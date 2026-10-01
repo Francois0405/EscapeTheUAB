@@ -1,0 +1,7 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="EntornVGI/EntornVGI.vcxproj" Id="f9482bd2-37e3-4568-abed-a98fbf131bc2" />
+</Solution>
