@@ -11,8 +11,36 @@
 
 // Entorn VGI: OBJECTE OBJ. Include per la definició de l'objecte Obj_OBJ
 #include "objLoader.h"	
+#include <memory>
 
 //-------------- Entorn VGI: Variables globals de main
+
+enum class SceneObjectType
+{
+	Cube,
+	Obj
+};
+
+struct SceneObject
+{
+	std::string name;
+	SceneObjectType type;
+	glm::vec3 position;
+	glm::vec3 rotation;
+	glm::vec3 scale;
+	glm::vec4 color;
+	std::unique_ptr<COBJModel> model;
+};
+
+std::vector<SceneObject> sceneObjects;
+int selectedSceneObject = -1;
+glm::vec3 freeCameraPosition(24.0f, -32.0f, 16.0f);
+float freeCameraYaw = 127.0f;
+float freeCameraPitch = -22.0f;
+bool freeCameraMouseCaptured = false;
+bool freeCameraFirstMouse = true;
+double freeCameraLastMouseX = 0.0;
+double freeCameraLastMouseY = 0.0;
 
 // Retrieving main monitor
 	GLFWmonitor* primary;
@@ -34,7 +62,7 @@
 
 // Entorn V3D: Variables de control per Menú Càmera: Esfèrica, Navega, Mòbil, Zoom, Satelit, Polars... 
 	char camera;	// Variable que controla el tipus de càmera segons valors definits en constants.h
-	static int oCamera = 0;	// Variable que controla desplegable CAMERA d'ImGui
+	static int oCamera = 3;	// Variable que controla desplegable CAMERA d'ImGui
 	bool mobil;		// Opció canvi de Punt de Vista interactiu (mobil) [0:NO,1:SI]
 	bool zzoom;		// Opció Zoom interactiu (zoom) [0:NO,1:SI]
 	bool zzoomO;	// Opció Zoom en Projecció Ortogràfica adaptant Volum Visualització [0:NO,1:SI]
@@ -241,6 +269,10 @@
 	void OnCameraOrigenNavega();
 	void OnCameraGeode();
 	void OnCameraOrigenGeode();
+	void OnCameraFly();
+	void addSceneCube();
+	void addSceneOBJ(const char* filename);
+	void updateFreeCamera(float deltaTime);
 	// Desplegable VISTA
 	void OnVistaFullscreen();
 	void OnVistaPan();

@@ -13,6 +13,7 @@
 #define CAM_ESFERICA 'E'
 #define CAM_GEODE 'G'
 #define CAM_NAVEGA 'N'
+#define CAM_FLY 'F'
 
 //--------------- VGI: Tipus de Projecció
 #define AXONOM 'A'

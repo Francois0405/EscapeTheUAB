@@ -21,6 +21,85 @@
 #include "main.h"
 //#include <iostream>
 
+void addSceneCube()
+{
+	sceneObjects.emplace_back();
+	SceneObject& sceneObject = sceneObjects.back();
+	sceneObject.name = "Cube " + std::to_string(sceneObjects.size());
+	sceneObject.type = SceneObjectType::Cube;
+	sceneObject.position = glm::vec3(0.0f);
+	sceneObject.rotation = glm::vec3(0.0f);
+	sceneObject.scale = glm::vec3(1.0f);
+	sceneObject.color = glm::vec4(0.7f, 0.7f, 0.7f, 1.0f);
+	selectedSceneObject = static_cast<int>(sceneObjects.size()) - 1;
+}
+
+void addSceneOBJ(const char* filename)
+{
+	if (!filename)
+		return;
+
+	std::string path(filename);
+	std::vector<char> mutablePath(path.begin(), path.end());
+	mutablePath.push_back('\0');
+	std::unique_ptr<COBJModel> model(new COBJModel());
+	if (model->LoadModel(mutablePath.data()) != 0)
+	{
+		fprintf(stderr, "Could not load OBJ file: %s\n", filename);
+		return;
+	}
+
+	const size_t fileNameStart = path.find_last_of("\\/");
+	std::string name = fileNameStart == std::string::npos ? path : path.substr(fileNameStart + 1);
+	const size_t extension = name.find_last_of('.');
+	if (extension != std::string::npos)
+		name.resize(extension);
+
+	sceneObjects.emplace_back();
+	SceneObject& sceneObject = sceneObjects.back();
+	sceneObject.name = name;
+	sceneObject.type = SceneObjectType::Obj;
+	sceneObject.position = glm::vec3(0.0f);
+	sceneObject.rotation = glm::vec3(0.0f);
+	sceneObject.scale = glm::vec3(1.0f);
+	sceneObject.color = glm::vec4(0.8f, 0.8f, 0.8f, 1.0f);
+	sceneObject.model = std::move(model);
+	selectedSceneObject = static_cast<int>(sceneObjects.size()) - 1;
+}
+
+static glm::vec3 getFreeCameraFront()
+{
+	const float yaw = glm::radians(freeCameraYaw);
+	const float pitch = glm::radians(freeCameraPitch);
+	return glm::normalize(glm::vec3(
+		std::cos(yaw) * std::cos(pitch),
+		std::sin(yaw) * std::cos(pitch),
+		std::sin(pitch)));
+}
+
+void updateFreeCamera(float deltaTime)
+{
+	if (camera != CAM_FLY || !window || ImGui::GetIO().WantCaptureKeyboard)
+		return;
+
+	if (deltaTime > 0.1f) deltaTime = 0.1f;
+	const float moveSpeed = 12.0f * deltaTime;
+	const glm::vec3 worldUp(0.0f, 0.0f, 1.0f);
+	const glm::vec3 front = getFreeCameraFront();
+	const glm::vec3 right = glm::normalize(glm::cross(front, worldUp));
+	glm::vec3 movement(0.0f);
+
+	if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) movement += front;
+	if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) movement -= front;
+	if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) movement += right;
+	if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) movement -= right;
+	if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS) movement += worldUp;
+	if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS) movement -= worldUp;
+
+	if (glm::length(movement) > 0.0f)
+		freeCameraPosition += glm::normalize(movement) * moveSpeed;
+}
+
 void InitGL()
 {
 	// TODO: agregar aquí el código de construcción
@@ -32,7 +111,7 @@ void InitGL()
 	statusB = false;
 
 	// Entorn VGI: Variables de control per Menú Càmera: Esfèrica, Navega, Mòbil, Zoom, Satelit, Polars... 
-	camera = CAM_ESFERICA;
+	camera = CAM_FLY;
 	mobil = true;	zzoom = true;		zzoomO = false;		satelit = false;
 
 	// Entorn VGI: Variables de control de l'opció Càmera->Navega?
@@ -57,7 +136,7 @@ void InitGL()
 	tr_cpv.x = 0;	tr_cpv.y = 0;	tr_cpv.z = 0;		tr_cpvF.x = 0;	tr_cpvF.y = 0;	tr_cpvF.z = 0;
 
 	// Entorn VGI: Variables de control per les opcions de menú Projecció, Objecte
-	projeccio = CAP;	// projeccio = PERSPECT;
+	projeccio = PERSPECT;
 	ProjectionMatrix = glm::mat4(1.0);	// Inicialitzar a identitat
 	objecte = CAP;		// objecte = TETERA;
 
@@ -77,7 +156,7 @@ void InitGL()
 	GTMatrix = glm::mat4(1.0);		// Inicialitzar a identitat
 
 	// Entorn VGI: Variables de control per les opcions de menú Ocultacions
-	front_faces = true;	test_vis = false;	oculta = false;		back_line = false;
+	front_faces = true;	test_vis = false;	oculta = true;		back_line = false;
 
 	// Entorn VGI: Variables de control del menú Iluminació		
 	ilumina = FILFERROS;			ifixe = false;					ilum2sides = false;
@@ -341,6 +420,20 @@ void InitGL()
 	// Entorn VGI: Altres variables
 	mida = 1.0;			nom = "";		buffer = "";
 	initVAOList();	// Inicialtzar llista de VAO'S.
+	SetColor4d(col_obj.r, col_obj.g, col_obj.b, col_obj.a);
+	Set_VAOList(GLUT_CUBE, loadglutSolidCube_EBO(1.0));
+
+	sceneObjects.clear();
+	addSceneCube();
+	sceneObjects.back().name = "Baseplate";
+	sceneObjects.back().position = glm::vec3(0.0f, 0.0f, -2.5f);
+	sceneObjects.back().scale = glm::vec3(4.0f, 4.0f, 0.2f);
+	sceneObjects.back().color = glm::vec4(0.45f, 0.48f, 0.52f, 1.0f);
+
+	addSceneCube();
+	sceneObjects.back().name = "Block";
+	sceneObjects.back().position = glm::vec3(0.0f, 0.0f, 0.5f);
+	sceneObjects.back().color = glm::vec4(0.2f, 0.55f, 0.9f, 1.0f);
 }
 
 
@@ -579,7 +672,23 @@ void OnPaint(GLFWwindow* window)
 		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, 0, 0, w, h, OPV.R);
 
 		// Entorn VGI: Definició de la càmera.
-		if (camera == CAM_ESFERICA) {
+		if (camera == CAM_FLY) {
+			const glm::vec3 front = getFreeCameraFront();
+			GLdouble cameraTarget[3] = {
+				freeCameraPosition.x + front.x,
+				freeCameraPosition.y + front.y,
+				freeCameraPosition.z + front.z
+			};
+			GLdouble cameraUp[3] = { 0.0, 0.0, 1.0 };
+			const CPunt3D cameraPosition = {
+				freeCameraPosition.x, freeCameraPosition.y, freeCameraPosition.z, 1.0
+			};
+			ViewMatrix = Vista_Navega(shader_programID, cameraPosition, cameraTarget,
+				cameraUp, false, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
+				front_faces, oculta, test_vis, back_line,
+				ilumina, llum_ambient, llumGL, ifixe, ilum2sides, eixos, grid, hgrid);
+		}
+		else if (camera == CAM_ESFERICA) {
 			n[0] = 0;		n[1] = 0;		n[2] = 0;
 			ViewMatrix = Vista_Esferica(shader_programID, OPV, Vis_Polar, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, mida, pas,
 				front_faces, oculta, test_vis, back_line,
@@ -661,13 +770,41 @@ void dibuixa_Escena() {
 
 	// Escalat d'objectes, per adequar-los a les vistes ortogràfiques (Pràctica 2)
 	//	GTMatrix = glm::scale();
+	bool hasCube = false;
+	for (const SceneObject& sceneObject : sceneObjects)
+		if (sceneObject.type == SceneObjectType::Cube) hasCube = true;
+	if (hasCube && Get_VAOId(GLUT_CUBE) == 0)
+	{
+		SetColor4d(1.0, 1.0, 1.0, 1.0);
+		Set_VAOList(GLUT_CUBE, loadglutSolidCube_EBO(1.0));
+	}
 
-	//	Dibuix geometria de l'escena amb comandes GL.
-	dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
-		textura, texturesID, textura_map, tFlag_invert_Y,
-		npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-		ObOBJ,				// Classe de l'objecte OBJ que conté els VAO's
-		GTMatrix);
+	for (const SceneObject& sceneObject : sceneObjects)
+	{
+		glm::mat4 modelMatrix(1.0f);
+		modelMatrix = glm::translate(modelMatrix, sceneObject.position);
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(sceneObject.rotation.x), glm::vec3(1.0f, 0.0f, 0.0f));
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(sceneObject.rotation.y), glm::vec3(0.0f, 1.0f, 0.0f));
+		modelMatrix = glm::rotate(modelMatrix, glm::radians(sceneObject.rotation.z), glm::vec3(0.0f, 0.0f, 1.0f));
+		modelMatrix = glm::scale(modelMatrix, sceneObject.scale);
+
+		CColor objectColor = { sceneObject.color.r, sceneObject.color.g, sceneObject.color.b, sceneObject.color.a };
+		const bool isObj = sceneObject.type == SceneObjectType::Obj;
+		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid,
+			isObj ? OBJOBJ : CUB, objectColor, sw_material,
+			isObj, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+			isObj ? sceneObject.model.get() : nullptr, modelMatrix);
+	}
+
+	if (objecte != CAP)
+	{
+		// Draw the legacy single-object preview in addition to the scene list.
+		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
+			textura, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+			ObOBJ, GTMatrix);
+	}
 }
 
 
@@ -1188,6 +1325,9 @@ int shortCut_Camera()
 	case CAM_GEODE:		// Càmera GEODE
 		auxCamera = 2;
 		break;
+	case CAM_FLY:		// Càmera lliure
+		auxCamera = 3;
+		break;
 	default:			// Opció CÀMERA <Altres Càmeres>
 		auxCamera = -1;
 		break;
@@ -1549,6 +1689,7 @@ void ShowEntornVGIWindow(bool* p_open)
 		static int clickCG = 0;
 		ImGui::RadioButton("Geode (<Shift>+J)", &oCamera, 2); ImGui::SameLine();
 		if (ImGui::Button("Origen Geode (<Shift>+Inici)")) clickCG++;
+		ImGui::RadioButton("Free roam", &oCamera, 3);
 
 		// EntornVGI: Si s'ha apretat el botó "Origen Geode"
 		if (clickCG)
@@ -1569,9 +1710,13 @@ void ShowEntornVGIWindow(bool* p_open)
 		case 2:	// Opció CAMERA Geode
 			if (camera != CAM_GEODE) OnCameraGeode();
 			break;
+		case 3:	// Opció CAMERA lliure
+			if (camera != CAM_FLY) OnCameraFly();
+			ImGui::TextWrapped("WASD to move, Space/Left Shift to move vertically. Right-click captures/releases the mouse; Escape releases it.");
+			break;
 		default:
-			// Opció per defecte: CAMERA Esfèrica
-			OnCameraEsferica();
+			// Opció per defecte: CAMERA lliure
+			OnCameraFly();
 			break;
 		}
 
@@ -1679,6 +1824,57 @@ void ShowEntornVGIWindow(bool* p_open)
 			OnProjeccioPerspectiva();
 			break;
 		}
+	}
+
+	if (ImGui::CollapsingHeader("SCENE OBJECTS", ImGuiTreeNodeFlags_DefaultOpen))
+	{
+		if (ImGui::Button("Add Cube"))
+			addSceneCube();
+		ImGui::SameLine();
+		if (ImGui::Button("Add OBJ..."))
+		{
+			nfdchar_t* filePath = NULL;
+			if (NFD_OpenDialog("obj", NULL, &filePath) == NFD_OKAY)
+			{
+				addSceneOBJ(filePath);
+				free(filePath);
+			}
+			else if (NFD_GetError() && NFD_GetError()[0] != '\0')
+				fprintf(stderr, "OBJ dialog error: %s\n", NFD_GetError());
+		}
+
+		for (int i = 0; i < static_cast<int>(sceneObjects.size()); ++i)
+		{
+			ImGui::PushID(i);
+			if (ImGui::Selectable(sceneObjects[i].name.c_str(), selectedSceneObject == i))
+				selectedSceneObject = i;
+			ImGui::PopID();
+		}
+
+		if (selectedSceneObject >= 0 && selectedSceneObject < static_cast<int>(sceneObjects.size()))
+		{
+			SceneObject& selected = sceneObjects[selectedSceneObject];
+			float position[3] = { selected.position.x, selected.position.y, selected.position.z };
+			float rotation[3] = { selected.rotation.x, selected.rotation.y, selected.rotation.z };
+			float scale[3] = { selected.scale.x, selected.scale.y, selected.scale.z };
+			if (ImGui::DragFloat3("Position", position, 0.1f))
+				selected.position = glm::vec3(position[0], position[1], position[2]);
+			if (ImGui::DragFloat3("Rotation", rotation, 1.0f))
+				selected.rotation = glm::vec3(rotation[0], rotation[1], rotation[2]);
+			if (ImGui::DragFloat3("Scale", scale, 0.05f, 0.01f, 100.0f))
+				selected.scale = glm::vec3(scale[0], scale[1], scale[2]);
+			ImGui::ColorEdit3("Object color", &selected.color.x);
+
+			if (ImGui::Button("Remove selected"))
+			{
+				sceneObjects.erase(sceneObjects.begin() + selectedSceneObject);
+				if (sceneObjects.empty())
+					selectedSceneObject = -1;
+				else if (selectedSceneObject >= static_cast<int>(sceneObjects.size()))
+					selectedSceneObject = static_cast<int>(sceneObjects.size()) - 1;
+			}
+		}
+		ImGui::Separator();
 	}
 
 	// DESPLEGABLE VISTA
@@ -2488,6 +2684,23 @@ void OnCameraOrigenNavega()
 		opvN.x = 10.0;	opvN.y = 0.0;		opvN.z = 0.0;
 		angleZ = 0.0;
 	}
+}
+
+void OnCameraFly()
+{
+	camera = CAM_FLY;
+	projeccio = PERSPECT;
+	oProjeccio = 3;
+	oCamera = 3;
+	mobil = false;
+	zzoom = false;
+	satelit = false;
+	pan = false;
+	oculta = true;
+	freeCameraMouseCaptured = false;
+	freeCameraFirstMouse = true;
+	if (window)
+		glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
 }
 
 
@@ -3815,6 +4028,21 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
 	//io.AddMouseButtonEvent(button, true);
+	if (camera == CAM_FLY)
+	{
+		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		{
+			if (freeCameraMouseCaptured)
+			{
+				freeCameraMouseCaptured = false;
+				freeCameraFirstMouse = true;
+				glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+			}
+			else
+				glfwSetWindowShouldClose(window, GL_TRUE);
+		}
+		return;
+	}
 
 	// (2) ONLY forward mouse data to your underlying app/game.
 	if (!io.WantCaptureKeyboard) { //<Tractament mouse de l'aplicació>}
@@ -5732,6 +5960,17 @@ void OnMouseButton(GLFWwindow* window, int button, int action, int mods)
 	// (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
 	io.AddMouseButtonEvent(button, action);
+	if (camera == CAM_FLY)
+	{
+		if (!io.WantCaptureMouse && button == GLFW_MOUSE_BUTTON_RIGHT && action == GLFW_PRESS)
+		{
+			freeCameraMouseCaptured = !freeCameraMouseCaptured;
+			freeCameraFirstMouse = true;
+			glfwSetInputMode(window, GLFW_CURSOR,
+				freeCameraMouseCaptured ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+		}
+		return;
+	}
 
 	// (2) ONLY forward mouse data to your underlying app/game.
 	if (!io.WantCaptureMouse) { //<Tractament mouse de l'aplicació>}
@@ -5792,6 +6031,27 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 	double modul = 0;
 	GLdouble vdir[3] = { 0, 0, 0 };
 	CSize gir = { 0,0 }, girn = { 0,0 }, girT = { 0,0 }, zoomincr = { 0,0 };
+	if (camera == CAM_FLY)
+	{
+		if (freeCameraMouseCaptured)
+		{
+			if (freeCameraFirstMouse)
+			{
+				freeCameraLastMouseX = xpos;
+				freeCameraLastMouseY = ypos;
+				freeCameraFirstMouse = false;
+			}
+			else
+			{
+				freeCameraYaw += static_cast<float>(xpos - freeCameraLastMouseX) * 0.12f;
+				freeCameraPitch -= static_cast<float>(ypos - freeCameraLastMouseY) * 0.12f;
+				freeCameraPitch = glm::clamp(freeCameraPitch, -89.0f, 89.0f);
+				freeCameraLastMouseX = xpos;
+				freeCameraLastMouseY = ypos;
+			}
+		}
+		return;
+	}
 
 	// TODO: Add your message handler code here and/or call default
 	if (m_ButoEAvall && mobil && projeccio != CAP)
@@ -6479,6 +6739,7 @@ int main()
 
 		// Poll for and process events
 		glfwPollEvents();
+		updateFreeCamera(delta);
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
 		draw_Menu_ImGui();
@@ -6504,6 +6765,7 @@ int main()
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+	sceneObjects.clear();
 
 	glfwDestroyWindow(window);
 
