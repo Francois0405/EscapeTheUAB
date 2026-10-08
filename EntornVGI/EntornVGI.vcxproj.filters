@@ -19,6 +19,9 @@
     <Filter Include="Archivos de origen\ImGui">
       <UniqueIdentifier>{61ef6e8e-1c9e-48f3-8e48-77892ecd2f51}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Archivos de encabezado\NewFilter1">
+      <UniqueIdentifier>{375706c8-b135-4bb0-b231-d1c31c9ba4ac}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp">
