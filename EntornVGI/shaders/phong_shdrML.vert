@@ -10,8 +10,8 @@
 //     f) Calcul component a de transparència segons color sigui provinent de material o de VAO
 //     g) Algorisme incremental iluminació Phong encapsulat en phongModel()
 
-//#version 330 core
-#version 460 core
+#version 330 core
+//#version 460 core
 
 #define MaxLights 8
 
@@ -44,7 +44,7 @@ layout (location = 2) in vec3 in_Normal; 	// Coordenades (x,y,z) Vector Normal
 layout (location = 3) in vec2 in_TexCoord; 	// Coordenades (s,t) Coordenada textura
 
 // --- L46- Variables uniform
-uniform mat4 normalMatrix;	// “the transpose of the inverse of the gl_ModelViewMatrix.” 
+//uniform mat4 normalMatrix;	// “the transpose of the inverse of the gl_ModelViewMatrix.” 
 uniform mat4 projectionMatrix;	// Projection Matrix
 uniform mat4 viewMatrix; 	// View Matrix
 uniform mat4 modelMatrix;	// Model Matrix
@@ -70,7 +70,7 @@ void main()	// --- L68-
 // --- L70- Calcul variables out.
     vertexPV = vec3(viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
 
-    //mat4 NormalMatrix = transpose(inverse(viewMatrix * modelMatrix));
+    mat4 normalMatrix = transpose(inverse(viewMatrix * modelMatrix));
     vec3 N = vec3(normalMatrix * vec4(in_Normal,1.0));
     vertexNormalPV = normalize(N);
 

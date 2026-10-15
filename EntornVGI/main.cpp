@@ -5002,9 +5002,9 @@ void Teclat_Navega(int key, int action)
 						else if (trasl) Teclat_TransTraslada(key, action);
 								else if (escal) Teclat_TransEscala(key, action);
 				}
-			else if (camera == CAM_NAVEGA) Teclat_Navega(key, action);
+			/*else if (camera == CAM_NAVEGA) Teclat_Navega(key, action);
 					else if (!sw_color) Teclat_ColorFons(key, action);
-								else Teclat_ColorObjecte(key, action);
+								else Teclat_ColorObjecte(key, action);*/
 			break;
 		}
 	}

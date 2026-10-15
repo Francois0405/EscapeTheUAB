@@ -10,8 +10,8 @@
 //     f) Calcul component a de transparència segons color sigui provinent de material o de VAO
 //     g) Algorisme de cares planes encapsulat en flatModel()
 
-//#version 330 core
-#version 460 core
+#version 330 core
+//#version 460 core
 
 #define MaxLights 8
 
@@ -44,7 +44,7 @@ layout (location = 2) in vec3 in_Normal; 	// Coordenades (x,y,z) Vector Normal.
 layout (location = 3) in vec2 in_TexCoord; 	// Coordenades (s,t) Coordenada textura.
 
 // --- L44- Variables uniform
-uniform mat4 normalMatrix;	// “the transpose of the inverse of the ModelViewMatrix.” 
+//uniform mat4 normalMatrix;	// “the transpose of the inverse of the ModelViewMatrix.” 
 uniform mat4 projectionMatrix;	// Projection Matrix.
 uniform mat4 viewMatrix; 	// View Matrix.
 uniform mat4 modelMatrix;	// Model Matrix.
@@ -66,7 +66,7 @@ out vec2 VertexTexCoord;	// Coordenades textura del vèrtex
 vec3 flatModel(inout int numMat, inout float aValue)
 {
 // --- L68- Calcul variables previes.
-    //mat4 NormalMatrix = transpose(inverse(viewMatrix * modelMatrix));
+    mat4 normalMatrix = transpose(inverse(viewMatrix * modelMatrix));
     vec3 N = vec3(normalMatrix * vec4(in_Normal,1.0));
     N = normalize(N);
     vec3 vertexPV = vec3(viewMatrix * modelMatrix * vec4(in_Vertex,1.0));

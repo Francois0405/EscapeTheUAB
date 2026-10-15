@@ -10,8 +10,8 @@
 //     f) Calcul component a de transparència segons color sigui provinent de material o de VAO
 //     g) Algorisme incremental iluminació Phong encapsulat en phongModel()
 
-//#version 330 core
-#version 460 core
+#version 330 core
+//#version 460 core
 
 #define MaxLights 8
 

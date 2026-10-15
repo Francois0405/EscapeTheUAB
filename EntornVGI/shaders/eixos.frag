@@ -3,8 +3,8 @@
 //******** Enric Marti (Setembre 2026)
 // eixos.frag: Fragment Program en GLSL en versió OpenGL 3.3 o 4.30 per a dibuixar eixos Coordenades Món
 
-//#version 330 core
-#version 460 core
+#version 330 core
+//#version 460 core
 
 // ---- L9- Variable in
 in vec4 VertexColor;
