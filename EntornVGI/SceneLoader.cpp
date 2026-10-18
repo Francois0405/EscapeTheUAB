@@ -72,4 +72,5 @@ std::vector<SceneObject> CargarEscena(const std::filesystem::path& ruta)
 
         OutputDebugStringA(mensaje.str().c_str());
     }
+    return objetos;
 }
