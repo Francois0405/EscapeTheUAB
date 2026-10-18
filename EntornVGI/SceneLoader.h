@@ -15,4 +15,8 @@ struct SceneObject
     glm::vec3 escala;
 };
 
+std::vector<SceneObject> CargarEscena(
+    const std::filesystem::path& ruta
+);
+
 #endif

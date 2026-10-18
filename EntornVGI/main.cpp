@@ -18,6 +18,7 @@
 #include "visualitzacio.h"
 #include "escena.h"
 #include "main.h"
+#include "SceneLoader.h"
 //#include <iostream>
 
 // CODI NOSTRE
@@ -1138,7 +1139,7 @@ void ShowArxiusOptions()
 	if (ImGui::MenuItem("New")) {}
 	if (ImGui::MenuItem("Probar habitacion_beta.txt"))
 	{
-		ComprobarArchivoEscena(
+		CargarEscena(
 			R"(C:\VGI\EntornVGI\assets\scenes\habitacion_beta.txt)"
 		);
 	}

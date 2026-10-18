@@ -8,14 +8,14 @@
 
 // Lee un archivo de escena y comprueba sus objetos.
 // Cada entrada contiene el modelo y sus transformaciones.
-void ComprobarArchivoEscena(const std::filesystem::path& ruta)
+std::vector<SceneObject> CargarEscena(const std::filesystem::path& ruta)
 {
     std::ifstream archivo(ruta);
 
     if (!archivo.is_open())
     {
         OutputDebugStringA("No se ha podido abrir el archivo de escena.\n");
-        return;
+        return {};
     }
 
     OutputDebugStringA("Archivo de escena abierto correctamente.\n");
@@ -27,7 +27,7 @@ void ComprobarArchivoEscena(const std::filesystem::path& ruta)
 
     while (std::getline(archivo, linea))
     {
-        // Empezamos con la parte de importacion de los obj a dentro del entorno
+        // Leemos los datos de cada objeto de la escena.
 
         // Posición del objeto.
         float x, y, z;
