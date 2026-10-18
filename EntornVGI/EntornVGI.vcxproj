@@ -195,6 +195,7 @@
     <ClInclude Include="material.h" />
     <ClInclude Include="objLoader.h" />
     <ClInclude Include="quatern.h" />
+    <ClInclude Include="SceneLoader.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="visualitzacio.h" />
   </ItemGroup>

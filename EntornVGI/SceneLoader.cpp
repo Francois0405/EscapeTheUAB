@@ -4,6 +4,7 @@
 #include <filesystem>
 #include <vector>
 #include <Windows.h>
+#include "SceneLoader.h"
 
 // Lee un archivo de escena y comprueba sus objetos.
 // Cada entrada contiene el modelo y sus transformaciones.
@@ -19,29 +20,14 @@ void ComprobarArchivoEscena(const std::filesystem::path& ruta)
 
     OutputDebugStringA("Archivo de escena abierto correctamente.\n");
 
-    // Pendiente:
-    // 1. Leer las líneas del archivo.
-    // 2. Ignorar las líneas vacías y los comentarios.
-    // 3. Obtener el modelo y sus nueve valores de transformación.
-    // 4. Comprobar que los datos son válidos.
-    // 5. Guardar los objetos para utilizarlos en la escena.
-
-    // Leer las entradas del archivo
+    // Leemos la ruta y las transformaciones de cada objeto.
     std::string linea;
-    int numObjetos = 0;
+
+    std::vector<SceneObject> objetos;
 
     while (std::getline(archivo, linea))
     {
         // Empezamos con la parte de importacion de los obj a dentro del entorno
-
-        struct SceneObject
-        {
-            std::string modelo;
-
-            glm::vec3 posicion;
-            glm::vec3 rotacion;
-            glm::vec3 escala;
-        };
 
         // Posición del objeto.
         float x, y, z;
@@ -67,8 +53,13 @@ void ComprobarArchivoEscena(const std::filesystem::path& ruta)
             continue;
         }
 
-
-        numObjetos++;
+        // Guardamos el modelo y sus transformaciones.
+        objetos.push_back({
+            modelo,
+            {x, y, z},
+            {rx, ry, rz},
+            {sx, sy, sz}
+            });
 
         // Mostrar el modelo detectado.
         std::ostringstream mensaje;
@@ -81,9 +72,4 @@ void ComprobarArchivoEscena(const std::filesystem::path& ruta)
 
         OutputDebugStringA(mensaje.str().c_str());
     }
-
-    std::string resumen = "Objetos detectados: "
-        + std::to_string(numObjetos) + "\n";
-
-    OutputDebugStringA(resumen.c_str());
 }
