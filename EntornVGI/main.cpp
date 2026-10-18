@@ -25,10 +25,10 @@
 
 #include <filesystem>
 
-// Función definida en SceneLoader.cpp.
-void ComprobarArchivoEscena(const std::filesystem::path& ruta);
-
 // ---------------------------
+
+// Objetos de la escena cargada.
+std::vector<SceneObject> objetosEscena;
 
 void InitGL()
 {
@@ -1140,6 +1140,9 @@ void ShowArxiusOptions()
 	if (ImGui::MenuItem("Probar habitacion_beta.txt"))
 	{
 		CargarEscena(
+			R"(C:\VGI\EntornVGI\assets\scenes\habitacion_beta.txt)"
+		);
+		objetosEscena = CargarEscena(
 			R"(C:\VGI\EntornVGI\assets\scenes\habitacion_beta.txt)"
 		);
 	}
