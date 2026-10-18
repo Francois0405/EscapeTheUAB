@@ -7,7 +7,6 @@
 //					- Per a dialeg de cerca de fitxers, s'utilitza la llibreria NativeFileDialog
 //
 
-
 // Entorn VGI.ImGui: Includes llibreria ImGui
 #include "ImGui\imgui.h"
 #include "ImGui\imgui_impl_glfw.h"
@@ -20,6 +19,15 @@
 #include "escena.h"
 #include "main.h"
 //#include <iostream>
+
+// CODI NOSTRE
+
+#include <filesystem>
+
+// Función definida en SceneLoader.cpp.
+void ComprobarArchivoEscena(const std::filesystem::path& ruta);
+
+// ---------------------------
 
 void InitGL()
 {
@@ -331,7 +339,7 @@ void InitGL()
 
 // Entorn VGI: OBJECTE --> Corba B-Spline i Bezier
 	npts_T = 0;
-	for (i = 0; i < MAX_PATCH_CORBA; i = i++)
+	for (i = 0; i < MAX_PATCH_CORBA; ++i)
 		{	PC_t[i].x = 0.0;
 			PC_t[i].y = 0.0;
 			PC_t[i].z = 0.0;
@@ -1128,7 +1136,12 @@ void ShowArxiusOptions()
 //IMGUI_DEMO_MARKER("Examples/Menu");
 	ImGui::MenuItem("(Arxius menu)", NULL, false, false);
 	if (ImGui::MenuItem("New")) {}
-
+	if (ImGui::MenuItem("Probar habitacion_beta.txt"))
+	{
+		ComprobarArchivoEscena(
+			R"(C:\VGI\EntornVGI\assets\scenes\habitacion_beta.txt)"
+		);
+	}
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;
 		nfdresult_t result = NFD_OpenDialog(NULL, NULL, &nomFitxer);

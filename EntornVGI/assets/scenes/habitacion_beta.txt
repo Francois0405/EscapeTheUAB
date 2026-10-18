@@ -1,0 +1,5 @@
+# modelo posX posY posZ rotX rotY rotZ escalaX escalaY escalaZ
+
+../models/test.obj 0 0 0 0 0 0 1 1 1
+../models/test.obj 3 0 0 0 0 0 1 1 1
+../models/test.obj 0 3 0 0 0 45 1 1 1

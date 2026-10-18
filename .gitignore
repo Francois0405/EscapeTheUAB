@@ -360,3 +360,15 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+
+# Objetos de compilación C++
+*.obj
+
+# Modelos Blender que sí queremos guardar
+!EntornVGI/assets/models/**/*.obj
+
+# Dependencias locales de vcpkg
+vcpkg_installed/
+
+# Archivos temporales de macOS
+.DS_Store
