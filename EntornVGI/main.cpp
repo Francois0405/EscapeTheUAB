@@ -24,6 +24,7 @@
 // CODI NOSTRE
 
 #include <filesystem>
+#include <glm/gtc/matrix_transform.hpp>
 
 // ---------------------------
 
@@ -743,6 +744,32 @@ void dibuixa_Escena() {
 // Escalat d'objectes, per adequar-los a les vistes ortogràfiques (Pràctica 2)
 //	GTMatrix = glm::scale();
 
+	// Dibuja cada objeto de la habitacion con su transformacion.
+	if (!objetosEscena.empty() && ObOBJ != nullptr)
+	{
+		for (const SceneObject& obj : objetosEscena)
+		{
+			glm::mat4 matriz(1.0f);
+
+			matriz = glm::translate(matriz, obj.posicion);
+
+			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.z),
+				glm::vec3(0.0f, 0.0f, 1.0f));
+
+			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.y),
+				glm::vec3(0.0f, 1.0f, 0.0f));
+
+			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.x),
+				glm::vec3(1.0f, 0.0f, 0.0f));
+
+			matriz = glm::scale(matriz, obj.escala);
+
+			// Reutilizar aqui la llamada existente a dibuixa_EscenaGL.
+		}
+
+		return;
+	}
+
 //	Dibuix geometria de l'escena amb comandes GL.
 	dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
 		textura, texturesID, textura_map, tFlag_invert_Y,
@@ -1139,9 +1166,6 @@ void ShowArxiusOptions()
 	if (ImGui::MenuItem("New")) {}
 	if (ImGui::MenuItem("Probar habitacion_beta.txt"))
 	{
-		CargarEscena(
-			R"(C:\VGI\EntornVGI\assets\scenes\habitacion_beta.txt)"
-		);
 		objetosEscena = CargarEscena(
 			R"(C:\VGI\EntornVGI\assets\scenes\habitacion_beta.txt)"
 		);
