@@ -764,7 +764,14 @@ void dibuixa_Escena() {
 
 			matriz = glm::scale(matriz, obj.escala);
 
-			// Reutilizar aqui la llamada existente a dibuixa_EscenaGL.
+			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
+			dibuixa_EscenaGL(
+				shader_programID, eixos, eixos_Id, grid, hgrid,
+				OBJOBJ, col_obj, sw_material,
+				textura, texturesID, textura_map, tFlag_invert_Y,
+				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+				ObOBJ, matriz
+			);
 		}
 
 		return;
