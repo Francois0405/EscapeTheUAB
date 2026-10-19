@@ -190,6 +190,28 @@
 	GLdouble mida;		// Factor d'escala per calcular Volum de Visualització de l'objecte que encaixi.
 	std::string nom;	// Nom de fitxer.
 	std::string buffer; // Buffer que magatzema string caracters corresponent a variables double a printar en Status Bar (funció Barra_Estat).
+
+// Entorn VGI Modif: Camara FPS, WASD moure camara + ratoli moure direccio camara
+// Posición de la cámara FPS.
+// Z será la altura fija durante el movimiento WASD.
+	double fpsX = 0.0;
+	double fpsY = 0.0;
+	double fpsZ = 2.0;
+
+	// Orientación en grados.
+	double fpsYaw = 0.0;
+	double fpsPitch = 0.0;
+
+	// Control del ratón.
+	bool mouseLookActive = false;
+	bool firstMouse = true;
+
+	double lastMouseX = 0.0;
+	double lastMouseY = 0.0;
+
+	double mouseSensitivity = 0.15;
+	double fpsSpeed = 0.1;
+
 //-------------- Entorn VGI: Fi De Variables globals de main
 
 //-------------- Entorn VGI: Declaració funcions main
@@ -326,7 +348,7 @@
 	void Teclat_Ctrl(int key);
 	void Teclat_ColorObjecte(int key, int action);
 	void Teclat_ColorFons(int key, int action);
-	void Teclat_Navega(int key, int action);
+	void Teclat_Navega(int key, int action, double deltaSeconds = 0.0);
 	void Teclat_Pan(int key, int action);
 	void Teclat_TransEscala(int key, int action);
 	void Teclat_TransRota(int key, int action);
@@ -338,6 +360,10 @@
 	void OnMouseButton(GLFWwindow* window, int button, int action, int mods);
 	void OnMouseMove(GLFWwindow* window, double xpos, double ypos);
 	void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset);
+
+// Entorn VGI: Control de l'EVENT JOYSTICK / GAMEPAD
+	void OnGamepadMove(int jid, int event);
+	void OnJoystickMove(int jid, int event);
 
 // Entorn VGI: Control de l'EVENT TIMER
 	void OnTimer();

@@ -1,12 +1,12 @@
-
 //******** PRACTICA VISUALITZACIÓ GRÀFICA INTERACTIVA (Escola Enginyeria - UAB)
 //******** Entorn bàsic VS2026 MONOFINESTRA amb OpenGL 4.6, interfície GLFW 3.4, ImGui i llibreries GLM
 //******** Ferran Poveda, Marc Vivet, Carme Julià, Débora Gil, Enric Martí (Setembre 2026)
 // main.cpp : Este archivo contiene la función "main". La ejecución del programa comienza y termina ahí.
 //    Versió 0.5:	- Interficie ImGui
 //					- Per a dialeg de cerca de fitxers, s'utilitza la llibreria NativeFileDialog
+//   				- Versió amb GamePad
 //
-
+// REAL FRANÇOIS
 
 // Entorn VGI.ImGui: Includes llibreria ImGui
 #include "ImGui\imgui.h"
@@ -19,7 +19,21 @@
 #include "visualitzacio.h"
 #include "escena.h"
 #include "main.h"
-//#include <iostream>
+#include <iostream>
+#include <cmath>
+#include <algorithm>
+
+#include "SceneLoader.h"
+
+// CODI NOSTRE
+
+#include <filesystem>
+#include <glm/gtc/matrix_transform.hpp>
+
+// ---------------------------
+
+// Objetos de la escena cargada.
+std::vector<SceneObject> objetosEscena;
 
 void InitGL()
 {
@@ -32,14 +46,15 @@ void InitGL()
 	statusB = false;
 
 	// Entorn VGI: Variables de control per Menú Càmera: Esfèrica, Navega, Mòbil, Zoom, Satelit, Polars... 
-	camera = CAM_ESFERICA;
-	mobil = true;	zzoom = true;		zzoomO = false;		satelit = false;
+	camera = CAM_ESFERICA;	oCamera = 0;
+	mobil = true;			zzoom = true;		zzoomO = false;		satelit = false;
 
 	// Entorn VGI: Variables de control de l'opció Càmera->Navega?
-	n[0] = 0.0;		n[1] = 0.0;		n[2] = 0.0;
-	opvN.x = 10.0;	opvN.y = 0.0;		opvN.z = 0.0;
-	angleZ = 0.0;
+	cam_Esferica[0] = 15.0f;	cam_Esferica[1] = 0.0f;			cam_Esferica[2] = 0.0f;
+	OPV.R = cam_Esferica[0];	OPV.alfa = cam_Esferica[1];		OPV.beta = cam_Esferica[2];		// Origen PV en esfèriques
+	Vis_Polar = POLARZ;
 	ViewMatrix = glm::mat4(1.0);		// Inicialitzar a identitat
+	oPolars = -1;
 
 	// Entorn VGI: Variables de control de l'opció Càmera->Geode?
 	OPV_G.R = 15.0;		OPV_G.alfa = 0.0;	OPV_G.beta = 0.0;	// Origen PV en esfèriques per a Vista_Geode
@@ -58,8 +73,10 @@ void InitGL()
 
 	// Entorn VGI: Variables de control per les opcions de menú Projecció, Objecte
 	projeccio = CAP;	// projeccio = PERSPECT;
-	ProjectionMatrix = glm::mat4(1.0);	// Inicialitzar a identitat
+	oProjeccio = 3;		// ImGui: Variable que controla desplegable TIPUS PROJECCIO d'ImGui (opció Perspectiva)
+	ProjectionMatrix = glm::mat4(1.0);	// Inicialitzar matriu a identitat
 	objecte = CAP;		// objecte = TETERA;
+	oObjecte = 0;		// ImGui: Variable que controla desplegable TIPUS OBJECTE d'ImGui (opció cap objecte)
 
 	// Entorn VGI: Variables de control Skybox Cube
 	SkyBoxCube = false;		skC_programID = 0;
@@ -200,7 +217,6 @@ void InitGL()
 	// ---------------- LLUM #5 - (-Z), direccional, no restringida, amb atenuació constant (a,b,c) = (0,0,1)
 	// Vector de la font de llum direccional (x,y,z)=(-1,-1,-1):
 	llumGL[5].posicio.x = -1.0;			llumGL[5].posicio.y = -1.0;			llumGL[5].posicio.z = -1.0;		llumGL[5].posicio.w = 0.0;
-
 	// Intensitats difusa i especular de la font de llum (r,g,b) = (1,0,0):
 	llumGL[5].difusa.r = 1.0f;			llumGL[5].difusa.g = 0.0f;			llumGL[5].difusa.b = 0.0f;		llumGL[5].difusa.a = 1.0f;
 	llumGL[5].especular.r = 1.0f;		llumGL[5].especular.g = 0.0f;		llumGL[5].especular.b = 0.0f;	llumGL[5].especular.a = 1.0f;
@@ -255,11 +271,12 @@ void InitGL()
 	llumGL[7].encesa = false;
 	// ---------------- FI DEFINICIÓ LLUMS
 
-	// Entorn VGI: Variables de control del menú Shaders
-	shader = CAP_SHADER;	shader_programID = 0;
+	// Entorn VGI: Variables de control del menú SHADERS
+	shader = CAP_SHADER;
+	oShader = 1;				// Variable que controla desplegable SHADER d'ImGui (opció Gouraud)
+	shader_programID = 0;
 	shaderLighting.releaseAllShaders();
 	// Càrrega Shader de Gouraud
-	shader_programID = 0;
 	fprintf(stderr, "Gouraud_shdrML: \n");
 	if (!shader_programID) shader_programID = shaderLighting.loadFileShaders(".\\shaders\\gouraud_shdrML.vert", ".\\shaders\\gouraud_shdrML.frag");
 	shader = GOURAUD_SHADER;
@@ -309,6 +326,8 @@ void InitGL()
 	fonsR = true;		fonsG = true;		fonsB = true;
 	c_fons.r = clear_colorB.x;		c_fons.g = clear_colorB.y;		c_fons.b = clear_colorB.z;			c_fons.b = clear_colorB.w;
 	sw_color = false;
+	clear_colorB = ImVec4(0.0f, 0.0f, 0.0f, 1.00f);	// ImGui: Color de fons
+	clear_colorO = ImVec4(1.0f, 1.0f, 1.0f, 1.00f);	// ImGui: Color de l'objecte.
 	col_obj.r = clear_colorO.x;	col_obj.g = clear_colorO.y;	col_obj.b = clear_colorO.z;		col_obj.a = clear_colorO.w;
 
 	// Entorn VGI: Objecte OBJ
@@ -316,7 +335,7 @@ void InitGL()
 
 	// Entorn VGI: OBJECTE --> Corba B-Spline i Bezier
 	npts_T = 0;
-	for (i = 0; i < MAX_PATCH_CORBA; i = i++)
+	for (i = 0; i < MAX_PATCH_CORBA; i++)
 	{
 		PC_t[i].x = 0.0;
 		PC_t[i].y = 0.0;
@@ -662,6 +681,39 @@ void dibuixa_Escena() {
 	// Escalat d'objectes, per adequar-los a les vistes ortogràfiques (Pràctica 2)
 	//	GTMatrix = glm::scale();
 
+	// Dibuja cada objeto de la habitacion con su transformacion.
+	if (!objetosEscena.empty() && ObOBJ != nullptr)
+	{
+		for (const SceneObject& obj : objetosEscena)
+		{
+			glm::mat4 matriz(1.0f);
+
+			matriz = glm::translate(matriz, obj.posicion);
+
+			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.z),
+				glm::vec3(0.0f, 0.0f, 1.0f));
+
+			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.y),
+				glm::vec3(0.0f, 1.0f, 0.0f));
+
+			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.x),
+				glm::vec3(1.0f, 0.0f, 0.0f));
+
+			matriz = glm::scale(matriz, obj.escala);
+
+			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
+			dibuixa_EscenaGL(
+				shader_programID, eixos, eixos_Id, grid, hgrid,
+				OBJOBJ, col_obj, sw_material,
+				textura, texturesID, textura_map, tFlag_invert_Y,
+				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+				ObOBJ, matriz
+			);
+		}
+
+		return;
+	}
+
 	//	Dibuix geometria de l'escena amb comandes GL.
 	dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
 		textura, texturesID, textura_map, tFlag_invert_Y,
@@ -937,12 +989,30 @@ void draw_Menu_ImGui()
 		static float f = 0.0f;
 		static int counter = 0;
 		static float PV[4] = { 0.0f, 0.0f, 0.0f, 1.0f };
+		static bool preset = false;
 
 		ImGui::Begin("Status Menu");                          // Create a window called "Status Menu" and append into it.
 
 		ImGui::Text("Finestres EntornVGI:");               // Display some text (you can use a format strings too)
 		ImGui::SameLine();
 		ImGui::Checkbox("EntornVGI Window", &show_EntornVGI_window);
+		ImGui::SameLine();
+		if (ImGui::Checkbox("Preset", &preset) && preset) {
+			show_EntornVGI_window = true;
+
+			// Actualitzar també els índexs dels controls ImGui perquè no sobreescriguin el preset.
+			oProjeccio = 3; // Perspectiva
+			oCamera = 1;    // Navega
+			oObjecte = 1;   // Cub
+			oIlumina = 3;   // Suau
+
+			OnProjeccioPerspectiva();
+			OnCameraNavega();
+			OnObjecteCub();
+			OnIluminacioSuau();
+			SkyBoxCube = true;
+			OnVistaSkyBox();
+		}
 		ImGui::Separator();
 		ImGui::Spacing();
 
@@ -1080,7 +1150,12 @@ void ShowArxiusOptions()
 	//IMGUI_DEMO_MARKER("Examples/Menu");
 	ImGui::MenuItem("(Arxius menu)", NULL, false, false);
 	if (ImGui::MenuItem("New")) {}
-
+	if (ImGui::MenuItem("Probar habitacion_beta.txt"))
+	{
+		objetosEscena = CargarEscena(
+			R"(assets\scenes\habitacion_beta.txt)"
+		);
+	}
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;
 		nfdresult_t result = NFD_OpenDialog(NULL, NULL, &nomFitxer);
@@ -3776,7 +3851,7 @@ void OnShaderPBinaryRead()
 			{	//AfxMessageBox(_T("GLSL_Error.LINK was not opened"));
 				fprintf(stderr, "%s \n", "GLSL_Error.LINK was not opened");
 			}
-			for (int i = 0; i <= maxLength; i = i++) fprintf(fd, "%c", errorLog[i]);
+			for (int i = 0; i <= maxLength; i++) fprintf(fd, "%c", errorLog[i]);
 			fclose(fd);
 			glDeleteProgram(shader_BinProgramID);		// Don't leak the program.
 		}
@@ -3852,12 +3927,10 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 }
 
 void OnKeyUp(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-}
+{}
 
 void OnTextDown(GLFWwindow* window, unsigned int codepoint)
-{
-}
+{}
 
 // Teclat_Shift: Shortcuts per Pop Ups Fitxer, Finestra, Vista, Projecció i Objecte
 void Teclat_Shift(int key, GLFWwindow* window)
@@ -4888,9 +4961,227 @@ void Teclat_ColorFons(int key, int action)
 	}
 }
 
-// Teclat_Navega: Teclat pels moviments de navegació.
-void Teclat_Navega(int key, int action)
+void InclinaNavega(double yoffset)
 {
+	// Vector desde la cámara hasta el punto de mirada.
+	double dx = n[0] - opvN.x;
+	double dy = n[1] - opvN.y;
+	double dz = n[2] - opvN.z;
+	double horizontal = 0.0;
+	double altura = 0.0;
+	double distancia = sqrt(dx * dx + dy * dy + dz * dz);
+
+	if (distancia < 1e-6)
+		return;
+
+	// El eje vertical depende de la orientación polar activa.
+	double yaw = 0.0;
+	if (Vis_Polar == POLARX) {
+		horizontal = sqrt(dy * dy + dz * dz);
+		altura = dx;
+		yaw = atan2(dz, dy);
+	}
+	else if (Vis_Polar == POLARY) {
+		horizontal = sqrt(dx * dx + dz * dz);
+		altura = dy;
+		yaw = atan2(dz, dx);
+	}
+	else {
+		horizontal = sqrt(dx * dx + dy * dy);
+		altura = dz;
+		yaw = atan2(dy, dx);
+	}
+	double ratio = altura / distancia;
+	if (ratio < -1.0) ratio = -1.0;
+	else if (ratio > 1.0) ratio = 1.0;
+	double pitch = asin(ratio);
+
+	// Sensibilidad vertical en radianes por píxel.
+	const double sensibilidad = 0.002;
+
+	// El ratón hacia arriba aumenta el pitch.
+	pitch += yoffset * sensibilidad;
+
+	// Evitar mirar exactamente en vertical.
+	const double limite = 89.0 * 3.14159265358979323846 / 180.0;
+	if (pitch < -limite) pitch = -limite;
+	else if (pitch > limite) pitch = limite;
+
+	// Reconstruir el punto de mirada conservando distancia y orientación horizontal.
+	horizontal = distancia * cos(pitch);
+	if (Vis_Polar == POLARX) {
+		n[0] = opvN.x + distancia * sin(pitch);
+		n[1] = opvN.y + horizontal * cos(yaw);
+		n[2] = opvN.z + horizontal * sin(yaw);
+	}
+	else if (Vis_Polar == POLARY) {
+		n[0] = opvN.x + horizontal * cos(yaw);
+		n[1] = opvN.y + distancia * sin(pitch);
+		n[2] = opvN.z + horizontal * sin(yaw);
+	}
+	else {
+		n[0] = opvN.x + horizontal * cos(yaw);
+		n[1] = opvN.y + horizontal * sin(yaw);
+		n[2] = opvN.z + distancia * sin(pitch);
+	}
+}
+
+// Funcio auxiliar creada per moure lateralmente, creada pel grup.
+void MouCameraLateral(int sentit)
+{
+	// Dirección desde la posición de la cámara
+	// hasta el punto al que mira.
+	double fx = n[0] - opvN.x;
+	double fy = n[1] - opvN.y;
+	double fz = n[2] - opvN.z;
+
+	// Vector lateral: derecha para sentit = +1,
+	// izquierda para sentit = -1.
+	double rx = 0.0;
+	double ry = 0.0;
+	double rz = 0.0;
+
+	double longitud = 0.0;
+
+	if (Vis_Polar == POLARZ)
+	{
+		// Eje vertical Z: nos movemos por el plano XY.
+		longitud = sqrt(fx * fx + fy * fy);
+
+		if (longitud < 1e-6)
+			return;
+
+		rx = fy / longitud;
+		ry = -fx / longitud;
+	}
+	else if (Vis_Polar == POLARY)
+	{
+		// Eje vertical Y: nos movemos por el plano XZ.
+		longitud = sqrt(fx * fx + fz * fz);
+
+		if (longitud < 1e-6)
+			return;
+
+		rx = -fz / longitud;
+		rz = fx / longitud;
+	}
+	else if (Vis_Polar == POLARX)
+	{
+		// Eje vertical X: nos movemos por el plano YZ.
+		longitud = sqrt(fy * fy + fz * fz);
+
+		if (longitud < 1e-6)
+			return;
+
+		ry = fz / longitud;
+		rz = -fy / longitud;
+	}
+
+	// Desplazamiento lateral.
+	double dx = sentit * fact_pan * rx;
+	double dy = sentit * fact_pan * ry;
+	double dz = sentit * fact_pan * rz;
+
+	// Trasladamos tanto la cámara como el objetivo.
+	opvN.x += dx;
+	opvN.y += dy;
+	opvN.z += dz;
+
+	n[0] += dx;
+	n[1] += dy;
+	n[2] += dz;
+}
+
+// Velocidad de navegación en unidades por segundo; modificar este valor para ajustar WASD.
+constexpr double velocidadNavega = 6.0;
+
+// Teclat_Navega: Teclat pels moviments de navegació.
+void Teclat_Navega(int key, int action, double deltaSeconds)
+{
+	// Estat de teclat per a moviment continu
+	static bool mouW = false, mouA = false, mouS = false, mouD = false;
+
+	// Si no estem en mode NAVEGA, esborrem l'estat i sortim.
+	if (camera != CAM_NAVEGA) {
+		mouW = mouA = mouS = mouD = false;
+		return;
+	}
+
+	// Si és un esdeveniment de tecla relacionat amb WASD, actualitzem l'estat i marquem retorn.
+	if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D) {
+		bool premuda = (action == GLFW_PRESS || action == GLFW_REPEAT);
+		if (key == GLFW_KEY_W) mouW = premuda;
+		else if (key == GLFW_KEY_A) mouA = premuda;
+		else if (key == GLFW_KEY_S) mouS = premuda;
+		else if (key == GLFW_KEY_D) mouD = premuda;
+		return;
+	}
+
+	// Invocat per frame amb deltaSeconds > 0 per a moviment continu amb l'estat acumulat.
+	if (deltaSeconds > 0.0) {
+		// ImGui captura teclat: abandonar moviment
+		if (ImGui::GetIO().WantCaptureKeyboard) {
+			mouW = mouA = mouS = mouD = false;
+			return;
+		}
+
+		double endavant = (mouW ? 1.0 : 0.0) - (mouS ? 1.0 : 0.0);
+		double lateral = (mouD ? 1.0 : 0.0) - (mouA ? 1.0 : 0.0);
+		if (endavant == 0.0 && lateral == 0.0)
+			return;
+
+		// Limitar el delta per evitar salts quan la finestra ha estat pausada.
+		if (deltaSeconds > 0.05) deltaSeconds = 0.05;
+
+		double fx = n[0] - opvN.x;
+		double fy = n[1] - opvN.y;
+		double fz = n[2] - opvN.z;
+		double horizontal = 0.0;
+		double forward[3] = { 0.0, 0.0, 0.0 };
+		double right[3] = { 0.0, 0.0, 0.0 };
+
+		if (Vis_Polar == POLARY) {
+			horizontal = sqrt(fx * fx + fz * fz);
+			if (horizontal < 1e-6) return;
+			forward[0] = fx / horizontal;
+			forward[2] = fz / horizontal;
+			right[0] = -fz / horizontal;
+			right[2] = fx / horizontal;
+		}
+		else if (Vis_Polar == POLARX) {
+			horizontal = sqrt(fy * fy + fz * fz);
+			if (horizontal < 1e-6) return;
+			forward[1] = fy / horizontal;
+			forward[2] = fz / horizontal;
+			right[1] = fz / horizontal;
+			right[2] = -fy / horizontal;
+		}
+		else {
+			horizontal = sqrt(fx * fx + fy * fy);
+			if (horizontal < 1e-6) return;
+			forward[0] = fx / horizontal;
+			forward[1] = fy / horizontal;
+			right[0] = fy / horizontal;
+			right[1] = -fx / horizontal;
+		}
+
+		// Normalització per evitar augment de velocitat en diagonal.
+		double inputLength = sqrt(endavant * endavant + lateral * lateral);
+		endavant /= inputLength;
+		lateral /= inputLength;
+
+		// Distància recorreguda aquest frame (escalat per fact_pan i delta).
+		const double distance = fact_pan * deltaSeconds * velocidadNavega;
+		double dx = (forward[0] * endavant + right[0] * lateral) * distance;
+		double dy = (forward[1] * endavant + right[1] * lateral) * distance;
+		double dz = (forward[2] * endavant + right[2] * lateral) * distance;
+
+		opvN.x += dx; opvN.y += dy; opvN.z += dz;
+		n[0] += dx; n[1] += dy; n[2] += dz;
+		return;
+	}
+
+	// Si no és moviment continu ni WASD, caiem al tractament clàssic per a altres tecles.
 	GLdouble vdir[3] = { 0, 0, 0 };
 	double modul = 0;
 
@@ -4953,60 +5244,12 @@ void Teclat_Navega(int key, int action)
 
 			// Tecla cursor esquerra
 		case GLFW_KEY_LEFT:
-			angleZ += fact_pan;
-			if (Vis_Polar == POLARZ) { // (X,Y,Z)
-				n[0] = vdir[0]; // n[0] - opvN.x;
-				n[1] = vdir[1]; // n[1] - opvN.y;
-				n[0] = n[0] * cos(angleZ * PI / 180) - n[1] * sin(angleZ * PI / 180);
-				n[1] = n[0] * sin(angleZ * PI / 180) + n[1] * cos(angleZ * PI / 180);
-				n[0] = n[0] + opvN.x;
-				n[1] = n[1] + opvN.y;
-			}
-			else if (Vis_Polar == POLARY) { //(X,Y,Z) --> (Z,X,Y)
-				n[2] = vdir[2]; // n[2] - opvN.z;
-				n[0] = vdir[0]; // n[0] - opvN.x;
-				n[2] = n[2] * cos(angleZ * PI / 180) - n[0] * sin(angleZ * PI / 180);
-				n[0] = n[2] * sin(angleZ * PI / 180) + n[0] * cos(angleZ * PI / 180);
-				n[2] = n[2] + opvN.z;
-				n[0] = n[0] + opvN.x;
-			}
-			else if (Vis_Polar == POLARX) { //(X,Y,Z) --> (Y,Z,X)
-				n[1] = vdir[1]; // n[1] - opvN.y;
-				n[2] = vdir[2]; // n[2] - opvN.z;
-				n[1] = n[1] * cos(angleZ * PI / 180) - n[2] * sin(angleZ * PI / 180);
-				n[2] = n[1] * sin(angleZ * PI / 180) + n[2] * cos(angleZ * PI / 180);
-				n[1] = n[1] + opvN.y;
-				n[2] = n[2] + opvN.z;
-			}
+			MouCameraLateral(-1);
 			break;
 
 			// Tecla cursor dret
 		case GLFW_KEY_RIGHT:
-			angleZ = 360 - fact_pan;
-			if (Vis_Polar == POLARZ) { // (X,Y,Z)
-				n[0] = vdir[0]; // n[0] - opvN.x;
-				n[1] = vdir[1]; // n[1] - opvN.y;
-				n[0] = n[0] * cos(angleZ * PI / 180) - n[1] * sin(angleZ * PI / 180);
-				n[1] = n[0] * sin(angleZ * PI / 180) + n[1] * cos(angleZ * PI / 180);
-				n[0] = n[0] + opvN.x;
-				n[1] = n[1] + opvN.y;
-			}
-			else if (Vis_Polar == POLARY) { //(X,Y,Z) --> (Z,X,Y)
-				n[2] = vdir[2]; // n[2] - opvN.z;
-				n[0] = vdir[0]; // n[0] - opvN.x;
-				n[2] = n[2] * cos(angleZ * PI / 180) - n[0] * sin(angleZ * PI / 180);
-				n[0] = n[2] * sin(angleZ * PI / 180) + n[0] * cos(angleZ * PI / 180);
-				n[2] = n[2] + opvN.z;
-				n[0] = n[0] + opvN.x;
-			}
-			else if (Vis_Polar == POLARX) { //(X,Y,Z) --> (Y,Z,X)
-				n[1] = vdir[1]; // n[1] - opvN.y;
-				n[2] = vdir[2]; // n[2] - opvN.z;
-				n[1] = n[1] * cos(angleZ * PI / 180) - n[2] * sin(angleZ * PI / 180);
-				n[2] = n[1] * sin(angleZ * PI / 180) + n[2] * cos(angleZ * PI / 180);
-				n[1] = n[1] + opvN.y;
-				n[2] = n[2] + opvN.z;
-			}
+			MouCameraLateral(+1);
 			break;
 
 			// Tecla Inicio ('7')
@@ -5060,9 +5303,6 @@ void Teclat_Navega(int key, int action)
 				else if (trasl) Teclat_TransTraslada(key, action);
 				else if (escal) Teclat_TransEscala(key, action);
 			}
-			else if (camera == CAM_NAVEGA) Teclat_Navega(key, action);
-			else if (!sw_color) Teclat_ColorFons(key, action);
-			else Teclat_ColorObjecte(key, action);
 			break;
 		}
 	}
@@ -5827,6 +6067,7 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 	{	// Entorn VGI: Canviar orientació en opció de Navegació
 		girn.cx = m_PosEAvall.x - xpos;		girn.cy = m_PosEAvall.y - ypos;
 		angleZ = girn.cx / 2.0;
+		InclinaNavega(girn.cy);
 		// Entorn VGI: Control per evitar el creixement desmesurat dels angles.
 		while (angleZ >= 360, 0) angleZ = angleZ - 360;
 		while (angleZ < 0.0)	angleZ = angleZ + 360;
@@ -6115,13 +6356,251 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 				n[2] += (yoffset / 4.0) * vdir[2];
 			}
 			/*
-						opvN.x += (yoffset / 4.0) * vdir[0];		//opvN.x += (zDelta / 4.0) * vdir[0];
-						opvN.y += (yoffset / 4.0) * vdir[1];		//opvN.y += (zDelta / 4.0) * vdir[1];
-						n[0] += (yoffset / 4.0) * vdir[0];		//n[0] += (zDelta / 4.0) * vdir[0];
-						n[1] += (yoffset / 4.0) * vdir[1];		//n[1] += (zDelta / 4.0) * vdir[1];
+							opvN.x += (yoffset / 4.0) * vdir[0];		//opvN.x += (zDelta / 4.0) * vdir[0];
+							opvN.y += (yoffset / 4.0) * vdir[1];		//opvN.y += (zDelta / 4.0) * vdir[1];
+							n[0] += (yoffset / 4.0) * vdir[0];		//n[0] += (zDelta / 4.0) * vdir[0];
+							n[1] += (yoffset / 4.0) * vdir[1];		//n[1] += (zDelta / 4.0) * vdir[1];
 			*/
 		}
 	}
+}
+
+
+
+/* ------------------------------------------------------------------------- */
+/*                           CONTROL DEL JOYSTICK / GAMEPAD                  */
+/* ------------------------------------------------------------------------- */
+
+// OnGamepadMove: Funció de tractament de Gamepad (funció que es crida quan es prem una tecla o comandament d'un joystick)
+//   PARÀMETRES:
+//    - jid: Identificador del gamepad (GLFW_JOYSTICK_1, GLFW_JOYSTICK_2, GLFW_JOYSTICK_3, etc.) connectat o desconnectat
+//    - event: et retorna si el gamepad està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
+void OnGamepadMove(int jid, int event)
+{
+	GLFWgamepadstate estat;		// Variable que obté l'estat (valors) del botons i eixos dels stocks i triggers del Gamepad.
+
+	//	if (event == GLFW_CONNECTED)	// NO FUNCIONA
+	if (glfwGetGamepadState(GLFW_JOYSTICK_1, &estat))
+	{
+		// BOTONS-----------------------------------
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_A])
+		{
+			fprintf(stderr, "%s \n", "Botó <A> pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_B])
+		{
+			fprintf(stderr, "%s \n", "Botó <B> pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_X])
+		{
+			fprintf(stderr, "%s \n", "Botó <X> pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_Y])
+		{
+			fprintf(stderr, "%s \n", "Botó <Y> pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER])
+		{
+			fprintf(stderr, "%s \n", "Left Bumper (LB) pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER])
+		{
+			fprintf(stderr, "%s \n", "Right Bumper (RB) pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_BACK])
+		{
+			fprintf(stderr, "%s \n", "Botó <Back> pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_START])
+		{
+			fprintf(stderr, "%s \n", "Botó <Start> pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB])
+		{
+			fprintf(stderr, "%s \n", "Stick esquerra (click) pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB])
+		{
+			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP])
+		{
+			fprintf(stderr, "%s \n", "Fletxa amunt pulsada");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT])
+		{
+			fprintf(stderr, "%s \n", "Fletxa dreta pulsada");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN])
+		{
+			fprintf(stderr, "%s \n", "Fletxa avall pulsada");
+		}
+
+		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT])
+		{
+			fprintf(stderr, "%s \n", "Fletxa esquerra pulsada");
+		}
+
+		// EIXOS (DIRECCIONS) DE STICKS i TRIGGERS -----------------------------------
+
+		// STICK ESQUERRE
+		fprintf(stderr, "%s %f %s %f \n", "Stick esquerre X: ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X], "Y: ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
+		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
+		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
+		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
+		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
+
+		// STICK DRET
+		fprintf(stderr, "%s %f %s %f \n", "Stick dret X: ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X], "Y: ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
+		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
+		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
+		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
+		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
+
+		// TRIGGERS LT i RT
+		fprintf(stderr, "%s %f \n", "Trigger esquerre (LT): ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER]);
+		fprintf(stderr, "%s %f \n", "Trigger dret (RT): ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]);
+	}
+	else fprintf(stderr, "%s %i %s \n", "Gamepad ", jid, " desconnectat");
+}
+
+
+// OnJoystickMove: Funció de tractament de joystick (funció que es crida quan es prem una tecla o comandament d'un joystick)
+//   PARÀMETRES:
+//    - jid: Identificador del joystick (GLFW_JOYSTICK_1, GLFW_JOYSTICK_2, GLFW_JOYSTICK_3, etc.) connectat o desconnectat
+//    - event: et retorna si el joystick està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
+void OnJoystickMove(int jid, int event)
+{
+	int buttonCount;	// Variable que obté l'estat dels botons del Joystick / Gamepad. 
+	int axisCount;		// Variable que obté l'estat dels eixos dels sticks i triggers del Joystick / Gamepad.
+
+	//	if (event == GLFW_CONNECTED)	// NO FUNCIONA
+	if (glfwJoystickPresent(GLFW_JOYSTICK_1))
+	{
+		// BOTONS-----------------------------------
+		// Obtenir botons del Gamepad: GLFW_PRESS si botó apretat, GLFW_RELEASE si botó s'ha deixat de pressionar.
+		const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttonCount);
+
+		if (buttons[0] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Botó <A> pulsat");
+		}
+
+		if (buttons[1] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Botó <B> pulsat");
+		}
+
+		if (buttons[2] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Botó <X> pulsat");
+		}
+
+		if (buttons[3] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Botó <Y> pulsat");
+		}
+
+		if (buttons[4] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Left Bumper (LB) pulsat");
+		}
+
+		if (buttons[5] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Right Bumper (RB) pulsat");
+		}
+
+		if (buttons[6] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Botó <Back> pulsat");
+		}
+
+		if (buttons[7] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Botó <Start> pulsat");
+		}
+
+		if (buttons[8] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Stick esquerra (click) pulsat");
+		}
+
+		if (buttons[9] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
+		}
+
+		if (buttons[10] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Fletxa amunt pulsada");
+		}
+
+		if (buttons[11] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Fletxa dreta pulsada");
+		}
+
+		if (buttons[12] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Fletxa avall pulsada");
+		}
+
+		if (buttons[13] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Fletxa esquerra pulsada");
+		}
+
+		if (buttons[14] == GLFW_PRESS)
+		{
+			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
+		}
+
+		// EIXOS (DIRECCIONS) DE STICKS i TRIGGERS -----------------------------------
+		// Obtenir direccions pulsades d'algun stick o trigger si s'han pulsat.
+		const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axisCount);
+
+		// STICK ESQUERRE
+		if (axisCount > 0)
+		{
+			fprintf(stderr, "%s %f %s %f \n", "Stick esquerre X: ", axes[0], "Y: ", axes[1]);
+			if (axes[0] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
+			if (axes[0] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
+			if (axes[1] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
+			if (axes[1] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
+		}
+
+		// STICK DRET
+		if (axisCount > 2)
+		{
+			fprintf(stderr, "%s %f %s %f \n", "Stick dret X: ", axes[2], "Y: ", axes[3]);
+			if (axes[2] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
+			if (axes[2] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
+			if (axes[3] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
+			if (axes[3] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
+		}
+
+		// TRIGGERS LT i RT
+		if (axisCount > 4)
+		{
+			fprintf(stderr, "%s %f \n", "Trigger esquerre (LT): ", axes[4]);
+			fprintf(stderr, "%s %f \n", "Trigger dret (RT): ", axes[5]);
+		}
+	}
+	else fprintf(stderr, "%s %i %s \n", "Joystick ", jid, " desconnectat");
 }
 
 
@@ -6188,7 +6667,7 @@ int llegir_ptsC(const char* nomf)
 	FILE* fd;
 
 	// Inicialitzar vector punts de control de la corba spline
-	for (i = 0; i < MAX_PATCH_CORBA; i = i++)
+	for (i = 0; i < MAX_PATCH_CORBA; i++)
 	{
 		PC_t[i].x = 0.0;
 		PC_t[i].y = 0.0;
@@ -6330,7 +6809,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severi
 // main(): Funció principal del programa. Inicialitza la finestra, els callbacks i el bucle principal d'operació
 int main()
 {
-    //std::cout << "Hello World!\n";
+	//std::cout << "Hello World!\n";
 
 //    GLFWwindow* window;
 // Entorn VGI. Timer: Variables
@@ -6366,7 +6845,7 @@ int main()
 #endif
 
 	// Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(640, 480, "Entorn Grafic VS2022 amb GLFW i OpenGL 4.6 (Visualitzacio Grafica Interactiva - Grau en Enginyeria Informatica - Escola Enginyeria - UAB)", NULL, NULL);
+	window = glfwCreateWindow(2000, 1500, "Entorn Grafic VS2022 amb GLFW i OpenGL 4.6 (Visualitzacio Grafica Interactiva - Grau en Enginyeria Informatica - Escola Enginyeria - UAB)", NULL, NULL);
 	if (!window)
 	{
 		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 4.6 compatible. Try the 2.1 version of the tutorials.\n");
@@ -6443,6 +6922,18 @@ int main()
 	glfwSetErrorCallback(error_callback);											// Error callback
 	glfwSetWindowRefreshCallback(window, (GLFWwindowrefreshfun)OnPaint);			// - Callback to refresh the screen
 
+	int event = 0;	// Paràmetre de la funció OnHotstickMove().
+
+	/*
+	// Entorn VGI: Comprovació si tenim un Joystick connectat per a definit la funció de callback. --> NO FUNCIONA CallBack
+	//	if (glfwJoystickPresent(GLFW_JOYSTICK_1))	// Test de presència de joystick / gamepad
+		if (glfwJoystickIsGamepad(GLFW_JOYSTICK_1))	// Test equivalent
+				glfwSetJoystickCallback((GLFWjoystickfun)OnGamepadMove);	// - Directly redirect GLFW Gamepad events
+			else fprintf(stderr, "%s \n", "No hi ha joystick");
+		//glfwSetJoystickUserPointer(GLFW_JOYSTICK_2);
+	*/
+
+
 	// Entorn VGI; Timer: Lectura temps
 	float previous = glfwGetTime();
 
@@ -6463,6 +6954,7 @@ int main()
 	// Entorn VGI.ImGui: End Setup Dear ImGui context
 
 	// Loop until the user closes the window
+	bool nogamepad = true;
 	while (!glfwWindowShouldClose(window))
 	{
 		// Poll for and process events */
@@ -6477,8 +6969,19 @@ int main()
 		time -= delta;
 		if ((time <= 0.0) && (satelit || anima)) OnTimer();
 
+		// Entorn VGI: Comprovació si tenim un Joystick / Gamepad connectat per anar a la funció de callback.
+		//	if (glfwJoystickPresent(GLFW_JOYSTICK_1)) OnGamepadMove(GLFW_JOYSTICK_1,event);		// - Directly redirect GLFW joystick events
+		if (glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) OnGamepadMove(GLFW_JOYSTICK_1, event);	// - Directly redirect GLFW gamepad events (equivalent)
+		else if (nogamepad) {
+			nogamepad = false;
+			fprintf(stderr, "%s \n", "No hi ha Gamepad");
+		}
+
 		// Poll for and process events
 		glfwPollEvents();
+
+		// Actualitzar moviment continu de navegació (WASD) per frame.
+		Teclat_Navega(GLFW_KEY_UNKNOWN, GLFW_REPEAT, delta);
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
 		draw_Menu_ImGui();
