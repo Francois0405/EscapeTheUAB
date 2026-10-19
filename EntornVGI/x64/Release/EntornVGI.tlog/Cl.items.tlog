@@ -1,0 +1,17 @@
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\include\ImGui\imgui.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\imgui.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\include\ImGui\imgui_demo.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\imgui_demo.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\include\ImGui\imgui_draw.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\imgui_draw.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\include\ImGui\imgui_impl_glfw.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\imgui_impl_glfw.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\include\ImGui\imgui_impl_opengl3.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\imgui_impl_opengl3.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\include\ImGui\imgui_tables.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\imgui_tables.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\include\ImGui\imgui_widgets.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\imgui_widgets.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\escena.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\escena.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\glut_geometry.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\glut_geometry.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\main.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\main.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\material.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\material.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\ModelLoader.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\ModelLoader.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\objLoader.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\objLoader.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\quatern.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\quatern.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\SceneLoader.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\SceneLoader.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\shader.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\shader.obj
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\visualitzacio.cpp;D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\x64\Release\visualitzacio.obj

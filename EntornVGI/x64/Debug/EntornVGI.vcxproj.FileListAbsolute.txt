@@ -1,0 +1,6 @@
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6 - Copy\x64\Debug\assimp-vc145-mtd.dll
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6 - Copy\x64\Debug\poly2tri.dll
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6 - Copy\x64\Debug\minizipd.dll
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6 - Copy\x64\Debug\zd.dll
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6 - Copy\x64\Debug\kubazip.dll
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6 - Copy\x64\Debug\pugixml.dll

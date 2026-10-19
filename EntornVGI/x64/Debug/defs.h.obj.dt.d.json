@@ -1,0 +1,12 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "d:\\repos\\vgi\\vcpkg\\installed\\x64-windows\\include\\assimp\\defs.h",
+        "ProvidedModule": "",
+        "Includes": [
+            "d:\\repos\\vgi\\vcpkg\\installed\\x64-windows\\include\\assimp\\config.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

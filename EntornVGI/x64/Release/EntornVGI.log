@@ -1,0 +1,22 @@
+﻿  imgui.cpp
+  imgui_demo.cpp
+  imgui_draw.cpp
+  imgui_impl_glfw.cpp
+  imgui_impl_opengl3.cpp
+  imgui_tables.cpp
+  imgui_widgets.cpp
+  escena.cpp
+  glut_geometry.cpp
+  main.cpp
+  material.cpp
+  ModelLoader.cpp
+  objLoader.cpp
+  quatern.cpp
+D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\EntornVGI\objLoader.cpp(1027,23): warning C5056: operator '!=': deprecated for array types
+  SceneLoader.cpp
+  shader.cpp
+  visualitzacio.cpp
+     Creating library D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\x64\Release\EntornVGI.lib and object D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\x64\Release\EntornVGI.exp
+  Generating code
+  Finished generating code
+  EntornVGI.vcxproj -> D:\Repos\VGI\EvakEngine-GLFW-VS2026_GL4.6\x64\Release\EntornVGI.exe

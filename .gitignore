@@ -2,11 +2,6 @@
 .vs/
 **/.vs/
 
-# Build output
-x64/
-Debug/
-Release/
-
 # User-specific files
 *.user
 *.suo
