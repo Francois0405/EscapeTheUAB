@@ -10,3 +10,4 @@ D:\Repos\VGI\EscapeTheUAB\x64\Debug\minizipd.dll
 D:\Repos\VGI\EscapeTheUAB\x64\Debug\zd.dll
 D:\Repos\VGI\EscapeTheUAB\x64\Debug\kubazip.dll
 D:\Repos\VGI\EscapeTheUAB\x64\Debug\pugixml.dll
+D:\Repos\VGI\EscapeTheUAB\EntornVGI\x64\Debug\EntornVGI.vcxproj.Up2Date
