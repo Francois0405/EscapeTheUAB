@@ -149,7 +149,6 @@
     <ClCompile Include="glut_geometry.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="material.cpp" />
-    <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="objLoader.cpp" />
     <ClCompile Include="quatern.cpp" />
     <ClCompile Include="SceneLoader.cpp" />
