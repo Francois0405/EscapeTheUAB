@@ -19,17 +19,20 @@
 #include "escena.h"
 #include "main.h"
 #include "SceneLoader.h"
-//#include <iostream>
+#include <iostream>
 
 // CODI NOSTRE
 
 #include <filesystem>
+#include <memory>
+#include <unordered_map>
 #include <glm/gtc/matrix_transform.hpp>
 
 // ---------------------------
 
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
+std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
 
 void InitGL()
 {
@@ -745,10 +748,15 @@ void dibuixa_Escena() {
 //	GTMatrix = glm::scale();
 
 	// Dibuja cada objeto de la habitacion con su transformacion.
-	if (!objetosEscena.empty() && ObOBJ != nullptr)
+	if (!objetosEscena.empty())
 	{
 		for (const SceneObject& obj : objetosEscena)
 		{
+			auto it = modelosHabitacion.find(obj.modelo);
+
+			if (it == modelosHabitacion.end())
+				continue;
+
 			glm::mat4 matriz(1.0f);
 
 			matriz = glm::translate(matriz, obj.posicion);
@@ -770,7 +778,7 @@ void dibuixa_Escena() {
 				OBJOBJ, col_obj, sw_material,
 				textura, texturesID, textura_map, tFlag_invert_Y,
 				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-				ObOBJ, matriz
+				it->second.get(), matriz
 			);
 		}
 
@@ -1171,12 +1179,84 @@ void ShowArxiusOptions()
 //IMGUI_DEMO_MARKER("Examples/Menu");
 	ImGui::MenuItem("(Arxius menu)", NULL, false, false);
 	if (ImGui::MenuItem("New")) {}
-	if (ImGui::MenuItem("Probar habitacion_beta.txt"))
+	if (ImGui::MenuItem("Cargar habitacion_demo.txt"))
 	{
-		objetosEscena = CargarEscena(
-			R"(C:\VGI\EntornVGI\assets\scenes\habitacion_beta.txt)"
-		);
+		namespace fs = std::filesystem;
+
+		const fs::path rutaEscena =
+			"assets/scenes/habitacion_beta.txt";
+
+			auto objetosLeidos = CargarEscena(rutaEscena);
+
+			std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
+			std::vector<SceneObject> objetosValidos;
+
+			for (auto obj : objetosLeidos)
+			{
+				// Resolver la ruta del OBJ respecto a la carpeta del TXT.
+				fs::path rutaObj = fs::absolute(
+					rutaEscena.parent_path() / obj.modelo
+				).lexically_normal();
+
+				if (!fs::exists(rutaObj))
+				{
+					std::cerr << "No existe el OBJ: " << rutaObj << '\n';
+					continue;
+				}
+
+				std::string clave = rutaObj.string();
+
+				// Cargar cada archivo OBJ una sola vez.
+				if (nuevosModelos.find(clave) == nuevosModelos.end())
+				{
+					auto modelo = std::make_unique<COBJModel>();
+
+					// LoadModel recibe char*.
+					std::string rutaEditable = clave;
+					int error = modelo->LoadModel(rutaEditable.data());
+
+					if (error != 0)
+					{
+						std::cerr << "Error cargando: " << clave
+							<< " (codigo " << error << ")\n";
+						continue;
+					}
+
+					nuevosModelos.emplace(clave, std::move(modelo));
+				}
+
+				// Guardar la ruta resuelta para encontrar el modelo al dibujar.
+				obj.modelo = clave;
+				objetosValidos.push_back(obj);
+			}
+
+			if (!objetosValidos.empty())
+			{
+				// Liberar los recursos de la habitación anterior.
+				for (auto& entrada : modelosHabitacion)
+					entrada.second->netejaTextures_OBJ();
+
+				modelosHabitacion = std::move(nuevosModelos);
+				objetosEscena = std::move(objetosValidos);
+
+				objecte = OBJOBJ;
+				textura = true;
+				tFlag_invert_Y = false;
+
+				glUseProgram(shader_programID);
+				glUniform1i(
+					glGetUniformLocation(shader_programID, "textur"), textura
+				);
+				glUniform1i(
+					glGetUniformLocation(shader_programID, "flag_invert_y"),
+					tFlag_invert_Y
+				);
+
+				std::cout << "Habitacion cargada: "
+					<< objetosEscena.size() << " objetos.\n";
+			}
 	}
+
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;
 		nfdresult_t result = NFD_OpenDialog(NULL, NULL, &nomFitxer);
@@ -1185,7 +1265,7 @@ void ShowArxiusOptions()
 			puts("Success!");
 			puts(nomFitxer);
 
-			objecte = OBJOBJ;	textura = true;		tFlag_invert_Y = false;
+			objecte = OBJOBJ;	textura = true;		tFlag_invert_Y = false; oObjecte = 9;
 			//char* nomfitx = nomfitxer;
 			if (ObOBJ == NULL) ObOBJ = ::new COBJModel;
 			else { // Si instància ja s'ha utilitzat en un objecte OBJ
@@ -6828,6 +6908,12 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
+	for (auto& entrada : modelosHabitacion)
+		entrada.second->netejaTextures_OBJ();
+
+	modelosHabitacion.clear();
+	objetosEscena.clear();
+
 	glfwDestroyWindow(window);
 
 // Terminating GLFW: Destroy the windows, monitors and cursor objects
@@ -6839,7 +6925,7 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 }
 
-// Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurar
+// Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurarglfwDestroyWindow
 // Depurar programa: F5 o menú Depurar > Iniciar depuración
 
 // Sugerencias para primeros pasos: 1. Use la ventana del Explorador de soluciones para agregar y administrar archivos
