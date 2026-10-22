@@ -34,6 +34,8 @@
 
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
+// Modelo permanente de los brazos del jugador.
+COBJModel* armsRigOBJ = nullptr;
 
 void InitGL()
 {
@@ -720,6 +722,60 @@ void dibuixa_Escena() {
 		npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 		ObOBJ,				// Classe de l'objecte OBJ que conté els VAO's
 		GTMatrix);
+
+// ============================================================
+// BRAZOS DEL JUGADOR: MODELO UNIDO A LA CAMARA
+// ============================================================
+
+	if (camera == CAM_NAVEGA &&
+		projeccio == PERSPECT &&
+		armsRigOBJ != nullptr)
+	{
+		// Transformacion del modelo en coordenadas de camara.
+		// X: derecha/izquierda.
+		// Y: arriba/abajo.
+		// Z: distancia delante de la camara.
+
+		// lejos derecha glm::vec3 brazosPos(0.10f, -0.15f, -0.35f); 
+		glm::vec3 brazosPos(0.0f, -0.165f, -0.01f);
+
+		// Escala del modelo.
+		glm::vec3 brazosEscala(0.10f, 0.10f, 0.10f);
+
+		glm::mat4 matrizCamara(1.0f);
+
+
+		// Posicion inicial en la pantalla: abajo y a la derecha.
+		matrizCamara = glm::translate(matrizCamara, brazosPos);
+
+		matrizCamara = glm::rotate(matrizCamara, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+
+		// Escala inicial: AJUSTAR SEGUN EL TAMANO DEL OBJ.
+		matrizCamara = glm::scale(matrizCamara, brazosEscala);
+
+		// Convertir de coordenadas de camara a coordenadas mundo.
+		// De este modo, los brazos siguen la posicion y orientacion
+		// de la camara actual.
+		glm::mat4 matrizBrazos =
+			glm::inverse(ViewMatrix) * matrizCamara;
+
+		// Utilizar las texturas/materiales del OBJ de los brazos.
+		bool texturaAnterior = textura;
+		textura = true;
+
+		dibuixa_EscenaGL(
+			shader_programID,
+			eixos, eixos_Id, grid, hgrid,
+			OBJOBJ, col_obj, sw_material,
+			textura, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control,
+			dibuixa_TriedreFrenet,
+			armsRigOBJ,
+			matrizBrazos
+		);
+
+		textura = texturaAnterior;
+	}
 }
 
 
@@ -6909,6 +6965,22 @@ int main()
 
 	// Initialize Application control varibles
 	InitGL();
+	armsRigOBJ = new COBJModel();
+	
+	char armsPath[] = ".\\assets\\models\\arms_rig2.obj";
+
+	int errorArms = armsRigOBJ->LoadModel(armsPath);
+
+	if (errorArms != 0)
+	{
+		std::cerr << "Error cargando arms_rig.obj: "
+			<< errorArms << std::endl;
+	}
+	else
+	{
+		std::cout << "arms_rig.obj cargado correctamente" << std::endl;
+	}
+
 
 	// ------------- Entorn VGI: Callbacks
 	// Set GLFW event callbacks. I removed glfwSetWindowSizeCallback for conciseness
@@ -7008,6 +7080,14 @@ int main()
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
 
+	if (armsRigOBJ != nullptr)
+	{
+		armsRigOBJ->netejaVAOList_OBJ();
+		armsRigOBJ->netejaTextures_OBJ();
+
+		delete armsRigOBJ;
+		armsRigOBJ = nullptr;
+	}
 	glfwDestroyWindow(window);
 
 	// Terminating GLFW: Destroy the windows, monitors and cursor objects
