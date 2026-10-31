@@ -715,21 +715,24 @@ void dibuixa_Escena() {
 			dibuixa_EscenaGL(
 				shader_programID, eixos, eixos_Id, grid, hgrid,
 				OBJOBJ, col_obj, sw_material,
-				textura, texturesID, textura_map, tFlag_invert_Y,
-				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+				false, texturesID, textura_map, tFlag_invert_Y,
+				npts_T, PC_t, pas_CS, sw_Punts_Control,
+				dibuixa_TriedreFrenet,
 				it->second.get(), matriz
 			);
 		}
-
-		return;
 	}
-
-	//	Dibuix geometria de l'escena amb comandes GL.
-	dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
-		textura, texturesID, textura_map, tFlag_invert_Y,
-		npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-		ObOBJ,				// Classe de l'objecte OBJ que conté els VAO's
-		GTMatrix);
+	else
+	{
+		dibuixa_EscenaGL(
+			shader_programID, eixos, eixos_Id, grid, hgrid,
+			objecte, col_obj, sw_material,
+			textura, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control,
+			dibuixa_TriedreFrenet,
+			ObOBJ, GTMatrix
+		);
+	}
 
 // ============================================================
 // BRAZOS DEL JUGADOR: MODELO UNIDO A LA CAMARA
