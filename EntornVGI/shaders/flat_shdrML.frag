@@ -9,7 +9,7 @@
 //     e) Modus d'assignació de textura MODULATE o DECAL
 
 //#version 330 core
-#version 460 core
+#version 330 core
 
 // ---- L14- in Variables
 flat in vec4 VertexColor;     // Color del vèrtex

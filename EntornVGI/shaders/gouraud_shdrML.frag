@@ -11,7 +11,7 @@
 //     g) Algorisme incremental iluminació Gouraud encapsulat en gouraudModel()
 
 //#version 330 core
-#version 460 core
+#version 330 core
 
 // --- L16- Variables in
 in vec4 VertexColor;	// Color del Vèrtex

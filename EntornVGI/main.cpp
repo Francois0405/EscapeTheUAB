@@ -6983,11 +6983,19 @@ int main()
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
 #endif
 
+	// Solicitar OpenGL 3.3 como version minima.
+	glfwDefaultWindowHints();
+
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_FALSE);
+
 	// Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(2000, 1500, "Entorn Grafic VS2022 amb GLFW i OpenGL 4.6 (Visualitzacio Grafica Interactiva - Grau en Enginyeria Informatica - Escola Enginyeria - UAB)", NULL, NULL);
+	window = glfwCreateWindow(2000, 1500, "Entorn Grafic VS2022 amb GLFW i OpenGL 3.3+ (Visualitzacio Grafica Interactiva - Grau en Enginyeria Informatica - Escola Enginyeria - UAB)", NULL, NULL);
 	if (!window)
 	{
-		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 4.6 compatible. Try the 2.1 version of the tutorials.\n");
+		fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 3.3+ compatible. Try the 2.1 version of the tutorials.\n");
 		getchar();
 		glfwTerminate();
 		return -1;
@@ -7000,7 +7008,7 @@ int main()
 	glfwGetWindowSize(window, &width_old, &height_old);
 
 	// Initialize GLEW
-	if (GLEW_VERSION_3_3) glewExperimental = GL_TRUE; // Needed for core profile
+	glewExperimental = GL_TRUE; // Needed for core profile
 	if (glewInit() != GLEW_OK) {
 		glGetError();	// Esborrar codi error generat per bug a llibreria GLEW
 		fprintf(stderr, "Failed to initialize GLEW\n");
@@ -7008,6 +7016,18 @@ int main()
 		glfwTerminate();
 		return -1;
 	}
+
+	std::cout << "OpenGL: "
+		<< glGetString(GL_VERSION)
+		<< std::endl;
+
+	std::cout << "GLSL: "
+		<< glGetString(GL_SHADING_LANGUAGE_VERSION)
+		<< std::endl;
+
+	std::cout << "GPU: "
+		<< glGetString(GL_RENDERER)
+		<< std::endl;
 
 	const unsigned char* version = (unsigned char*)glGetString(GL_VERSION);
 
