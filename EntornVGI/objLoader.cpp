@@ -352,7 +352,10 @@ void _stdcall COBJModel::ParseFaceString(char szFaceString[], Face *FaceOut,
 			&pNormals[iNormal - 1], sizeof(Vector3D));
 
 		// Set string pointer to the next triplet
-		pFaceString = &szFaceString[iTripletPos[i]];
+		if (i + 1 < (int)FaceOut->iNumVertices)
+		{
+			pFaceString = &szFaceString[iTripletPos[i]];
+		}
 	}
 }
 
@@ -1275,18 +1278,19 @@ void _stdcall COBJModel::MakePath(char szFileAndPath[])
 void _stdcall COBJModel::GetTokenParameter(char szString[], 
 								  const unsigned int iStrSize, FILE *hFile)
 {
-////////////////////////////////////////////////////////////////////////
-// Read the parameter of a token, remove space and newline character
-////////////////////////////////////////////////////////////////////////
+	if (!fgets(szString, iStrSize, hFile)) {
+		szString[0] = '\0';
+		return;
+	}
 
-// Read the parameter after the token
-	fgets(szString, iStrSize, hFile);
+	size_t inicio = strspn(szString, " \t");
+	memmove(
+		szString,
+		szString + inicio,
+		strlen(szString + inicio) + 1
+	);
 
-// Remove space before the token			
-	strcpy(szString, &szString[1]);
-
-// Remove newline character after the token
-	szString[strlen(szString) - 1] = char('\0');
+	szString[strcspn(szString, "\r\n")] = '\0';
 }
 
 static int CompareFaceByMaterial(const void *Arg1, const void *Arg2)
