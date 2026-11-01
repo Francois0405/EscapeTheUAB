@@ -7113,19 +7113,38 @@ int main()
 	float previous = glfwGetTime();
 
 	// Entorn VGI.ImGui: Setup Dear ImGui context
+
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-// Entorn VGI.ImGui: Setup Dear ImGui style
-	//ImGui::StyleColorsDark();
+	ImGuiIO& io = ImGui::GetIO();
+
+	// Detectar el escalado DPI de Windows o Parallels.
+	float dpiX = 1.0f;
+	float dpiY = 1.0f;
+
+	glfwGetWindowContentScale(window, &dpiX, &dpiY);
+
+	float uiScale = std::max(1.0f, std::max(dpiX, dpiY));
+
+	// Escalar la fuente manteniendo su nitidez.
+	ImFontConfig fontConfig;
+	fontConfig.SizePixels = 14.0f * uiScale;
+	io.Fonts->AddFontDefault(&fontConfig);
+
+	// Mantener el estilo original de la aplicación.
 	ImGui::StyleColorsLight();
 
-	// Entorn VGI.ImGui: Setup Platform/Renderer backends
+	// Escalar botones, espaciados y otros elementos.
+	ImGui::GetStyle().ScaleAllSizes(uiScale);
+
+	std::cout << "Escalado ImGui: "
+		<< uiScale << std::endl;
+
+	// Inicializar los backends de ImGui.
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 130");
+
 	// Entorn VGI.ImGui: End Setup Dear ImGui context
 
 	// Loop until the user closes the window
