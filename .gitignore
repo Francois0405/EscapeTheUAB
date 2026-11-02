@@ -367,6 +367,13 @@ FodyWeavers.xsd
 # Modelos Blender que sí queremos guardar
 !EntornVGI/assets/models/**/*.obj
 
+# Bibliotecas x64 necesarias para enlazar el proyecto Visual Studio.
+!lib/
+!lib/x64/
+!lib/x64/*.lib
+!lib/x64/*.pdb
+!lib/x64/*.dll
+
 # Dependencias locales de vcpkg
 vcpkg_installed/
 

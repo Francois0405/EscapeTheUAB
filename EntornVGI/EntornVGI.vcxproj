@@ -70,8 +70,8 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
-  <PropertyGroup Label="Vcpkg">
-    <VcpkgEnableManifest>true</VcpkgEnableManifest>
+  <PropertyGroup>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -152,7 +152,6 @@
     <ClCompile Include="glut_geometry.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="material.cpp" />
-    <ClCompile Include="ModelLoader.cpp" />
     <ClCompile Include="objLoader.cpp" />
     <ClCompile Include="quatern.cpp" />
     <ClCompile Include="SceneLoader.cpp" />
@@ -201,6 +200,9 @@
     <ClInclude Include="visualitzacio.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyX64RuntimeLibraries" AfterTargets="Build" Condition="'$(Platform)' == 'x64'">
+    <Copy SourceFiles="$(SolutionDir)lib\x64\glfw3.dll;$(SolutionDir)lib\x64\glew32.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

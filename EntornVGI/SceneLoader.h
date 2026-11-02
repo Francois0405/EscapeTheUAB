@@ -17,10 +17,6 @@ struct SceneObject
     glm::vec3 escala;
 };
 
-std::vector<SceneObject> CargarEscena(
-    const std::filesystem::path& ruta
-);
-
 // JSON es estricto: si hay un error no publica objetos parciales.
 bool CargarEscenaJSON(
     const std::filesystem::path& ruta,

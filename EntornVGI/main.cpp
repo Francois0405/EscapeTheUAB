@@ -20,6 +20,8 @@
 #include "main.h"
 #include "SceneLoader.h"
 #include <iostream>
+#include <algorithm>
+#include <cmath>
 
 // CODI NOSTRE
 
@@ -33,6 +35,7 @@
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
+COBJModel* armsRigOBJ = nullptr;
 
 namespace
 {
@@ -41,6 +44,7 @@ namespace
 	bool fpsCursorCapturado = false;
 	bool fpsTienePosicionAnterior = false;
 	bool ventanaConFoco = true;
+	bool mostrarPanelesDebug = false;
 	double fpsUltimoX = 0.0;
 	double fpsUltimoY = 0.0;
 
@@ -60,7 +64,7 @@ namespace
 
 	void sincronizarCursorFPS(GLFWwindow* window)
 	{
-		const bool capturar = modoJuegoFPS() && !fpsPausado && ventanaConFoco && fpsCapturaSolicitada;
+		const bool capturar = modoJuegoFPS() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
 		fijarCapturaCursor(window, capturar);
 	}
 }
@@ -70,28 +74,76 @@ namespace
 {
 	std::string nombreEscenaActiva;
 
-	bool cargarYAplicarEscena(const std::filesystem::path& ruta, bool formatoJSON)
+	void aplicarPresetJuego()
+	{
+		show_EntornVGI_window = true;
+		oProjeccio = 3;
+		oCamera = 1;
+		oObjecte = 1;
+		oIlumina = 3;
+
+		OnProjeccioPerspectiva();
+		OnCameraNavega();
+		OnObjecteCub();
+		OnIluminacioSuau();
+		SkyBoxCube = true;
+		OnVistaSkyBox();
+	}
+
+	void inclinarJugadorFPS(double deltaY)
+	{
+		const double dx = n[0] - opvN.x;
+		const double dy = n[1] - opvN.y;
+		const double horizontal = sqrt(dx * dx + dy * dy);
+		if (horizontal == 0.0) return;
+
+		double inclinacion = atan2(n[2] - opvN.z, horizontal) - deltaY * 0.12 * PI / 180.0;
+		const double limite = 85.0 * PI / 180.0;
+		inclinacion = std::clamp(inclinacion, -limite, limite);
+		const double longitud = sqrt(dx * dx + dy * dy + (n[2] - opvN.z) * (n[2] - opvN.z));
+		const double factor = longitud * cos(inclinacion) / horizontal;
+		n[0] = opvN.x + dx * factor;
+		n[1] = opvN.y + dy * factor;
+		n[2] = opvN.z + longitud * sin(inclinacion);
+	}
+
+	void moverJugadorFPS(GLFWwindow* window, double delta)
+	{
+		const double dx = n[0] - opvN.x;
+		const double dy = n[1] - opvN.y;
+		const double longitud = sqrt(dx * dx + dy * dy);
+		if (longitud == 0.0) return;
+
+		const double delanteX = dx / longitud;
+		const double delanteY = dy / longitud;
+		const double velocidad = 3.0 * delta;
+		double moverX = 0.0;
+		double moverY = 0.0;
+
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { moverX += delanteX; moverY += delanteY; }
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { moverX -= delanteX; moverY -= delanteY; }
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { moverX += delanteY; moverY -= delanteX; }
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { moverX -= delanteY; moverY += delanteX; }
+
+		const double distancia = sqrt(moverX * moverX + moverY * moverY);
+		if (distancia == 0.0) return;
+		moverX = moverX / distancia * velocidad;
+		moverY = moverY / distancia * velocidad;
+		opvN.x += moverX;
+		opvN.y += moverY;
+		n[0] += moverX;
+		n[1] += moverY;
+	}
+
+	bool cargarYAplicarEscena(const std::filesystem::path& ruta)
 	{
 		std::vector<SceneObject> objetosLeidos;
+		std::string error;
 		std::string nombre;
-		if (formatoJSON)
+		if (!CargarEscenaJSON(ruta, objetosLeidos, error, nombre))
 		{
-			std::string error;
-			if (!CargarEscenaJSON(ruta, objetosLeidos, error, nombre))
-			{
-				std::cerr << "No se cargo la escena: " << error << '\n';
-				return false;
-			}
-		}
-		else
-		{
-			objetosLeidos = CargarEscena(ruta);
-			if (objetosLeidos.empty())
-			{
-				std::cerr << "La escena TXT no contiene objetos validos: " << ruta << '\n';
-				return false;
-			}
-			nombre = ruta.filename().string();
+			std::cerr << "No se cargo la escena: " << error << '\n';
+			return false;
 		}
 
 		std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
@@ -155,8 +207,6 @@ namespace
 		if (!ventanaConFoco)
 		{
 			fijarCapturaCursor(window, false);
-			for (int tecla : { GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D })
-				Teclat_Navega(tecla, GLFW_RELEASE);
 		}
 		else
 		{
@@ -671,16 +721,16 @@ void GetGLVersion(int* major, int* minor)
 
 void OnSize(GLFWwindow* window, int width, int height)
 {
-	// TODO: Agregue aquí su código de controlador de mensajes
+	width_old = width;
+	height_old = height;
+}
 
-	// A resize event occured; cx and cy are the window's new width and height.
-	// Find the OpenGL change size function given in the Lab 1 notes and call it here
-
-	// Entorn VGI: MODIFICACIÓ ->Establim les mides de la finestra actual
-	w = width;	h = height;
-
-	// Crida a OnPaint per a redibuixar la pantalla
-	//	OnPaint();
+void OnFramebufferSize(GLFWwindow* window, int width, int height)
+{
+	w = width;
+	h = height;
+	if (width > 0 && height > 0)
+		glViewport(0, 0, width, height);
 }
 
 
@@ -688,6 +738,7 @@ void OnSize(GLFWwindow* window, int width, int height)
 void OnPaint(GLFWwindow* window)
 {
 // TODO: Agregue aquí su código de controlador de mensajes
+	if (w <= 0 || h <= 0) return;
 	GLdouble vpv[3] = { 0.0, 0.0, 1.0 };
 
 // Entorn VGI.ImGui: Menú ImGui condicionat al color de fons
@@ -913,15 +964,32 @@ void dibuixa_Escena() {
 			);
 		}
 
-		return;
+	}
+	else
+	{
+		// Dibujar el objeto seleccionado cuando no hay una habitación cargada.
+		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
+			textura, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+			ObOBJ, GTMatrix);
 	}
 
-//	Dibuix geometria de l'escena amb comandes GL.
-	dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
-		textura, texturesID, textura_map, tFlag_invert_Y,
-		npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-		ObOBJ,				// Classe de l'objecte OBJ que conté els VAO's
-		GTMatrix);
+	if (modoJuegoFPS() && armsRigOBJ != nullptr)
+	{
+		glm::mat4 matrizCamara(1.0f);
+		matrizCamara = glm::translate(matrizCamara, glm::vec3(0.0f, -0.165f, -0.01f));
+		matrizCamara = glm::rotate(matrizCamara, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
+		matrizCamara = glm::scale(matrizCamara, glm::vec3(0.1f));
+		const glm::mat4 matrizBrazos = glm::inverse(ViewMatrix) * matrizCamara;
+
+		const bool texturaAnterior = textura;
+		textura = true;
+		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
+			textura, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+			armsRigOBJ, matrizBrazos);
+		textura = texturaAnterior;
+	}
 }
 
 
@@ -1153,6 +1221,8 @@ void draw_Menu_ImGui()
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	if (!modoJuegoFPS() || mostrarPanelesDebug)
+	{
 
 // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
 	if (show_demo_window)
@@ -1182,6 +1252,9 @@ void draw_Menu_ImGui()
 		ImGui::Text("Finestres EntornVGI:");               // Display some text (you can use a format strings too)
 		ImGui::SameLine();
 		ImGui::Checkbox("EntornVGI Window", &show_EntornVGI_window);
+		static bool preset = true;
+		if (ImGui::Checkbox("Preset", &preset) && preset)
+			aplicarPresetJuego();
 		ImGui::Separator();
 		ImGui::Spacing();
 
@@ -1246,6 +1319,7 @@ void draw_Menu_ImGui()
 
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		ImGui::End();
+	}
 	}
 
 // Rendering ImGui Menus
@@ -1322,10 +1396,8 @@ void ShowArxiusOptions()
 //IMGUI_DEMO_MARKER("Examples/Menu");
 	ImGui::MenuItem("(Arxius menu)", NULL, false, false);
 	if (ImGui::MenuItem("New")) {}
-    if (ImGui::MenuItem("Cargar habitacion_beta.txt"))
-        cargarYAplicarEscena("assets/scenes/habitacion_beta.txt", false);
-    if (ImGui::MenuItem("Cargar habitacion_beta.json"))
-        cargarYAplicarEscena("assets/scenes/habitacion_beta.json", true);
+	if (ImGui::MenuItem("Cargar habitacion JSON"))
+		cargarYAplicarEscena("assets/scenes/habitacion_beta.json");
 
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;
@@ -3976,11 +4048,6 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		{
 			fpsPausado = !fpsPausado;
-			if (fpsPausado)
-			{
-				for (int tecla : { GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D })
-					Teclat_Navega(tecla, GLFW_RELEASE);
-			}
 			sincronizarCursorFPS(window);
 			return;
 		}
@@ -3991,12 +4058,15 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			sincronizarCursorFPS(window);
 			return;
 		}
-		if (fpsPausado || !ventanaConFoco) return;
-		if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D)
+		if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
 		{
-			if (!io.WantCaptureKeyboard) Teclat_Navega(key, action);
+			mostrarPanelesDebug = !mostrarPanelesDebug;
+			if (mostrarPanelesDebug) show_EntornVGI_window = true;
+			sincronizarCursorFPS(window);
 			return;
 		}
+		if (fpsPausado || !ventanaConFoco) return;
+		if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D) return;
 		if (key == GLFW_KEY_PRINT_SCREEN && mods == 0 && action == GLFW_PRESS)
 			statusB = !statusB;
 		return;
@@ -6056,7 +6126,7 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 			const double dy = n[1] - opvN.y;
 			n[0] = opvN.x + dx * cos(angulo) - dy * sin(angulo);
 			n[1] = opvN.y + dx * sin(angulo) + dy * cos(angulo);
-			InclinaNavega(-deltaY);
+			inclinarJugadorFPS(deltaY);
 		}
 		return;
 	}
@@ -6740,26 +6810,24 @@ int llegir_ptsC(const char* nomf)
 // Entorn VGI. OnFull_Screen: Funció per a pantalla completa
 void OnFull_Screen(GLFWmonitor* monitor, GLFWwindow* window)
 {
-	//int winPosX, winPosY;
-	//winPosX = 0;	winPosY = 0;
+	static int windowX = 0;
+	static int windowY = 0;
+	static int windowWidth = 1280;
+	static int windowHeight = 720;
 
 	fullscreen = !fullscreen;
 
-	if (fullscreen) 
-	{	// backup window position and window size
-		//glfwGetWindowPos(window, &winPosX, &winPosY);
-		//glfwGetWindowSize(window, &width_old, &height_old);
-
-		// Get resolution of monitor
-		const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-
-		w = mode->width;	h = mode->height;
-		// Switch to full screen
-		glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+	if (fullscreen)
+	{
+		glfwGetWindowPos(window, &windowX, &windowY);
+		glfwGetWindowSize(window, &windowWidth, &windowHeight);
+		const GLFWvidmode* videoMode = glfwGetVideoMode(monitor);
+		glfwSetWindowMonitor(window, monitor, 0, 0, videoMode->width, videoMode->height, videoMode->refreshRate);
 	}
-	else {	// Restore last window size and position
-			glfwSetWindowMonitor(window, nullptr, 216, 239, 640, 480, mode->refreshRate);
-		}
+	else
+	{
+		glfwSetWindowMonitor(window, nullptr, windowX, windowY, windowWidth, windowHeight, GLFW_DONT_CARE);
+	}
 }
 
 // -------------------- TRACTAMENT ERRORS
@@ -6885,7 +6953,7 @@ glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 // Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(640, 480, "Entorn Grafic VS2022 amb GLFW i OpenGL 4.6 (Visualitzacio Grafica Interactiva - Grau en Enginyeria Informatica - Escola Enginyeria - UAB)", NULL, NULL);
+	window = glfwCreateWindow(1280, 720, "EscapeTheUAB", NULL, NULL);
 	if (!window)
 	{	fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 4.6 compatible. Try the 2.1 version of the tutorials.\n");
 		getchar();
@@ -6898,6 +6966,7 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 // Llegir resolució actual de pantalla
 	glfwGetWindowSize(window, &width_old, &height_old);
+	glfwGetFramebufferSize(window, &w, &h);
 
 // Initialize GLEW
 	if (GLEW_VERSION_3_3) glewExperimental = GL_TRUE; // Needed for core profile
@@ -6947,11 +7016,19 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 // Initialize Application control varibles
 	InitGL();
+	char armsPath[] = ".\\assets\\models\\arms_rig2.obj";
+	armsRigOBJ = new COBJModel();
+	if (armsRigOBJ->LoadModel(armsPath) != 0)
+	{
+		std::cerr << "No se pudieron cargar los brazos del jugador.\n";
+		delete armsRigOBJ;
+		armsRigOBJ = nullptr;
+	}
 
 // ------------- Entorn VGI: Callbacks
 // Set GLFW event callbacks. I removed glfwSetWindowSizeCallback for conciseness
 	glfwSetWindowSizeCallback(window, OnSize);										// - Windows Size in screen Coordinates
-	glfwSetFramebufferSizeCallback(window, OnSize);									// - Windows Size in Pixel Coordinates
+	glfwSetFramebufferSizeCallback(window, OnFramebufferSize);							// - Medidas del framebuffer en píxeles
 	glfwSetWindowFocusCallback(window, OnWindowFocus);
 	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun)OnMouseButton);			// - Directly redirect GLFW mouse button events
 	glfwSetCursorPosCallback(window, (GLFWcursorposfun)OnMouseMove);				// - Directly redirect GLFW mouse position events
@@ -6975,14 +7052,18 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 	//ImGui::StyleColorsDark();
 	ImGui::StyleColorsLight();
 
-// Aumentar interfaz para Parallels / pantalla Retina
-	const float uiScale = 1.9f;
-	io.FontGlobalScale = uiScale;
-	ImGui::GetStyle().ScaleAllSizes(uiScale);
+	io.FontGlobalScale = 1.0f;
 
 // Entorn VGI.ImGui: Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 130");
+
+	// Arrancar directamente con la habitación y la configuración de juego.
+	aplicarPresetJuego();
+	cargarYAplicarEscena("assets/scenes/habitacion_beta.json");
+	glfwSetWindowTitle(window, "EscapeTheUAB");
+	glfwGetFramebufferSize(window, &w, &h);
+	OnFramebufferSize(window, w, h);
 	// Entorn VGI.ImGui: End Setup Dear ImGui context
 
 // Loop until the user closes the window
@@ -7014,8 +7095,8 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 		sincronizarCursorFPS(window);
 
 		// Actualitzar moviment continu de navegació (WASD) per frame.
-		if (!fpsPausado && ventanaConFoco)
-			Teclat_Navega(GLFW_KEY_UNKNOWN, GLFW_REPEAT, delta);
+		if (!fpsPausado && ventanaConFoco && modoJuegoFPS())
+			moverJugadorFPS(window, delta);
 
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
@@ -7048,6 +7129,13 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 	modelosHabitacion.clear();
 	objetosEscena.clear();
+	if (armsRigOBJ != nullptr)
+	{
+		armsRigOBJ->netejaVAOList_OBJ();
+		armsRigOBJ->netejaTextures_OBJ();
+		delete armsRigOBJ;
+		armsRigOBJ = nullptr;
+	}
 
 	glfwDestroyWindow(window);
 

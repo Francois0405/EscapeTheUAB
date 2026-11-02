@@ -1,101 +1,55 @@
-# Cambios FPS y escenas JSON
+# EscapeTheUAB: controles FPS y escenas JSON
 
-## 1. Resumen
+## Formato de escena
 
-Se incorporó giro FPS continuo con ratón, pausa, captura del cursor y compatibilidad con los controles académicos de cámara. También se añadió lectura estricta de escenas JSON versión 1 y una habitación JSON equivalente al TXT actual. Los dos formatos llegan a `SceneObject` y al renderizador existente.
+Las habitaciones se definen únicamente en `EntornVGI/assets/scenes/*.json`. La escena inicial `habitacion_beta.json` contiene 12 instancias: seis en `architecture` (suelo, techo y cuatro paredes) y seis en `objects` (armario, dos mesas, lámpara y dos cajas). Cada instancia especifica `id`, `model`, `position`, `rotation` y `scale`. Las rotaciones están en grados.
 
-## 2. Archivos modificados
+`SceneObject` es el formato interno sencillo que conecta el archivo con el renderizador: guarda el identificador, la categoría, el modelo y tres vectores GLM. El lector no cambia el sistema de coordenadas ni las matrices OpenGL existentes.
 
-| Ruta | Funciones o elementos | Cambio y motivo |
+## Módulos principales
+
+| Archivo y líneas | Función o elemento | Responsabilidad |
 |---|---|---|
-| `EntornVGI/main.cpp` | `modoJuegoFPS`, `fijarCapturaCursor`, `sincronizarCursorFPS`, `OnWindowFocus`, `OnKeyDown`, `OnMouseMove`, `OnMouseButton`, `OnMouseWheel`, `cargarYAplicarEscena`, `MostraEntornVGIWindow`, `ShowArxiusOptions`, `main` | Añade controles FPS, gestión del foco y cursor, selector de formato, carga transaccional de modelos y salida por menú. |
-| `EntornVGI/SceneLoader.h` | `SceneObject`, `CargarEscenaJSON` | Añade identificador y categoría a cada instancia y declara el lector JSON estricto; conserva `CargarEscena`. |
-| `EntornVGI/SceneLoader.cpp` | `CargarEscena`, `CargarEscenaJSON`, `leerVector3` | Mantiene el lector TXT y añade comprobación de versión, campos, vectores, finitud, IDs y rutas OBJ. |
-| `EntornVGI/assets/scenes/habitacion_beta.json` | Datos de escena | Describe las 3 instancias que ya tenía la rama `carlos`, con las mismas transformaciones del TXT. |
-| `EntornVGI/assets/scenes/habitacion_beta.txt` | Datos originales de Carlos | Se conserva sin cambios y se usa como referencia para las tres instancias del JSON. |
-| `EntornVGI/third_party/nlohmann/json.hpp` | nlohmann/json 3.11.3 | Añade la distribución de encabezado único con licencia MIT; evita dependencia de descarga durante compilación. |
-| `EntornVGI/EntornVGI.vcxproj`, `EntornVGI/EntornVGI.vcxproj.filters` | Configuración del proyecto | Incluye el encabezado de nlohmann/json en el proyecto de Visual Studio. |
+| `EntornVGI/SceneLoader.h:8-25` | `SceneObject`, `CargarEscenaJSON` | Define los datos de una instancia y la única interfaz de lectura de escenas. |
+| `EntornVGI/SceneLoader.cpp:13-38` | `leerVector3` | Comprueba que cada transformación tenga tres números finitos dentro del rango de `float`. |
+| `EntornVGI/SceneLoader.cpp:42-143` | `CargarEscenaJSON` | Valida versión, nombre, colecciones, campos, IDs, transformaciones y existencia de cada OBJ antes de entregar la escena completa. |
+| `EntornVGI/main.cpp:138-200` | `cargarYAplicarEscena` | Carga exclusivamente JSON y prepara las instancias y modelos antes de sustituir la habitación activa. |
+| `EntornVGI/main.cpp:56-90` | `fijarCapturaCursor`, `sincronizarCursorFPS` | Captura el cursor durante el juego y lo libera al pausar, mostrar paneles o perder el foco. |
+| `EntornVGI/main.cpp:93-135` | `inclinarJugadorFPS`, `moverJugadorFPS` | Controla la inclinación y el desplazamiento FPS ligados al movimiento del ratón y al tiempo del fotograma. |
+| `EntornVGI/main.cpp:919-...` | `dibuixa_Escena` | Dibuja las instancias con las transformaciones y el renderizado OpenGL del proyecto, y conserva los brazos FPS. |
+| `EntornVGI/main.cpp:1218-...` | `draw_Menu_ImGui` | Mantiene los paneles académicos fuera del modo juego; en juego muestra solo la interfaz prevista para ese modo. |
+| `EntornVGI/main.cpp:4036-...` | `OnKeyDown` | F1 alterna los paneles VGI y sincroniza el cursor; ESC pausa y reanuda. |
+| `EntornVGI/main.cpp:6914-...` | `main` | Crea la ventana, fija ImGui a escala 1.0 y carga al inicio `habitacion_beta.json`. |
+| `EntornVGI/EntornVGI.vcxproj:74,203-205` | Configuración de Visual Studio | Usa la carpeta del proyecto como directorio de trabajo y copia `glfw3.dll` y `glew32.dll` junto al ejecutable x64. |
 
-## 3. Funcionamiento de la cámara
+### Lectura y renderizado
 
-El modo FPS reutiliza la cámara de navegación del entorno: `modoJuegoFPS()` es verdadero cuando `camera == CAM_NAVEGA` y `projeccio == PERSPECT`. Así se conservan el cálculo de vista, el movimiento WASD y los brazos dibujados por `dibuixa_Escena()`.
+El documento tiene versión `1`, un nombre y dos listas independientes, `architecture` y `objects`. `CargarEscenaJSON` recorre ambas, asigna la categoría según la lista y rechaza el documento completo si encuentra un error. Las rutas de modelos se resuelven desde la carpeta del JSON. `cargarYAplicarEscena` carga los modelos y solo publica la nueva habitación cuando los datos necesarios están disponibles.
 
-El recorrido del ratón es:
+El renderizador sigue usando `SceneObject`, GLM y OpenGL. Las rotaciones del JSON se convierten de grados a radianes en el punto de dibujo. No se cambiaron las escalas de los modelos OBJ ni las matrices GLM para corregir la interfaz.
 
-1. GLFW genera movimiento y llama a `OnMouseMove`.
-2. Si el modo FPS está activo, `OnMouseMove` calcula la diferencia con la posición anterior, rota el vector de mirada en el plano XY y llama a `InclinaNavega` para el ángulo vertical.
-3. `Teclat_Navega` procesa las teclas WASD y aplica el desplazamiento según el tiempo del fotograma.
-4. Tras `glfwPollEvents`, el bucle principal llama a `sincronizarCursorFPS` para capturar el cursor solo si el juego está activo, sin pausa y con foco.
+### Juego e interfaz
 
-```cpp
-fpsTienePosicionAnterior = false;
-glfwSetInputMode(window, GLFW_CURSOR, capturar ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
-```
+El modo de juego inicia en perspectiva con la habitación completa y los brazos. WASD mueve al jugador y el ratón cambia la dirección de la cámara. ESC pausa o reanuda el juego. F1 muestra u oculta los paneles de depuración VGI; al mostrarlos se libera el cursor y al ocultarlos se recupera la captura si el juego está activo.
 
-La captura con `GLFW_CURSOR_DISABLED` evita que el giro dependa de mantener un botón. ESC alterna pausa y reanudación; en pausa se libera el cursor. Ctrl+Shift+M alterna el estado solicitado del cursor. Al perder el foco se libera y se envían eventos de liberación para WASD. La primera posición después de cada cambio se guarda sin aplicar delta, evitando un salto.
+ImGui empieza en escala 1.0 (`FontGlobalScale`) y no se llama a `ScaleAllSizes`, evitando escalar dos veces. `imgui.ini` se dejó vacío para que ImGui genere posiciones y tamaños iniciales; la copia `imgui.ini.before-scale-reset` conserva el estado anterior.
 
-`ImGui_ImplGlfw_InitForOpenGL(window, true)` instala los callbacks de ImGui y encadena los callbacks de la aplicación. Por eso el callback propio ya no llama también a `io.AddMouseButtonEvent`: ImGui recibe el clic una sola vez. Durante FPS, los callbacks propios de botón y rueda no ejecutan acciones antiguas de cámara.
+### Modelos y DLL
 
-## 4. Funcionamiento de JSON
+Los OBJ y MTL de la habitación y de los brazos, además de `arms_01.png`, están en `EntornVGI/assets/models`. Las dependencias de enlace x64 están en `lib/x64`; las DLL de GLFW y GLEW también se guardan ahí y el proyecto las copia al directorio del ejecutable después de compilar. La configuración no contiene rutas absolutas ligadas a una cuenta de usuario. Visual Studio usa `EntornVGI` como directorio de trabajo para resolver las rutas relativas de escenas, modelos, texturas y shaders.
 
-`ShowArxiusOptions()` permite escoger el TXT o el JSON. `CargarEscenaJSON()` abre el archivo con `std::ifstream`, lo analiza con `nlohmann::json` y valida primero la raíz y los campos obligatorios. Cada entrada debe tener `id`, `model`, `position`, `rotation` y `scale`. Las listas de transformación deben tener tres números finitos; los IDs no se pueden repetir y las rutas se resuelven desde la carpeta de la escena.
+## Validación
 
-```json
-{
-  "version": 1,
-  "name": "habitacion_beta",
-  "architecture": [],
-  "objects": []
-}
-```
+### Ejecutada en esta integración
 
-Los elementos validados se convierten en `SceneObject`. `cargarYAplicarEscena()` resuelve cada ruta OBJ, carga cada archivo una sola vez por ruta absoluta y construye colecciones temporales. Solo después de cargar correctamente toda la escena sustituye `objetosEscena` y `modelosHabitacion`; si hay error, conserva la escena anterior.
+- MSBuild 18.10.1 compiló `EntornVGI.slnx` en `Debug|x64`; el ejecutable se generó correctamente.
+- Tras compilar, `x64/Debug` contiene `glfw3.dll` y `glew32.dll`.
+- La comprobación estructural de `habitacion_beta.json` encontró 6 elementos `architecture`, 6 `objects`, 12 IDs únicos y ningún modelo OBJ ausente.
+- La búsqueda de llamadas `CargarEscena(`, el archivo `habitacion_beta.txt`, el parámetro `formatoJSON` y opciones de menú TXT no encontró referencias en el código ni en esta documentación.
 
-`dibuixa_Escena()` usa las mismas instancias para ambos formatos. Aplica traslación y escala con GLM, y las rotaciones en grados mediante `glm::radians`, manteniendo el eje Z vertical del proyecto. `architecture` y `objects` clasifican las instancias para futuras propiedades; todavía no hay colisiones ni puzles.
+### Pendiente
 
-La dependencia se integra con el encabezado único `third_party/nlohmann/json.hpp` versión 3.11.3. Visual Studio la muestra en el proyecto y el código la incluye directamente, por lo que no se necesita instalar paquetes externos.
+- No se abrió la aplicación para comprobar visualmente habitación, materiales, brazos, tamaño de ImGui ni comportamiento interactivo de ratón, WASD, F1 y ESC.
+- No se probaron configuraciones Release o Win32 ni la ejecución desde otra carpeta de trabajo.
 
-## 5. Código del profesor frente a código nuestro
-
-Se reutilizaron `OnCameraNavega`, `Teclat_Navega`, `InclinaNavega`, `dibuixa_Escena`, `dibuixa_EscenaGL`, `COBJModel::LoadModel` y el renderizado de brazos existente. Los controles originales con botones siguen en su ruta cuando no está activo el modo FPS.
-
-Son nuevas `CargarEscenaJSON`, `leerVector3`, `cargarYAplicarEscena`, `modoJuegoFPS`, `fijarCapturaCursor`, `sincronizarCursorFPS` y la lógica FPS de `OnKeyDown`, `OnMouseMove` y `OnWindowFocus`. `CargarEscena` sigue siendo el lector TXT existente, con IDs técnicos asignados al convertir cada fila.
-
-## 6. Pruebas
-
-### Ejecutadas y superadas
-
-- En `dev`, la comprobación estructural Python confirmó que JSON y TXT contienen las mismas 3 rutas y transformaciones; los IDs son únicos y los valores finitos.
-- En `dev`, `git diff --check` terminó sin errores.
-- En la rama anterior `feature/fps-controls-json-scenes`, MSBuild compiló `Debug|x64` con 0 errores y un smoke test de `SceneLoader.cpp` verificó una escena de 12 instancias y casos inválidos. Esos resultados no corresponden a la base `carlos` de esta rama `dev`.
-
-### Fallidas y correcciones
-
-- No hubo pruebas fallidas en `dev`.
-
-### No ejecutadas
-
-- No se pudo compilar `dev`: MSBuild y `cl.exe` no están disponibles en el entorno actual. La compilación de la rama anterior no sustituye esta comprobación.
-- No se realizó una sesión gráfica interactiva para comprobar ratón, WASD, pausa, foco, menús y brazos.
-- Los casos de escenas inválidas y el conteo de llamadas a `LoadModel` no se repitieron sobre `dev`.
-## 7. Defensa universitaria
-
-**1. ¿Por qué se desactiva el cursor en el modo FPS?**
-
-`GLFW_CURSOR_DISABLED` oculta el puntero y permite recibir movimiento relativo sin mantener pulsado un botón. Cuando hay pausa, se pierde el foco o el usuario alterna la captura, se vuelve al cursor normal.
-
-**2. ¿Cómo se evita el salto al recuperar el ratón?**
-
-`fijarCapturaCursor()` invalida `fpsTienePosicionAnterior`. El primer `OnMouseMove()` guarda la nueva posición y no rota; los deltas se aplican a partir del segundo evento.
-
-**3. ¿Cómo puede ImGui recibir clics si también hay callbacks de la aplicación?**
-
-El backend GLFW de ImGui se inicializa con el encadenamiento de callbacks habilitado. La aplicación conserva su callback, pero no vuelve a inyectar el botón con `AddMouseButtonEvent`, evitando duplicados.
-
-**4. ¿Por qué no se borra la habitación actual al comenzar a leer otra?**
-
-`CargarEscenaJSON()` construye una lista candidata y solo la publica al terminar la validación. `cargarYAplicarEscena()` carga también todos los modelos temporalmente y sustituye las colecciones globales al final. Un error devuelve antes de ese intercambio.
-
-**5. ¿Cómo se evita cargar varias veces el mismo OBJ y cómo se aplican los grados?**
-
-`cargarYAplicarEscena()` guarda los modelos en un mapa cuya clave es la ruta absoluta; solo llama a `LoadModel` si no existe esa clave. Cada instancia conserva su transformación y `dibuixa_Escena()` convierte los grados a radianes con `glm::radians` antes de rotar.
+La compilación y las comprobaciones estructurales no sustituyen una prueba gráfica en ejecución.
