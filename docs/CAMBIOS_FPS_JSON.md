@@ -45,7 +45,7 @@ Los OBJ y MTL de la habitación y de los brazos, además de `arms_01.png`, está
 - MSBuild 18.10.1 compiló `EntornVGI.slnx` en `Debug|x64`; el ejecutable se generó correctamente.
 - Tras compilar, `x64/Debug` contiene `glfw3.dll` y `glew32.dll`.
 - La comprobación estructural de `habitacion_beta.json` encontró 6 elementos `architecture`, 6 `objects`, 12 IDs únicos y ningún modelo OBJ ausente.
-- La búsqueda de llamadas `CargarEscena(`, el archivo `habitacion_beta.txt`, el parámetro `formatoJSON` y opciones de menú TXT no encontró referencias en el código ni en esta documentación.
+- La búsqueda en el código de llamadas `CargarEscena(`, `habitacion_beta.txt`, `formatoJSON` y opciones de menú TXT no encontró coincidencias.
 
 ### Pendiente
 
