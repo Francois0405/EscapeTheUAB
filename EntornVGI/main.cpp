@@ -1286,11 +1286,23 @@ void MostraEntornVGIWindow(bool* p_open)
 
 // Menu Bar
 	if (ImGui::BeginMenuBar())
-	{	if (ImGui::BeginMenu("Arxius"))
-			{	//IMGUI_DEMO_MARKER("Menu/File");
-				ShowArxiusOptions();
-				ImGui::EndMenu();
+	{
+		if (ImGui::BeginMenu("Arxius"))
+		{
+			//IMGUI_DEMO_MARKER("Menu/File");
+			ShowArxiusOptions();
+			ImGui::EndMenu();
+		}
+		if (modoJuegoFPS() && ImGui::BeginMenu("Juego"))
+		{
+			if (ImGui::MenuItem(fpsPausado ? "Reanudar juego FPS" : "Pausar juego FPS"))
+			{
+				fpsPausado = !fpsPausado;
+				sincronizarCursorFPS(window);
 			}
+			ImGui::EndMenu();
+		}
+
 		if (ImGui::BeginMenu("Sobre EntornVGI"))
 			{	//IMGUI_DEMO_MARKER("Menu/Examples");
 				//ShowAboutOptions(&show_window_about);
@@ -1377,7 +1389,8 @@ void ShowArxiusOptions()
 		}
 	if (ImGui::MenuItem("Checked", NULL, true)) {}
 	ImGui::Separator();
-	if (ImGui::MenuItem("Quit", "Alt+F4")) {}
+	if (ImGui::MenuItem("Quit", "Alt+F4"))
+		glfwSetWindowShouldClose(window, GL_TRUE);
 }
 
 
@@ -3958,7 +3971,36 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
-	//io.AddMouseButtonEvent(button, true);
+	if (modoJuegoFPS())
+	{
+		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		{
+			fpsPausado = !fpsPausado;
+			if (fpsPausado)
+			{
+				for (int tecla : { GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D })
+					Teclat_Navega(tecla, GLFW_RELEASE);
+			}
+			sincronizarCursorFPS(window);
+			return;
+		}
+		if (key == GLFW_KEY_M && action == GLFW_PRESS &&
+			(mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT))
+		{
+			fpsCapturaSolicitada = !fpsCapturaSolicitada;
+			sincronizarCursorFPS(window);
+			return;
+		}
+		if (fpsPausado || !ventanaConFoco) return;
+		if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D)
+		{
+			if (!io.WantCaptureKeyboard) Teclat_Navega(key, action);
+			return;
+		}
+		if (key == GLFW_KEY_PRINT_SCREEN && mods == 0 && action == GLFW_PRESS)
+			statusB = !statusB;
+		return;
+	}
 
 // (2) ONLY forward mouse data to your underlying app/game.
 	if (!io.WantCaptureKeyboard) { //<Tractament mouse de l'aplicació>}
@@ -5930,9 +5972,10 @@ void OnMouseButton(GLFWwindow* window, int button, int action, int mods)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
-	io.AddMouseButtonEvent(button, action);
 
-// (2) ONLY forward mouse data to your underlying app/game.
+	// (2) ONLY forward mouse data to your underlying app/game.
+	if (modoJuegoFPS()) return;
+
 	if (!io.WantCaptureMouse) { //<Tractament mouse de l'aplicació>}
 		// OnLButtonDown
 		if (button == GLFW_MOUSE_BUTTON_LEFT && action == GLFW_PRESS)
@@ -5990,7 +6033,34 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 	GLdouble vdir[3] = { 0, 0, 0 };
 	CSize gir = { 0,0 }, girn = { 0,0 }, girT = { 0,0 }, zoomincr = { 0,0 };
 
-// TODO: Add your message handler code here and/or call default
+	// TODO: Add your message handler code here and/or call default
+	if (modoJuegoFPS())
+	{
+		if (!fpsCursorCapturado || fpsPausado || !ventanaConFoco) return;
+		if (!fpsTienePosicionAnterior)
+		{
+			fpsUltimoX = xpos;
+			fpsUltimoY = ypos;
+			fpsTienePosicionAnterior = true;
+			return;
+		}
+		const double deltaX = xpos - fpsUltimoX;
+		const double deltaY = ypos - fpsUltimoY;
+		fpsUltimoX = xpos;
+		fpsUltimoY = ypos;
+
+		if (Vis_Polar == POLARZ)
+		{
+			const double angulo = -deltaX * 0.12 * PI / 180.0;
+			const double dx = n[0] - opvN.x;
+			const double dy = n[1] - opvN.y;
+			n[0] = opvN.x + dx * cos(angulo) - dy * sin(angulo);
+			n[1] = opvN.y + dx * sin(angulo) + dy * cos(angulo);
+			InclinaNavega(-deltaY);
+		}
+		return;
+	}
+
 	if (m_ButoEAvall && mobil && projeccio != CAP)
 	{	// Entorn VGI: Determinació dels angles (en graus) segons l'increment
 		//				horitzontal i vertical de la posició del mouse.
@@ -6257,9 +6327,9 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
-	//io.AddMouseButtonEvent(button, true);
 
 // (2) ONLY forward mouse data to your underlying app/game.
+	if (modoJuegoFPS()) return;
 	if (!io.WantCaptureMouse) { // <Tractament mouse de l'aplicació>}
 		// Funció de zoom quan està activada la funció pan o les T. Geomètriques
 		if ((zzoom || zzoomO) || (transX) || (transY) || (transZ))
@@ -6882,6 +6952,7 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 // Set GLFW event callbacks. I removed glfwSetWindowSizeCallback for conciseness
 	glfwSetWindowSizeCallback(window, OnSize);										// - Windows Size in screen Coordinates
 	glfwSetFramebufferSizeCallback(window, OnSize);									// - Windows Size in Pixel Coordinates
+	glfwSetWindowFocusCallback(window, OnWindowFocus);
 	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun)OnMouseButton);			// - Directly redirect GLFW mouse button events
 	glfwSetCursorPosCallback(window, (GLFWcursorposfun)OnMouseMove);				// - Directly redirect GLFW mouse position events
 	glfwSetScrollCallback(window, (GLFWscrollfun)OnMouseWheel);						// - Directly redirect GLFW mouse wheel events
@@ -6940,6 +7011,12 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 
 		// Poll for and process events
 		glfwPollEvents();
+		sincronizarCursorFPS(window);
+
+		// Actualitzar moviment continu de navegació (WASD) per frame.
+		if (!fpsPausado && ventanaConFoco)
+			Teclat_Navega(GLFW_KEY_UNKNOWN, GLFW_REPEAT, delta);
+
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
 		draw_Menu_ImGui();
@@ -6957,9 +7034,9 @@ glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
 		glfwSwapBuffers(window);
 	}
 
-// Check if the ESC key was pressed or the window was closed
-	while (glfwGetKey(window, GLFW_KEY_ESCAPE) != GLFW_PRESS &&
-		glfwWindowShouldClose(window) == 0);
+	// Una salida por el boton de Windows tambien devuelve el cursor al sistema.
+	fijarCapturaCursor(window, false);
+
 
 // Entorn VGI.ImGui: Cleanup ImGui
 	ImGui_ImplOpenGL3_Shutdown();
