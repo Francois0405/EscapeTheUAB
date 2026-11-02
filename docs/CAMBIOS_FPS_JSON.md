@@ -12,14 +12,14 @@ Las habitaciones se definen únicamente en `EntornVGI/assets/scenes/*.json`. La 
 |---|---|---|
 | `EntornVGI/SceneLoader.h:8-25` | `SceneObject`, `CargarEscenaJSON` | Define los datos de una instancia y la única interfaz de lectura de escenas. |
 | `EntornVGI/SceneLoader.cpp:13-38` | `leerVector3` | Comprueba que cada transformación tenga tres números finitos dentro del rango de `float`. |
-| `EntornVGI/SceneLoader.cpp:42-143` | `CargarEscenaJSON` | Valida versión, nombre, colecciones, campos, IDs, transformaciones y existencia de cada OBJ antes de entregar la escena completa. |
+| `EntornVGI/SceneLoader.cpp:42-164` | `CargarEscenaJSON` | Valida versión, nombre, colecciones, campos, IDs, transformaciones y existencia de cada OBJ antes de entregar la escena completa. |
 | `EntornVGI/main.cpp:138-200` | `cargarYAplicarEscena` | Carga exclusivamente JSON y prepara las instancias y modelos antes de sustituir la habitación activa. |
 | `EntornVGI/main.cpp:56-90` | `fijarCapturaCursor`, `sincronizarCursorFPS` | Captura el cursor durante el juego y lo libera al pausar, mostrar paneles o perder el foco. |
 | `EntornVGI/main.cpp:93-135` | `inclinarJugadorFPS`, `moverJugadorFPS` | Controla la inclinación y el desplazamiento FPS ligados al movimiento del ratón y al tiempo del fotograma. |
-| `EntornVGI/main.cpp:919-...` | `dibuixa_Escena` | Dibuja las instancias con las transformaciones y el renderizado OpenGL del proyecto, y conserva los brazos FPS. |
-| `EntornVGI/main.cpp:1218-...` | `draw_Menu_ImGui` | Mantiene los paneles académicos fuera del modo juego; en juego muestra solo la interfaz prevista para ese modo. |
-| `EntornVGI/main.cpp:4036-...` | `OnKeyDown` | F1 alterna los paneles VGI y sincroniza el cursor; ESC pausa y reanuda. |
-| `EntornVGI/main.cpp:6914-...` | `main` | Crea la ventana, fija ImGui a escala 1.0 y carga al inicio `habitacion_beta.json`. |
+| `EntornVGI/main.cpp:919` | `dibuixa_Escena` | Dibuja las instancias con las transformaciones y el renderizado OpenGL del proyecto, y conserva los brazos FPS. |
+| `EntornVGI/main.cpp:1218` | `draw_Menu_ImGui` | Mantiene los paneles académicos fuera del modo juego; en juego muestra solo la interfaz prevista para ese modo. |
+| `EntornVGI/main.cpp:4036` | `OnKeyDown` | F1 alterna los paneles VGI y sincroniza el cursor; ESC pausa y reanuda. |
+| `EntornVGI/main.cpp:6914` | `main` | Crea la ventana, fija ImGui a escala 1.0 y carga al inicio `habitacion_beta.json`. |
 | `EntornVGI/EntornVGI.vcxproj:74,203-205` | Configuración de Visual Studio | Usa la carpeta del proyecto como directorio de trabajo y copia `glfw3.dll` y `glew32.dll` junto al ejecutable x64. |
 
 ### Lectura y renderizado
