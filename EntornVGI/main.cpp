@@ -5015,6 +5015,97 @@ void Teclat_ColorObjecte(int key, int action)
 	}
 }
 
+void ShowPresetWindow() {
+	show_EntornVGI_window = true;
+
+	// Actualitzar també els índexs dels controls ImGui perquè no sobreescriguin el preset.
+	oProjeccio = 3; // Perspectiva
+	oCamera = 1;    // Navega
+	oObjecte = 1;   // Cub
+	oIlumina = 3;   // Suau
+
+	OnProjeccioPerspectiva();
+	OnCameraNavega();
+	OnObjecteCub();
+	OnIluminacioSuau();
+	SkyBoxCube = true;
+	OnVistaSkyBox();
+	namespace fs = std::filesystem;
+
+	const fs::path rutaEscena =
+		"assets/scenes/habitacion_beta.txt";
+
+	auto objetosLeidos = CargarEscena(rutaEscena);
+
+	std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
+	std::vector<SceneObject> objetosValidos;
+
+	for (auto obj : objetosLeidos)
+	{
+		// Resolver la ruta del OBJ respecto a la carpeta del TXT.
+		fs::path rutaObj = fs::absolute(
+			rutaEscena.parent_path() / obj.modelo
+		).lexically_normal();
+
+		if (!fs::exists(rutaObj))
+		{
+			std::cerr << "No existe el OBJ: " << rutaObj << '\n';
+			continue;
+		}
+
+		std::string clave = rutaObj.string();
+
+		// Cargar cada archivo OBJ una sola vez.
+		if (nuevosModelos.find(clave) == nuevosModelos.end())
+		{
+			auto modelo = std::make_unique<COBJModel>();
+
+			// LoadModel recibe char*.
+			std::string rutaEditable = clave;
+			int error = modelo->LoadModel(rutaEditable.data());
+
+			if (error != 0)
+			{
+				std::cerr << "Error cargando: " << clave
+					<< " (codigo " << error << ")\n";
+				continue;
+			}
+
+			nuevosModelos.emplace(clave, std::move(modelo));
+		}
+
+		// Guardar la ruta resuelta para encontrar el modelo al dibujar.
+		obj.modelo = clave;
+		objetosValidos.push_back(obj);
+	}
+
+	if (!objetosValidos.empty())
+	{
+		// Liberar los recursos de la habitación anterior.
+		for (auto& entrada : modelosHabitacion)
+			entrada.second->netejaTextures_OBJ();
+
+		modelosHabitacion = std::move(nuevosModelos);
+		objetosEscena = std::move(objetosValidos);
+
+		objecte = OBJOBJ;
+		textura = true;
+		tFlag_invert_Y = false;
+
+		glUseProgram(shader_programID);
+		glUniform1i(
+			glGetUniformLocation(shader_programID, "textur"), textura
+		);
+		glUniform1i(
+			glGetUniformLocation(shader_programID, "flag_invert_y"),
+			tFlag_invert_Y
+		);
+
+		std::cout << "Habitacion cargada: "
+			<< objetosEscena.size() << " objetos.\n";
+	}
+}
+
 
 // Teclat_ColorFons: Teclat pels canvis del color de fons.
 void Teclat_ColorFons(int key, int action)
@@ -7095,6 +7186,10 @@ int main()
 	glfwSetKeyCallback(window, (GLFWkeyfun)OnKeyDown);								// - Directly redirect GLFW key events
 	//glfwSetCharCallback(window, OnTextDown);										// - Directly redirect GLFW char events
 	glfwSetErrorCallback(error_callback);											// Error callback
+	
+	glfwMaximizeWindow(window); // si lo pones despues del glfwSetWindowRefreshCallback peta duro xdxdxdxdxdxdx
+	glfwPollEvents();
+
 	glfwSetWindowRefreshCallback(window, (GLFWwindowrefreshfun)OnPaint);			// - Callback to refresh the screen
 
 	int event = 0;	// Paràmetre de la funció OnHotstickMove().
@@ -7149,6 +7244,17 @@ int main()
 
 	// Loop until the user closes the window
 	bool nogamepad = true;
+
+	if (!DEBUG_MODE) {
+
+		// Get resolution of monitor
+		const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+		GLFWmonitor* monitor = primary;
+		w = mode->width;	h = mode->height;
+		// Switch to full screen
+		glfwSetWindowMonitor(window, monitor, 0, 0, mode->width, mode->height, mode->refreshRate);
+		ShowPresetWindow();
+	}
 	while (!glfwWindowShouldClose(window))
 	{
 		// Poll for and process events */
@@ -7177,14 +7283,19 @@ int main()
 		// Actualitzar moviment continu de navegació (WASD) per frame.
 		Teclat_Navega(GLFW_KEY_UNKNOWN, GLFW_REPEAT, delta);
 
-		// Entorn VGI.ImGui: Dibuixa menú ImGui
-		draw_Menu_ImGui();
+		if (DEBUG_MODE) {
+			// Entorn VGI.ImGui: Dibuixa menú ImGui
+			draw_Menu_ImGui();
 
-		// Crida a OnPaint() per redibuixar l'escena
-		OnPaint(window);
+			// Crida a OnPaint() per redibuixar l'escena
+			OnPaint(window);
 
-		// Entorn VGI.ImGui: Capta dades del menú InGui
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			// Entorn VGI.ImGui: Capta dades del menú InGui
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+		}
+		else {
+			OnPaint(window);
+		}
 
 		// Entorn VGI: Activa la finestra actual
 		glfwMakeContextCurrent(window);

@@ -14,6 +14,8 @@
 
 //-------------- Entorn VGI: Variables globals de main
 
+#define DEBUG_MODE 0
+
 // Retrieving main monitor
 	GLFWmonitor* primary;
 
@@ -242,6 +244,8 @@
 	int shortCut_Iluminacio();
 	int shortCut_Shader();
 	void ShowEntornVGIWindow(bool* p_open);
+
+	void ShowPresetWindow();
 
 // EntornVGI: RECURSOS DE MENU (persianes) DE L'APLICACIO:
 	void OnArxiuObrirFractal();
