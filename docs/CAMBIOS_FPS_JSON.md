@@ -11,8 +11,8 @@ Se incorporó giro FPS continuo con ratón, pausa, captura del cursor y compatib
 | `EntornVGI/main.cpp` | `modoJuegoFPS`, `fijarCapturaCursor`, `sincronizarCursorFPS`, `OnWindowFocus`, `OnKeyDown`, `OnMouseMove`, `OnMouseButton`, `OnMouseWheel`, `cargarYAplicarEscena`, `MostraEntornVGIWindow`, `ShowArxiusOptions`, `main` | Añade controles FPS, gestión del foco y cursor, selector de formato, carga transaccional de modelos y salida por menú. |
 | `EntornVGI/SceneLoader.h` | `SceneObject`, `CargarEscenaJSON` | Añade identificador y categoría a cada instancia y declara el lector JSON estricto; conserva `CargarEscena`. |
 | `EntornVGI/SceneLoader.cpp` | `CargarEscena`, `CargarEscenaJSON`, `leerVector3` | Mantiene el lector TXT y añade comprobación de versión, campos, vectores, finitud, IDs y rutas OBJ. |
-| `EntornVGI/assets/scenes/habitacion_beta.json` | Datos de escena | Describe las 12 instancias de la habitación, con las transformaciones del TXT de trabajo. |
-| `EntornVGI/assets/scenes/habitacion_beta.txt` | Transformación del armario | Conserva el ajuste local previo de posición Y (`4.3`) y queda emparejado con la versión JSON. |
+| `EntornVGI/assets/scenes/habitacion_beta.json` | Datos de escena | Describe las 3 instancias que ya tenía la rama `carlos`, con las mismas transformaciones del TXT. |
+| `EntornVGI/assets/scenes/habitacion_beta.txt` | Datos originales de Carlos | Se conserva sin cambios y se usa como referencia para las tres instancias del JSON. |
 | `EntornVGI/third_party/nlohmann/json.hpp` | nlohmann/json 3.11.3 | Añade la distribución de encabezado único con licencia MIT; evita dependencia de descarga durante compilación. |
 | `EntornVGI/EntornVGI.vcxproj`, `EntornVGI/EntornVGI.vcxproj.filters` | Configuración del proyecto | Incluye el encabezado de nlohmann/json en el proyecto de Visual Studio. |
 
@@ -65,21 +65,19 @@ Son nuevas `CargarEscenaJSON`, `leerVector3`, `cargarYAplicarEscena`, `modoJuego
 
 ### Ejecutadas y superadas
 
-- Compilación completa `Debug|x64` con MSBuild 18.10. Se usaron `x64/verify/obj` y `x64/verify` para no modificar las salidas preexistentes. Resultado: 0 errores. La compilación completa inicial reportó una advertencia anterior en `objLoader.cpp(1030)` (`C5056`, comparación `!=` de arrays); una recompilación posterior de las fuentes modificadas terminó sin advertencias.
-- Smoke test C++ directo de `SceneLoader.cpp`: JSON válido aceptado con 12 instancias, TXT válido aceptado con 12 y rechazo de cuatro escenas JSON inválidas (versión ausente, ID duplicado, valor fuera de rango de `float` y ruta OBJ inexistente). En los cuatro casos inválidos, la lista y el nombre anteriores se conservaron. Un TXT con una fila mal formada también se rechazó como un todo.
-- Comparación estructural Python de JSON y TXT: las 12 rutas y todas las posiciones, rotaciones y escalas coinciden; los IDs son únicos y las transformaciones son finitas.
-- `git diff --check`: sin errores de espacios en el diff de los cambios previos a la documentación.
+- En `dev`, la comprobación estructural Python confirmó que JSON y TXT contienen las mismas 3 rutas y transformaciones; los IDs son únicos y los valores finitos.
+- En `dev`, `git diff --check` terminó sin errores.
+- En la rama anterior `feature/fps-controls-json-scenes`, MSBuild compiló `Debug|x64` con 0 errores y un smoke test de `SceneLoader.cpp` verificó una escena de 12 instancias y casos inválidos. Esos resultados no corresponden a la base `carlos` de esta rama `dev`.
 
 ### Fallidas y correcciones
 
-- La primera invocación manual de `cl` tenía comillas incompatibles con `cmd.exe` y no arrancó el compilador. Se corrigió la invocación mediante `VsDevCmd.bat`; el smoke test compiló y pasó. No fue un fallo del código.
+- No hubo pruebas fallidas en `dev`.
 
 ### No ejecutadas
 
-- No se realizó una sesión visual interactiva para comprobar giro, WASD, pausa, pérdida de foco, menús y brazos. La compilación no valida el comportamiento en una ventana real.
-- No se provocó un fallo de `LoadModel` con una escena desde la interfaz. El rechazo de rutas inexistentes se comprobó en el lector JSON; la preservación durante la carga OBJ se revisó en la transacción de `cargarYAplicarEscena`.
-- La reutilización de OBJ se verificó inspeccionando la caché por ruta absoluta en el código; no se instrumentó `LoadModel` para contar llamadas en tiempo de ejecución.
-
+- No se pudo compilar `dev`: MSBuild y `cl.exe` no están disponibles en el entorno actual. La compilación de la rama anterior no sustituye esta comprobación.
+- No se realizó una sesión gráfica interactiva para comprobar ratón, WASD, pausa, foco, menús y brazos.
+- Los casos de escenas inválidas y el conteo de llamadas a `LoadModel` no se repitieron sobre `dev`.
 ## 7. Defensa universitaria
 
 **1. ¿Por qué se desactiva el cursor en el modo FPS?**
