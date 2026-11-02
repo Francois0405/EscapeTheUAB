@@ -34,6 +34,137 @@
 std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
 
+namespace
+{
+	bool fpsPausado = false;
+	bool fpsCapturaSolicitada = true;
+	bool fpsCursorCapturado = false;
+	bool fpsTienePosicionAnterior = false;
+	bool ventanaConFoco = true;
+	double fpsUltimoX = 0.0;
+	double fpsUltimoY = 0.0;
+
+	bool modoJuegoFPS()
+	{
+		return camera == CAM_NAVEGA && projeccio == PERSPECT;
+	}
+
+	void fijarCapturaCursor(GLFWwindow* window, bool capturar)
+	{
+		if (fpsCursorCapturado == capturar) return;
+		fpsCursorCapturado = capturar;
+		fpsTienePosicionAnterior = false;
+		glfwSetInputMode(window, GLFW_CURSOR, capturar ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
+		// Al cambiar GLFW_CURSOR se reinicia el delta antes de aplicar giro FPS.
+	}
+
+	void sincronizarCursorFPS(GLFWwindow* window)
+	{
+		const bool capturar = modoJuegoFPS() && !fpsPausado && ventanaConFoco && fpsCapturaSolicitada;
+		fijarCapturaCursor(window, capturar);
+	}
+}
+
+
+namespace
+{
+	std::string nombreEscenaActiva;
+
+	bool cargarYAplicarEscena(const std::filesystem::path& ruta, bool formatoJSON)
+	{
+		std::vector<SceneObject> objetosLeidos;
+		std::string nombre;
+		if (formatoJSON)
+		{
+			std::string error;
+			if (!CargarEscenaJSON(ruta, objetosLeidos, error, nombre))
+			{
+				std::cerr << "No se cargo la escena: " << error << '\n';
+				return false;
+			}
+		}
+		else
+		{
+			objetosLeidos = CargarEscena(ruta);
+			if (objetosLeidos.empty())
+			{
+				std::cerr << "La escena TXT no contiene objetos validos: " << ruta << '\n';
+				return false;
+			}
+			nombre = ruta.filename().string();
+		}
+
+		std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
+		std::vector<SceneObject> objetosValidos;
+		auto liberarModelosTemporales = [&nuevosModelos]()
+		{
+			for (auto& entrada : nuevosModelos) entrada.second->netejaTextures_OBJ();
+		};
+		for (auto& obj : objetosLeidos)
+		{
+			const auto rutaObj = std::filesystem::absolute(ruta.parent_path() / obj.modelo).lexically_normal();
+			if (!std::filesystem::exists(rutaObj) || !std::filesystem::is_regular_file(rutaObj))
+			{
+				std::cerr << "No existe el OBJ: " << rutaObj << '\n';
+				liberarModelosTemporales();
+				return false;
+			}
+			const std::string clave = rutaObj.string();
+			if (nuevosModelos.find(clave) == nuevosModelos.end())
+			{
+				auto modelo = std::make_unique<COBJModel>();
+				std::string rutaEditable = clave;
+				const int resultado = modelo->LoadModel(rutaEditable.data());
+				if (resultado != 0)
+				{
+					std::cerr << "Error cargando OBJ " << clave << " (codigo " << resultado << ")\n";
+					modelo->netejaTextures_OBJ();
+					liberarModelosTemporales();
+					return false;
+				}
+				// Todas las instancias de un mismo OBJ comparten el modelo ya cargado.
+				nuevosModelos.emplace(clave, std::move(modelo));
+			}
+			obj.modelo = clave;
+			objetosValidos.push_back(std::move(obj));
+		}
+
+		if (objetosValidos.empty()) return false;
+		// Sustituir solo despues de validar la escena y cargar todos sus modelos.
+		for (auto& entrada : modelosHabitacion) entrada.second->netejaTextures_OBJ();
+		modelosHabitacion = std::move(nuevosModelos);
+		objetosEscena = std::move(objetosValidos);
+		nombreEscenaActiva = std::move(nombre);
+		objecte = OBJOBJ;
+		textura = true;
+		tFlag_invert_Y = false;
+		glUseProgram(shader_programID);
+		glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
+		glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+		std::cout << "Escena cargada: " << nombreEscenaActiva << " (" << objetosEscena.size() << " instancias).\n";
+		return true;
+	}
+}
+
+
+namespace
+{
+	void OnWindowFocus(GLFWwindow* window, int focused)
+	{
+		ventanaConFoco = focused == GLFW_TRUE;
+		if (!ventanaConFoco)
+		{
+			fijarCapturaCursor(window, false);
+			for (int tecla : { GLFW_KEY_W, GLFW_KEY_A, GLFW_KEY_S, GLFW_KEY_D })
+				Teclat_Navega(tecla, GLFW_RELEASE);
+		}
+		else
+		{
+			fpsTienePosicionAnterior = false;
+		}
+	}
+}
+
 void InitGL()
 {
 // TODO: agregar aquí el código de construcción
@@ -1179,83 +1310,10 @@ void ShowArxiusOptions()
 //IMGUI_DEMO_MARKER("Examples/Menu");
 	ImGui::MenuItem("(Arxius menu)", NULL, false, false);
 	if (ImGui::MenuItem("New")) {}
-	if (ImGui::MenuItem("Cargar habitacion_demo.txt"))
-	{
-		namespace fs = std::filesystem;
-
-		const fs::path rutaEscena =
-			"assets/scenes/habitacion_beta.txt";
-
-			auto objetosLeidos = CargarEscena(rutaEscena);
-
-			std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
-			std::vector<SceneObject> objetosValidos;
-
-			for (auto obj : objetosLeidos)
-			{
-				// Resolver la ruta del OBJ respecto a la carpeta del TXT.
-				fs::path rutaObj = fs::absolute(
-					rutaEscena.parent_path() / obj.modelo
-				).lexically_normal();
-
-				if (!fs::exists(rutaObj))
-				{
-					std::cerr << "No existe el OBJ: " << rutaObj << '\n';
-					continue;
-				}
-
-				std::string clave = rutaObj.string();
-
-				// Cargar cada archivo OBJ una sola vez.
-				if (nuevosModelos.find(clave) == nuevosModelos.end())
-				{
-					auto modelo = std::make_unique<COBJModel>();
-
-					// LoadModel recibe char*.
-					std::string rutaEditable = clave;
-					int error = modelo->LoadModel(rutaEditable.data());
-
-					if (error != 0)
-					{
-						std::cerr << "Error cargando: " << clave
-							<< " (codigo " << error << ")\n";
-						continue;
-					}
-
-					nuevosModelos.emplace(clave, std::move(modelo));
-				}
-
-				// Guardar la ruta resuelta para encontrar el modelo al dibujar.
-				obj.modelo = clave;
-				objetosValidos.push_back(obj);
-			}
-
-			if (!objetosValidos.empty())
-			{
-				// Liberar los recursos de la habitación anterior.
-				for (auto& entrada : modelosHabitacion)
-					entrada.second->netejaTextures_OBJ();
-
-				modelosHabitacion = std::move(nuevosModelos);
-				objetosEscena = std::move(objetosValidos);
-
-				objecte = OBJOBJ;
-				textura = true;
-				tFlag_invert_Y = false;
-
-				glUseProgram(shader_programID);
-				glUniform1i(
-					glGetUniformLocation(shader_programID, "textur"), textura
-				);
-				glUniform1i(
-					glGetUniformLocation(shader_programID, "flag_invert_y"),
-					tFlag_invert_Y
-				);
-
-				std::cout << "Habitacion cargada: "
-					<< objetosEscena.size() << " objetos.\n";
-			}
-	}
+    if (ImGui::MenuItem("Cargar habitacion_beta.txt"))
+        cargarYAplicarEscena("assets/scenes/habitacion_beta.txt", false);
+    if (ImGui::MenuItem("Cargar habitacion_beta.json"))
+        cargarYAplicarEscena("assets/scenes/habitacion_beta.json", true);
 
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;

@@ -188,6 +188,7 @@
     <ClInclude Include="..\include\ImGui\imstb_textedit.h" />
     <ClInclude Include="..\include\ImGui\nfd.h" />
     <ClInclude Include="constants.h" />
+    <ClInclude Include="third_party\nlohmann\json.hpp" />
     <ClInclude Include="escena.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="glut_geometry.h" />

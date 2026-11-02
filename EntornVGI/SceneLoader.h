@@ -8,6 +8,8 @@
 
 struct SceneObject
 {
+    std::string id;
+    std::string categoria;
     std::string modelo;
 
     glm::vec3 posicion;
@@ -17,6 +19,14 @@ struct SceneObject
 
 std::vector<SceneObject> CargarEscena(
     const std::filesystem::path& ruta
+);
+
+// JSON es estricto: si hay un error no publica objetos parciales.
+bool CargarEscenaJSON(
+    const std::filesystem::path& ruta,
+    std::vector<SceneObject>& objetos,
+    std::string& error,
+    std::string& nombre
 );
 
 #endif
