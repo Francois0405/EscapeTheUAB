@@ -1,17 +1,17 @@
-//******** PRACTICA VISUALITZACIÓ GRÀFICA INTERACTIVA (Escola Enginyeria - UAB)
-//******** Entorn bàsic VS2026 MONOFINESTRA amb OpenGL 4.6, interfície GLFW 3.4, ImGui i llibreries GLM
-//******** Enric Martí Gòdia (Setembre 2026)
-// glut_geometry.cpp : Codi font de les primitives gràfiques freeglut i GLU adaptades a VS2022.
-// FUNCIONS:		- Primitives sòlides (glutSolid<primitiva>)
+//******** PRACTICA VISUALITZACIï¿½ GRï¿½FICA INTERACTIVA (Escola Enginyeria - UAB)
+//******** Entorn bï¿½sic VS2026 MONOFINESTRA amb OpenGL 4.6, interfï¿½cie GLFW 3.4, ImGui i llibreries GLM
+//******** Enric Martï¿½ Gï¿½dia (Setembre 2026)
+// glut_geometry.cpp : Codi font de les primitives grï¿½fiques freeglut i GLU adaptades a VS2022.
+// FUNCIONS:		- Primitives sï¿½lides (glutSolid<primitiva>)
 //					- Primitives filferros (glutWire<primitiva>)
 //					- Primitives punts (glutPoint<primitiva>)
 //					- Interficie de primitives (glet<primitiva>)
-//					- Primitives sòlides (gluCilindre, gluDisc, GluParcialDisc, GluEsfera)
-//	  Versió 2.8:	- Adaptació primitives glut a VAO amb tres funcions separedes:
-//						1) Càrrega geometria VAO a placa gràfica --> CVAO cubeVAO = loadglutSolidCube_VAO(1.0);
+//					- Primitives sï¿½lides (gluCilindre, gluDisc, GluParcialDisc, GluEsfera)
+//	  Versiï¿½ 2.8:	- Adaptaciï¿½ primitives glut a VAO amb tres funcions separedes:
+//						1) Cï¿½rrega geometria VAO a placa grï¿½fica --> CVAO cubeVAO = loadglutSolidCube_VAO(1.0);
 //																 --> Set_VAOList(GLUT_CUBE, cubeVAO);
 //						2) Dibuix VAO tantes vegades com es vulgui --> draw_TriVAO_Object(GLUT_CUBE);
-//						3) Eliminació VAO --> deleteVAOList(GLUT_CUBE)
+//						3) Eliminaciï¿½ VAO --> deleteVAOList(GLUT_CUBE)
 //
 
 /*
@@ -20,7 +20,7 @@
  * Codi adaptat de Freeglut geometry rendering methods.
  *
  * Copyright (c) 2017 Nosferatu Software. All Rights Reserved.
- * Adaptat per Enric Martí Gòdia, <enric.marti@uab.cat>
+ * Adaptat per Enric Martï¿½ Gï¿½dia, <enric.marti@uab.cat>
  * Creation date: Dimarts 9 Maig 2017
  * Update date: Dimarts 28 Novembre 2017
  *
@@ -47,7 +47,7 @@
 #include "glut_geometry.h"
 
 // VAOList: Vector d'identificadors de Vertex Buffer Objects per a primitives glut_geometry.
-								// Cada posició del vector correspon a una primitiva:
+								// Cada posiciï¿½ del vector correspon a una primitiva:
 								// 0: CUBE_SKYBOX, 1: GLUT_CUBE, 2:GLUT_CUBE_RGB, 3:GLUT_SPHERE, 4: GLUT_CONE, 
 								// 5: GLUT_CYLINDER, 6: GLUT_TORUS, 7: GLUT_DODECAHEDRON, 8: GLUT_OCTAHEDRON, 
 								// 9: GLUT_TETRAEDRON, 10: GLUT_ICOSAHEDRON, 11: GLUT_RHOMBICDODECAHEDRON,  
@@ -67,7 +67,7 @@ GLdouble cColor[4] = { 0.0, 0.0, 0.0, 1.0 };
 /*
  * TODO BEFORE THE STABLE RELEASE:
  *
- * Following functions have been contributed by Andreas Umbach, updated by Enric Martí to VAO.
+ * Following functions have been contributed by Andreas Umbach, updated by Enric Martï¿½ to VAO.
  *
  *      glutSolidCube()		    -- looks OK, VAO functions separated (load*_VAO(), draw_TriVAO_Object(GL*), deleteVAOList(GL*)
  *											 EBO functions separated (load*_EBO(), draw_TriEBO_Object(GL*), deleteVAOList(GL*)
@@ -75,7 +75,7 @@ GLdouble cColor[4] = { 0.0, 0.0, 0.0, 1.0 };
  * *										 EBO functions separated (load*_EBO(), draw_TriEBO_Object(GL*), deleteVAOList(GL*)
  *
  *  The Following functions have been updated by Nigel Stewart, based
- *  on FreeGLUT 2.0.0 implementations, updated by Enric Martí to VAO:
+ *  on FreeGLUT 2.0.0 implementations, updated by Enric Martï¿½ to VAO:
  *
  *      glutSolidSphere()       -- looks OK, VAO functions separated (load*_VAO(), draw_TriVAO_Object(GL*), deleteVAOList(GL*)
  * *										 EBO functions separated (load*_EBO(), draw_TriEBO_Object(GL*), deleteVAOList(GL*)
@@ -84,7 +84,7 @@ GLdouble cColor[4] = { 0.0, 0.0, 0.0, 1.0 };
  *      glutSolidCylinder()		-- looks OK, VAO functions separated (load*_VAO(), draw_TriVAO_Object(GL*), deleteVAOList(GL*)
  * *										 EBO functions separated (load*_EBO(), draw_TriEBO_Object(GL*), deleteVAOList(GL*)
  *
- * Those functions have been implemented by John Fay, updated by Enric Martí to VAO..
+ * Those functions have been implemented by John Fay, updated by Enric Martï¿½ to VAO..
  *
  *      glutSolidTorus()				-- looks OK, VAO functions separated (load*_VAO(), draw_TriVAO_Object(GL*), deleteVAOList(GL*)
  *      glutSolidDodecahedron()			-- looks OK
@@ -95,7 +95,7 @@ GLdouble cColor[4] = { 0.0, 0.0, 0.0, 1.0 };
  *      glutSolidSierpinskiSponge()		-- looks OK
  *      glutSolidTeapot()				-- looks OK, VAO functions separated (load*_VAO(), draw_TriVAO_Object(GL*), deleteVAOList(GL*)
  *
- *  The Following functions have been updated by Enric Martí, based
+ *  The Following functions have been updated by Enric Martï¿½, based
  *  on GLU 9.0.0 implementations (include texture coordinates) to VAO and EBO:
  *
  *      gluCylinder()			-- looks OK, VAO functions separated (load*_VAO(), draw_TriVAO_Object(GL*), deleteVAOList(GL*)
@@ -372,7 +372,7 @@ CVAO loadglutSolidCube_VAO(GLdouble dSize)
 		0.0, 0.0, 1.0, 0.0, 1.0, 1.0,      // v4-v7-v6 (back)
 		1.0, 1.0, 0.0, 1.0, 0.0, 0.0 };    // v6-v5-v4
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	auxVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//auxVAO.nVertexs = 36;
 
@@ -475,7 +475,7 @@ CVAO loadglutSolidCube_EBO(GLdouble dSize)
 		16, 17, 18, 18, 19, 16,		// v7-v4-v3-v2 (bottom)
 		20, 21, 22, 22, 23, 20 };	// v4-v7-v6-v5 (back)
 
-// Creació d'un VAO, VBO i EBO carregant-hi la geometria. Guardar identificadors VAO, VBO, EBO, vertex i indexs a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO carregant-hi la geometria. Guardar identificadors VAO, VBO, EBO, vertex i indexs a struct CVAO.
 	auxVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 
 	return auxVAO;
@@ -577,7 +577,7 @@ CVAO loadglutSolidCubeRGB_VAO(GLdouble dSize)
 		0, 0, 1, 0, 1, 1,      // v4-v7-v6 (back)
 		1, 1, 0, 1, 0, 0 };    // v6-v5-v4
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	auxVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//auxVAO.nVertexs = 36;
 
@@ -656,7 +656,7 @@ CVAO loadglutSolidCubeRGB_EBO(GLdouble dSize)
 		16, 17, 18, 18, 19, 16,		// v7-v4-v3-v2 (left)
 		20, 21, 22, 22, 23, 20 };	// v4-v7-v6-v5 (bottom)
 
-// Creació d'un VAO, VBO i EBO carregant-hi la geometria. Guardar identificadors VAO, VBO, EBO, vertex i indexs a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO carregant-hi la geometria. Guardar identificadors VAO, VBO, EBO, vertex i indexs a struct CVAO.
 	auxVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures,indices);
 	//auxVAO.nVertexs = 36;
 
@@ -785,7 +785,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 	CVAO sphereVAO;
 	sphereVAO.vaoId = 0;	sphereVAO.vboId = 0;	sphereVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -855,7 +855,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 				textures.push_back(-(cost1[j] * r1*radius) + (sint1[j] * r1*radius));	textures.push_back(-(cost1[j] * r1*radius) + z1*radius);// Vector Textures
 				vertices.push_back(cost1[j] * r1*radius);	vertices.push_back(sint1[j] * r1*radius);	vertices.push_back(z1*radius);	// Vector Vertices
 				
-				// Vèrtex 1
+				// Vï¿½rtex 1
 				//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
                 //glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 				colors.push_back(cColor[0]);				colors.push_back(cColor[1]);				colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -863,7 +863,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 				textures.push_back(-(cost1[j] * r0*radius) + (sint1[j] * r0*radius));	textures.push_back(-(cost1[j] * r0*radius) + z0*radius);// Vector Textures
 				vertices.push_back(cost1[j] * r0*radius);	vertices.push_back(sint1[j] * r0*radius);	vertices.push_back(z0*radius);	// Vector Vertices
 
-				// Vèrtex 3
+				// Vï¿½rtex 3
 				//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
 				//glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 				colors.push_back(cColor[0]);				colors.push_back(cColor[1]);				colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -871,7 +871,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 				textures.push_back(-(cost1[j + 1] * r0 * radius) + (sint1[j+1] * r0 * radius));	textures.push_back(-(cost1[j + 1] * r0 * radius) + z0 * radius);// Vector Textures
 				vertices.push_back(cost1[j + 1] * r0 * radius);	vertices.push_back(sint1[j + 1] * r0 * radius);	vertices.push_back(z0 * radius);	// Vector Vertices
 				
-				// Vèrtex 3
+				// Vï¿½rtex 3
 				//glNormal3d(cost1[j+1]*r0,        sint1[j+1]*r0,        z0       );
 				//glVertex3d(cost1[j+1]*r0*radius, sint1[j+1]*r0*radius, z0*radius);
 				colors.push_back(cColor[0]);				colors.push_back(cColor[1]);				colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -913,7 +913,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 
     for (j=0; j<=slices-1; j++)
         {   
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glNormal3d(0,0,-1);
 			//glVertex3d(0,0,-radius);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -921,7 +921,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 			textures.push_back(0.0);		textures.push_back(-radius);									// Vector Textures
 			vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(-radius);	// Vector Vertices
 
-			// Vèrtex j 
+			// Vï¿½rtex j 
 			//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
             //glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -929,7 +929,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 			textures.push_back(-(cost1[j] * r0*radius) + (sint1[j] * r0*radius));	textures.push_back(-(cost1[j] * r0*radius) + z0*radius);// Vector Textures
 			vertices.push_back(cost1[j] * r0*radius);	vertices.push_back(sint1[j] * r0*radius);	vertices.push_back(z0*radius);	// Vector Vertices
 
-			// Vèrtex j+1 
+			// Vï¿½rtex j+1 
 			//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
 			//glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -942,7 +942,7 @@ CVAO loadglutSolidSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	sphereVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//sphereVAO.nVertexs = (int) nv / 3;
 
@@ -969,13 +969,13 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 	double* sint1, * cost1;
 	double* sint2, * cost2;
 
-	GLint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO sphereVAO;
 	sphereVAO.vaoId = 0;	sphereVAO.vboId = 0;	sphereVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	std::vector <uint> indices;
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
@@ -1055,7 +1055,7 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 			textures.push_back(-(cost1[j] * r1 * radius) + (sint1[j] * r1 * radius));	textures.push_back(-(cost1[j] * r1 * radius) + z1 * radius);// Vector Textures
 			vertices.push_back(cost1[j] * r1 * radius);	vertices.push_back(sint1[j] * r1 * radius);	vertices.push_back(z1 * radius);	// Vector Vertices
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
 			//glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 			colors.push_back(cColor[0]);				colors.push_back(cColor[1]);				colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1071,7 +1071,7 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 			textures.push_back(-(cost1[j + 1] * r1 * radius) + (sint1[j] * r1 * radius));	textures.push_back(-(cost1[j + 1] * r1 * radius) + z1 * radius);// Vector Textures
 			vertices.push_back(cost1[j + 1] * r1 * radius);	vertices.push_back(sint1[j + 1] * r1 * radius);	vertices.push_back(z1 * radius);	// Vector Vertices
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
 			//glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 			colors.push_back(cColor[0]);				colors.push_back(cColor[1]);				colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1093,7 +1093,7 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 
 	//glBegin(GL_TRIANGLE_FAN);
 	//    glNormal3d(0,0,-1);
-	// Vèrtex 0.
+	// Vï¿½rtex 0.
 	//    glVertex3d(0,0,-radius);
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);		// Vector Normals
@@ -1105,7 +1105,7 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 
 	for (j = 0; j <= slices - 1; j++)
 	{
-		// Vèrtex 0
+		// Vï¿½rtex 0
 		//glNormal3d(0,0,-1);
 		//glVertex3d(0,0,-radius);
 		//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1113,7 +1113,7 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 		//textures.push_back(0.0);		textures.push_back(-radius);									// Vector Textures
 		//vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(-radius);	// Vector Vertices
 
-		// Vèrtex j 
+		// Vï¿½rtex j 
 		//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
 		//glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 		colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1121,7 +1121,7 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 		textures.push_back(-(cost1[j] * r0 * radius) + (sint1[j] * r0 * radius));	textures.push_back(-(cost1[j] * r0 * radius) + z0 * radius);// Vector Textures
 		vertices.push_back(cost1[j] * r0 * radius);	vertices.push_back(sint1[j] * r0 * radius);	vertices.push_back(z0 * radius);	// Vector Vertices
 
-		// Vèrtex j+1 
+		// Vï¿½rtex j+1 
 		//glNormal3d(cost1[j]*r0,        sint1[j]*r0,        z0       );
 		//glVertex3d(cost1[j]*r0*radius, sint1[j]*r0*radius, z0*radius);
 		colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1138,7 +1138,7 @@ CVAO loadglutSolidSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
- // Creació d'un VAO, VBO i EBO amb càrrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
+ // Creaciï¿½ d'un VAO, VBO i EBO amb cï¿½rrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
 	sphereVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//sphereVAO.nVertexs = (int)nv / 3;
 
@@ -1222,7 +1222,7 @@ CVAO loadglutSolidCone_VAO(GLdouble base, GLdouble height, GLint slices, GLint s
 	CVAO conusVAO;			
 	conusVAO.vaoId = 0;	conusVAO.vboId = 0;	conusVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	vertices.resize(0);		normals.resize(0);		colors.resize(0);		textures.resize(0);			// Reinicialitzar vectors
 
 // Obtenir color actual definit en OpenGL amb glColor();
@@ -1247,7 +1247,7 @@ CVAO loadglutSolidCone_VAO(GLdouble base, GLdouble height, GLint slices, GLint s
 	//vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(z0);			// Vector Vertices
         for (j=0; j<=slices-1; j++)
 			{	
-				// Vèrtex 0
+				// Vï¿½rtex 0
 				//glNormal3d(0.0,0.0,-1.0);
 				//glVertex3d(0.0,0.0, z0 );
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]); // Vector Colors
@@ -1255,14 +1255,14 @@ CVAO loadglutSolidCone_VAO(GLdouble base, GLdouble height, GLint slices, GLint s
 				textures.push_back(0.0);		textures.push_back(z0);											// Vector Textures
 				vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(z0);			// Vector Vertices
 				
-				//Vèrtex 1 (j)
+				//Vï¿½rtex 1 (j)
 				//glVertex3d(cost[j]*r0, sint[j]*r0, z0);
 				colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]);// Vector Colors
 				normals.push_back(0.0);				normals.push_back(0.0);				normals.push_back(-1.0);	// Vector Normals
 				textures.push_back(-(cost[j] * r0) + (sint[j] * r0));					textures.push_back(-(cost[j] * r0) + z0);	// Vector Textures
 				vertices.push_back(cost[j] * r0);	vertices.push_back(sint[j] * r0);	vertices.push_back(z0);		// Vector Vertices
 
-				//Vèrtex 2 (j+1)
+				//Vï¿½rtex 2 (j+1)
 				//glVertex3d(cost[j+1]*r0, sint[j+1]*r0, z0);
 				colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]);// Vector Colors
 				normals.push_back(0.0);				normals.push_back(0.0);				normals.push_back(-1.0);	// Vector Normals
@@ -1276,7 +1276,7 @@ CVAO loadglutSolidCone_VAO(GLdouble base, GLdouble height, GLint slices, GLint s
     {	//glBegin(GL_QUAD_STRIP);
             for(j=0; j<=slices-1; j++)
             {   
-				// Vèrtex 0
+				// Vï¿½rtex 0
 				//glNormal3d(cost[j]*cosn, sint[j]*cosn, sinn);
                 //glVertex3d(cost[j]*r0,   sint[j]*r0,   z0  );
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1284,28 +1284,28 @@ CVAO loadglutSolidCone_VAO(GLdouble base, GLdouble height, GLint slices, GLint s
 				textures.push_back(-(cost[j] * r0) + (sint[j] * r0));			textures.push_back(-(cost[j] * r0) + z0);	// Vector Textures
 				vertices.push_back(cost[j] * r0);	vertices.push_back(sint[j] * r0);	vertices.push_back(z0);	// Vector Vertices
 
-				// Vèrtex 1
+				// Vï¿½rtex 1
                 //glVertex3d(cost[j]*r1,   sint[j]*r1,   z1  );
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 				normals.push_back(cost[j] * cosn);	normals.push_back(sint[j] * cosn);	normals.push_back(sinn);// Vector Normals
 				textures.push_back(-(cost[j] * r1) + (sint[j] * r1));			textures.push_back(-(cost[j] * r1) + z1);	// Vector Textures
 				vertices.push_back(cost[j] * r1);	vertices.push_back(sint[j] * r1);	vertices.push_back(z1);	// Vector Vertices
 
-				// Vèrtex 3
+				// Vï¿½rtex 3
 				//glVertex3d(cost[j]*r1,   sint[j]*r1,   z1  );
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 				normals.push_back(cost[j + 1] * cosn);	normals.push_back(sint[j+1] * cosn);	normals.push_back(sinn);// Vector Normals
 				textures.push_back(-(cost[j + 1] * r1) + (sint[j+1] * r1));			textures.push_back(-(cost[j + 1] * r1) + z1);	// Vector Textures
 				vertices.push_back(cost[j + 1] * r1);	vertices.push_back(sint[j + 1] * r1);	vertices.push_back(z1);	// Vector Vertices
 
-				// Vèrtex 3
+				// Vï¿½rtex 3
 				//glVertex3d(cost[j]*r1,   sint[j]*r1,   z1  );
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 				normals.push_back(cost[j + 1] * cosn);	normals.push_back(sint[j+1] * cosn);	normals.push_back(sinn);// Vector Normals
 				textures.push_back(-(cost[j + 1] * r1) + (sint[j+1] * r1));			textures.push_back(-(cost[j + 1] * r1) + z1);	// Vector Textures
 				vertices.push_back(cost[j + 1] * r1);	vertices.push_back(sint[j + 1] * r1);	vertices.push_back(z1);	// Vector Vertices
 
-				// Vèrtex 2
+				// Vï¿½rtex 2
 				//glNormal3d(cost[j+1]*cosn, sint[j+1]*cosn, sinn);
 				//glVertex3d(cost[j+1]*r0,   sint[j+1]*r0,   z0  );
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1313,7 +1313,7 @@ CVAO loadglutSolidCone_VAO(GLdouble base, GLdouble height, GLint slices, GLint s
 				textures.push_back(-(cost[j+1] * r0) + (sint[j] * r0));			textures.push_back(-(cost[j+1] * r0) + z0);	// Vector Textures
 				vertices.push_back(cost[j+1] * r0);	vertices.push_back(sint[j+1] * r0);	vertices.push_back(z0);	// Vector Vertices
 
-				// Vèrtex 0
+				// Vï¿½rtex 0
 				//glNormal3d(cost[j]*cosn, sint[j]*cosn, sinn);
 				//glVertex3d(cost[j]*r0,   sint[j]*r0,   z0  );
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1356,7 +1356,7 @@ CVAO loadglutSolidCone_VAO(GLdouble base, GLdouble height, GLint slices, GLint s
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	conusVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//conusVAO.nVertexs = int (nv / 3);
 
@@ -1386,15 +1386,15 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 // Pre-computed circle 
 	double* sint, * cost;
 
-	GLint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO conusVAO;
 	conusVAO.vaoId = 0;	conusVAO.vboId = 0;	conusVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	vertices.resize(0);		normals.resize(0);		colors.resize(0);		textures.resize(0);			// Reinicialitzar vectors
-	std::vector <uint> indices;									// Definició vector dinàmic d'índexs per a EBO
+	std::vector <uint> indices;									// Definiciï¿½ vector dinï¿½mic d'ï¿½ndexs per a EBO
 	indices.resize(0);											// Reinicialitzar vectors
 
 // Obtenir color actual definit en OpenGL amb glColor();
@@ -1412,7 +1412,7 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 
 	//glBegin(GL_TRIANGLE_FAN);
 	//glNormal3d(0.0,0.0,-1.0);
-	// Vèrtex 0
+	// Vï¿½rtex 0
 	//glVertex3d(0.0,0.0, z0 );
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);		// Vector Normals
@@ -1423,7 +1423,7 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 
 	for (j = 0; j <= slices - 1; j++)
 	{
-		// Vèrtex 0
+		// Vï¿½rtex 0
 		//glNormal3d(0.0,0.0,-1.0);
 		//glVertex3d(0.0,0.0, z0 );
 		//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]); // Vector Colors
@@ -1431,14 +1431,14 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 		//textures.push_back(0.0);		textures.push_back(z0);											// Vector Textures
 		//vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(z0);			// Vector Vertices
 
-		//Vèrtex 1 (j)
+		//Vï¿½rtex 1 (j)
 		//glVertex3d(cost[j]*r0, sint[j]*r0, z0);
 		colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]);// Vector Colors
 		normals.push_back(0.0);				normals.push_back(0.0);				normals.push_back(-1.0);	// Vector Normals
 		textures.push_back(-(cost[j] * r0) + (sint[j] * r0));					textures.push_back(-(cost[j] * r0) + z0);	// Vector Textures
 		vertices.push_back(cost[j] * r0);	vertices.push_back(sint[j] * r0);	vertices.push_back(z0);		// Vector Vertices
 
-		//Vèrtex 2 (j+1)
+		//Vï¿½rtex 2 (j+1)
 		//glVertex3d(cost[j+1]*r0, sint[j+1]*r0, z0);
 		colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]);// Vector Colors
 		normals.push_back(0.0);				normals.push_back(0.0);				normals.push_back(-1.0);	// Vector Normals
@@ -1456,7 +1456,7 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 	{	//glBegin(GL_QUAD_STRIP);
 		for (j = 0; j <= slices - 1; j++)
 		{
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glNormal3d(cost[j]*cosn, sint[j]*cosn, sinn);
 			//glVertex3d(cost[j]*r0,   sint[j]*r0,   z0  );
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1464,14 +1464,14 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 			textures.push_back(-(cost[j] * r0) + (sint[j] * r0));			textures.push_back(-(cost[j] * r0) + z0);	// Vector Textures
 			vertices.push_back(cost[j] * r0);	vertices.push_back(sint[j] * r0);	vertices.push_back(z0);	// Vector Vertices
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glVertex3d(cost[j]*r1,   sint[j]*r1,   z1  );
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(cost[j] * cosn);	normals.push_back(sint[j] * cosn);	normals.push_back(sinn);// Vector Normals
 			textures.push_back(-(cost[j] * r1) + (sint[j] * r1));			textures.push_back(-(cost[j] * r1) + z1);	// Vector Textures
 			vertices.push_back(cost[j] * r1);	vertices.push_back(sint[j] * r1);	vertices.push_back(z1);	// Vector Vertices
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glNormal3d(cost[j+1]*cosn, sint[j+1]*cosn, sinn);
 			//glVertex3d(cost[j+1]*r0,   sint[j+1]*r0,   z0  );
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1479,7 +1479,7 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 			textures.push_back(-(cost[j + 1] * r0) + (sint[j] * r0));			textures.push_back(-(cost[j + 1] * r0) + z0);	// Vector Textures
 			vertices.push_back(cost[j + 1] * r0);	vertices.push_back(sint[j + 1] * r0);	vertices.push_back(z0);	// Vector Vertices
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glVertex3d(cost[j]*r1,   sint[j]*r1,   z1  );
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(cost[j + 1] * cosn);	normals.push_back(sint[j + 1] * cosn);	normals.push_back(sinn);// Vector Normals
@@ -1529,7 +1529,7 @@ CVAO loadglutSolidCone_EBO(GLdouble base, GLdouble height, GLint slices, GLint s
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
- // Creació d'un VAO, VBO i EBO amb càrrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
+ // Creaciï¿½ d'un VAO, VBO i EBO amb cï¿½rrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
 	conusVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//conusVAO.nVertexs = int(nv / 3);
 
@@ -1569,7 +1569,7 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 	CVAO cilindreVAO;		
 	cilindreVAO.vaoId = 0;		cilindreVAO.vboId = 0;		cilindreVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -1579,7 +1579,7 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 
 //    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSolidCylinder" );
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
 	//Activa_Coordenades_Textura();
 
     fghCircleTable(&sint,&cost,-slices);
@@ -1596,7 +1596,7 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 
 	for (j = 0; j <= slices; j++)
 		{	
-			// Vèrtex 0 (0)
+			// Vï¿½rtex 0 (0)
 			//  glNormal3d(0.0, 0.0, -1.0 );
 			//  glVertex3d(0.0, 0.0,  0.0 );
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1604,14 +1604,14 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 			textures.push_back(0.0);	textures.push_back(0.0);											// Vector Textures
 			vertices.push_back(0.0);	vertices.push_back(0.0);	vertices.push_back(0.0);				// Vector Vertices
 		
-			// Vèrtex 1 (j)
+			// Vï¿½rtex 1 (j)
 			//glVertex3d(cost[j]*radius, sint[j]*radius, 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);		// Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);					// Vector Normals
 			textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius));		// Vector Textures
 			vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(0.0);	// Vector Vertices
 
-			// Vèrtex 2 (j+1)
+			// Vï¿½rtex 2 (j+1)
 			//glVertex3d(cost[j+1]*radius, sint[j+1]*radius, 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);		// Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);					// Vector Normals
@@ -1633,7 +1633,7 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 	//for (j = slices; j >= 0; j--)
 	for (j = slices; j >= 1; j--)
 		{	
-			// Vèrtex 0 (0)
+			// Vï¿½rtex 0 (0)
 			//  glNormal3d(0.0, 0.0, 1.0);
 			//  glVertex3d(0.0, 0.0, height);
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);	// Vector Colors
@@ -1641,14 +1641,14 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 			textures.push_back(0.0);	textures.push_back(0.0);										// Vector Textures
 			vertices.push_back(0.0);	vertices.push_back(0.0);	vertices.push_back(height);			// Vector Vertices
 			
-			// Vèrtex 1 (j)
+			// Vï¿½rtex 1 (j)
 			//glVertex3d(cost[j]*radius, sint[j]*radius, height);
 			colors.push_back(cColor[0]); colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
 			normals.push_back(0.0);		 normals.push_back(0.0);	normals.push_back(-1.0);	// Vector Normals
 			textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius) + height);// Vector Textures
 			vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(height);	// Vector Vertices
 
-			// Vèrtex 2 (j-1)
+			// Vï¿½rtex 2 (j-1)
 			//glVertex3d(cost[j-1]*radius, sint[j-1]*radius, height);
 			colors.push_back(cColor[0]);			colors.push_back(cColor[1]);			colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
 			normals.push_back(0.0);					normals.push_back(0.0);					normals.push_back(-1.0);	// Vector Normals
@@ -1666,7 +1666,7 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 	    //glBegin(GL_QUAD_STRIP);
             for (j=0; j<=slices-1; j++ )
             {   
-				// Vèrtex 0
+				// Vï¿½rtex 0
 				//glNormal3d(cost[j],        sint[j],        0.0);
                 //glVertex3d(cost[j]*radius, sint[j]*radius, z0);
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
@@ -1674,35 +1674,35 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 				textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius) + z0);	// Vector Textures
 				vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(z0);		// Vector Vertices
                 
-				// Vèrtex 1
+				// Vï¿½rtex 1
 				//glVertex3d(cost[j]*radius, sint[j]*radius, z1);
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);	// Vector Colors
 				normals.push_back(cost[j]);		normals.push_back(sint[j]);		normals.push_back(0.0);		// Vector Normals
 				textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius) + z1);	// Vector Textures
 				vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(z1);		// Vector Vertices
 
-				// Vèrtex 3
+				// Vï¿½rtex 3
 				//glVertex3d(cost[j+1]*radius, sint[j+1]*radius, z1);
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);	// Vector Colors
 				normals.push_back(cost[j+1]);	normals.push_back(sint[j+1]);	normals.push_back(0.0);		// Vector Normals
 				textures.push_back(-(cost[j+1] * radius) + (sint[j+1] * radius)); textures.push_back(-(cost[j+1] * radius) + z1);	// Vector Textures
 				vertices.push_back(cost[j+1] * radius);	vertices.push_back(sint[j+1] * radius);	vertices.push_back(z1);		// Vector Vertices
 
-				// Vèrtex 3
+				// Vï¿½rtex 3
 				//glVertex3d(cost[j+1]*radius, sint[j+1]*radius, z1);
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);	// Vector Colors
 				normals.push_back(cost[j + 1]);	normals.push_back(sint[j + 1]);	normals.push_back(0.0);		// Vector Normals
 				textures.push_back(-(cost[j + 1] * radius) + (sint[j + 1] * radius)); textures.push_back(-(cost[j + 1] * radius) + z1);	// Vector Textures
 				vertices.push_back(cost[j + 1] * radius);	vertices.push_back(sint[j + 1] * radius);	vertices.push_back(z1);		// Vector Vertices
 
-				// Vèrtex 2
+				// Vï¿½rtex 2
 				//glVertex3d(cost[j+1]*radius, sint[j+1]*radius, z0);
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
 				normals.push_back(cost[j+1]);	normals.push_back(sint[j]);		normals.push_back(0.0);		// Vector Normals
 				textures.push_back(-(cost[j+1] * radius) + (sint[j+1] * radius)); textures.push_back(-(cost[j+1] * radius) + z0);	// Vector Textures
 				vertices.push_back(cost[j+1] * radius);	vertices.push_back(sint[j+1] * radius);	vertices.push_back(z0);		// Vector Vertices
 
-				// Vèrtex 0
+				// Vï¿½rtex 0
 				//glNormal3d(cost[j],        sint[j],        0.0);
 				//glVertex3d(cost[j]*radius, sint[j]*radius, z0);
 				colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
@@ -1718,7 +1718,7 @@ CVAO loadglutSolidCylinder_VAO(GLdouble radius, GLdouble height, GLint slices, G
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 	//std::vector <int>::size_type ni = vertices.size();	// Tamany del vector indices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	cilindreVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//cilindreVAO.nVertexs = ni;
 
@@ -1743,14 +1743,14 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 // Pre-computed circle 
 	double* sint, * cost;
 
-	GLuint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLuint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO cilindreVAO;
 	cilindreVAO.vaoId = 0;		cilindreVAO.vboId = 0;		cilindreVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures
-	std::vector <uint> indices;									// Definició vector dinàmic d'índexs per a EBO
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures
+	std::vector <uint> indices;									// Definiciï¿½ vector dinï¿½mic d'ï¿½ndexs per a EBO
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 	indices.clear();
@@ -1761,7 +1761,7 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 
 //    FREEGLUT_EXIT_IF_NOT_INITIALISED ( "glutSolidCylinder" );
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
 	//Activa_Coordenades_Textura();
 
 	fghCircleTable(&sint, &cost, -slices);
@@ -1771,7 +1771,7 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 	//glBegin(GL_TRIANGLE_FAN);
 	//  glNormal3d(0.0, 0.0, -1.0 );
 
-	// Vèrtex 0 (0)
+	// Vï¿½rtex 0 (0)
 	//  glVertex3d(0.0, 0.0,  0.0 );
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.0);		normals.push_back(-1.0);				// Vector Normals
@@ -1782,7 +1782,7 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 
 	for (j = 0; j <= slices; j++)
 	{
-		// Vèrtex 0 (0)
+		// Vï¿½rtex 0 (0)
 		//  glNormal3d(0.0, 0.0, -1.0 );
 		//  glVertex3d(0.0, 0.0,  0.0 );
 		//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -1790,14 +1790,14 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 		//textures.push_back(0.0);	textures.push_back(0.0);											// Vector Textures
 		//vertices.push_back(0.0);	vertices.push_back(0.0);	vertices.push_back(0.0);				// Vector Vertices
 
-		// Vèrtex 1 (j)
+		// Vï¿½rtex 1 (j)
 		//glVertex3d(cost[j]*radius, sint[j]*radius, 0.0);
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);		// Vector Colors
 		normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);					// Vector Normals
 		textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius));		// Vector Textures
 		vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(0.0);	// Vector Vertices
 
-		// Vèrtex 2 (j+1)
+		// Vï¿½rtex 2 (j+1)
 		//glVertex3d(cost[j+1]*radius, sint[j+1]*radius, 0.0);
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);		// Vector Colors
 		normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);					// Vector Normals
@@ -1814,7 +1814,7 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 	//glBegin(GL_TRIANGLE_FAN);
 	//  glNormal3d(0.0, 0.0, 1.0);
 
-	// Vèrtex 0 (0)
+	// Vï¿½rtex 0 (0)
 	//  glVertex3d(0.0, 0.0, height);
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.0);		normals.push_back(1.0);				// Vector Normals
@@ -1827,7 +1827,7 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 	//for (j = slices; j >= 0; j--)
 	for (j = slices; j >= 1; j--)
 	{
-		// Vèrtex 0 (0)
+		// Vï¿½rtex 0 (0)
 		//  glNormal3d(0.0, 0.0, 1.0);
 		//  glVertex3d(0.0, 0.0, height);
 		//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);	// Vector Colors
@@ -1835,14 +1835,14 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 		//textures.push_back(0.0);	textures.push_back(0.0);										// Vector Textures
 		//vertices.push_back(0.0);	vertices.push_back(0.0);	vertices.push_back(height);			// Vector Vertices
 
-		// Vèrtex 1 (j)
+		// Vï¿½rtex 1 (j)
 		//glVertex3d(cost[j]*radius, sint[j]*radius, height);
 		colors.push_back(cColor[0]); colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
 		normals.push_back(0.0);		 normals.push_back(0.0);	normals.push_back(-1.0);	// Vector Normals
 		textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius) + height);// Vector Textures
 		vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(height);	// Vector Vertices
 
-		// Vèrtex 2 (j-1)
+		// Vï¿½rtex 2 (j-1)
 		//glVertex3d(cost[j-1]*radius, sint[j-1]*radius, height);
 		colors.push_back(cColor[0]);			colors.push_back(cColor[1]);			colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
 		normals.push_back(0.0);					normals.push_back(0.0);					normals.push_back(-1.0);	// Vector Normals
@@ -1866,7 +1866,7 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 		//glBegin(GL_QUAD_STRIP);
 		for (j = 0; j <= slices - 1; j++)
 		{
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glNormal3d(cost[j],        sint[j],        0.0);
 			//glVertex3d(cost[j]*radius, sint[j]*radius, z0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
@@ -1874,21 +1874,21 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 			textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius) + z0);	// Vector Textures
 			vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(z0);		// Vector Vertices
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glVertex3d(cost[j]*radius, sint[j]*radius, z1);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);	// Vector Colors
 			normals.push_back(cost[j]);		normals.push_back(sint[j]);		normals.push_back(0.0);		// Vector Normals
 			textures.push_back(-(cost[j] * radius) + (sint[j] * radius)); textures.push_back(-(cost[j] * radius) + z1);	// Vector Textures
 			vertices.push_back(cost[j] * radius);	vertices.push_back(sint[j] * radius);	vertices.push_back(z1);		// Vector Vertices
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glVertex3d(cost[j+1]*radius, sint[j+1]*radius, z0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]); colors.push_back(cColor[3]);// Vector Colors
 			normals.push_back(cost[j + 1]);	normals.push_back(sint[j]);		normals.push_back(0.0);		// Vector Normals
 			textures.push_back(-(cost[j + 1] * radius) + (sint[j + 1] * radius)); textures.push_back(-(cost[j + 1] * radius) + z0);	// Vector Textures
 			vertices.push_back(cost[j + 1] * radius);	vertices.push_back(sint[j + 1] * radius);	vertices.push_back(z0);		// Vector Vertices
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glVertex3d(cost[j+1]*radius, sint[j+1]*radius, z1);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);	// Vector Colors
 			normals.push_back(cost[j + 1]);	normals.push_back(sint[j + 1]);	normals.push_back(0.0);		// Vector Normals
@@ -1908,7 +1908,7 @@ CVAO loadglutSolidCylinder_EBO(GLdouble radius, GLdouble height, GLint slices, G
 // ------------------------ VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
- // Creació d'un VAO, VBO i EBO amb càrrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
+ // Creaciï¿½ d'un VAO, VBO i EBO amb cï¿½rrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
 	cilindreVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//cilindreVAO.nVertexs = (int)nv / 3;
 
@@ -1946,7 +1946,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
   CVAO torusVAO;
   torusVAO.vaoId = 0;	torusVAO.vboId = 0;		torusVAO.nVertexs = 0;
 
-  std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+  std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
   //vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
   vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -1954,7 +1954,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
   //GLdouble cColor[4];
   //glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
   //Activa_Coordenades_Textura();
 
   if ( nSides < 1 ) nSides = 1;
@@ -1997,7 +1997,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
     { for( j=0; j<nRings-1; j++ )
       { int offset = 3 * ( j * nSides + i ) ;
 
-		// Vèrtex 0
+		// Vï¿½rtex 0
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 		val.x = *(vertex + offset + 0);	val.y = *(vertex + offset + 1);	val.z = *(vertex + offset + 2);
 		//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2007,7 +2007,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 		//glVertex3dv(vertex + offset);
 		vertices.push_back(*(vertex + offset + 0));	vertices.push_back(*(vertex + offset + 1)); vertices.push_back(*(vertex + offset + 2)); // Vector Vertices
 
-		// Vèrtex 1
+		// Vï¿½rtex 1
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 		val.x = *(vertex + offset + 3);	val.y = *((vertex + offset + 3) + 1);	val.z = *((vertex + offset + 3) + 2);
 		//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2017,7 +2017,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 		//glVertex3dv(vertex + offset + 3);
 		vertices.push_back(*(vertex + offset + 3));	vertices.push_back(*((vertex + offset + 3) + 1));	vertices.push_back(*((vertex + offset + 3) + 2)); // Vector Vertices
 		
-		// Vèrtex 2
+		// Vï¿½rtex 2
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 		val.x = *((vertex + offset + 3 * nSides + 3) + 0);	val.y = *((vertex + offset + 3 * nSides + 3) + 1);	val.z = *((vertex + offset + 3 * nSides + 3) + 2);
 		//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2027,7 +2027,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 		//glVertex3dv(vertex + offset + 3 * nSides + 3);
 		vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 0));	vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 1));	vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 2)); // Vector Vertices
 
-		// Vèrtex 2
+		// Vï¿½rtex 2
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 		val.x = *((vertex + offset + 3 * nSides + 3) + 0);	val.y = *((vertex + offset + 3 * nSides + 3) + 1);	val.z = *((vertex + offset + 3 * nSides + 3) + 2);
 		//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2037,7 +2037,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 		//glVertex3dv(vertex + offset + 3 * nSides + 3);
 		vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 0));	vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 1));	vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 2)); // Vector Vertices
 
-		// Vèrtex 3
+		// Vï¿½rtex 3
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 		val.x = *((vertex + offset + 3 * nSides) + 0);	val.y = *((vertex + offset + 3 * nSides) + 1);	val.z = *((vertex + offset + 3 * nSides) + 2);
 		//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2047,7 +2047,7 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 		//glVertex3dv(vertex + offset + 3 * nSides);
 		vertices.push_back(*((vertex + offset + 3 * nSides) + 0));	vertices.push_back(*((vertex + offset + 3 * nSides) + 1));	vertices.push_back(*((vertex + offset + 3 * nSides) + 2)); // Vector Vertices
 
-		// Vèrtex 0
+		// Vï¿½rtex 0
 		colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 		val.x = *(vertex + offset + 0);	val.y = *(vertex + offset + 1);	val.z = *(vertex + offset + 2);
 		//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2063,14 +2063,14 @@ CVAO loadglutSolidTorus_VAO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 // ------------------------ VAO
   std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
   torusVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
   torusVAO.nVertexs = (int)nv / 3;
 
   free ( vertex ) ;
   free ( normal ) ;
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
   //Desactiva_Coordenades_Textura();
   return torusVAO;
 }
@@ -2086,14 +2086,14 @@ CVAO loadglutSolidTorus_EBO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 	//float modul = 0.0;
 	CPunt3D val;
 
-	GLuint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLuint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO torusVAO;
 	torusVAO.vaoId = 0;	torusVAO.vboId = 0;		torusVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
-	std::vector <uint> indices;									// Definició vector dinàmic d'índexs per a EBO
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
+	std::vector <uint> indices;									// Definiciï¿½ vector dinï¿½mic d'ï¿½ndexs per a EBO
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 	indices.clear();
@@ -2102,7 +2102,7 @@ CVAO loadglutSolidTorus_EBO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 	//GLdouble cColor[4];
 	//glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-  //---- DEFINICIÓ COORDENADES TEXTURA
+  //---- DEFINICIï¿½ COORDENADES TEXTURA
 	//Activa_Coordenades_Textura();
 
 	if (nSides < 1) nSides = 1;
@@ -2149,7 +2149,7 @@ CVAO loadglutSolidTorus_EBO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 		{
 			int offset = 3 * (j * nSides + i);
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			val.x = *(vertex + offset + 0);	val.y = *(vertex + offset + 1);	val.z = *(vertex + offset + 2);
 			//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2159,7 +2159,7 @@ CVAO loadglutSolidTorus_EBO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 			//glVertex3dv(vertex + offset);
 			vertices.push_back(*(vertex + offset + 0));	vertices.push_back(*(vertex + offset + 1)); vertices.push_back(*(vertex + offset + 2)); // Vector Vertices
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			val.x = *(vertex + offset + 3);	val.y = *((vertex + offset + 3) + 1);	val.z = *((vertex + offset + 3) + 2);
 			//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2169,7 +2169,7 @@ CVAO loadglutSolidTorus_EBO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 			//glVertex3dv(vertex + offset + 3);
 			vertices.push_back(*(vertex + offset + 3));	vertices.push_back(*((vertex + offset + 3) + 1));	vertices.push_back(*((vertex + offset + 3) + 2)); // Vector Vertices
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			val.x = *((vertex + offset + 3 * nSides + 3) + 0);	val.y = *((vertex + offset + 3 * nSides + 3) + 1);	val.z = *((vertex + offset + 3 * nSides + 3) + 2);
 			//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2179,7 +2179,7 @@ CVAO loadglutSolidTorus_EBO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
 			//glVertex3dv(vertex + offset + 3 * nSides + 3);
 			vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 0));	vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 1));	vertices.push_back(*((vertex + offset + 3 * nSides + 3) + 2)); // Vector Vertices
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			val.x = *((vertex + offset + 3 * nSides) + 0);	val.y = *((vertex + offset + 3 * nSides) + 1);	val.z = *((vertex + offset + 3 * nSides) + 2);
 			//modul = sqrt(val.x * val.x + val.y * val.y + val.z * val.z);	val.x = val.x / modul;	val.y = val.y / modul;	val.z = val.z / modul;
@@ -2200,14 +2200,14 @@ CVAO loadglutSolidTorus_EBO(GLdouble dInnerRadius, GLdouble dOuterRadius, GLint 
   // ------------------------ VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-  // Creació d'un VAO, VBO i EBO amb càrrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
+  // Creaciï¿½ d'un VAO, VBO i EBO amb cï¿½rrega de la geometria. Guardar identificadors VAO, VBO i EBO a struct CVAO.
 	torusVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//torusVAO.nVertexs = (int)nv / 3;
 
 	free(vertex);
 	free(normal);
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
 	//Desactiva_Coordenades_Textura();
 	return torusVAO;
 }
@@ -2233,7 +2233,7 @@ CVAO loadglutSolidDodecahedron_VAO( void )
 	CVAO dodeVAO;
 	dodeVAO.vaoId = 0;		dodeVAO.vboId = 0;		dodeVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -2241,7 +2241,7 @@ CVAO loadglutSolidDodecahedron_VAO( void )
 	//GLdouble cColor[4];
 	//glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
 	//Activa_Coordenades_Textura();
 
   /* Magic Numbers:  It is possible to create a dodecahedron by attaching two pentagons to each face of
@@ -2255,55 +2255,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   //glEnd () ;
 
 // VAO CARA 1
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);// Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(1.61803398875); textures.push_back(0.61803398875);									// Vector Textures
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);		// Vector Vertices
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			// Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(2.0); textures.push_back(2.0);														// Vector Textures
   vertices.push_back(-1.0);	vertices.push_back(1.0);	vertices.push_back(1.0);						// Vector Vertices
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 + 1.61803398875);					// Vector Textures
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
   
-   // Vèrtex 2
+   // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 + 1.61803398875);					// Vector Textures
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 + 1.61803398875);				// Vector Textures
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
  
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(0.0); textures.push_back(0.0);														// Vector textures
   vertices.push_back(1.0);	vertices.push_back(1.0);			vertices.push_back(1.0);				// Vector Vertices
 
-   // Vèrtex 0
+   // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);// Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(1.61803398875); textures.push_back(0.61803398875);									// Vector Textures
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);		// Vector Vertices
 
-   // Vèrtex 2
+   // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 + 1.61803398875);					// Vector Textures
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
 
-   // Vèrtex 4
+   // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   textures.push_back(0.0); textures.push_back(0.0);														// Vector textures
@@ -2317,55 +2317,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
 
   //vertices.resize(0);		normals.resize(0);		colors.resize(0);	 textures.resize(0);			// Reinicialitzar vectors
 // VAO CARA 2
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);		// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(-0.61803398875);								// Vector Textures
 
-  //Vèrtex 1
+  //Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(1.0);	vertices.push_back(1.0);			vertices.push_back(-1.0);				// Vector Vertices
   textures.push_back(0.0);	textures.push_back(-2.0);													// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 - 1.61803398875);					// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(-1.0);	vertices.push_back(1.0);			vertices.push_back(-1.0);				// Vector Vertices
   textures.push_back(2.0);	textures.push_back(0.0);													// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);		// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(-0.61803398875);								// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(-1.0);	vertices.push_back(1.0);			vertices.push_back(-1.0);				// Vector Vertices
@@ -2377,55 +2377,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
 */
 // VAO CARA 3
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);		// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(1.0);	vertices.push_back(-1.0);	vertices.push_back(1.0);						// Vector Vertices
   textures.push_back(-2.0);	textures.push_back(0.0);													// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 + 1.61803398875);				// Vector Textures
 
-   // Vèrtex 2
+   // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 + 1.61803398875);				// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 + 1.61803398875);					// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(-1.0);	vertices.push_back(-1.0);			vertices.push_back(1.0);				// Vector Vertices
   textures.push_back(0.0);	textures.push_back(2.0);													// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);		// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-   // Vèrtex 2
+   // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 + 1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
   vertices.push_back(-1.0);	vertices.push_back(-1.0);			vertices.push_back(1.0);				// Vector Vertices
@@ -2437,55 +2437,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
 */
 // VAO CARA 4
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);		// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);								// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(-1.0);	vertices.push_back(-1.0);	vertices.push_back(-1.0);						// Vector Vertices
   textures.push_back(0.0);	textures.push_back(0.0);													// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 - 1.61803398875);					// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 - 1.61803398875);					// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(1.0);	vertices.push_back(-1.0);			vertices.push_back(-1.0);				// Vector Vertices
   textures.push_back(-2.0);	textures.push_back(-2.0);													// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);		// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);								// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(0.61803398875); textures.push_back(0.61803398875 - 1.61803398875);					// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(1.0);	vertices.push_back(-1.0);			vertices.push_back(-1.0);				// Vector Vertices
@@ -2497,55 +2497,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
 */
 // VAO CARA 5
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0); vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875);	textures.push_back(-0.61803398875 + 1.61803398875);			// Vector Textures
 
-  // Vèrtex 1 
+  // Vï¿½rtex 1 
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	 normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(-1.0); vertices.push_back(1.0);				// Vector Vertices
   textures.push_back(-2.0);			textures.push_back(0.0);										// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875); vertices.push_back(0.0);// Vector Vertices
   textures.push_back(-1.61803398875 - 0.61803398875);  textures.push_back(-1.61803398875);			// Vector Textures
 
-   // Vèrtex 2
+   // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875); vertices.push_back(0.0);// Vector Vertices
   textures.push_back(-1.61803398875 - 0.61803398875);  textures.push_back(-1.61803398875);			// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875); vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(1.0); vertices.push_back(1.0);				// Vector Vertices
   textures.push_back(0.0);			textures.push_back(0.0);										// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0); vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875);	textures.push_back(-0.61803398875 + 1.61803398875);			// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875); vertices.push_back(0.0);// Vector Vertices
   textures.push_back(-1.61803398875 - 0.61803398875);  textures.push_back(-1.61803398875);			// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(1.0); vertices.push_back(1.0);				// Vector Vertices
@@ -2557,55 +2557,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
  */
 // VAO CARA 6
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0); vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(0.61803398875);	textures.push_back(0.61803398875 + 1.61803398875);			// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(1.0); vertices.push_back(1.0);				// Vector Vertices
   textures.push_back(2.0);			textures.push_back(2.0);										// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875); vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875); vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875); vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(-1.0); vertices.push_back(1.0);				// Vector Vertices
   textures.push_back(0.0);			textures.push_back(2.0);										// Vector textures
 
-   // Vèrtex 0
+   // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0); vertices.push_back(1.61803398875);	// Vector Vertices
   textures.push_back(0.61803398875);	textures.push_back(0.61803398875 + 1.61803398875);			// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875); vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(-1.0); vertices.push_back(1.0);				// Vector Vertices
@@ -2618,55 +2618,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
  */
   //vertices.resize(0);		normals.resize(0);		colors.resize(0);	 textures.resize(0);			// Reinicialitzar vectors
  // VAO CARA 7
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0); vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(1.0); vertices.push_back(-1.0);					// Vector Vertices
   textures.push_back(0.0); textures.push_back(-2.0);													// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);				// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);				// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(-1.61803398875 - 0.61803398875); textures.push_back(-1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(-1.0); vertices.push_back(-1.0);					// Vector Vertices
   textures.push_back(-2.0); textures.push_back(-2.0);													// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(0.61803398875);	vertices.push_back(0.0); vertices.push_back(-1.61803398875);	// Vector Vertices
   textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	// Vector Vertices
   textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(-1.0); vertices.push_back(-1.0);					// Vector Vertices
@@ -2678,55 +2678,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
 */
 // VAO CARA 8
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0); vertices.push_back(-1.61803398875);// Vector Vertices
   textures.push_back(0.61803398875);  textures.push_back(0.61803398875 - 1.61803398875);			// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-1.0);	vertices.push_back(-1.0);	vertices.push_back(-1.0);					// Vector Vertices
   textures.push_back(0.0); textures.push_back(0.0);													// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);// Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(1.0); vertices.push_back(-1.0);				// Vector Vertices
   textures.push_back(2.0);			textures.push_back(0.0);										// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-0.61803398875);	vertices.push_back(0.0); vertices.push_back(-1.61803398875);// Vector Vertices
   textures.push_back(0.61803398875);  textures.push_back(0.61803398875 - 1.61803398875);			// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);// Vector Colors
   normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(1.0); vertices.push_back(-1.0);				// Vector Vertices
@@ -2739,55 +2739,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
 */
   //vertices.resize(0);		normals.resize(0);		colors.resize(0);	 textures.resize(0);			// Reinicialitzar vectors
 // VAO CARA 9
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(1.0);			vertices.push_back(-1.0);	// Vector Vertices
   textures.push_back(0.0);			textures.push_back(-2.0);										// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0); vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0); vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875);	textures.push_back(0.61803398875);							// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(1.0);			vertices.push_back(1.0);	// Vector Vertices
   textures.push_back(0.0);			textures.push_back(0.0);										// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0); vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-   // Vèrtex 4
+   // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(-0.850650808354);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(1.0);			vertices.push_back(1.0);	// Vector Vertices
@@ -2804,55 +2804,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
 */
 // VAO CARA 10
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(-1.61803398875 - 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(-1.0);	vertices.push_back(1.0);			// Vector Vertices
   textures.push_back(-2.0);			textures.push_back(0.0);										// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(0.61803398875);							// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(0.61803398875);							// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(-1.0);			vertices.push_back(-1.0);	// Vector Vertices
   textures.push_back(-2.0);			textures.push_back(-2.0);										// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(-1.61803398875 - 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(0.61803398875);							// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(1.0);			vertices.push_back(-1.0);			vertices.push_back(-1.0);	// Vector Vertices
@@ -2869,55 +2869,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
 */
 // VAO CARA 11
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 1
+  // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(1.0);			vertices.push_back(1.0);	// Vector Vertices
   textures.push_back(2.0);			textures.push_back(2.0);										// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-   // Vèrtex 2
+   // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(1.0);			vertices.push_back(-1.0);	// Vector Vertices
   textures.push_back(2.0);			textures.push_back(0.0);										// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-   // Vèrtex 2
+   // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(1.0);			vertices.push_back(-1.0);	// Vector Vertices
@@ -2934,55 +2934,55 @@ CVAO loadglutSolidDodecahedron_VAO( void )
   glEnd () ;
 */
 // VAO CARA 12
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
- // Vèrtex 1
+ // Vï¿½rtex 1
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(-1.0);			vertices.push_back(-1.0);	// Vector Vertices
   textures.push_back(0.0);			textures.push_back(0.0);										// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.00);// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.00);// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-  // Vèrtex 3
+  // Vï¿½rtex 3
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(0.61803398875);							// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(-1.0);			vertices.push_back(1.0);	// Vector Vertices
   textures.push_back(0.0);			textures.push_back(2.0);										// Vector textures
 
-  // Vèrtex 0
+  // Vï¿½rtex 0
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
   textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-  // Vèrtex 2
+  // Vï¿½rtex 2
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.00);// Vector Normals
   vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
   textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-  // Vèrtex 4
+  // Vï¿½rtex 4
   colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
   normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
   vertices.push_back(-1.0);			vertices.push_back(-1.0);			vertices.push_back(1.0);	// Vector Vertices
@@ -2991,7 +2991,7 @@ CVAO loadglutSolidDodecahedron_VAO( void )
 // ------------------------ VAO
   std::vector <int>::size_type nv = vertices.size();		// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
   dodeVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
   dodeVAO.nVertexs = 108;
 
@@ -3008,8 +3008,8 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	CVAO dodeVAO;
 	dodeVAO.vaoId = 0;		dodeVAO.vboId = 0;		dodeVAO.eboId = 0;	dodeVAO.nVertexs = 0;	dodeVAO.nIndices = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
-	std::vector <uint> indices;				// Definició vector dinàmics per a indices a EBO. 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
+	std::vector <uint> indices;				// Definiciï¿½ vector dinï¿½mics per a indices a EBO. 
 																//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 	indices.clear();
@@ -3018,7 +3018,7 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	//GLdouble cColor[4];
 	//glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
 	//Activa_Coordenades_Textura();
 
   /* Magic Numbers:  It is possible to create a dodecahedron by attaching two pentagons to each face of
@@ -3033,31 +3033,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 
 
  // VAO CARA 1
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]);// Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);		// Vector Normals
 	textures.push_back(1.61803398875); textures.push_back(0.61803398875);									// Vector Textures
 	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);		// Vector Vertices
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			// Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	textures.push_back(2.0); textures.push_back(2.0);														// Vector Textures
 	vertices.push_back(-1.0);	vertices.push_back(1.0);	vertices.push_back(1.0);						// Vector Vertices
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	textures.push_back(0.61803398875); textures.push_back(0.61803398875 + 1.61803398875);					// Vector Textures
 	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 + 1.61803398875);				// Vector Textures
 	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	textures.push_back(0.0); textures.push_back(0.0);														// Vector textures
@@ -3077,31 +3077,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 
   //vertices.resize(0);		normals.resize(0);		colors.resize(0);	 textures.resize(0);			// Reinicialitzar vectors
 // VAO CARA 2
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);		// Vector Vertices
 	textures.push_back(1.61803398875); textures.push_back(-0.61803398875);								// Vector Textures
 
-//Vèrtex 1
+//Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(1.0);	vertices.push_back(1.0);			vertices.push_back(-1.0);				// Vector Vertices
 	textures.push_back(0.0);	textures.push_back(-2.0);													// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
 	textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
 	textures.push_back(0.61803398875); textures.push_back(0.61803398875 - 1.61803398875);					// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(-1.0);	vertices.push_back(1.0);			vertices.push_back(-1.0);				// Vector Vertices
@@ -3119,31 +3119,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
   */
   // VAO CARA 3
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);		// Vector Vertices
 	textures.push_back(-1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	vertices.push_back(1.0);	vertices.push_back(-1.0);	vertices.push_back(1.0);						// Vector Vertices
 	textures.push_back(-2.0);	textures.push_back(0.0);													// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
 	textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 + 1.61803398875);				// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	// Vector Vertices
 	textures.push_back(0.61803398875); textures.push_back(0.61803398875 + 1.61803398875);					// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	// Vector Normals
 	vertices.push_back(-1.0);	vertices.push_back(-1.0);			vertices.push_back(1.0);				// Vector Vertices
@@ -3161,31 +3161,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
   */
   // VAO CARA 4
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);		// Vector Vertices
 	textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);								// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(-1.0);	vertices.push_back(-1.0);	vertices.push_back(-1.0);						// Vector Vertices
 	textures.push_back(0.0);	textures.push_back(0.0);													// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
 	textures.push_back(0.61803398875); textures.push_back(0.61803398875 - 1.61803398875);					// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	// Vector Vertices
 	textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.0);		normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(1.0);	vertices.push_back(-1.0);			vertices.push_back(-1.0);				// Vector Vertices
@@ -3203,31 +3203,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
   */
   // VAO CARA 5
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
 	vertices.push_back(0.61803398875);	vertices.push_back(0.0); vertices.push_back(1.61803398875);	// Vector Vertices
 	textures.push_back(-0.61803398875);	textures.push_back(-0.61803398875 + 1.61803398875);			// Vector Textures
 
-// Vèrtex 1 
+// Vï¿½rtex 1 
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	 normals.push_back(0.525731112119);	// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(-1.0); vertices.push_back(1.0);				// Vector Vertices
 	textures.push_back(-2.0);			textures.push_back(0.0);										// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
 	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875); vertices.push_back(0.0);// Vector Vertices
 	textures.push_back(-1.61803398875 - 0.61803398875);  textures.push_back(-1.61803398875);			// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
 	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875); vertices.push_back(0.0);	// Vector Vertices
 	textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(1.0); vertices.push_back(1.0);				// Vector Vertices
@@ -3245,31 +3245,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
    */
 // VAO CARA 6
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
 	vertices.push_back(-0.61803398875);	vertices.push_back(0.0); vertices.push_back(1.61803398875);	// Vector Vertices
 	textures.push_back(0.61803398875);	textures.push_back(0.61803398875 + 1.61803398875);			// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);	// Vector Normals
 	vertices.push_back(-1.0);			vertices.push_back(1.0); vertices.push_back(1.0);				// Vector Vertices
 	textures.push_back(2.0);			textures.push_back(2.0);										// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);		// Vector Normals
 	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875); vertices.push_back(0.0);		// Vector Vertices
 	textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);		// Vector Normals
 	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875); vertices.push_back(0.0);	// Vector Vertices
 	textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(0.525731112119);		// Vector Normals
 	vertices.push_back(-1.0);			vertices.push_back(-1.0); vertices.push_back(1.0);				// Vector Vertices
@@ -3288,31 +3288,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
    */
    //vertices.resize(0);		normals.resize(0);		colors.resize(0);	 textures.resize(0);			// Reinicialitzar vectors
  // VAO CARA 7
- // Vèrtex 0
+ // Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
 	vertices.push_back(0.61803398875);	vertices.push_back(0.0); vertices.push_back(-1.61803398875);	// Vector Vertices
 	textures.push_back(-0.61803398875); textures.push_back(-0.61803398875 - 1.61803398875);				// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(1.0); vertices.push_back(-1.0);					// Vector Vertices
 	textures.push_back(0.0); textures.push_back(-2.0);													// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
 	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);	// Vector Vertices
 	textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);				// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
 	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);	// Vector Vertices
 	textures.push_back(-1.61803398875 - 0.61803398875); textures.push_back(-1.61803398875);				// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);			colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.850650808354);		// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(-1.0); vertices.push_back(-1.0);					// Vector Vertices
@@ -3330,31 +3330,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
   */
   // VAO CARA 8
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
 	vertices.push_back(-0.61803398875);	vertices.push_back(0.0); vertices.push_back(-1.61803398875);// Vector Vertices
 	textures.push_back(0.61803398875);  textures.push_back(0.61803398875 - 1.61803398875);			// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
 	vertices.push_back(-1.0);	vertices.push_back(-1.0);	vertices.push_back(-1.0);					// Vector Vertices
 	textures.push_back(0.0); textures.push_back(0.0);													// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
 	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
 	textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
 	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
 	textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);// Vector Colors
 	normals.push_back(-0.850650808354);	normals.push_back(0.0);	normals.push_back(-0.525731112119);	// Vector Normals
 	vertices.push_back(-1.0);			vertices.push_back(1.0); vertices.push_back(-1.0);				// Vector Vertices
@@ -3373,31 +3373,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
   */
   //vertices.resize(0);		normals.resize(0);		colors.resize(0);	 textures.resize(0);			// Reinicialitzar vectors
 // VAO CARA 9
- // Vèrtex 0
+ // Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
 	textures.push_back(-1.61803398875 + 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(1.0);			vertices.push_back(-1.0);	// Vector Vertices
 	textures.push_back(0.0);			textures.push_back(-2.0);										// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(0.0); vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
 	textures.push_back(1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
 	textures.push_back(1.61803398875);	textures.push_back(0.61803398875);							// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(-0.850650808354);	// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(1.0);			vertices.push_back(1.0);	// Vector Vertices
@@ -3420,31 +3420,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
   */
   // VAO CARA 10
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
 	textures.push_back(-1.61803398875 - 0.61803398875); textures.push_back(-1.61803398875);			// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);		// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(-1.0);	vertices.push_back(1.0);			// Vector Vertices
 	textures.push_back(-2.0);			textures.push_back(0.0);										// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);		// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
 	textures.push_back(-1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);		// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
 	textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);								// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(1.0);			vertices.push_back(-1.0);			vertices.push_back(-1.0);	// Vector Vertices
@@ -3467,31 +3467,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
   */
 // VAO CARA 11
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	vertices.push_back(0.0);// Vector Vertices
 	textures.push_back(1.61803398875 + 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(-1.0);			vertices.push_back(1.0);			vertices.push_back(1.0);	// Vector Vertices
 	textures.push_back(2.0);			textures.push_back(2.0);										// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
 	textures.push_back(1.61803398875); textures.push_back(0.61803398875);								// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
 	textures.push_back(1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(-1.0);			vertices.push_back(1.0);			vertices.push_back(-1.0);	// Vector Vertices
@@ -3514,31 +3514,31 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 	glEnd () ;
   */
 // VAO CARA 12
-// Vèrtex 0
+// Vï¿½rtex 0
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	vertices.push_back(0.0);// Vector Vertices
 	textures.push_back(1.61803398875 - 0.61803398875); textures.push_back(1.61803398875);				// Vector Textures
 
-// Vèrtex 1
+// Vï¿½rtex 1
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(-1.0);			vertices.push_back(-1.0);			vertices.push_back(-1.0);	// Vector Vertices
 	textures.push_back(0.0);			textures.push_back(0.0);										// Vector Textures
 
-// Vèrtex 2
+// Vï¿½rtex 2
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.00);// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(-0.61803398875);	// Vector Vertices
 	textures.push_back(-1.61803398875); textures.push_back(-0.61803398875);							// Vector Textures
 
-// Vèrtex 3
+// Vï¿½rtex 3
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(0.0);	vertices.push_back(-1.61803398875);	vertices.push_back(0.61803398875);	// Vector Vertices
 	textures.push_back(-1.61803398875); textures.push_back(0.61803398875);							// Vector Textures
 
-// Vèrtex 4
+// Vï¿½rtex 4
 	colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 	normals.push_back(-0.525731112119);	normals.push_back(-0.850650808354);	normals.push_back(0.0);	// Vector Normals
 	vertices.push_back(-1.0);			vertices.push_back(-1.0);			vertices.push_back(1.0);	// Vector Vertices
@@ -3553,7 +3553,7 @@ CVAO loadglutSolidDodecahedron_EBO(void)
 // ------------------------ VAO
 	//std::vector <int>::size_type nv = vertices.size();		// Tamany del vector vertices en elements.
 
- // Creació d'un VAO, VBO i EBO carregant de la geometria. Guardar identificadors VAO, VBO, EBO, número de vertex i indices a struct CVAO.
+ // Creaciï¿½ d'un VAO, VBO i EBO carregant de la geometria. Guardar identificadors VAO, VBO, EBO, nï¿½mero de vertex i indices a struct CVAO.
 	dodeVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures,indices);
 
 	return dodeVAO;
@@ -3650,7 +3650,7 @@ CVAO loadglutSolidOctahedron_VAO(void)
   glEnd();
 */
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	octaVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//octaVAO.nVertexs = 24;
 
@@ -3735,7 +3735,7 @@ CVAO loadglutSolidOctahedron_EBO(void)
 		21, 22, 23 };	// v7-v4-v5 (bottom ---)
 #undef RADIUS
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	octaVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures,indices);
 	//octaVAO.nVertexs = 24;
 
@@ -3811,7 +3811,7 @@ CVAO loadglutSolidTetrahedron_VAO( void )
 		-tet_r[0][0] + tet_r[0][1], -tet_r[0][0] + tet_r[0][2], -tet_r[3][0] + tet_r[3][1], -tet_r[3][0] + tet_r[3][2], -tet_r[1][0] + tet_r[1][1], -tet_r[1][0] + tet_r[1][2],    // v0-v3-v1 (top)
 		-tet_r[0][0] + tet_r[0][1], -tet_r[0][0] + tet_r[0][2], -tet_r[1][0] + tet_r[1][1], -tet_r[1][0] + tet_r[1][2], -tet_r[2][0] + tet_r[2][1], -tet_r[2][0] + tet_r[2][2] };  // v0-v1-v2 (back)
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	tetraVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//tetraVAO.nVertexs = 12;
 
@@ -3875,7 +3875,7 @@ CVAO loadglutSolidTetrahedron_EBO(void)
 		6, 7, 8,		// v0-v3-v1 (top)
 		9, 10, 11 };	// v0-v1-v2 (back)
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	tetraVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//tetraVAO.nVertexs = 12;
 
@@ -3905,7 +3905,7 @@ CVAO loadglutSolidIcosahedron_VAO( void )
   CVAO icosVAO;
   icosVAO.vaoId = 0;		icosVAO.vboId = 0;		icosVAO.nVertexs = 0;
 
-  std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+  std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
   //vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
   vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -3913,7 +3913,7 @@ CVAO loadglutSolidIcosahedron_VAO( void )
   //GLdouble cColor[4];
   //glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
 //  Activa_Coordenades_Textura();
 
   //glBegin ( GL_TRIANGLES ) ;
@@ -3946,11 +3946,11 @@ CVAO loadglutSolidIcosahedron_VAO( void )
 // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	icosVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	icosVAO.nVertexs = 60;
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
   //Desactiva_Coordenades_Textura();
 	return icosVAO;
 }
@@ -3962,14 +3962,14 @@ CVAO loadglutSolidIcosahedron_EBO(void)
 	int i;
 	double normal[3];
 
-	GLuint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLuint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO icosVAO;
 	icosVAO.vaoId = 0;		icosVAO.vboId = 0;		icosVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
-	std::vector <uint> indices;									// Definició vector dinàmic d'índexs per a EBO
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
+	std::vector <uint> indices;									// Definiciï¿½ vector dinï¿½mic d'ï¿½ndexs per a EBO
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 	indices.clear();
@@ -3978,7 +3978,7 @@ CVAO loadglutSolidIcosahedron_EBO(void)
 	//GLdouble cColor[4];
 	//glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-  //---- DEFINICIÓ COORDENADES TEXTURA
+  //---- DEFINICIï¿½ COORDENADES TEXTURA
   //  Activa_Coordenades_Textura();
 
 	//glBegin ( GL_TRIANGLES ) ;
@@ -4016,11 +4016,11 @@ CVAO loadglutSolidIcosahedron_EBO(void)
 // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	icosVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//icosVAO.nVertexs = 60;
 
-//---- DEFINICIÓ COORDENADES TEXTURA
+//---- DEFINICIï¿½ COORDENADES TEXTURA
 	//Desactiva_Coordenades_Textura();
 	return icosVAO;
 }
@@ -4048,7 +4048,7 @@ CVAO loadglutSolidRhombicDodecahedron_VAO( void )
   CVAO rhombicDodeVAO;
   rhombicDodeVAO.vaoId = 0;		rhombicDodeVAO.vboId = 0;	rhombicDodeVAO.nVertexs = 0;
 
-  std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+  std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
   std::vector <uint> indices;
   //vertices.resize(0);		normals.resize(0);	colors.resize(0);	textures.resize(0);		// Reinicialitzar vectors
   vertices.clear();		normals.clear();		colors.clear();		textures.clear();		// Reinicialitzar vectors
@@ -4102,7 +4102,7 @@ CVAO loadglutSolidRhombicDodecahedron_VAO( void )
 // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	rhombicDodeVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	rhombicDodeVAO.nVertexs = (int) nv/3;
 
@@ -4114,13 +4114,13 @@ CVAO loadglutSolidRhombicDodecahedron_VAO( void )
 CVAO loadglutSolidRhombicDodecahedron_EBO(void)
 {
 	GLint i;
-	GLuint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLuint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO rhombicDodeVAO;
 	rhombicDodeVAO.vaoId = 0;		rhombicDodeVAO.vboId = 0;	rhombicDodeVAO.eboId = 0;	rhombicDodeVAO.nVertexs = 0;	rhombicDodeVAO.nIndices = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures
 	std::vector <uint> indices;
 	//vertices.resize(0);		normals.resize(0);	colors.resize(0);	 textures.resize(0);		// Reinicialitzar vectors
 	vertices.clear();		normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
@@ -4167,7 +4167,7 @@ CVAO loadglutSolidRhombicDodecahedron_EBO(void)
   // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO, VBO i EBO carregant la geometria. Guarda identificadors VAO, VBO, EBO i numero de vertex i indices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO carregant la geometria. Guarda identificadors VAO, VBO, EBO i numero de vertex i indices a struct CVAO.
 	rhombicDodeVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//rhombicDodeVAO.nVertexs = (int)nv / 3;
 
@@ -4196,7 +4196,7 @@ CVAO loadglutSolidSierpinskiSponge_VAO(int num_levels, GLdouble offset[3], GLdou
 	CVAO SierpinskySpongeVAO;		
 	SierpinskySpongeVAO.vaoId = 0;		SierpinskySpongeVAO.vboId = 0;		SierpinskySpongeVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	std::vector <uint> indices;
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();		normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
@@ -4211,7 +4211,7 @@ CVAO loadglutSolidSierpinskiSponge_VAO(int num_levels, GLdouble offset[3], GLdou
 // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
 	SierpinskySpongeVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//SierpinskySpongeVAO.nVertexs = int(nv / 3);
 
@@ -4228,7 +4228,7 @@ CVAO loadglutSolidSierpinskiSponge_EBO(int num_levels, GLdouble offset[3], GLdou
 	CVAO SierpinskySpongeVAO;
 	SierpinskySpongeVAO.vaoId = 0;		SierpinskySpongeVAO.vboId = 0;		SierpinskySpongeVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	std::vector <uint> indices;
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);		// Reinicialitzar vectors
 	vertices.clear();		normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
@@ -4243,7 +4243,7 @@ CVAO loadglutSolidSierpinskiSponge_EBO(int num_levels, GLdouble offset[3], GLdou
 // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
 	SierpinskySpongeVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//SierpinskySpongeVAO.nVertexs = int(nv / 3);
 
@@ -4257,7 +4257,7 @@ void glutSolidSierpinskiSpongeR(int num_levels, GLdouble offset[3], GLdouble sca
 {
   int i, j ;
 
-  GLuint index = apunt;	// Apuntador a vèrtexs per a indices.
+  GLuint index = apunt;	// Apuntador a vï¿½rtexs per a indices.
 
   if ( num_levels == 0 )
   { //glBegin ( GL_TRIANGLES ) ;
@@ -4303,13 +4303,13 @@ CVAO fghTeapot(bool flag_EBO)
 {
 	int i, numV = sizeof(strip_vertices) / 4, numI = sizeof(strip_normals) / 4, vidx, nidx;
 
-	GLuint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLuint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO teapotVAO;
 	teapotVAO.vaoId = 0;	teapotVAO.vboId = 0;	teapotVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	std::vector <uint> indices;
 	//vertices.resize(0);	normals.resize(0);		colors.resize(0);	textures.resize(0);	// Reinicialitzar vectors
 	vertices.clear();		normals.clear();		colors.clear();		textures.clear();	// Reinicialitzar vectors
@@ -4335,7 +4335,7 @@ CVAO fghTeapot(bool flag_EBO)
 			vertices.push_back(Vertices[vidx][0]);	vertices.push_back(Vertices[vidx][1]);	vertices.push_back(Vertices[vidx][2]);	// Vector Vertices
 			textures.push_back(-Vertices[vidx][0] + Vertices[vidx][1]); textures.push_back(-Vertices[vidx][0] + Vertices[vidx][2]);	// Vector Textures
 
-			// Segon vèrtex (i-1)
+			// Segon vï¿½rtex (i-1)
 			vidx = strip_vertices[i-1],
 			nidx = strip_normals[i-1];
 			//glNormal3fv(Normals[nidx]);
@@ -4345,7 +4345,7 @@ CVAO fghTeapot(bool flag_EBO)
 			vertices.push_back(Vertices[vidx][0]);	vertices.push_back(Vertices[vidx][1]);	vertices.push_back(Vertices[vidx][2]);	// Vector Vertices
 			textures.push_back(-Vertices[vidx][0] + Vertices[vidx][1]); textures.push_back(-Vertices[vidx][0] + Vertices[vidx][2]);	// Vector Textures
 		
-			// Tercer Vèrtex (i)
+			// Tercer Vï¿½rtex (i)
 			vidx = strip_vertices[i],
 			nidx = strip_normals[i];
 			//glNormal3fv(Normals[nidx]);
@@ -4370,7 +4370,7 @@ CVAO fghTeapot(bool flag_EBO)
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
 	if (flag_EBO) teapotVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures,indices);
 		else teapotVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//teapotVAO.nVertexs = (int) nv / 3;
@@ -4450,7 +4450,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 	CVAO cilindreVAO;
 	cilindreVAO.vaoId = 0;		cilindreVAO.vboId = 0;		cilindreVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -4494,7 +4494,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 
 //		glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices-1; i++) {
-			// Vèrtex 0 (i)
+			// Vï¿½rtex 0 (i)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
@@ -4503,7 +4503,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], zLow);
 			vertices.push_back(radiusLow * sinCache[i]);	vertices.push_back(radiusLow * cosCache[i]);	vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 1 (i)
+			// Vï¿½rtex 1 (i)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)i / slices, (float)(j + 1) / stacks);
@@ -4511,7 +4511,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i]);	vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 3 (i+1)
+			// Vï¿½rtex 3 (i+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)(i+1) / slices, (float)(j + 1) / stacks);
@@ -4519,7 +4519,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i+1]);	vertices.push_back(radiusHigh * cosCache[i+1]);	vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 3 (i+1)
+			// Vï¿½rtex 3 (i+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)(i+1) / slices, (float)(j + 1) / stacks);
@@ -4527,7 +4527,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i+1]);	vertices.push_back(radiusHigh * cosCache[i+1]);	vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 2 (i+1)
+			// Vï¿½rtex 2 (i+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i+1]);	normals.push_back(cosCache2[i+1]);	normals.push_back(zNormal);		// Vector Normals
@@ -4536,7 +4536,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], zLow);
 			vertices.push_back(radiusLow * sinCache[i+1]);	vertices.push_back(radiusLow * cosCache[i+1]);	vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 0 (i)
+			// Vï¿½rtex 0 (i)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
@@ -4551,7 +4551,7 @@ CVAO loadgluCylinder_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	cilindreVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 
 	return cilindreVAO;
@@ -4575,13 +4575,13 @@ CVAO loadgluCylinder_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 	GLdouble radiusLow, radiusHigh;
 	int needCache2, needCache3;
 
-	GLint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO cilindreVAO;
 	cilindreVAO.vaoId = 0;		cilindreVAO.vboId = 0;	cilindreVAO.eboId = 0;	cilindreVAO.nVertexs = 0;	cilindreVAO.nIndices = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	std::vector <uint> indices;
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
@@ -4627,7 +4627,7 @@ CVAO loadgluCylinder_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
-			// Vèrtex 0 (i,j)
+			// Vï¿½rtex 0 (i,j)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
@@ -4636,7 +4636,7 @@ CVAO loadgluCylinder_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], zLow);
 			vertices.push_back(radiusLow * sinCache[i]);	vertices.push_back(radiusLow * cosCache[i]);	vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 1 (i,j+1)
+			// Vï¿½rtex 1 (i,j+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)i / slices, (float)(j + 1) / stacks);
@@ -4644,7 +4644,7 @@ CVAO loadgluCylinder_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i]);	vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 2 (i+1,j)
+			// Vï¿½rtex 2 (i+1,j)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);		// Vector Normals
@@ -4653,7 +4653,7 @@ CVAO loadgluCylinder_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], zLow);
 			vertices.push_back(radiusLow * sinCache[i + 1]);	vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 3 (i+1,j+1)
+			// Vï¿½rtex 3 (i+1,j+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)(i+1) / slices, (float)(j + 1) / stacks);
@@ -4672,7 +4672,7 @@ CVAO loadgluCylinder_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble heigh
 	// ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO, VBO i EBO carregant de la geometria. Guardar identificadors VAO, VBO, EBO, numero vèrtexs i indices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO carregant de la geometria. Guardar identificadors VAO, VBO, EBO, numero vï¿½rtexs i indices a struct CVAO.
 	cilindreVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures,indices);
 
 	return cilindreVAO;
@@ -4731,7 +4731,7 @@ CVAO loadgluPartialDisk_VAO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 	CVAO diskVAO;
 	diskVAO.vaoId = 0;	diskVAO.vboId = 0;	diskVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -4781,7 +4781,7 @@ CVAO loadgluPartialDisk_VAO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 		  radiusLow = outerRadius - deltaRadius * ((float)(loops - 1) / loops);
 		  texLow = radiusLow / outerRadius / 2;
 		  for (i = slices-1; i >= 0; i--) {
-			  // Vèrtex (0)
+			  // Vï¿½rtex (0)
 			  //glTexCoord2f(0.5, 0.5);
 			  //glVertex3f(0.0, 0.0, 0.0);
 			  colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -4789,7 +4789,7 @@ CVAO loadgluPartialDisk_VAO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 			  textures.push_back(0.5);		textures.push_back(0.5);										// Vector Textures
 			  vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(0.0);		// Vector Vertexs
 			  
-			  // Vèrtex (i+1)
+			  // Vï¿½rtex (i+1)
 			  //glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			  //glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			  colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -4797,7 +4797,7 @@ CVAO loadgluPartialDisk_VAO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 			  textures.push_back(texLow * sinCache[i+1] + 0.5);				textures.push_back(texLow * cosCache[i+1] + 0.5);	// Vector Textures
 			  vertices.push_back(radiusLow * sinCache[i+1]);				vertices.push_back(radiusLow * cosCache[i+1]);		vertices.push_back(0.0);		// Vector Vertexs
 
-			  // Vèrtex (i)
+			  // Vï¿½rtex (i)
 			  //glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			  //glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			  colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -4822,53 +4822,53 @@ CVAO loadgluPartialDisk_VAO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices-1; i++) {
 			
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 			
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glTexCoord2f(texHigh * sinCache[i] + 0.5, texHigh * cosCache[i] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i] + 0.5);				textures.push_back(texHigh * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);		vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);		vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);				textures.push_back(texHigh * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);				textures.push_back(texHigh * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i+1] + 0.5);				textures.push_back(texLow * cosCache[i+1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i+1]);					vertices.push_back(radiusLow * cosCache[i+1]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i+1]);					vertices.push_back(radiusLow * cosCache[i+1]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 		}
 		//glEnd();
 	}
@@ -4876,7 +4876,7 @@ CVAO loadgluPartialDisk_VAO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 // ------------------------ VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO a vector VAOId i identificador VBO a vector VBOId.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO a vector VAOId i identificador VBO a vector VBOId.
 	diskVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//diskVAO.nVertexs = (int)nv / 3;
 
@@ -4897,14 +4897,14 @@ CVAO loadgluPartialDisk_EBO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 	GLint slices2;
 	GLint finish;
 
-	GLint index = 0;	// Apuntador a vèrtexs per a indices EBO.
+	GLint index = 0;	// Apuntador a vï¿½rtexs per a indices EBO.
 
 // VAO
 	CVAO diskVAO;
 	diskVAO.vaoId = 0;	diskVAO.vboId = 0;	diskVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
-	std::vector <uint> indices;									// Definició vectors dinàmic d'índexs per a EBO 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
+	std::vector <uint> indices;									// Definiciï¿½ vectors dinï¿½mic d'ï¿½ndexs per a EBO 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 	indices.clear();
@@ -4961,7 +4961,7 @@ CVAO loadgluPartialDisk_EBO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 		radiusLow = outerRadius - deltaRadius * ((float)(loops - 1) / loops);
 		texLow = radiusLow / outerRadius / 2;
 		for (i = slices - 1; i >= 0; i--) {
-			// Vèrtex (0)
+			// Vï¿½rtex (0)
 			//glTexCoord2f(0.5, 0.5);
 			//glVertex3f(0.0, 0.0, 0.0);
 			//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -4969,7 +4969,7 @@ CVAO loadgluPartialDisk_EBO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 			//textures.push_back(0.5);		textures.push_back(0.5);										// Vector Textures
 			//vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(0.0);		// Vector Vertexs
 
-			// Vèrtex (i+1)
+			// Vï¿½rtex (i+1)
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -4977,7 +4977,7 @@ CVAO loadgluPartialDisk_EBO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
 			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);		vertices.push_back(0.0);		// Vector Vertexs
 
-			// Vèrtex (i)
+			// Vï¿½rtex (i)
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -5006,37 +5006,37 @@ CVAO loadgluPartialDisk_EBO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glTexCoord2f(texHigh * sinCache[i] + 0.5, texHigh * cosCache[i] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i] + 0.5);				textures.push_back(texHigh * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);		vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);		vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i + 1]);					vertices.push_back(radiusLow * cosCache[i + 1]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i + 1]);					vertices.push_back(radiusLow * cosCache[i + 1]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);				textures.push_back(texHigh * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(0.0);// Vector Vï¿½rtexs
 		
 			// Vector indices CARA i
 			indices.push_back(index);		indices.push_back(index + 1);		indices.push_back(index + 3);	// v0-v1-v3
@@ -5049,7 +5049,7 @@ CVAO loadgluPartialDisk_EBO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 // ------------------------ VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO a vector VAOId i identificador VBO a vector VBOId.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO a vector VAOId i identificador VBO a vector VBOId.
 	diskVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 	//diskVAO.nVertexs = (int)nv / 3;
 
@@ -5057,7 +5057,7 @@ CVAO loadgluPartialDisk_EBO(GLdouble innerRadius, GLdouble outerRadius, GLint sl
 }
 
 
-// --- ESFERA : Texturització compatible amb superficie planetes
+// --- ESFERA : Texturitzaciï¿½ compatible amb superficie planetes
 
 void gluSphere(GLdouble radius, GLint slices, GLint stacks)
 {	
@@ -5090,7 +5090,7 @@ CVAO loadgluSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 	CVAO auxVAO;
 	auxVAO.vaoId = 0;		auxVAO.vboId = 0;	auxVAO.nVertexs = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -5150,59 +5150,59 @@ CVAO loadgluSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices-1; i++) {
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glNormal3f(sinCache2a[i] * sintemp3, cosCache2a[i] * sintemp3, costemp3);
 			//glTexCoord2f(1 - (float)i / slices,	1 - (float)(j + 1) / stacks);
 			//glVertex3f(sintemp2 * sinCache1a[i], sintemp2 * cosCache1a[i], zHigh);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);	// Vector Colors
 			normals.push_back(sinCache2a[i] * sintemp3);	normals.push_back(cosCache2a[i] * sintemp3);		normals.push_back(costemp3);	// Vector Normals
 			textures.push_back(1 - (float)i / slices);		textures.push_back(1 - (float)(j + 1) / stacks);	// Vector Textures
-			vertices.push_back(sintemp2 * sinCache1a[i]);	vertices.push_back(sintemp2 * cosCache1a[i]);		vertices.push_back(zHigh);		// Vector Vèrtexs
+			vertices.push_back(sintemp2 * sinCache1a[i]);	vertices.push_back(sintemp2 * cosCache1a[i]);		vertices.push_back(zHigh);		// Vector Vï¿½rtexs
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glNormal3f(sinCache2a[i] * sintemp4, cosCache2a[i] * sintemp4, costemp4);
 			//glTexCoord2f(1 - (float)i / slices,	1 - (float)j / stacks);
 			//glVertex3f(sintemp1 * sinCache1a[i], sintemp1 * cosCache1a[i], zLow);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2a[i] * sintemp4);		normals.push_back(cosCache2a[i] * sintemp4);	normals.push_back(costemp4);// Vector Normals
 			textures.push_back(1 - (float)i / slices);			textures.push_back(1 - (float)j / stacks);		// Vector Textures
-			vertices.push_back(sintemp1 * sinCache1a[i]);		vertices.push_back(sintemp1 * cosCache1a[i]);	vertices.push_back(zLow);// Vector Vèrtexs
+			vertices.push_back(sintemp1 * sinCache1a[i]);		vertices.push_back(sintemp1 * cosCache1a[i]);	vertices.push_back(zLow);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glNormal3f(sinCache2a[i+1] * sintemp4, cosCache2a[i] * sintemp4, costemp4);
 			//glTexCoord2f(1 - (float)i+1 / slices,	1 - (float)j / stacks);
 			//glVertex3f(sintemp1 * sinCache1a[i+1], sintemp1 * cosCache1a[i+1], zLow);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2a[i + 1] * sintemp4);		normals.push_back(cosCache2a[i + 1] * sintemp4);	normals.push_back(costemp4);// Vector Normals
 			textures.push_back(1 - (float)(i + 1) / slices);			textures.push_back(1 - (float)j / stacks);		// Vector Textures
-			vertices.push_back(sintemp1 * sinCache1a[i + 1]);		vertices.push_back(sintemp1 * cosCache1a[i + 1]);	vertices.push_back(zLow);// Vector Vèrtexs
+			vertices.push_back(sintemp1 * sinCache1a[i + 1]);		vertices.push_back(sintemp1 * cosCache1a[i + 1]);	vertices.push_back(zLow);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glNormal3f(sinCache2a[i+1] * sintemp4, cosCache2a[i] * sintemp4, costemp4);
 			//glTexCoord2f(1 - (float)i+1 / slices,	1 - (float)j / stacks);
 			//glVertex3f(sintemp1 * sinCache1a[i+1], sintemp1 * cosCache1a[i+1], zLow);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2a[i+1] * sintemp4);		normals.push_back(cosCache2a[i+1] * sintemp4);	normals.push_back(costemp4);// Vector Normals
 			textures.push_back(1 - (float)(i+1) / slices);			textures.push_back(1 - (float)j / stacks);		// Vector Textures
-			vertices.push_back(sintemp1 * sinCache1a[i+1]);		vertices.push_back(sintemp1 * cosCache1a[i+1]);	vertices.push_back(zLow);// Vector Vèrtexs
+			vertices.push_back(sintemp1 * sinCache1a[i+1]);		vertices.push_back(sintemp1 * cosCache1a[i+1]);	vertices.push_back(zLow);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glNormal3f(sinCache2a[i+1] * sintemp3, cosCache2a[i+1] * sintemp3, costemp3);
 			//glTexCoord2f(1 - (float)i+1 / slices,	1 - (float)(j + 1) / stacks);
 			//glVertex3f(sintemp2 * sinCache1a[i+1], sintemp2 * cosCache1a[i+1], zHigh);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);	// Vector Colors
 			normals.push_back(sinCache2a[i+1] * sintemp3);	normals.push_back(cosCache2a[i+1] * sintemp3);		normals.push_back(costemp3);	// Vector Normals
 			textures.push_back(1 - (float)(i+1) / slices);		textures.push_back(1 - (float)(j + 1) / stacks);	// Vector Textures
-			vertices.push_back(sintemp2 * sinCache1a[i+1]);	vertices.push_back(sintemp2 * cosCache1a[i+1]);		vertices.push_back(zHigh);		// Vector Vèrtexs
+			vertices.push_back(sintemp2 * sinCache1a[i+1]);	vertices.push_back(sintemp2 * cosCache1a[i+1]);		vertices.push_back(zHigh);		// Vector Vï¿½rtexs
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glNormal3f(sinCache2a[i] * sintemp3, cosCache2a[i] * sintemp3, costemp3);
 			//glTexCoord2f(1 - (float)i / slices,	1 - (float)(j + 1) / stacks);
 			//glVertex3f(sintemp2 * sinCache1a[i], sintemp2 * cosCache1a[i], zHigh);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);	// Vector Colors
 			normals.push_back(sinCache2a[i] * sintemp3);	normals.push_back(cosCache2a[i] * sintemp3);		normals.push_back(costemp3);	// Vector Normals
 			textures.push_back(1 - (float)i / slices);		textures.push_back(1 - (float)(j + 1) / stacks);	// Vector Textures
-			vertices.push_back(sintemp2 * sinCache1a[i]);	vertices.push_back(sintemp2 * cosCache1a[i]);		vertices.push_back(zHigh);		// Vector Vèrtexs
+			vertices.push_back(sintemp2 * sinCache1a[i]);	vertices.push_back(sintemp2 * cosCache1a[i]);		vertices.push_back(zHigh);		// Vector Vï¿½rtexs
 
 		}
 		//glEnd();
@@ -5211,7 +5211,7 @@ CVAO loadgluSphere_VAO(GLdouble radius, GLint slices, GLint stacks)
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO en struct CVAO.
 	auxVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//auxVAO.nVertexs = (int)nv / 3;
 
@@ -5237,13 +5237,13 @@ CVAO loadgluSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 	GLboolean needCache2;
 	GLint start, finish;
 
-	GLint index = 0; // Index a vèrtexs dins indices de l'EBO.
+	GLint index = 0; // Index a vï¿½rtexs dins indices de l'EBO.
 
 // VAO
 	CVAO auxVAO;
 	auxVAO.vaoId = 0;		auxVAO.vboId = 0;	auxVAO.eboId = 0;	auxVAO.nVertexs = 0;	auxVAO.nIndices = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures
 	std::vector <uint> indices;
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);		// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();		// Reinicialitzar vectors
@@ -5305,41 +5305,41 @@ CVAO loadgluSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glNormal3f(sinCache2a[i] * sintemp3, cosCache2a[i] * sintemp3, costemp3);
 			//glTexCoord2f(1 - (float)i / slices,	1 - (float)(j + 1) / stacks);
 			//glVertex3f(sintemp2 * sinCache1a[i], sintemp2 * cosCache1a[i], zHigh);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);	// Vector Colors
 			normals.push_back(sinCache2a[i] * sintemp3);	normals.push_back(cosCache2a[i] * sintemp3);		normals.push_back(costemp3);	// Vector Normals
 			textures.push_back(1 - (float)i / slices);		textures.push_back(1 - (float)(j + 1) / stacks);	// Vector Textures
-			vertices.push_back(sintemp2 * sinCache1a[i]);	vertices.push_back(sintemp2 * cosCache1a[i]);		vertices.push_back(zHigh);		// Vector Vèrtexs
+			vertices.push_back(sintemp2 * sinCache1a[i]);	vertices.push_back(sintemp2 * cosCache1a[i]);		vertices.push_back(zHigh);		// Vector Vï¿½rtexs
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glNormal3f(sinCache2a[i] * sintemp4, cosCache2a[i] * sintemp4, costemp4);
 			//glTexCoord2f(1 - (float)i / slices,	1 - (float)j / stacks);
 			//glVertex3f(sintemp1 * sinCache1a[i], sintemp1 * cosCache1a[i], zLow);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2a[i] * sintemp4);		normals.push_back(cosCache2a[i] * sintemp4);	normals.push_back(costemp4);// Vector Normals
 			textures.push_back(1 - (float)i / slices);			textures.push_back(1 - (float)j / stacks);		// Vector Textures
-			vertices.push_back(sintemp1 * sinCache1a[i]);		vertices.push_back(sintemp1 * cosCache1a[i]);	vertices.push_back(zLow);// Vector Vèrtexs
+			vertices.push_back(sintemp1 * sinCache1a[i]);		vertices.push_back(sintemp1 * cosCache1a[i]);	vertices.push_back(zLow);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glNormal3f(sinCache2a[i+1] * sintemp3, cosCache2a[i+1] * sintemp3, costemp3);
 			//glTexCoord2f(1 - (float)i+1 / slices,	1 - (float)(j + 1) / stacks);
 			//glVertex3f(sintemp2 * sinCache1a[i+1], sintemp2 * cosCache1a[i+1], zHigh);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]);	// Vector Colors
 			normals.push_back(sinCache2a[i + 1] * sintemp3);	normals.push_back(cosCache2a[i + 1] * sintemp3);		normals.push_back(costemp3);	// Vector Normals
 			textures.push_back(1 - (float)(i + 1) / slices);		textures.push_back(1 - (float)(j + 1) / stacks);	// Vector Textures
-			vertices.push_back(sintemp2 * sinCache1a[i + 1]);	vertices.push_back(sintemp2 * cosCache1a[i + 1]);		vertices.push_back(zHigh);		// Vector Vèrtexs
+			vertices.push_back(sintemp2 * sinCache1a[i + 1]);	vertices.push_back(sintemp2 * cosCache1a[i + 1]);		vertices.push_back(zHigh);		// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glNormal3f(sinCache2a[i+1] * sintemp4, cosCache2a[i] * sintemp4, costemp4);
 			//glTexCoord2f(1 - (float)i+1 / slices,	1 - (float)j / stacks);
 			//glVertex3f(sintemp1 * sinCache1a[i+1], sintemp1 * cosCache1a[i+1], zLow);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2a[i + 1] * sintemp4);		normals.push_back(cosCache2a[i + 1] * sintemp4);	normals.push_back(costemp4);// Vector Normals
 			textures.push_back(1 - (float)(i + 1) / slices);			textures.push_back(1 - (float)j / stacks);		// Vector Textures
-			vertices.push_back(sintemp1 * sinCache1a[i + 1]);		vertices.push_back(sintemp1 * cosCache1a[i + 1]);	vertices.push_back(zLow);// Vector Vèrtexs
+			vertices.push_back(sintemp1 * sinCache1a[i + 1]);		vertices.push_back(sintemp1 * cosCache1a[i + 1]);	vertices.push_back(zLow);// Vector Vï¿½rtexs
 
 			// Vector indices CARA 1
 			indices.push_back(index);		indices.push_back(index + 1);		indices.push_back(index + 3);	// v0-v1-v3
@@ -5352,7 +5352,7 @@ CVAO loadgluSphere_EBO(GLdouble radius, GLint slices, GLint stacks)
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO, VBO i EBO carregant de la geometria. Guardar identificadors VAO, VBO, EBO, numero vèrtexs i indices en struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO carregant de la geometria. Guardar identificadors VAO, VBO, EBO, numero vï¿½rtexs i indices en struct CVAO.
 	auxVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures,indices);
 	//auxVAO.nVertexs = (int)nv / 3;
 
@@ -5409,7 +5409,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 	CVAO auxVAO;
 	auxVAO.vaoId = -0;		auxVAO.vboId = 0;	auxVAO.nVertexs = 0;
 	
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
 
@@ -5456,7 +5456,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 
 		//		glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
-			// Vèrtex 0 (i)
+			// Vï¿½rtex 0 (i)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
@@ -5465,7 +5465,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], zLow);
 			vertices.push_back(radiusLow * sinCache[i]);	vertices.push_back(radiusLow * cosCache[i]);	vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 1 (i)
+			// Vï¿½rtex 1 (i)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)i / slices, (float)(j + 1) / stacks);
@@ -5473,7 +5473,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i]);	vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 3 (i+1)
+			// Vï¿½rtex 3 (i+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)(i+1) / slices, (float)(j + 1) / stacks);
@@ -5481,7 +5481,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i + 1]);	vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 3 (i+1)
+			// Vï¿½rtex 3 (i+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)(i+1) / slices, (float)(j + 1) / stacks);
@@ -5489,7 +5489,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i + 1]);	vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 2 (i+1)
+			// Vï¿½rtex 2 (i+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);		// Vector Normals
@@ -5498,7 +5498,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], zLow);
 			vertices.push_back(radiusLow * sinCache[i + 1]);	vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 0 (i)
+			// Vï¿½rtex 0 (i)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
@@ -5511,7 +5511,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 	}
 
 
-	// Inicialització variables disk
+	// Inicialitzaciï¿½ variables disk
 	if (slices >= CACHE_SIZE) slices = CACHE_SIZE - 1;
 	if (slices < 2 || loops < 1 || outerRadius <= 0.0 || innerRadius < 0.0 || innerRadius > outerRadius) return auxVAO;
 	if (sweepAngle < -360.0) sweepAngle = 360.0;
@@ -5558,7 +5558,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		radiusLow = outerRadius - deltaRadius * ((float)(loops - 1) / loops);
 		texLow = radiusLow / outerRadius / 2;
 		for (i = slices - 1; i >= 0; i--) {
-			// Vèrtex (0)
+			// Vï¿½rtex (0)
 			//glTexCoord2f(0.5, 0.5);
 			//glVertex3f(0.0, 0.0, 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -5566,7 +5566,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			textures.push_back(0.5);		textures.push_back(0.5);										// Vector Textures
 			vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(0.0);		// Vector Vertexs
 
-			// Vèrtex (i+1)
+			// Vï¿½rtex (i+1)
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -5574,7 +5574,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
 			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);		vertices.push_back(0.0);		// Vector Vertexs
 
-			// Vèrtex (i)
+			// Vï¿½rtex (i)
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -5599,53 +5599,53 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glTexCoord2f(texHigh * sinCache[i] + 0.5, texHigh * cosCache[i] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i] + 0.5);				textures.push_back(texHigh * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);		vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);		vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);			textures.push_back(texHigh * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);			textures.push_back(texHigh * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(0.0);	// Vector Vï¿½rtexs
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 		}
 		//glEnd();
 	}
@@ -5684,7 +5684,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		radiusLow = outerRadius - deltaRadius * ((float)(loops - 1) / loops);
 		texLow = radiusLow / outerRadius / 2;
 		for (i = slices - 1; i >= 0; i--) {
-			// Vèrtex (0)
+			// Vï¿½rtex (0)
 			//glTexCoord2f(0.5, 0.5);
 			//glVertex3f(0.0, 0.0, 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -5692,7 +5692,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			textures.push_back(0.5);		textures.push_back(0.5);										// Vector Textures
 			vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(height);		// Vector Vertexs
 
-			// Vèrtex (i+1)
+			// Vï¿½rtex (i+1)
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
@@ -5700,7 +5700,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
 			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(height);		// Vector Vertexs
 
-			// Vèrtex (i)
+			// Vï¿½rtex (i)
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -5725,53 +5725,53 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(height);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(height);	// Vector Vï¿½rtexs
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glTexCoord2f(texHigh * sinCache[i] + 0.5, texHigh * cosCache[i] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i] + 0.5);				textures.push_back(texHigh * cosCache[i] + 0.5);// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(height);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(height);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);			textures.push_back(texHigh * cosCache[i + 1] + 0.5);// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(height);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(height);// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);				colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);				textures.push_back(texHigh * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(height);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);		vertices.push_back(height);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i + 1]);					vertices.push_back(radiusLow * cosCache[i + 1]);vertices.push_back(height);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i + 1]);					vertices.push_back(radiusLow * cosCache[i + 1]);vertices.push_back(height);	// Vector Vï¿½rtexs
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);				// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);	vertices.push_back(height);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);	vertices.push_back(height);	// Vector Vï¿½rtexs
 		}
 		//glEnd();
 	}
@@ -5779,7 +5779,7 @@ CVAO loadCilindre_VAO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	auxVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 	//auxVAO.nVertexs = (int)nv / 3;
 
@@ -5820,14 +5820,14 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 	GLdouble outerRadius = baseRadius;
 	GLint loops = stacks;
 
-	GLint index = 0;		// Apuntador a vèrtexs per a indices.
+	GLint index = 0;		// Apuntador a vï¿½rtexs per a indices.
 	GLint index_ini = 0;
 
 // VAO
 	CVAO auxVAO;
 	auxVAO.vaoId = -0;		auxVAO.vboId = 0;		auxVAO.eboId = 0;	auxVAO.nVertexs = 0;	auxVAO.nIndices = 0;
 
-	std::vector <double> vertices, normals, colors, textures;	// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, normals, colors, textures;	// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	std::vector <uint> indices;
 	//vertices.resize(0);		normals.resize(0);		colors.resize(0);	textures.resize(0);			// Reinicialitzar vectors
 	vertices.clear();			normals.clear();		colors.clear();		textures.clear();			// Reinicialitzar vectors
@@ -5875,7 +5875,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 
 		//		glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
-			// Vèrtex 0 (i,j)
+			// Vï¿½rtex 0 (i,j)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
@@ -5884,7 +5884,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], zLow);
 			vertices.push_back(radiusLow * sinCache[i]);	vertices.push_back(radiusLow * cosCache[i]);			vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 1 (i,j+1)
+			// Vï¿½rtex 1 (i,j+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i]);	normals.push_back(cosCache2[i]);	normals.push_back(zNormal);		// Vector Normals
 			//glTexCoord2f(1 - (float)i / slices, (float)(j + 1) / stacks);
@@ -5892,7 +5892,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], zHigh);
 			vertices.push_back(radiusHigh * sinCache[i]);	vertices.push_back(radiusHigh * cosCache[i]);			vertices.push_back(zHigh); // Vector Vertexs
 
-			// Vèrtex 2 (i+1,j)
+			// Vï¿½rtex 2 (i+1,j)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			//glNormal3f(sinCache2[i], cosCache2[i], zNormal);
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);	// Vector Normals
@@ -5901,7 +5901,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], zLow);
 			vertices.push_back(radiusLow * sinCache[i + 1]);	vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(zLow); // Vector Vertexs
 
-			// Vèrtex 3 (i+1,j+1)
+			// Vï¿½rtex 3 (i+1,j+1)
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);		colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(sinCache2[i + 1]);	normals.push_back(cosCache2[i + 1]);	normals.push_back(zNormal);	// Vector Normals
 			//glTexCoord2f(1 - (float)(i+1) / slices, (float)(j + 1) / stacks);
@@ -5918,7 +5918,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		//glEnd();
 	}
 
-// Inicialització variables disk
+// Inicialitzaciï¿½ variables disk
 	if (slices >= CACHE_SIZE) slices = CACHE_SIZE - 1;
 	if (slices < 2 || loops < 1 || outerRadius <= 0.0 || innerRadius < 0.0 || innerRadius > outerRadius) return auxVAO;
 	if (sweepAngle < -360.0) sweepAngle = 360.0;
@@ -5968,7 +5968,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		radiusLow = outerRadius - deltaRadius * ((float)(loops - 1) / loops);
 		texLow = radiusLow / outerRadius / 2;
 		for (i = slices - 1; i >= 0; i--) {
-			// Vèrtex (0)
+			// Vï¿½rtex (0)
 			//glTexCoord2f(0.5, 0.5);
 			//glVertex3f(0.0, 0.0, 0.0);
 			//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -5976,7 +5976,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//textures.push_back(0.5);		textures.push_back(0.5);										// Vector Textures
 			//vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(0.0);		// Vector Vertexs
 
-			// Vèrtex (i+1)
+			// Vï¿½rtex (i+1)
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
@@ -5984,7 +5984,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
 			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);		vertices.push_back(0.0);		// Vector Vertexs
 
-			// Vèrtex (i)
+			// Vï¿½rtex (i)
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -6013,38 +6013,38 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);						// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);		vertices.push_back(0.0);	// Vector Vï¿½rtexs
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glTexCoord2f(texHigh * sinCache[i] + 0.5, texHigh * cosCache[i] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);						// Vector Normals
 			textures.push_back(texHigh * sinCache[i] + 0.5);				textures.push_back(texHigh * cosCache[i] + 0.5);// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(0.0);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);							// Vector Normals
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(0.0);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(0.0);	// Vector Vï¿½rtexs
 
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(-1.0);							// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);			textures.push_back(texHigh * cosCache[i + 1] + 0.5);// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(0.0);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);				vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(0.0);// Vector Vï¿½rtexs
 
 			// Vector indices CARA i
 			indices.push_back(index);		indices.push_back(index + 1);		indices.push_back(index + 3);	// v0-v1-v3
@@ -6093,7 +6093,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		radiusLow = outerRadius - deltaRadius * ((float)(loops - 1) / loops);
 		texLow = radiusLow / outerRadius / 2;
 		for (i = slices - 1; i >= 0; i--) {
-			// Vèrtex (0)
+			// Vï¿½rtex (0)
 			//glTexCoord2f(0.5, 0.5);
 			//glVertex3f(0.0, 0.0, 0.0);
 			//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
@@ -6101,7 +6101,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			//textures.push_back(0.5);		textures.push_back(0.5);										// Vector Textures
 			//vertices.push_back(0.0);		vertices.push_back(0.0);		vertices.push_back(height);		// Vector Vertexs
 
-			// Vèrtex (i+1)
+			// Vï¿½rtex (i+1)
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
@@ -6109,7 +6109,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 			textures.push_back(texLow * sinCache[i + 1] + 0.5);				textures.push_back(texLow * cosCache[i + 1] + 0.5);	// Vector Textures
 			vertices.push_back(radiusLow * sinCache[i + 1]);				vertices.push_back(radiusLow * cosCache[i + 1]);	vertices.push_back(height);		// Vector Vertexs
 
-			// Vèrtex (i)
+			// Vï¿½rtex (i)
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
@@ -6139,37 +6139,37 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 		//glBegin(GL_QUAD_STRIP);
 		for (i = 0; i <= slices - 1; i++) {
 
-			// Vèrtex 0
+			// Vï¿½rtex 0
 			//glTexCoord2f(texLow * sinCache[i] + 0.5, texLow * cosCache[i] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i], radiusLow * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);							// Vector Normals
 			textures.push_back(texLow * sinCache[i] + 0.5);					textures.push_back(texLow * cosCache[i] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);	vertices.push_back(height);	// Vector Vèrtexs
+			vertices.push_back(radiusLow * sinCache[i]);					vertices.push_back(radiusLow * cosCache[i]);	vertices.push_back(height);	// Vector Vï¿½rtexs
 
-			// Vèrtex 1
+			// Vï¿½rtex 1
 			//glTexCoord2f(texHigh * sinCache[i] + 0.5, texHigh * cosCache[i] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i], radiusHigh * cosCache[i], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);					colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);							// Vector Normals
 			textures.push_back(texHigh * sinCache[i] + 0.5);				textures.push_back(texHigh * cosCache[i] + 0.5);// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(height);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i]);					vertices.push_back(radiusHigh * cosCache[i]);	vertices.push_back(height);// Vector Vï¿½rtexs
 
-			// Vèrtex 2
+			// Vï¿½rtex 2
 			//glTexCoord2f(texLow * sinCache[i+1] + 0.5, texLow * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusLow * sinCache[i+1], radiusLow * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);						colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);								// Vector Normals
 			textures.push_back(texLow* sinCache[i + 1] + 0.5);				textures.push_back(texLow* cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusLow* sinCache[i + 1]);					vertices.push_back(radiusLow* cosCache[i + 1]);		vertices.push_back(height);	// Vector Vèrtexs
+			vertices.push_back(radiusLow* sinCache[i + 1]);					vertices.push_back(radiusLow* cosCache[i + 1]);		vertices.push_back(height);	// Vector Vï¿½rtexs
 
-			// Vèrtex 3
+			// Vï¿½rtex 3
 			//glTexCoord2f(texHigh * sinCache[i+1] + 0.5, texHigh * cosCache[i+1] + 0.5);
 			//glVertex3f(radiusHigh * sinCache[i+1], radiusHigh * cosCache[i+1], 0.0);
 			colors.push_back(cColor[0]);	colors.push_back(cColor[1]);	colors.push_back(cColor[2]);							colors.push_back(cColor[3]); // Vector Colors
 			normals.push_back(0.0);			normals.push_back(0.0);			normals.push_back(1.0);									// Vector Normals
 			textures.push_back(texHigh * sinCache[i + 1] + 0.5);				textures.push_back(texHigh * cosCache[i + 1] + 0.5);	// Vector Textures
-			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(height);// Vector Vèrtexs
+			vertices.push_back(radiusHigh * sinCache[i + 1]);					vertices.push_back(radiusHigh * cosCache[i + 1]);	vertices.push_back(height);// Vector Vï¿½rtexs
 
 			// Vector indices CARA i
 			indices.push_back(index);		indices.push_back(index + 1);		indices.push_back(index + 3);	// v0-v1-v3
@@ -6185,7 +6185,7 @@ CVAO loadCilindre_EBO(GLdouble baseRadius, GLdouble topRadius, GLdouble height, 
 // ----------------------- VAO
 	//std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	auxVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures,indices);
 	//auxVAO.nVertexs = (int)nv / 3;
 
@@ -6251,7 +6251,7 @@ CVAO loadglutSolidSquare_VAO(GLdouble dSize)
 		0.0, 0.0, 1.0, 0.0, 1.0, 1.0,      // v0-v1-v2 (front)
 		1.0, 1.0, 0.0, 1.0, 0.0, 0.0 };    // v2-v3-v0
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO i identificador VBO a struct CVAO.
 	auxVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 
     return auxVAO;
@@ -6307,7 +6307,7 @@ CVAO loadglutSolidSquare_EBO(GLdouble dSize)
 		0, 1, 2, 2, 3, 0 };			// v0-v1-v2-v3 (front)
 
 
-// Creació d'un VAO, VBO i EBO carregant-hi la geometria. Guardar identificadors VAO, VBO, EBO, vertex i indexs a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO carregant-hi la geometria. Guardar identificadors VAO, VBO, EBO, vertex i indexs a struct CVAO.
 	auxVAO = load_TRIANGLES_EBO(vertices, normals, colors, textures, indices);
 
 	return auxVAO;
@@ -6316,10 +6316,10 @@ CVAO loadglutSolidSquare_EBO(GLdouble dSize)
 
 //----------- DIBUIX DE CORBES i SUPERFICIES -------------------------------------
 
-//----- CÀLCUL VECTOR NORMAL (PRODUCTE VECTORAL)
+//----- Cï¿½LCUL VECTOR NORMAL (PRODUCTE VECTORAL)
 
 /*
-// VNormal: Càlcul del producte vectorial normalitzat de dos vectors v1, v2.
+// VNormal: Cï¿½lcul del producte vectorial normalitzat de dos vectors v1, v2.
 //         Resultat a la variable n.
 CPunt3D VNormal(CPunt3D v1, CPunt3D v2)
 {
@@ -6340,7 +6340,7 @@ CPunt3D VNormal(CPunt3D v1, CPunt3D v2)
 }
 */
 
-// Producte_Vectorial: Càlcul del producte vectorial normalitzat de dos vectors v1,v2.
+// Producte_Vectorial: Cï¿½lcul del producte vectorial normalitzat de dos vectors v1,v2.
 //			Resultat a la variable n.
 CPunt3D Prod_Vectorial(CPunt3D v1, CPunt3D v2)
 {
@@ -6351,7 +6351,7 @@ CPunt3D Prod_Vectorial(CPunt3D v1, CPunt3D v2)
 	vn.y = v1.z * v2.x - v2.z * v1.x;	//	n[1] = v1[2] * v2[0] - v2[2] * v1[0];
 	vn.z = v1.x * v2.y - v1.y * v2.x;	//	n[2] = v1[0] * v2[1] - v1[1] * v2[0];
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitud = sqrt(vn.x * vn.x + vn.y * vn.y + vn.z * vn.z);
 	vn.x = vn.x / longitud;
 	vn.y = vn.y / longitud;
@@ -6371,13 +6371,13 @@ CPunt3D Vector_Normal_Principal(CPunt3D VBN, CPunt3D VT)
 
 	vnp = Prod_Vectorial(VBN, VT);
 
-	// Convertim el vector en vector unitat (normalització)
+	// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vnp.x * vnp.x + vnp.y * vnp.y + vnp.z * vnp.z);
 	vnp.x = vnp.x / longitut;
 	vnp.y = vnp.y / longitut;
 	vnp.z = vnp.z / longitut;
 
-	// Rectificació cap a eix Z positiu
+	// Rectificaciï¿½ cap a eix Z positiu
 	//if (vnp.z < 0.0) vnp.z = -vnp.z;
 	return vnp;
 }
@@ -6394,7 +6394,7 @@ void dibuixa_Triedre_Frenet(GLuint sh_programID, CPunt3D vertex, CPunt3D VT, CPu
 	glLineWidth(2.0);
 
 // VAO
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs i colors 
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i colors 
 	//vertices.resize(0);	colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();		colors.clear();		// Reinicialitzar vectors
 
@@ -6469,7 +6469,7 @@ CColor SetColorPatch(int ptch)
 }
 
 
-//----------  POLYLINE (Interpolació linial entre punts de control) --------------
+//----------  POLYLINE (Interpolaciï¿½ linial entre punts de control) --------------
 void draw_PolyLine(CPunt3D* ctr_points, int nptsPolyLine, float pas)
 {
 	Set_VAOList(CRV_POLYLINE, load_PolyLine_VAO(ctr_points, nptsPolyLine, pas));
@@ -6481,7 +6481,7 @@ void draw_PolyLine(CPunt3D* ctr_points, int nptsPolyLine, float pas)
 CVAO load_PolyLine_VAO(CPunt3D* ctr_points, int nptsPolyLine, float pas)
 {
 	CPunt3D vertexL1, vertexL2;
-	CPunt3D ctr[3];		// Punts control del patch de la línia.
+	CPunt3D ctr[3];		// Punts control del patch de la lï¿½nia.
 	int patch = 0;		// Patch actual.
 	GLfloat t = 0;
 
@@ -6489,20 +6489,19 @@ CVAO load_PolyLine_VAO(CPunt3D* ctr_points, int nptsPolyLine, float pas)
 	CVAO polyVAO;		
 	polyVAO.vaoId = 0;		polyVAO.vboId = 0;		polyVAO.nVertexs = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		// Reinicialitzar vectors
 
-// Obtenir color actual definit en OpenGL amb glColor();
-	GLfloat cColor[4];
-	glGetFloatv(GL_CURRENT_COLOR, cColor);
+// Core profiles have no fixed-function current color state.
+	const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 // TRIEDRE DE FRENET
 	CPunt3D VT = { 0.0, 0.0, 0.0f, 1.0f };
 	CPunt3D VNP = { 0.0f, 0.0f, 0.0f, 1.0f };
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 3; i++)
 	{	ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
@@ -6526,12 +6525,12 @@ CVAO load_PolyLine_VAO(CPunt3D* ctr_points, int nptsPolyLine, float pas)
 			else glLineWidth(4.0);
 
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vértex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vï¿½rtex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vèrtex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vï¿½rtex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			
 			vertexL1 = vertexL2;
 			t = 0;
@@ -6571,12 +6570,12 @@ CVAO load_PolyLine_VAO(CPunt3D* ctr_points, int nptsPolyLine, float pas)
 			else glLineWidth(4.0);
 
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vértex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vï¿½rtex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vèrtex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vï¿½rtex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 
 			vertexL1 = vertexL2;
 			t = t + pas;
@@ -6585,19 +6584,19 @@ CVAO load_PolyLine_VAO(CPunt3D* ctr_points, int nptsPolyLine, float pas)
 	//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	polyVAO = load_LINES_VAO(vertices, colors);
 
 	return polyVAO;
 }
 
 
-// draw_TFPolyLine: Visualització del Triedre de Frenet del PolyLine de cada vèrtex del polyLine
-//					donada la seqüència de punts 
+// draw_TFPolyLine: Visualitzaciï¿½ del Triedre de Frenet del PolyLine de cada vï¿½rtex del polyLine
+//					donada la seqï¿½ï¿½ncia de punts 
 void draw_TFPolyLine(GLuint sh_programID, CPunt3D* ctr_points, int nptsPolyLine, float pas)
 {
 	CPunt3D vertexL1, vertexL2;
-	CPunt3D ctr[3];		// Punts control del patch de la línia.
+	CPunt3D ctr[3];		// Punts control del patch de la lï¿½nia.
 	int patch = 0;		// Patch actual.
 	GLfloat t = 0;
 
@@ -6606,7 +6605,7 @@ void draw_TFPolyLine(GLuint sh_programID, CPunt3D* ctr_points, int nptsPolyLine,
 	CPunt3D VNP = { 0.0f, 0.0f, 0.0f, 1.0f };
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 3; i++)
 	{
 		ctr[i].x = ctr_points[i].x;
@@ -6614,7 +6613,7 @@ void draw_TFPolyLine(GLuint sh_programID, CPunt3D* ctr_points, int nptsPolyLine,
 		ctr[i].z = ctr_points[i].z;
 	}
 	vertexL1 = Punt_PolyLine(t, ctr);
-	// Càlcul i dibuix Triedre de Frenet en vertexL1	
+	// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1	
 	VT = VT_PolyLine(ctr);
 	VBN = VBN_PolyLine(ctr);
 	VNP = VNP_PolyLine(VBN, VT);
@@ -6641,13 +6640,13 @@ void draw_TFPolyLine(GLuint sh_programID, CPunt3D* ctr_points, int nptsPolyLine,
 							ctr[i].y = ctr_points[patch + i].y;
 						ctr[i].z = ctr_points[patch + i].z;
 						}
-					// Si cadena de punts Tancat (primer punt [0] igual a últim[nptsPolyLine]), agafar punt [1]
+					// Si cadena de punts Tancat (primer punt [0] igual a ï¿½ltim[nptsPolyLine]), agafar punt [1]
 					if ((ctr[1].x == ctr[2].x) && (ctr[1].y = ctr[2].y) && (ctr[1].z == ctr[2].z))
 						{	ctr[2].x = ctr_points[1].x;
 							ctr[2].y = ctr_points[1].y;
 						ctr[2].z = ctr_points[1].z;
 						}
-					// Si cadena de punts no Tancada, agafar primer punt com a últim
+					// Si cadena de punts no Tancada, agafar primer punt com a ï¿½ltim
 					else {	ctr[2].x = ctr_points[0].x;
 							ctr[2].y = ctr_points[0].y;
 							ctr[2].z = ctr_points[0].z;
@@ -6655,7 +6654,7 @@ void draw_TFPolyLine(GLuint sh_programID, CPunt3D* ctr_points, int nptsPolyLine,
 				}
 			}
 			vertexL1 = Punt_PolyLine(t, ctr);
-			// Càlcul i dibuix Triedre de Frenet en vertexL1 (primer vèrtex del patch de línia)	
+			// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1 (primer vï¿½rtex del patch de lï¿½nia)	
 			VT = VT_PolyLine(ctr);
 			VBN = VBN_PolyLine(ctr);
 			VNP = VNP_PolyLine(VBN, VT);
@@ -6672,16 +6671,16 @@ void draw_TFPolyLine(GLuint sh_programID, CPunt3D* ctr_points, int nptsPolyLine,
 }
 
 // Punt_Polyline: Calcul del punt del Polyline en coordenades 3D (CPunt3D) segons el 
-//					paràmetre t i els punts de control (extrems) ctr del segment (patch) 
+//					parï¿½metre t i els punts de control (extrems) ctr del segment (patch) 
 CPunt3D Punt_PolyLine(float t, CPunt3D* ctr)
 {
 	CPunt3D p = { (0.0f, 0.0f, 0.0f, 1.0f) };
 	CPunt3D lambda;
 
-	// Càlcul de la pendent
+	// Cï¿½lcul de la pendent
 	lambda.x = ctr[1].x - ctr[0].x;	lambda.y = ctr[1].y - ctr[0].y;	lambda.z = ctr[1].z - ctr[0].z;
 
-	// Càlcul de la Posició
+	// Cï¿½lcul de la Posiciï¿½
 	p.x = ctr[0].x + t * lambda.x;
 	p.y = ctr[0].y + t * lambda.y;
 	p.z = ctr[0].z + t * lambda.z;
@@ -6694,7 +6693,7 @@ CPunt3D D_PolyLine(CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-	// Càlcul de la Primera Derivada v1-v0
+	// Cï¿½lcul de la Primera Derivada v1-v0
 	dp.x = ctr[1].x - ctr[0].x;
 	dp.y = ctr[1].y - ctr[0].y;
 	dp.z = ctr[1].z - ctr[0].z;
@@ -6709,7 +6708,7 @@ CPunt3D D2_PolyLine(CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-	// Càlcul de la Primera Derivada v2-v0
+	// Cï¿½lcul de la Primera Derivada v2-v0
 	dp.x = ctr[2].x - ctr[0].x;
 	dp.y = ctr[2].y - ctr[0].y;
 	dp.z = ctr[2].z - ctr[0].z;
@@ -6728,7 +6727,7 @@ CPunt3D VT_PolyLine(CPunt3D* ctr)
 
 	vt = D_PolyLine(ctr);
 
-	// Convertim el vector en vector unitat (normalització)
+	// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vt.x * vt.x + vt.y * vt.y + vt.z * vt.z);
 	vt.x = vt.x / longitut;
 	vt.y = vt.y / longitut;
@@ -6752,7 +6751,7 @@ CPunt3D VBN_PolyLine(CPunt3D* ctr)
 
 	vbn = Prod_Vectorial(vt1, vt2);
 
-	// Convertim el vector en vector unitat (normalització)
+	// Convertim el vector en vector unitat (normalitzaciï¿½)
 	//	longitut = sqrt(vbn.x * vbn.x + vbn.y * vbn.y + vbn.z * vbn.z);
 	//	vbn.x = vbn.x / longitut;
 	//	vbn.y = vbn.y / longitut;
@@ -6761,8 +6760,8 @@ CPunt3D VBN_PolyLine(CPunt3D* ctr)
 }
 
 
-// VNP_Polyline: Càlcul del Vector Normal principal a partir dels vectors Tangent (VT) i 
-//				 el Binormal (VBN) com a producte vectorial d'ambós. Normalitzat.
+// VNP_Polyline: Cï¿½lcul del Vector Normal principal a partir dels vectors Tangent (VT) i 
+//				 el Binormal (VBN) com a producte vectorial d'ambï¿½s. Normalitzat.
 CPunt3D VNP_PolyLine(CPunt3D VBN, CPunt3D VT)
 {
 	CPunt3D vnp = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -6777,7 +6776,7 @@ CPunt3D VNP_PolyLine(CPunt3D VBN, CPunt3D VT)
 	//	vnp.z = vnp.z / longitut;
 	return vnp;
 }
-//----------  FI POLYLINE (Interpolació linial entre punts de control) -----------
+//----------  FI POLYLINE (Interpolaciï¿½ linial entre punts de control) -----------
 
 
 //----------- CORBA LEMNISCATA 2D ------------------------------------------------
@@ -6797,7 +6796,7 @@ CVAO load_Lemniscata2D_VAO(float escala, float pas)
 	CVAO lemniVAO;		
 	lemniVAO.vaoId = 0;		lemniVAO.vboId = 0;	lemniVAO.nVertexs = 0;
 	
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		// Reinicialitzar vectors
 
@@ -6814,11 +6813,11 @@ CVAO load_Lemniscata2D_VAO(float escala, float pas)
 			vertexL2 = Punt_Lemniscata2D(t, escala);
 			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 
 			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 
 			vertexL1 = vertexL2;
 			t = t + pas;
@@ -6826,7 +6825,7 @@ CVAO load_Lemniscata2D_VAO(float escala, float pas)
 		//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	lemniVAO = load_LINES_VAO(vertices, colors);
 
 	return lemniVAO;
@@ -6838,23 +6837,23 @@ CVAO load_Lemniscata2D_EBO(float escala, float pas)
 {
 	float t = 0;
 	CPunt3D vertexL1, vertexL2;
-	GLint index = 0;		// Apuntador a vèrtexs per a indices.
+	GLint index = 0;		// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO lemniVAO;
 	lemniVAO.vaoId = 0;		lemniVAO.vboId = 0;		lemniVAO.eboId = 0;		lemniVAO.nVertexs = 0;	lemniVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs, normals i textures 
-	std::vector <uint> indices;					// Vector dinàmic per a indexs EBO
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
+	std::vector <uint> indices;					// Vector dinï¿½mic per a indexs EBO
 	//vertices.resize(0);		colors.resize(0);	indices.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		indices.clear();		// Reinicialitzar vectors
 
 	if (pas == 0) return lemniVAO;
 	else {
-		// Definició del primer vèrtex de la corba.
+		// Definiciï¿½ del primer vï¿½rtex de la corba.
 		vertexL1 = Punt_Lemniscata2D(t, escala);
 		colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-		vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+		vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 
 		t = t + pas;
 		//glBegin(GL_LINES);
@@ -6862,13 +6861,13 @@ CVAO load_Lemniscata2D_EBO(float escala, float pas)
 			vertexL2 = Punt_Lemniscata2D(t, escala);
 			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 
 			//vertexL1 = vertexL2;
@@ -6877,7 +6876,7 @@ CVAO load_Lemniscata2D_EBO(float escala, float pas)
 		//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO, VBO i EBO per a la càrrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO per a la cï¿½rrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
 	lemniVAO = load_LINES_EBO(vertices, colors, indices);
 
 	return lemniVAO;
@@ -6885,7 +6884,7 @@ CVAO load_Lemniscata2D_EBO(float escala, float pas)
 }
 
 
-// draw_TFLemniscata2D: Visualització del Triedre de Frenet de la corba de lemniscata 2D donada l'escala, 
+// draw_TFLemniscata2D: Visualitzaciï¿½ del Triedre de Frenet de la corba de lemniscata 2D donada l'escala, 
 //						amb increment pas i si volem visualtzar el Triedre de Frenet 
 void draw_TFLemniscata2D(GLuint sh_programID, float escala, float pas)
 {
@@ -6896,10 +6895,10 @@ void draw_TFLemniscata2D(GLuint sh_programID, float escala, float pas)
 	CPunt3D VNP = { 0.0f, 0.0f, 0.0f, 1.0f };
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-// Càlcul i dibuix Triedre de Frenet en cada vèrtex de la corba Lemniscata3D
+// Cï¿½lcul i dibuix Triedre de Frenet en cada vï¿½rtex de la corba Lemniscata3D
 	t = 0;
 	vertexL1 = Punt_Lemniscata2D(t, escala);
-// Càlcul i dibuix Triedre de Frenet en vertexL1
+// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1
 	VT = VT_Lemniscata2D(t, escala);
 	VBN = VBN_Lemniscata2D(t, escala);
 	VNP = Vector_Normal_Principal(VBN, VT);
@@ -6907,7 +6906,7 @@ void draw_TFLemniscata2D(GLuint sh_programID, float escala, float pas)
 
 	t = t + pas;
 	while (t <= 360) {	vertexL2 = Punt_Lemniscata2D(t, escala);
-						// Càlcul i dibuix Triedre de Frenet en vertexL2
+						// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 						VT = VT_Lemniscata2D(t, escala);
 						VBN = VBN_Lemniscata2D(t, escala);
 						VNP = Vector_Normal_Principal(VBN, VT);
@@ -6917,18 +6916,18 @@ void draw_TFLemniscata2D(GLuint sh_programID, float escala, float pas)
 					}
 }
 
-// Punt_Lemniscata2D: Calcul de la posició (x,y,z) segons lemniscata 2D (CPoint3D)
+// Punt_Lemniscata2D: Calcul de la posiciï¿½ (x,y,z) segons lemniscata 2D (CPoint3D)
 CPunt3D Punt_Lemniscata2D(float t, float scale)
 {
 	CPunt3D p = { (0, 0, 0) };
-	const double a = 1.0 * scale * (0.6); // paràmetre lemniscata
+	const double a = 1.0 * scale * (0.6); // parï¿½metre lemniscata
 
 	float bet = sqrtf(2.0) / 2;
 
 	float x1 = a * cos(2 * t * PI / 180) * cos(t * PI / 180);
 	float y1 = a * cos(2 * t * PI / 180) * sin(t * PI / 180);
 
-// Càlcul de la Posició
+// Cï¿½lcul de la Posiciï¿½
 	p.x = bet * x1 + bet * y1;
 	p.y = -bet * x1 + bet * y1;
 	p.z = 0;
@@ -6938,7 +6937,7 @@ CPunt3D Punt_Lemniscata2D(float t, float scale)
 // D_CLemniscata2D: Calcul de la primera derivada de lemniscata 2D (CPoint3D)
 CPunt3D D_Lemniscata2D(float t, float scale)
 {
-	const double a = 1.0 * scale * (0.6); // paràmetre lemniscata
+	const double a = 1.0 * scale * (0.6); // parï¿½metre lemniscata
 
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -6946,9 +6945,9 @@ CPunt3D D_Lemniscata2D(float t, float scale)
 
 	float dx1 = -2 * a * sin(2 * t * PI / 180) * cos(t * PI / 180) - a * cos(2 * t * PI / 180) * sin(t * PI / 180);
 	float dy1 = -2 * a * sin(2 * t * PI / 180) * sin(t * PI / 180) + a * cos(2 * t * PI / 180) * cos(t * PI / 180);
-	float dz1 = 0.0f;	// Trajectòria 1
+	float dz1 = 0.0f;	// Trajectï¿½ria 1
 
-// Càlcul de la Primera Derivada
+// Cï¿½lcul de la Primera Derivada
 	dp.x = bet * dx1 + bet * dy1;
 	dp.y = -bet * dx1 + bet * dy1;
 	dp.z = 0.0;
@@ -6960,7 +6959,7 @@ CPunt3D D_Lemniscata2D(float t, float scale)
 // D2CLemniscata3D: Calcul de la segona derivada de lemniscata 3D (CPoint3D)
 CPunt3D D2_Lemniscata2D(float t, float scale)
 {
-	const double a = 1.0 * scale * (0.6); // paràmetre lemniscata
+	const double a = 1.0 * scale * (0.6); // parï¿½metre lemniscata
 
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -6968,9 +6967,9 @@ CPunt3D D2_Lemniscata2D(float t, float scale)
 
 	float dx1 = -4 * a * cos(2 * t * PI / 180) * cos(t * PI / 180) + 2 * a * sin(2 * t * PI / 180) * sin(t * PI / 180) + 2 * a * sin(2 * t * PI / 180) * sin(t * PI / 180) - a * cos(2 * t * PI / 180) * cos(t * PI / 180);
 	float dy1 = -4 * a * cos(2 * t * PI / 180) * sin(t * PI / 180) - 2 * a * sin(2 * t * PI / 180) * cos(t * PI / 180) - 2 * a * sin(2 * t * PI / 180) * cos(t * PI / 180) - a * cos(2 * t * PI / 180) * sin(t * PI / 180);
-	float dz1 = 0.0;		// Trajectòria 1
+	float dz1 = 0.0;		// Trajectï¿½ria 1
 
-// Càlcul de la Segona Derivada
+// Cï¿½lcul de la Segona Derivada
 	dp.x = bet * dx1 + bet * dy1;
 	dp.y = -bet * dx1 + bet * dy1;
 	dp.z = 0.0;
@@ -6982,7 +6981,7 @@ CPunt3D D2_Lemniscata2D(float t, float scale)
 //-- TRIEDRE DE FRENET PER A CORBES LEMNISCATA 2D
 
 // VT_Lemniscata2D: Calcul del Vector Tangent (primera derivada) de la corba Lemniscata 2D en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i l'escala scale. Normalitzat.
+//             parï¿½metre t i l'escala scale. Normalitzat.
 CPunt3D VT_Lemniscata2D(float t, float scale)
 {
 	CPunt3D vt = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -6990,7 +6989,7 @@ CPunt3D VT_Lemniscata2D(float t, float scale)
 
 	vt = D_Lemniscata2D(t, scale);
 
-	// Convertim el vector en vector unitat (normalització)
+	// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vt.x * vt.x + vt.y * vt.y);
 	vt.x = vt.x / longitut;
 	vt.y = vt.y / longitut;
@@ -7000,7 +6999,7 @@ CPunt3D VT_Lemniscata2D(float t, float scale)
 }
 
 // VBN_Lemniscata2D: Calcul del Vector Normal Principal (segona derivada) de la corba Lemniscata 2D en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i l'escala scale. Normalitzat.
+//             parï¿½metre t i l'escala scale. Normalitzat.
 CPunt3D VBN_Lemniscata2D(float t, float scale)
 {
 	CPunt3D vt1 = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7013,7 +7012,7 @@ CPunt3D VBN_Lemniscata2D(float t, float scale)
 
 	vbn = Prod_Vectorial(vt1, vt2);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	//	longitut = sqrt(vbn.x * vbn.x + vbn.y * vbn.y);
 	//	vbn.x = vbn.x / longitut;
 	//	vbn.y = vbn.y / longitut;
@@ -7031,7 +7030,7 @@ void draw_Lemniscata3D(float escala, float pas)
 }
 
 
-// load_Lemniscata3D_VAO: Càrrega en VAO de la corba de lemniscata 3D donada l'escala, 
+// load_Lemniscata3D_VAO: Cï¿½rrega en VAO de la corba de lemniscata 3D donada l'escala, 
 //             amb increment pas i si volem visualtzar el Triedre de Frenet 
 CVAO load_Lemniscata3D_VAO(float escala, float pas)
 {
@@ -7039,7 +7038,7 @@ CVAO load_Lemniscata3D_VAO(float escala, float pas)
 	CVAO lemniVAO;		
 	lemniVAO.vaoId = 0;		lemniVAO.vboId = 0;	lemniVAO.nVertexs = 0;
 	
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		// Reinicialitzar vectors
 
@@ -7054,11 +7053,11 @@ CVAO load_Lemniscata3D_VAO(float escala, float pas)
 			vertexL2 = Punt_Lemniscata3D(t, escala);
 			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 
 			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 
 			vertexL1 = vertexL2;
 			t = t + pas;
@@ -7068,7 +7067,7 @@ CVAO load_Lemniscata3D_VAO(float escala, float pas)
 // ----------------------- VAO
 		std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 		lemniVAO = load_LINES_VAO(vertices, colors);
 		lemniVAO.nVertexs = int(nv / 3);
 		
@@ -7077,29 +7076,29 @@ CVAO load_Lemniscata3D_VAO(float escala, float pas)
 }
 
 
-// load_Lemniscata3D_EBO: Càrrega en VAO i EBO de la corba de lemniscata 3D donada l'escala, 
+// load_Lemniscata3D_EBO: Cï¿½rrega en VAO i EBO de la corba de lemniscata 3D donada l'escala, 
 //             amb increment pas i si volem visualtzar el Triedre de Frenet 
 CVAO load_Lemniscata3D_EBO(float escala, float pas)
 {
 	float t = 0;
 	CPunt3D vertexL1, vertexL2;
-	GLint index = 0;		// Apuntador a vèrtexs per a indices.
+	GLint index = 0;		// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO lemniVAO;
 	lemniVAO.vaoId = 0;		lemniVAO.vboId = 0;		lemniVAO.eboId = 0;  lemniVAO.nVertexs = 0; lemniVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs i color 
-	std::vector <uint> indices;					// Vector dinàmic per a indexs EBO
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i color 
+	std::vector <uint> indices;					// Vector dinï¿½mic per a indexs EBO
 	//vertices.resize(0);		colors.resize(0);	indices.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		indices.clear();		// Reinicialitzar vectors
 
 	if (pas == 0) return lemniVAO;
 	else {
-		// Definició del primer vèrtex de la corba.
+		// Definiciï¿½ del primer vï¿½rtex de la corba.
 		vertexL1 = Punt_Lemniscata3D(t, escala);
 		colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-		vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+		vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 
 		t = t + pas;
 		//glBegin(GL_LINES);
@@ -7107,13 +7106,13 @@ CVAO load_Lemniscata3D_EBO(float escala, float pas)
 			vertexL2 = Punt_Lemniscata3D(t, escala);
 			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);
 			colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 
 			//vertexL1 = vertexL2;
@@ -7122,14 +7121,14 @@ CVAO load_Lemniscata3D_EBO(float escala, float pas)
 		//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO, VBO i EBO per a la càrrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO per a la cï¿½rrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
 	lemniVAO = load_LINES_EBO(vertices, colors,indices);
 
 	return lemniVAO;
 	}
 }
 
-// draw_TFLemniscata3D: Visualització del Triedre de Frenet de la corba de lemniscata 3D donada l'escala, 
+// draw_TFLemniscata3D: Visualitzaciï¿½ del Triedre de Frenet de la corba de lemniscata 3D donada l'escala, 
 //             amb increment pas.
 void draw_TFLemniscata3D(GLuint sh_programID, float escala, float pas)
 {
@@ -7140,10 +7139,10 @@ void draw_TFLemniscata3D(GLuint sh_programID, float escala, float pas)
 	CPunt3D VNP = { 0.0f, 0.0f, 0.0f, 1.0f };
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
-// Càlcul i dibuix Triedre de Frenet en cada vèrtex de la corba Lemniscata3D
+// Cï¿½lcul i dibuix Triedre de Frenet en cada vï¿½rtex de la corba Lemniscata3D
 	t = 0;
 	vertexL1 = Punt_Lemniscata3D(t, escala);
-	// Càlcul i dibuix Triedre de Frenet en vertexL1
+	// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1
 	VT = VT_Lemniscata3D(t, escala);
 	VBN = VBN_Lemniscata3D(t, escala);
 	VNP = Vector_Normal_Principal(VBN, VT);
@@ -7152,7 +7151,7 @@ void draw_TFLemniscata3D(GLuint sh_programID, float escala, float pas)
 	t = t + pas;
 	while (t <= 360) {
 		vertexL2 = Punt_Lemniscata3D(t, escala);
-		// Càlcul i dibuix Triedre de Frenet en vertexL2
+		// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 		VT = VT_Lemniscata3D(t, escala);
 		VBN = VBN_Lemniscata3D(t, escala);
 		VNP = Vector_Normal_Principal(VBN, VT);
@@ -7162,35 +7161,35 @@ void draw_TFLemniscata3D(GLuint sh_programID, float escala, float pas)
 		}
 }
 
-// Punt_Lemniscata3D: Calcul de la posició (x,y,z) segons lemniscata 3D (CPunt3D)
+// Punt_Lemniscata3D: Calcul de la posiciï¿½ (x,y,z) segons lemniscata 3D (CPunt3D)
 CPunt3D Punt_Lemniscata3D(float t, float scale)
 {
 	CPunt3D p = { (0, 0, 0) };
-	const double a = 1.0*scale*(0.6); // paràmetre lemniscata
+	const double a = 1.0*scale*(0.6); // parï¿½metre lemniscata
 
 	float bet = sqrtf(2.0) / 2;
 	//float aeli=0.95*512/2;
 	//float beli=0.8*512/2;
 	float x1 = a*cos(2 * t*PI / 180)*cos(t*PI / 180);
 	float y1 = a*cos(2 * t*PI / 180)*sin(t*PI / 180);
-	float z1 = a*(sin(t*PI / 180) + cos(t*PI / 180));	// Trajectòria 1
-	//float z1=a*sin(t*PI/180);							// Trajectòria 2
+	float z1 = a*(sin(t*PI / 180) + cos(t*PI / 180));	// Trajectï¿½ria 1
+	//float z1=a*sin(t*PI/180);							// Trajectï¿½ria 2
 
-// Càlcul de la Posició
+// Cï¿½lcul de la Posiciï¿½
 	p.x = bet*x1 + bet*y1;
 	p.y = -bet*x1 + bet*y1;
 
-	//p.z=bet*z1+256;		// Elevació 1 (la més alta)
-	//p.z=(bet/2)*z1+158;	// Elevació 2 
-	p.z = (bet / 4)*z1 + 82;	// Elevació 3
-	//p.z=(bet/8)*z1+43;	// Elevació 4
+	//p.z=bet*z1+256;		// Elevaciï¿½ 1 (la mï¿½s alta)
+	//p.z=(bet/2)*z1+158;	// Elevaciï¿½ 2 
+	p.z = (bet / 4)*z1 + 82;	// Elevaciï¿½ 3
+	//p.z=(bet/8)*z1+43;	// Elevaciï¿½ 4
 	return p;
 }
 
 // D_CLemniscata3D: Calcul de la primera derivada de lemniscata 3D (CPoint3D)
 CPunt3D D_Lemniscata3D(float t, float scale)
 {
-	const double a = 1.0 * scale * (0.6); // paràmetre lemniscata
+	const double a = 1.0 * scale * (0.6); // parï¿½metre lemniscata
 
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -7201,10 +7200,10 @@ CPunt3D D_Lemniscata3D(float t, float scale)
 
 	float dx1 = -2 * a * sin(2 * t * PI / 180) * cos(t * PI / 180) - a * cos(2 * t * PI / 180) * sin(t * PI / 180);
 	float dy1 = -2 * a * sin(2 * t * PI / 180) * sin(t * PI / 180) + a * cos(2 * t * PI / 180) * cos(t * PI / 180);
-	float dz1 = a * (cos(t * PI / 180) - sin(t * PI / 180));	// Trajectòria 1
-	//float dz1=a*cos(t*pi/180);						// Trajectòria 2
+	float dz1 = a * (cos(t * PI / 180) - sin(t * PI / 180));	// Trajectï¿½ria 1
+	//float dz1=a*cos(t*pi/180);						// Trajectï¿½ria 2
 
-// Càlcul de la Primera Derivada
+// Cï¿½lcul de la Primera Derivada
 	dp.x = bet * dx1 + bet * dy1;
 	dp.y = -bet * dx1 + bet * dy1;
 	dp.z = bet * dz1;
@@ -7216,7 +7215,7 @@ CPunt3D D_Lemniscata3D(float t, float scale)
 // D2_CLemniscata3D: Calcul de la segona derivada de lemniscata 3D (CPoint3D)
 CPunt3D D2_Lemniscata3D(float t, float scale)
 {
-	const double a = 1.0 * scale * (0.6); // paràmetre lemniscata
+	const double a = 1.0 * scale * (0.6); // parï¿½metre lemniscata
 
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
 
@@ -7227,10 +7226,10 @@ CPunt3D D2_Lemniscata3D(float t, float scale)
 
 	float dx1 = -4 * a * cos(2 * t * PI / 180) * cos(t * PI / 180) + 2 * a * sin(2 * t * PI / 180) * sin(t * PI / 180) + 2 * a * sin(2 * t * PI / 180) * sin(t * PI / 180) - a * cos(2 * t * PI / 180) * cos(t * PI / 180);
 	float dy1 = -4 * a * cos(2 * t * PI / 180) * sin(t * PI / 180) - 2 * a * sin(2 * t * PI / 180) * cos(t * PI / 180) - 2 * a * sin(2 * t * PI / 180) * cos(t * PI / 180) - a * cos(2 * t * PI / 180) * sin(t * PI / 180);
-	float dz1 = -a * sin(t * PI / 180) - cos(t * PI / 180);	// Trajectòria PI
-	//float dz1=-a*sin(t*pi/180);						// Trajectòria 2
+	float dz1 = -a * sin(t * PI / 180) - cos(t * PI / 180);	// Trajectï¿½ria PI
+	//float dz1=-a*sin(t*pi/180);						// Trajectï¿½ria 2
 
-// Càlcul de la Segona Derivada
+// Cï¿½lcul de la Segona Derivada
 	dp.x = bet * dx1 + bet * dy1;
 	dp.y = -bet * dx1 + bet * dy1;
 	dp.z = bet * dz1;
@@ -7242,7 +7241,7 @@ CPunt3D D2_Lemniscata3D(float t, float scale)
 //-- TRIEDRE DE FRENET PER A CORBES LEMNISCATA 3D
 
 // VT_Lemniscata3D: Calcul del Vector Tangent (primera derivada) de la corba lemniscata 3D en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i l'escala scale. Normalitzat.
+//             parï¿½metre i l'escala scale. Normalitzat.
 CPunt3D VT_Lemniscata3D(float t, float scale)
 {
 	CPunt3D vt = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7250,7 +7249,7 @@ CPunt3D VT_Lemniscata3D(float t, float scale)
 
 	vt = D_Lemniscata3D(t, scale);
 
-	// Convertim el vector en vector unitat (normalització)
+	// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vt.x * vt.x + vt.y * vt.y + vt.z * vt.z);
 	vt.x = vt.x / longitut;
 	vt.y = vt.y / longitut;
@@ -7261,7 +7260,7 @@ CPunt3D VT_Lemniscata3D(float t, float scale)
 
 
 // VNP_Lemniscata3D: Calcul del Vector Normal Principal (segona derivada) de la corba lemniscata 3D en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i l'escala scale. Normalitzat.
+//             parï¿½metre t i l'escala scale. Normalitzat.
 CPunt3D VBN_Lemniscata3D(float t, float scale)
 {
 	CPunt3D vt1 = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7274,7 +7273,7 @@ CPunt3D VBN_Lemniscata3D(float t, float scale)
 
 	vbn = Prod_Vectorial(vt1, vt2);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	//	longitut = sqrt(vbn.x * vbn.x + vbn.y * vbn.y + vbn.z * vbn.z);
 	//	vbn.x = vbn.x / longitut;
 	//	vbn.y = vbn.y / longitut;
@@ -7293,7 +7292,7 @@ void draw_Hermitte_Curve(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], flo
 	deleteVAOList(CRV_HERMITTE);
 }
 
-// load_Hermitte_Curve_VAO: Càrrega de la corba de Hermitte donada per nptsCorba punts de control definits en ctr_points, 
+// load_Hermitte_Curve_VAO: Cï¿½rrega de la corba de Hermitte donada per nptsCorba punts de control definits en ctr_points, 
 //							 amb increment pas com a VAO.
 CVAO load_Hermitte_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas)
 {
@@ -7308,7 +7307,7 @@ CVAO load_Hermitte_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 	HermitVAO.vaoId = 0;		HermitVAO.vboId = 0;		HermitVAO.eboId = 0;
 	HermitVAO.nVertexs = 0;		HermitVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;			// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, colors;			// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		// Reinicialitzar vectors
 
@@ -7317,7 +7316,7 @@ CVAO load_Hermitte_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 	//glGetFloatv(GL_CURRENT_COLOR, cColor);
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++)	
 		{	ctr[i].x = ctr_points[i].x;
 			ctr[i].y = ctr_points[i].y;
@@ -7326,22 +7325,22 @@ CVAO load_Hermitte_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 		}
 
 	//glBegin(GL_LINES);
-// Definició del primer vèrtex de la corba.
+// Definiciï¿½ del primer vï¿½rtex de la corba.
 	vertexL1 = Punt_Corba_Hermitte(t, ctr);
 	t = t + pas;
 	while (patch <= nptsCorba - 4) {
 		if (t >= 1.0) {
 			// Dibuixa Darrera aresta del patch.(t-pas, 1.0)
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 
 			vertexL2 = Punt_Corba_Hermitte(1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -7361,16 +7360,16 @@ CVAO load_Hermitte_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 		}
 		if (patch <= nptsCorba - 4) {
 			
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 			
 			vertexL2 = Punt_Corba_Hermitte(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -7392,7 +7391,7 @@ CVAO load_Hermitte_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 }
 
 
-// load_Hermitte_Curve_EBO: Càrrega de la corba de Hermitte donada per nptsCorba punts de control definits en ctr_points, 
+// load_Hermitte_Curve_EBO: Cï¿½rrega de la corba de Hermitte donada per nptsCorba punts de control definits en ctr_points, 
 //							 amb increment pas com a VAO amb EBO.
 CVAO load_Hermitte_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas)
 {
@@ -7401,15 +7400,15 @@ CVAO load_Hermitte_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 	CColor pColor = { 1.0, 1.0, 1.0, 1.0 };	// Vector de color pel Patch
 	int patch = 0;		// Patch actual.
 	GLfloat t = 0;
-	GLint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO HermitVAO;
 	HermitVAO.vaoId = 0;		HermitVAO.vboId = 0;		HermitVAO.eboId = 0; 
 	HermitVAO.nVertexs = 0;		HermitVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs i color 
-	std::vector <uint> indices;					// Vector dinàmic per a indexs EBO
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i color 
+	std::vector <uint> indices;					// Vector dinï¿½mic per a indexs EBO
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		indices.clear();		// Reinicialitzar vectors// Obtenir color actual definit en OpenGL amb glColor();
 	
@@ -7417,7 +7416,7 @@ CVAO load_Hermitte_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 	//GLfloat cColor[4];
 	//glGetFloatv(GL_CURRENT_COLOR, cColor);
 
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++) {
 		ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
@@ -7425,34 +7424,34 @@ CVAO load_Hermitte_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 		}
 
 	//glBegin(GL_LINES);
-	// Definició del primer vèrtex de la corba.
+	// Definiciï¿½ del primer vï¿½rtex de la corba.
 	vertexL1 = Punt_Corba_Hermitte(t, ctr);
 	// Donar color a cada patch de la corba (passant el color pel shader)
 	pColor = SetColorPatch(patch);
 	colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 	//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 
 	t = t + pas;
 	while (patch <= nptsCorba - 4) {
 		if (t >= 1.0) {
 			// Dibuixa Darrera aresta del patch.(t-pas, 1.0)
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			//colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			vertexL2 = Punt_Corba_Hermitte(1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 
 			t = pas;
@@ -7466,22 +7465,22 @@ CVAO load_Hermitte_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 			}
 		}
 		if (patch <= nptsCorba - 4) {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			//colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			vertexL2 = Punt_Corba_Hermitte(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 			//vertexL1 = vertexL2;
 			t = t + pas;
@@ -7490,14 +7489,14 @@ CVAO load_Hermitte_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA],
 	//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO, VBO i EBO per a la càrrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO per a la cï¿½rrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
 	HermitVAO = load_LINES_EBO(vertices, colors, indices);
 
 	return HermitVAO;
 }
 
 
-// draw_TFHermitte_Curve: Visualització del Triedre de Frenet de la corba de Hermitte donada per nptsCorba 
+// draw_TFHermitte_Curve: Visualitzaciï¿½ del Triedre de Frenet de la corba de Hermitte donada per nptsCorba 
 //							punts de control definits en ctr_points i vectors tangents vec_tangent, 
 //             amb increment pas.
 void draw_TFHermitte_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba, float pas)
@@ -7513,17 +7512,17 @@ void draw_TFHermitte_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCor
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++)
 	{	ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
 		ctr[i].z = ctr_points[i].z;
 	}
 
-// Càlcul i dibuix Triedre de Frenet en cada vèrtex de la corba Hermitte
+// Cï¿½lcul i dibuix Triedre de Frenet en cada vï¿½rtex de la corba Hermitte
 	vertexL1 = Punt_Corba_Hermitte(t, ctr);
 
-// Càlcul i dibuix Triedre de Frenet en vertexL1
+// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1
 	VT = VT_Hermitte_Curve(t, ctr);
 	VBN = VBN_Hermitte_Curve(t, ctr);
 	VNP = Vector_Normal_Principal(VBN, VT);
@@ -7533,7 +7532,7 @@ void draw_TFHermitte_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCor
 	while (patch <= nptsCorba - 4) {
 		if (t >=1)
 		{	vertexL2 = Punt_Corba_Hermitte(1.0, ctr);
-			// Càlcul i dibuix Triedre de Frenet en vertexL2
+			// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 			VT = VT_Hermitte_Curve(1.0, ctr);
 			VBN = VBN_Hermitte_Curve(1.0, ctr);
 			VNP = Vector_Normal_Principal(VBN, VT);
@@ -7551,7 +7550,7 @@ void draw_TFHermitte_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCor
 		}
 		if (patch <= nptsCorba - 4) {
 			vertexL2 = Punt_Corba_Hermitte(t, ctr);
-			// Càlcul i dibuix Triedre de Frenet en vertexL2
+			// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 			VT = VT_Hermitte_Curve(t, ctr);
 			VBN = VBN_Hermitte_Curve(t, ctr);
 			VNP = Vector_Normal_Principal(VBN, VT);
@@ -7565,7 +7564,7 @@ void draw_TFHermitte_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCor
 
 
 // Punt_Corba_Hermitte: Calcul del punt del Hermitte en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i i els punts de control ctr 
+//             parï¿½metre i i els punts de control ctr 
 CPunt3D Punt_Corba_Hermitte(float t, CPunt3D* ctr)
 {
 	CPunt3D p = { 0.0, 0.0, 0.0, 1.0 };
@@ -7580,7 +7579,7 @@ CPunt3D Punt_Corba_Hermitte(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + H[i][j];
 	}
 
-// Càlcul de la Posició
+// Cï¿½lcul de la Posiciï¿½
 	for (i = 0; i < 4; i++)
 	{	p.x += coef[i] * ctr[i].x;
 		p.y += coef[i] * ctr[i].y;
@@ -7592,7 +7591,7 @@ CPunt3D Punt_Corba_Hermitte(float t, CPunt3D* ctr)
 
 
 // D_Hermitte_Curve: Calcul de la derivada del Hermitte en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr
+//             parï¿½metre t i els punts de control ctr
 CPunt3D D_Hermitte_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7607,7 +7606,7 @@ CPunt3D D_Hermitte_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * H[i][j];
 	}
 
-// Càlcul de la Primera Derivada
+// Cï¿½lcul de la Primera Derivada
 	for (i = 0; i < 4; i++)
 	{
 		dp.x += coef[i] * ctr[i].x;
@@ -7619,7 +7618,7 @@ CPunt3D D_Hermitte_Curve(float t, CPunt3D* ctr)
 
 
 // D2_Hermitte_Curve: Calcul de la segona derivada del Hermitte en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr
+//             parï¿½metre t i els punts de control ctr
 CPunt3D D2_Hermitte_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7634,7 +7633,7 @@ CPunt3D D2_Hermitte_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * (2 - j) * H[i][j];
 	}
 
-// Càlcul de la Segona Derivada
+// Cï¿½lcul de la Segona Derivada
 	for (i = 0; i < 4; i++)
 	{
 		dp.x += coef[i] * ctr[i].x;
@@ -7646,7 +7645,7 @@ CPunt3D D2_Hermitte_Curve(float t, CPunt3D* ctr)
 
 //-- TRIEDRE DE FRENET PER A CORBES SPLINE
 // VT_Hermitte_Curve: Calcul del Vector Tangent (primera derivada) del Hermitte en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr. Normalitzat.
+//             parï¿½metre t i els punts de control ctr. Normalitzat.
 CPunt3D VT_Hermitte_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7654,7 +7653,7 @@ CPunt3D VT_Hermitte_Curve(float t, CPunt3D* ctr)
 
 	vt = D_Hermitte_Curve(t, ctr);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vt.x * vt.x + vt.y * vt.y + vt.z * vt.z);
 	vt.x = vt.x / longitut;
 	vt.y = vt.y / longitut;
@@ -7664,7 +7663,7 @@ CPunt3D VT_Hermitte_Curve(float t, CPunt3D* ctr)
 }
 
 // VBN_Hermitte_Curve: Calcul del Vector BiNormal de Hermitte en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr. Normalitzat.
+//             parï¿½metre t i els punts de control ctr. Normalitzat.
 CPunt3D VBN_Hermitte_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt1 = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7677,7 +7676,7 @@ CPunt3D VBN_Hermitte_Curve(float t, CPunt3D* ctr)
 
 	vbn = Prod_Vectorial(vt1, vt2);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 		//	longitut = sqrt(vbn.x * vbn.x + vbn.y * vbn.y + vbn.z * vbn.z);
 		//	vbn.x = vbn.x / longitut;
 		//	vbn.y = vbn.y / longitut;
@@ -7694,7 +7693,7 @@ void draw_CatmullRom_Curve(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	deleteVAOList(CRV_CATMULL_ROM);
 }
 
-// load_CatmullRom_Curve_VAO: Càrrega de la corba de Catmull-Rom donada per nptsCorba punts de control definits en ctr_points, 
+// load_CatmullRom_Curve_VAO: Cï¿½rrega de la corba de Catmull-Rom donada per nptsCorba punts de control definits en ctr_points, 
 //							 amb increment pas com a VAO.
 CVAO load_CatmullRom_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas)
 {
@@ -7709,7 +7708,7 @@ CVAO load_CatmullRom_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 	CatmullRomVAO.vaoId = 0;		CatmullRomVAO.vboId = 0;		CatmullRomVAO.eboId = 0; 
 	CatmullRomVAO.nVertexs = 0;		CatmullRomVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;			// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, colors;			// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();		colors.clear();		// Reinicialitzar vectors
 
@@ -7718,7 +7717,7 @@ CVAO load_CatmullRom_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 	//glGetFloatv(GL_CURRENT_COLOR, cColor);
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++)
 	{
 		ctr[i].x = ctr_points[i].x;
@@ -7732,16 +7731,16 @@ CVAO load_CatmullRom_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 		if (t >= 1.0) 
 		{
 			// Dibuixa Darrera aresta del patch.(t-pas, 1.0)
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			vertices.push_back(vertexL1.x);	vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);	vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);		colors.push_back(cColor[2]); colors.push_back(cColor[3]); // Vector Colors
 			
 			vertexL2 = Punt_Corba_CatmullRom(1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -7759,16 +7758,16 @@ CVAO load_CatmullRom_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 			}
 		}
 		if (patch <= nptsCorba - 4) {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			vertices.push_back(vertexL1.x);	vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);	vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);	colors.push_back(cColor[1]);		colors.push_back(cColor[2]); colors.push_back(cColor[3]); // Vector Colors
 
 			vertexL2 = Punt_Corba_CatmullRom(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -7789,7 +7788,7 @@ CVAO load_CatmullRom_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 }
 
 
-// load_CatmullRom_Curve_EBO: Càrrega de la corba de Catmull-Rom donada per nptsCorba punts de control definits en ctr_points, 
+// load_CatmullRom_Curve_EBO: Cï¿½rrega de la corba de Catmull-Rom donada per nptsCorba punts de control definits en ctr_points, 
 //							 amb increment pas com a VAO amb EBO.
 CVAO load_CatmullRom_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas)
 {
@@ -7798,28 +7797,28 @@ CVAO load_CatmullRom_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 	CColor pColor = { 1.0, 1.0, 1.0, 1.0 };	// Vector de color pel Patch
 	int patch = 0;		// Patch actual.
 	GLfloat t = 0;
-	GLint index = 0;	// Apuntador a vèrtexs per a indices.
+	GLint index = 0;	// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO CatmullRomVAO;
 	CatmullRomVAO.vaoId = 0;	CatmullRomVAO.vboId = 0;		CatmullRomVAO.eboId = 0;
 	CatmullRomVAO.nVertexs = 0;	CatmullRomVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs i color 
-	std::vector <uint> indices;					// Vector dinàmic per a indexs EBO
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i color 
+	std::vector <uint> indices;					// Vector dinï¿½mic per a indexs EBO
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		indices.clear();		// Reinicialitzar vectors
 
-	// Càrrega primers punts de control.
+	// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++) {
 		ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
 		ctr[i].z = ctr_points[i].z;
 	}
 	//glBegin(GL_LINES);
-	// Definició del primer vèrtex de la corba.
+	// Definiciï¿½ del primer vï¿½rtex de la corba.
 	vertexL1 = Punt_Corba_CatmullRom(t, ctr);
-	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 	// Donar color a cada patch de la corba (passant el color pel shader)
 	pColor = SetColorPatch(patch);
 	colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -7830,19 +7829,19 @@ CVAO load_CatmullRom_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 		if (t >= 1.0) 
 			{
 			// Dibuixa Darrera aresta del patch.(t-pas, 1.0)
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			vertexL2 = Punt_Corba_CatmullRom(1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 			
 			t = pas;  // t = t - (1.0 + pas); //t -= 1.0;
@@ -7857,19 +7856,19 @@ CVAO load_CatmullRom_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 		}
 		if (patch <= nptsCorba - 4) {
 			
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 			
 			vertexL2 = Punt_Corba_CatmullRom(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 			//vertexL1 = vertexL2;
 			t = t + pas;
@@ -7878,14 +7877,14 @@ CVAO load_CatmullRom_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA
 	//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO, VBO i EBO per a la càrrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO per a la cï¿½rrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
 	CatmullRomVAO = load_LINES_EBO(vertices, colors, indices);
 
 	return CatmullRomVAO;
 }
 
 
-// draw_TFCatmullRom_Curve: Visualització del Triedre de Frenet de la corba de Catmull-Rom donada per nptsCorba 
+// draw_TFCatmullRom_Curve: Visualitzaciï¿½ del Triedre de Frenet de la corba de Catmull-Rom donada per nptsCorba 
 //							punts de control definits en ctr_points i vectors tangents vec_tangent, 
 //             amb increment pas.
 void draw_TFCatmullRom_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba, float pas)
@@ -7900,17 +7899,17 @@ void draw_TFCatmullRom_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsC
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++)
 	{	ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
 		ctr[i].z = ctr_points[i].z;
 	}
 
-// Càlcul i dibuix Triedre de Frenet en cada vèrtex de la corba Catmull-Rom
+// Cï¿½lcul i dibuix Triedre de Frenet en cada vï¿½rtex de la corba Catmull-Rom
 	vertexL1 = Punt_Corba_CatmullRom(t, ctr);
 
-// Càlcul i dibuix Triedre de Frenet en vertexL1
+// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1
 	VT = VT_CatmullRom_Curve(t, ctr);
 	VBN = VBN_CatmullRom_Curve(t, ctr);
 	VNP = Vector_Normal_Principal(VBN, VT);
@@ -7920,7 +7919,7 @@ void draw_TFCatmullRom_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsC
 	while (patch <= nptsCorba - 4) {
 		if (t >= 1.0) //(t > 1.0 + pas)
 		{	vertexL2 = Punt_Corba_CatmullRom(1.0, ctr);
-			// Càlcul i dibuix Triedre de Frenet en vertexL2
+			// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 			VT = VT_CatmullRom_Curve(1.0, ctr);
 			VBN = VBN_CatmullRom_Curve(1.0, ctr);
 			VNP = Vector_Normal_Principal(VBN, VT);
@@ -7938,7 +7937,7 @@ void draw_TFCatmullRom_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsC
 		if (patch <= nptsCorba - 4) {
 			vertexL2 = Punt_Corba_CatmullRom(t, ctr);
 
-			// Càlcul i dibuix Triedre de Frenet en vertexL2
+			// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 			VT = VT_CatmullRom_Curve(t, ctr);
 			VBN = VBN_CatmullRom_Curve(t, ctr);
 			VNP = Vector_Normal_Principal(VBN, VT);
@@ -7952,7 +7951,7 @@ void draw_TFCatmullRom_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsC
 
 
 // Punt_Corba_CatmullRom: Calcul del punt del Catmull-Rom en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i i els punts de control ctr 
+//             parï¿½metre i i els punts de control ctr 
 CPunt3D Punt_Corba_CatmullRom(float t, CPunt3D* ctr)
 {
 	CPunt3D p = { 0.0, 0.0, 0.0, 1.0 };
@@ -7967,7 +7966,7 @@ CPunt3D Punt_Corba_CatmullRom(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + CR[i][j];
 	}
 
-// Càlcul de la Posició
+// Cï¿½lcul de la Posiciï¿½
 	for (i = 0; i < 4; i++)
 	{
 		p.x += coef[i] * ctr[i].x;
@@ -7979,7 +7978,7 @@ CPunt3D Punt_Corba_CatmullRom(float t, CPunt3D* ctr)
 }
 
 // D_CatmullRom_Curve: Calcul de la derivada del Catmull-Rom en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr
+//             parï¿½metre t i els punts de control ctr
 CPunt3D D_CatmullRom_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -7993,7 +7992,7 @@ CPunt3D D_CatmullRom_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * CR[i][j];
 	}
 
-// Càlcul de la Primera Derivada
+// Cï¿½lcul de la Primera Derivada
 	for (i = 0; i < 4; i++)
 	{	dp.x += coef[i] * ctr[i].x;
 		dp.y += coef[i] * ctr[i].y;
@@ -8004,7 +8003,7 @@ CPunt3D D_CatmullRom_Curve(float t, CPunt3D* ctr)
 
 
 // D2_CatmullRom_Curve: Calcul de la segona derivada del Catmull-Rom en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr
+//             parï¿½metre t i els punts de control ctr
 CPunt3D D2_CatmullRom_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8018,7 +8017,7 @@ CPunt3D D2_CatmullRom_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * (2 - j) * CR[i][j];
 	}
 
-// Càlcul de la Segona Derivada
+// Cï¿½lcul de la Segona Derivada
 	for (i = 0; i < 4; i++)
 	{	dp.x += coef[i] * ctr[i].x;
 		dp.y += coef[i] * ctr[i].y;
@@ -8029,7 +8028,7 @@ CPunt3D D2_CatmullRom_Curve(float t, CPunt3D* ctr)
 
 //-- TRIEDRE DE FRENET PER A CORBES SPLINE
 // VT_CatmullRom_Curve: Calcul del Vector Tangent (primera derivada) del Catmull-Rom en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr. Normalitzat.
+//             parï¿½metre t i els punts de control ctr. Normalitzat.
 CPunt3D VT_CatmullRom_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8037,7 +8036,7 @@ CPunt3D VT_CatmullRom_Curve(float t, CPunt3D* ctr)
 
 	vt = D_CatmullRom_Curve(t, ctr);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vt.x * vt.x + vt.y * vt.y + vt.z * vt.z);
 	vt.x = vt.x / longitut;
 	vt.y = vt.y / longitut;
@@ -8047,7 +8046,7 @@ CPunt3D VT_CatmullRom_Curve(float t, CPunt3D* ctr)
 }
 
 // VBN_CatmullRom_Curve: Calcul del Vector BiNormal de Catmull-Rom en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr. Normalitzat.
+//             parï¿½metre t i els punts de control ctr. Normalitzat.
 CPunt3D VBN_CatmullRom_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt1 = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8060,7 +8059,7 @@ CPunt3D VBN_CatmullRom_Curve(float t, CPunt3D* ctr)
 
 	vbn = Prod_Vectorial(vt1, vt2);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 		//	longitut = sqrt(vbn.x * vbn.x + vbn.y * vbn.y + vbn.z * vbn.z);
 		//	vbn.x = vbn.x / longitut;
 		//	vbn.y = vbn.y / longitut;
@@ -8078,7 +8077,7 @@ void draw_BSpline_Curve(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], floa
 	deleteVAOList(CRV_BSPLINE);
 }
 
-// load_BSpline_Curve_VAO: Càrrega de la corba de B-Spline donada per nptsCorba punts de control definits en ctr_points, 
+// load_BSpline_Curve_VAO: Cï¿½rrega de la corba de B-Spline donada per nptsCorba punts de control definits en ctr_points, 
 //							 amb increment pas com a VAO.
 CVAO load_BSpline_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas)
 {
@@ -8093,7 +8092,7 @@ CVAO load_BSpline_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], 
 	BSplineVAO.vaoId = 0;		BSplineVAO.vboId = 0;		BSplineVAO.eboId = 0;  
 	BSplineVAO.nVertexs = 0;	BSplineVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		// Reinicialitzar vectors
 
@@ -8102,7 +8101,7 @@ CVAO load_BSpline_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], 
 	//glGetFloatv(GL_CURRENT_COLOR, cColor);
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i<4; i++)
 	{	ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
@@ -8124,16 +8123,16 @@ CVAO load_BSpline_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], 
 			}
 		}
 		if (patch <= nptsCorba - 4) {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 
 			vertexL2 = Punt_Corba_BSpline(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -8143,16 +8142,16 @@ CVAO load_BSpline_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], 
 			t = t + pas;
 			}
 		else {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 
 			vertexL2 = Punt_Corba_BSpline(t + 1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -8171,7 +8170,7 @@ CVAO load_BSpline_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], 
 }
 
 
-// load_BSpline_Curve_EBO: Càrrega de la corba de B-Spline donada per nptsCorba punts de control definits en ctr_points, 
+// load_BSpline_Curve_EBO: Cï¿½rrega de la corba de B-Spline donada per nptsCorba punts de control definits en ctr_points, 
 //							 amb increment pas com a VAO amb EBO.
 CVAO load_BSpline_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas)
 {
@@ -8180,28 +8179,28 @@ CVAO load_BSpline_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], 
 	CColor pColor = {1.0, 1.0, 1.0, 1.0 };	// Vector de color pel Patch
 	int patch = 0;			// Patch actual.
 	GLfloat t = 0;
-	GLint index = 0;		// Apuntador a vèrtexs per a indices.
+	GLint index = 0;		// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO BSplineVAO;
 	BSplineVAO.vaoId = 0;		BSplineVAO.vboId = 0;		BSplineVAO.eboId = 0; 
 	BSplineVAO.nVertexs = 0;	BSplineVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs i color 
-	std::vector <uint> indices;					// Vector dinàmic per a indexs EBO
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i color 
+	std::vector <uint> indices;					// Vector dinï¿½mic per a indexs EBO
 	//vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 	vertices.clear();			colors.clear();		indices.clear();		// Reinicialitzar vectors
 
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++) {
 		ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
 		ctr[i].z = ctr_points[i].z;
 		}
 	//glBegin(GL_LINES);
-	// Definició del primer vèrtex de la corba.
+	// Definiciï¿½ del primer vï¿½rtex de la corba.
 	vertexL1 = Punt_Corba_BSpline(t, ctr);
-	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 	// Donar color a cada patch de la corba (passant el color pel shader)
 	pColor = SetColorPatch(patch);
 	colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -8221,57 +8220,57 @@ CVAO load_BSpline_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], 
 				}
 		}
 		if (patch <= nptsCorba - 4) {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			vertexL2 = Punt_Corba_BSpline(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 			//vertexL1 = vertexL2;
 			t = t + pas;
 			}
 		else {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vertex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			vertexL2 = Punt_Corba_BSpline(t + 1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vertex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 			}
 	}
 	//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO, VBO i EBO per a la càrrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO per a la cï¿½rrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
 	BSplineVAO = load_LINES_EBO(vertices, colors,indices);
 
 	return BSplineVAO;
 }
 
 
-// draw_TFBSpline_Curve: Visualització del Triedre de Frenet de la corba de B-Spline donada per nptsCorba punts de control definits en ctr_points, 
+// draw_TFBSpline_Curve: Visualitzaciï¿½ del Triedre de Frenet de la corba de B-Spline donada per nptsCorba punts de control definits en ctr_points, 
 //             amb increment pas.
 void draw_TFBSpline_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba, float pas)
 {
@@ -8286,7 +8285,7 @@ void draw_TFBSpline_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorb
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++)
 	{
 		ctr[i].x = ctr_points[i].x;
@@ -8294,10 +8293,10 @@ void draw_TFBSpline_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorb
 		ctr[i].z = ctr_points[i].z;
 	}
 
-// Càlcul i dibuix Triedre de Frenet en cada vèrtex de la corba B-Spline
+// Cï¿½lcul i dibuix Triedre de Frenet en cada vï¿½rtex de la corba B-Spline
 	vertexL1 = Punt_Corba_BSpline(t, ctr);
 
-// Càlcul i dibuix Triedre de Frenet en vertexL1
+// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1
 	VT = VT_BSpline_Curve(t, ctr);
 	VBN = VBN_BSpline_Curve(t, ctr);
 	VNP = Vector_Normal_Principal(VBN, VT);
@@ -8308,7 +8307,7 @@ void draw_TFBSpline_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorb
 		if (t >= 1.0)
 			{	//t -= 1.0;
 				vertexL2 = Punt_Corba_BSpline(t, ctr);
-				// Càlcul i dibuix Triedre de Frenet en vertexL2
+				// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 				VT = VT_BSpline_Curve(t, ctr);
 				VBN = VBN_BSpline_Curve(t, ctr);
 				VNP = Vector_Normal_Principal(VBN, VT);
@@ -8329,7 +8328,7 @@ void draw_TFBSpline_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorb
 //				else vertexL2 = Punt_Corba_BSpline(t, ctr);
 				vertexL2 = Punt_Corba_BSpline(t, ctr);
 
-// Càlcul i dibuix Triedre de Frenet en vertexL2
+// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2
 				VT = VT_BSpline_Curve(t, ctr);
 				VBN = VBN_BSpline_Curve(t, ctr);
 				VNP = Vector_Normal_Principal(VBN, VT);
@@ -8343,7 +8342,7 @@ void draw_TFBSpline_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorb
 
 
 // Punt_Corba_BSpline: Calcul del punt del B-Spline en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i i els punts de control ctr 
+//             parï¿½metre i i els punts de control ctr 
 CPunt3D Punt_Corba_BSpline(float t, CPunt3D * ctr)
 {
 	CPunt3D p = { 0.0, 0.0, 0.0, 1.0 };
@@ -8357,7 +8356,7 @@ CPunt3D Punt_Corba_BSpline(float t, CPunt3D * ctr)
 			coef[i] = coef[i] * t + AS[i][j];
 	}
 
-// Càlcul de la Posició
+// Cï¿½lcul de la Posiciï¿½
 	for (i = 0; i<4; i++)
 	{	p.x += coef[i] * ctr[i].x;
 		p.y += coef[i] * ctr[i].y;
@@ -8369,7 +8368,7 @@ CPunt3D Punt_Corba_BSpline(float t, CPunt3D * ctr)
 
 
 // D_BSpline_Curve: Calcul de la derivada del B-Spline en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr
+//             parï¿½metre t i els punts de control ctr
 CPunt3D D_BSpline_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8384,7 +8383,7 @@ CPunt3D D_BSpline_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * AS[i][j];
 	}
 
-// Càlcul de la Primera Derivada
+// Cï¿½lcul de la Primera Derivada
 	for (i = 0; i < 4; i++)
 	{
 		dp.x += coef[i] * ctr[i].x;
@@ -8396,7 +8395,7 @@ CPunt3D D_BSpline_Curve(float t, CPunt3D* ctr)
 
 
 // D2_BSpline_Curve: Calcul de la segona derivada del B-Spline en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr
+//             parï¿½metre t i els punts de control ctr
 CPunt3D D2_BSpline_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8411,7 +8410,7 @@ CPunt3D D2_BSpline_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * (2 - j) * AS[i][j];
 	}
 
-// Càlcul de la Segona Derivada
+// Cï¿½lcul de la Segona Derivada
 	for (i = 0; i < 4; i++)
 	{
 		dp.x += coef[i] * ctr[i].x;
@@ -8423,7 +8422,7 @@ CPunt3D D2_BSpline_Curve(float t, CPunt3D* ctr)
 
 //-- TRIEDRE DE FRENET PER A CORBES SPLINE
 // VT_BSpline_Curve: Calcul del Vector Tangent (primera derivada) del B-Spline en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr. Normalitzat.
+//             parï¿½metre t i els punts de control ctr. Normalitzat.
 CPunt3D VT_BSpline_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8431,7 +8430,7 @@ CPunt3D VT_BSpline_Curve(float t, CPunt3D* ctr)
 
 	vt = D_BSpline_Curve(t, ctr);
 
-	// Convertim el vector en vector unitat (normalització)
+	// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vt.x * vt.x + vt.y * vt.y + vt.z * vt.z);
 	vt.x = vt.x / longitut;
 	vt.y = vt.y / longitut;
@@ -8441,7 +8440,7 @@ CPunt3D VT_BSpline_Curve(float t, CPunt3D* ctr)
 }
 
 // VBN_BSpline_Curve: Calcul del Vector BiNormal del B-Spline en coordenades 3D (CPunt3D) segons el 
-//             paràmetre t i els punts de control ctr. Normalitzat.
+//             parï¿½metre t i els punts de control ctr. Normalitzat.
 CPunt3D VBN_BSpline_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt1 = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8454,7 +8453,7 @@ CPunt3D VBN_BSpline_Curve(float t, CPunt3D* ctr)
 
 	vbn = Prod_Vectorial(vt1, vt2);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	//	longitut = sqrt(vbn.x * vbn.x + vbn.y * vbn.y + vbn.z * vbn.z);
 	//	vbn.x = vbn.x / longitut;
 	//	vbn.y = vbn.y / longitut;
@@ -8465,7 +8464,7 @@ CPunt3D VBN_BSpline_Curve(float t, CPunt3D* ctr)
 
 
 //----------- CORBA BEZIER -------------------------------------------------------
-// draw_Bezier_Curve: Visualització de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
+// draw_Bezier_Curve: Visualitzaciï¿½ de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
 //             amb increment pas, corba tancada o no i si volem visualtzar el Triedre de Frenet 
 void draw_Bezier_Curve(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas, bool tancat)
 {
@@ -8474,7 +8473,7 @@ void draw_Bezier_Curve(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float
 	deleteVAOList(CRV_BEZIER);
 }
 
-// load_Bezier_Curve_VAO: Càrrega en VAO dels punts de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
+// load_Bezier_Curve_VAO: Cï¿½rrega en VAO dels punts de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
 //             amb increment pas, corba tancada o no i si volem visualtzar el Triedre de Frenet 
 CVAO load_Bezier_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas, bool tancat)
 {
@@ -8483,7 +8482,7 @@ CVAO load_Bezier_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	BezierVAO.vaoId = 0;	BezierVAO.vboId = 0;	BezierVAO.eboId = 0; 
 	BezierVAO.nVertexs = 0;	BezierVAO.nIndices = 0;
 	
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs, normals i textures 
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs, normals i textures 
 	vertices.resize(0);		colors.resize(0);	// Reinicialitzar vectors
 
 // Obtenir color actual definit en OpenGL amb glColor();
@@ -8510,7 +8509,7 @@ CVAO load_Bezier_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 		}
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i<4; i++)
 	{	ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
@@ -8523,16 +8522,16 @@ CVAO load_Bezier_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	while (patch <= npuntsCorba - 4) {
 		if (t >= 1)	{
 			// Dibuixa Darrera aresta del patch.(t-pas, 1.0)
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vértex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vï¿½rtex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors		
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 
 			vertexL2 = Punt_Bezier_Curve(1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vèrtex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vï¿½rtex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -8552,16 +8551,16 @@ CVAO load_Bezier_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 			}
 		}
 		if (patch <= npuntsCorba - 4) {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vértex 1 de la línia
-			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vï¿½rtex 1 de la lï¿½nia
+			vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors		
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
 
 			vertexL2 = Punt_Bezier_Curve(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vèrtex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vï¿½rtex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			//pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -8576,7 +8575,7 @@ CVAO load_Bezier_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 // ----------------------- VAO
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	BezierVAO = load_LINES_VAO(vertices, colors);
 	BezierVAO.nVertexs = int(nv / 3);
 	
@@ -8584,7 +8583,7 @@ CVAO load_Bezier_Curve_VAO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 }
 
 
-// load_Bezier_Curve_EBO: Càrrega en VAO i EBO els punts de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
+// load_Bezier_Curve_EBO: Cï¿½rrega en VAO i EBO els punts de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
 //             amb increment pas, corba tancada o no i si volem visualtzar el Triedre de Frenet 
 CVAO load_Bezier_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], float pas, bool tancat)
 {
@@ -8595,15 +8594,15 @@ CVAO load_Bezier_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	CColor pColor = { 1.0, 1.0, 1.0, 1.0 };	// Vector de color pel Patch
 	int patch = 0;			// Patch actual.
 	GLfloat t = 0;
-	GLint index = 0;		// Apuntador a vèrtexs per a indices.
+	GLint index = 0;		// Apuntador a vï¿½rtexs per a indices.
 
 // VAO
 	CVAO BezierVAO;
 	BezierVAO.vaoId = 0;	BezierVAO.vboId = 0;	BezierVAO.eboId = 0; 
 	BezierVAO.nVertexs = 0; BezierVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors;		// Definició vectors dinàmics per a vertexs i color 
-	std::vector <uint> indices;					// Vector dinàmic per a indexs EBO
+	std::vector <double> vertices, colors;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i color 
+	std::vector <uint> indices;					// Vector dinï¿½mic per a indexs EBO
 	vertices.clear();			colors.clear();		indices.clear();		// Reinicialitzar vectors
 
 	if (tancat && npuntsCorba + 3 < MAX_PATCH_CORBA)
@@ -8620,7 +8619,7 @@ CVAO load_Bezier_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	}
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++)
 	{
 		ctr[i].x = ctr_points[i].x;
@@ -8629,9 +8628,9 @@ CVAO load_Bezier_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	}
 	//glBegin(GL_LINES);
 
-// Definició del primer vèrtex de la corba.
+// Definiciï¿½ del primer vï¿½rtex de la corba.
 	vertexL1 = Punt_Bezier_Curve(t, ctr);
-	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+	vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 	// Donar color a cada patch de la corba (passant el color pel shader)
 	pColor = SetColorPatch(patch);
 	colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
@@ -8642,19 +8641,19 @@ CVAO load_Bezier_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	while (patch <= npuntsCorba - 4) {
 		if (t >= 1.0) {
 			// Dibuixa Darrera aresta del patch.(t-pas, 1.0)
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vértex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vï¿½rtex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 
 			vertexL2 = Punt_Bezier_Curve(1.0, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vèrtex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vï¿½rtex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 
 			t = pas;
@@ -8668,19 +8667,19 @@ CVAO load_Bezier_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 			}
 		}
 		if (patch <= npuntsCorba - 4) {
-			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vértex 1 de la línia
-			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL1.x, vertexL1.y, vertexL1.z);	// Vï¿½rtex 1 de la lï¿½nia
+			//vertices.push_back(vertexL1.x);		vertices.push_back(vertexL1.y);		vertices.push_back(vertexL1.z);	// Vector Vï¿½rtexs
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index);		// Vector indices Primer Vèrtex segment
+			indices.push_back(index);		// Vector indices Primer Vï¿½rtex segment
 			
 			vertexL2 = Punt_Bezier_Curve(t, ctr);
-			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vèrtex 2 de la línia
-			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vèrtexs
+			//glVertex3f(vertexL2.x, vertexL2.y, vertexL2.z);	// Vï¿½rtex 2 de la lï¿½nia
+			vertices.push_back(vertexL2.x);		vertices.push_back(vertexL2.y);		vertices.push_back(vertexL2.z);	// Vector Vï¿½rtexs
 			// Donar color a cada patch de la corba (passant el color pel shader)
 			pColor = SetColorPatch(patch);
 			colors.push_back(pColor.r);		colors.push_back(pColor.g);		colors.push_back(pColor.b);	colors.push_back(pColor.a); // Vector Colors
 			//colors.push_back(cColor[0]);		colors.push_back(cColor[1]);		colors.push_back(cColor[2]);	colors.push_back(cColor[3]); // Vector Colors
-			indices.push_back(index + 1);	// Vector indices Vèrtex segment
+			indices.push_back(index + 1);	// Vector indices Vï¿½rtex segment
 			index = index + 1;
 
 			//vertexL1 = vertexL2;
@@ -8690,13 +8689,13 @@ CVAO load_Bezier_Curve_EBO(int nptsCorba, CPunt3D ctr_points[MAX_PATCH_CORBA], f
 	//glEnd();
 
 // ----------------------- VAO
-// Creació d'un VAO, VBO i EBO per a la càrrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
+// Creaciï¿½ d'un VAO, VBO i EBO per a la cï¿½rrega de la geometria. Guardar identificador VAO, VBO, EBO nVertexs i nIndices a struct CVAO.
 	BezierVAO = load_LINES_EBO(vertices, colors,indices);
 
 	return BezierVAO;
 }
 
-// draw_TFBezier_Curve: Visualització del Triedre de Drenet de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
+// draw_TFBezier_Curve: Visualitzaciï¿½ del Triedre de Drenet de la corba de Bezier donada per nptsCorba punts de control definits en ctr_points, 
 //             amb increment pas, corba tancada o no i si volem visualtzar el Triedre de Frenet 
 void draw_TFBezier_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba, float pas, bool tancat)
 {
@@ -8711,16 +8710,16 @@ void draw_TFBezier_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba
 	CPunt3D VBN = { 0.0f, 0.0f, 0.0f, 1.0f };
 
 	//t = t - pas;
-// Càrrega primers punts de control.
+// Cï¿½rrega primers punts de control.
 	for (int i = 0; i < 4; i++)
 	{	ctr[i].x = ctr_points[i].x;
 		ctr[i].y = ctr_points[i].y;
 		ctr[i].z = ctr_points[i].z;
 	}
 
-// Càlcul i dibuix Triedre de Frenet en cada vèrtex de la corba Bezier
+// Cï¿½lcul i dibuix Triedre de Frenet en cada vï¿½rtex de la corba Bezier
 	vertexL1 = Punt_Bezier_Curve(t, ctr);
-// Càlcul i dibuix Triedre de Frenet en vertexL1	
+// Cï¿½lcul i dibuix Triedre de Frenet en vertexL1	
 	VT = VT_Bezier_Curve(t, ctr);
 	VBN = VBN_Bezier_Curve(t, ctr);
 	VNP = Vector_Normal_Principal(VBN, VT);
@@ -8729,7 +8728,7 @@ void draw_TFBezier_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba
 	while (patch <= nptsCorba - 4) {
 		if (t >= 1.0)
 		{	vertexL2 = Punt_Bezier_Curve(1.0, ctr);
-			// Càlcul i dibuix Triedre de Frenet en vertexL2	
+			// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2	
 			VT = VT_Bezier_Curve(1.0, ctr);
 			VBN = VBN_Bezier_Curve(1.0, ctr);
 			VNP = Vector_Normal_Principal(VBN, VT);
@@ -8750,7 +8749,7 @@ void draw_TFBezier_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba
 			//				if (t>1.0) vertexL2 = Punt_Corba_Bezier(1.0, ctr);
 			//				else 
 			vertexL2 = Punt_Bezier_Curve(t, ctr);
-			// Càlcul i dibuix Triedre de Frenet en vertexL2	
+			// Cï¿½lcul i dibuix Triedre de Frenet en vertexL2	
 			VT = VT_Bezier_Curve(t, ctr);
 			VBN = VBN_Bezier_Curve(t, ctr);
 			VNP = Vector_Normal_Principal(VBN, VT);
@@ -8763,7 +8762,7 @@ void draw_TFBezier_Curve(GLuint sh_programID, CPunt3D* ctr_points, int nptsCorba
 
 
 // Punt_Bezier_Curve: Calcul del punt de Bezier en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i i els punts de control ctr 
+//             parï¿½metre i i els punts de control ctr 
 CPunt3D Punt_Bezier_Curve(float t, CPunt3D * ctr)
 {
 	CPunt3D p = { 0.0, 0.0, 0.0, 1.0 };
@@ -8777,7 +8776,7 @@ CPunt3D Punt_Bezier_Curve(float t, CPunt3D * ctr)
 			coef[i] = coef[i] * t + AB[i][j];
 	}
 
-	// Càlcul de la Posició
+	// Cï¿½lcul de la Posiciï¿½
 	for (i = 0; i<4; i++)
 	{	p.x += coef[i] * ctr[i].x;
 		p.y += coef[i] * ctr[i].y;
@@ -8787,7 +8786,7 @@ CPunt3D Punt_Bezier_Curve(float t, CPunt3D * ctr)
 }
 
 // D_Bezier_Curve: Calcul de la derivada de la corba Bezier en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i els punts de control ctr
+//             parï¿½metre i els punts de control ctr
 CPunt3D D_Bezier_Curve(float t, CPunt3D* ctr)
 {	CPunt3D dp = { 0.0f, 0.0f, 0.0f, 1.0f };
 	float coef[4];
@@ -8800,7 +8799,7 @@ CPunt3D D_Bezier_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * AB[i][j];
 	}
 
-// Càlcul de la Primera Derivada
+// Cï¿½lcul de la Primera Derivada
 	for (i = 0; i < 4; i++)
 	{
 		dp.x += coef[i] * ctr[i].x;
@@ -8812,7 +8811,7 @@ CPunt3D D_Bezier_Curve(float t, CPunt3D* ctr)
 
 
 // D2_Bezie_Curver: Calcul de la segona derivada de la corba Bezier en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i els punts de control ctr
+//             parï¿½metre i els punts de control ctr
 CPunt3D D2_Bezier_Curve(float t, CPunt3D* ctr)
 {	CPunt3D dp = { 0.0, 0.0, 0.0, 1.0 };
 	float coef[4];
@@ -8825,7 +8824,7 @@ CPunt3D D2_Bezier_Curve(float t, CPunt3D* ctr)
 			coef[i] = coef[i] * t + (3 - j) * (2 - j) * AB[i][j];
 	}
 
-// Càlcul de la Segona Derivada
+// Cï¿½lcul de la Segona Derivada
 	for (i = 0; i < 4; i++)
 	{	dp.x += coef[i] * ctr[i].x;
 		dp.y += coef[i] * ctr[i].y;
@@ -8836,7 +8835,7 @@ CPunt3D D2_Bezier_Curve(float t, CPunt3D* ctr)
 
 //-- TRIEDRE DE FRENET PER A CORBES BEZIER
 // VT_Bezier_Curve: Calcul del Vector Tangent (primera derivada) de la corba Bezier en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i els punts de control ctr. Normalitzat.
+//             parï¿½metre i els punts de control ctr. Normalitzat.
 CPunt3D VT_Bezier_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8844,7 +8843,7 @@ CPunt3D VT_Bezier_Curve(float t, CPunt3D* ctr)
 
 	vt = D_Bezier_Curve(t, ctr);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	longitut = sqrt(vt.x * vt.x + vt.y * vt.y + vt.z * vt.z);
 	vt.x = vt.x / longitut;
 	vt.y = vt.y / longitut;
@@ -8855,7 +8854,7 @@ CPunt3D VT_Bezier_Curve(float t, CPunt3D* ctr)
 
 
 // VBN_Bezier_Curve: Calcul del Vector BiNormal de la corba Bezier en coordenades 3D (CPunt3D) segons el 
-//             paràmetre i els punts de control ctr. Normalitzat.
+//             parï¿½metre i els punts de control ctr. Normalitzat.
 CPunt3D VBN_Bezier_Curve(float t, CPunt3D* ctr)
 {
 	CPunt3D vt1 = { 0.0f, 0.0f, 0.0f, 1.0f };
@@ -8868,7 +8867,7 @@ CPunt3D VBN_Bezier_Curve(float t, CPunt3D* ctr)
 
 	vbn = Prod_Vectorial(vt1, vt2);
 
-// Convertim el vector en vector unitat (normalització)
+// Convertim el vector en vector unitat (normalitzaciï¿½)
 	//	longitut = sqrt(vbn.x * vbn.x + vbn.y * vbn.y + vbn.z * vbn.z);
 	//	vbn.x = vbn.x / longitut;
 	//	vbn.y = vbn.y / longitut;
@@ -8877,7 +8876,7 @@ CPunt3D VBN_Bezier_Curve(float t, CPunt3D* ctr)
 }
 //----------- FI CORBA BEZIER ----------------------------------------------------
 
-// ---------- ACTIVACIÓ VERTEX ARRAY DE CADA FORMA GL_* PER A VAO, VBO i EBO -----
+// ---------- ACTIVACIï¿½ VERTEX ARRAY DE CADA FORMA GL_* PER A VAO, VBO i EBO -----
 // ------------------- (LINES, TRIANGLES) ----------------------------------------
 
 // ---------- LINES VAO 
@@ -9200,7 +9199,7 @@ void draw_TRIANGLES_EBO(GLint vaoList_indx)
 
 // ---------- GL_LINES, GL_TRIANGLES, GL_TRIANGLE_FAN, GL_TRIANGLE_STRIP -------------------------
 // 
-// ----- ACTIVACIÓ VERTEX ARRAY I DIBUIX DE GL_LINES PER A VAO
+// ----- ACTIVACIï¿½ VERTEX ARRAY I DIBUIX DE GL_LINES PER A VAO
 void draw_GL_LINES_VAO(std::vector <double> vertices, std::vector <double> colors)
 {
 // ----------------------- VAO, VBO
@@ -9254,7 +9253,7 @@ void draw_GL_LINES_VAO(std::vector <double> vertices, std::vector <double> color
 }
 
 
-// ---- - ACTIVACIÓ VERTEX ARRAY I DIBUIX DE GL_TRIANGLES PER A VAO
+// ---- - ACTIVACIï¿½ VERTEX ARRAY I DIBUIX DE GL_TRIANGLES PER A VAO
 void draw_GL_TRIANGLES_VAO(std::vector <double> vertices, std::vector <double> normals, std::vector <double> colors, std::vector <double> textures)
 {
 // ----------------------- VAO
@@ -9319,7 +9318,7 @@ void draw_GL_TRIANGLES_VAO(std::vector <double> vertices, std::vector <double> n
 }
 
 
-// ----- ACTIVACIÓ VERTEX ARRAY I DIBUIX DE GL_TRIANGLE_FAN PER A VAO
+// ----- ACTIVACIï¿½ VERTEX ARRAY I DIBUIX DE GL_TRIANGLE_FAN PER A VAO
 void draw_GL_TRIANGLE_FAN_VAO(std::vector <double> vertices, std::vector <double> normals, std::vector <double> colors, std::vector <double> textures)
 {
 // ----------------------- VAO, VBO
@@ -9384,7 +9383,7 @@ void draw_GL_TRIANGLE_FAN_VAO(std::vector <double> vertices, std::vector <double
 }
 
 
-// ----- ACTIVACIÓ VERTEX ARRAY I DIBUIX DE GL_TRIANGLE_STRIP PER A VAO
+// ----- ACTIVACIï¿½ VERTEX ARRAY I DIBUIX DE GL_TRIANGLE_STRIP PER A VAO
 void draw_GL_TRIANGLE_STRIP_VAO(std::vector <double> vertices, std::vector <double> normals, std::vector <double> colors, std::vector <double> textures)
 {
 // ----------------------- VAO, VBO

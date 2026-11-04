@@ -1,0 +1,47 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "EntornVGI (Debug)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/EntornVGI",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "osx": { "MIMode": "lldb" },
+            "setupCommands": [
+                {
+                    "description": "Habilitar pretty printing de GDB",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "CMake: build"
+        },
+        {
+            "name": "EntornVGI (Release)",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${command:cmake.launchTargetPath}",
+            "args": [],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/EntornVGI",
+            "environment": [],
+            "externalConsole": false,
+            "MIMode": "gdb",
+            "osx": { "MIMode": "lldb" },
+            "setupCommands": [
+                {
+                    "description": "Habilitar pretty printing de GDB",
+                    "text": "-enable-pretty-printing",
+                    "ignoreFailures": true
+                }
+            ],
+            "preLaunchTask": "CMake: build (Release)"
+        }
+    ]
+}

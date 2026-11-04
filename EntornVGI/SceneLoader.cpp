@@ -3,7 +3,7 @@
 #include <string>
 #include <filesystem>
 #include <vector>
-#include <Windows.h>
+#include "platform_compat.h"
 #include "SceneLoader.h"
 
 // Lee un archivo de escena y comprueba sus objetos.

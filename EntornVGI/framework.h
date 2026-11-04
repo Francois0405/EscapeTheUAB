@@ -1,8 +1,10 @@
-// framework.h: archivo de inclusión para archivos de inclusión estándar del sistema,
-// o archivos de inclusión específicos del proyecto utilizados frecuentemente,
+// framework.h: archivo de inclusiï¿½n para archivos de inclusiï¿½n estï¿½ndar del sistema,
+// o archivos de inclusiï¿½n especï¿½ficos del proyecto utilizados frecuentemente,
 // pero cambiados rara vez
 
 #pragma once
+
+#include "platform_compat.h"
 
 #ifndef VC_EXTRALEAN
 #define VC_EXTRALEAN            // Excluir material rara vez utilizado de encabezados de Windows
@@ -14,8 +16,10 @@
 // VGI: Includes llibreria GLEW 2.1.0 (OpenGL)
 //#define GLEW_STATIC
 #define GLEW_NO_GLU	// Sense usar llibreria GLU
-#include <gl/glew.h>
-#include <gl/wglew.h>
+#include <GL/glew.h>
+#ifdef _WIN32
+#include <GL/wglew.h>
+#endif
 
 // VGI: Include llibreria GLFW
 #include <GLFW/glfw3.h>
@@ -34,11 +38,11 @@ using namespace glm;
 // VGI: Fonts dels Objectes de la llibreria freeglut adaptats a estructures VAO, EBO i VBO
 #include "glut_geometry.h"
 
-// VGI: Llibreria SOIL2 (actualització de SOIL) per llegir imatges de diferents formats 
-//     (BMP,JPG,TIF,GIF,etc.) en la funció loadIMA (visualitzacio.cpp)
-#include "gl/SOIL2.h"
+// VGI: Llibreria SOIL2 (actualitzaciï¿½ de SOIL) per llegir imatges de diferents formats 
+//     (BMP,JPG,TIF,GIF,etc.) en la funciï¿½ loadIMA (visualitzacio.cpp)
+#include "SOIL2.h"
 
-// VGI: Includes per lectura fitxers, funcions trigonomètriques i nombres aleatoris.
+// VGI: Includes per lectura fitxers, funcions trigonomï¿½triques i nombres aleatoris.
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -47,12 +51,14 @@ using namespace glm;
 #include <string>
 //#include <iostream>
 
-// VGI: Constants de l'aplicació EntornVGI
+// VGI: Constants de l'aplicaciï¿½ EntornVGI
 #include "constants.h"
 
-// Desactivar en llistat compilació warning C4244: 'argumento': conversión de 'double' a 'GLfloat'; posible pérdida de datos
+// Desactivar en llistat compilaciï¿½ warning C4244: 'argumento': conversiï¿½n de 'double' a 'GLfloat'; posible pï¿½rdida de datos
+#ifdef _MSC_VER
 #  pragma warning (disable:4244)  // Disable bogus VC++ 4.2 conversion warnings.
 #  pragma warning (disable:4305)  // VC++ 5.0 version of above warning.
 #  pragma warning (disable:4473)  // Disable strpcpy deprecated command in objLoader.cpp
 #  pragma warning (disable:4099)  // Warning 'no se encontro vc120.pdb
 #  pragma warning (disable:4996)  // Disable strpcpy deprecated command in objLoader.cpp
+#endif

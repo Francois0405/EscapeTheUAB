@@ -1024,16 +1024,16 @@ void FonsB()
 //                assignar la imatge
 GLint loadIMA_SOIL(const char * filename)
 {	FILE *file = NULL;
-	int errno;
+	int err;
 	GLuint textureID = 0;
 
 // Open the image file for reading
 //  file=fopen(nomf,"r");					// Funció Visual Studio 6.0
-	errno = fopen_s(&file, filename, "rb");		// Funció Visual 2010
+	err = fopen_s(&file, filename, "rb");		// Funció Visual 2010
 
 // If the file is empty (or non existent) print an error and return false
 // if (file == NULL)
-	if (errno != 0)
+	if (err != 0)
 	{	//	printf("Could not open file '%s'.\n",filename) ;
 		return false;
 	}

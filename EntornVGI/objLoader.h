@@ -1,22 +1,23 @@
-//******** PRACTICA VISUALITZACIÓ GRÀFICA INTERACTIVA (Escola Enginyeria - UAB)
-//******** Entorn bàsic VS2026 MONOFINESTRA amb OpenGL 4.6, interfície GLFW 3.4, ImGui i llibreries GLM
-//******** Enric Martí (Setembre 2026)
+//******** PRACTICA VISUALITZACIï¿½ GRï¿½FICA INTERACTIVA (Escola Enginyeria - UAB)
+//******** Entorn bï¿½sic VS2026 MONOFINESTRA amb OpenGL 4.6, interfï¿½cie GLFW 3.4, ImGui i llibreries GLM
+//******** Enric Martï¿½ (Setembre 2026)
 // objLoader.h: Inteface of the class COBJModel.
 //
-//	  Versió 2.0:	- Adaptació funcions a crear un VAO per a cada material del fitxer
+//	  Versiï¿½ 2.0:	- Adaptaciï¿½ funcions a crear un VAO per a cada material del fitxer
 //////////////////////////////////////////////////////////////////////////////////////
 
 #ifndef OBJLOADER_H
 #define OBJLOADER_H
 
+#include "platform_compat.h"
+
 #define OBJLOADER_CLASS_DECL     __declspec(dllexport)
 
-#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
 
-// Màxima mida vector VAOList
+// Mï¿½xima mida vector VAOList
 #define MAX_SIZE_VAOLIST 125
 
 // Needed structures
@@ -99,9 +100,10 @@ private:
 
 // CVAO
 	GLint numMaterials = 0;
-	int vector_Materials[MAX_SIZE_VAOLIST];
+	int vector_Materials[MAX_SIZE_VAOLIST]{};
 	CVAO VAOList_OBJ[MAX_SIZE_VAOLIST];
-	Material vMaterials[MAX_SIZE_VAOLIST];
+	Material vMaterials[MAX_SIZE_VAOLIST]{};
+	unsigned int materialCount = 0;
 
 // Funcions CVAO
 	void _stdcall initVAOList_OBJ();

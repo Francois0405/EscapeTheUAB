@@ -1,11 +1,11 @@
-//******** PRACTICA VISUALITZACIÓ GRÀFICA INTERACTIVA (Escola Enginyeria - UAB)
-//******** Entorn bàsic VS2026 MONOFINESTRA amb OpenGL 4.6, interfície GLFW 3.4, ImGui i llibreries GLM
-//******** Enric Martí (Setembre 2026)
+//******** PRACTICA VISUALITZACIï¿½ GRï¿½FICA INTERACTIVA (Escola Enginyeria - UAB)
+//******** Entorn bï¿½sic VS2026 MONOFINESTRA amb OpenGL 4.6, interfï¿½cie GLFW 3.4, ImGui i llibreries GLM
+//******** Enric Martï¿½ (Setembre 2026)
 // objLoader.cpp: Implements the class COBJModel.
 //
-//	  Versió 2.0:	- Adaptació funcions a crear un VAO per a cada material del fitxer
+//	  Versiï¿½ 2.0:	- Adaptaciï¿½ funcions a crear un VAO per a cada material del fitxer
 //////////////////////////////////////////////////////////////////////////////////////
-//           Wavefront OBJ Loader (C) 2000 Tim C. Schröder
+//           Wavefront OBJ Loader (C) 2000 Tim C. Schrï¿½der
 // -------------------------------------------------------------------
 //    tcs_web@gmx.de / tcs_web@hotmail.com / tcs@thereisnofate.net
 //                 http://glvelocity.demonews.com
@@ -88,7 +88,7 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 // Open the OBJ file
 ////////////////////////////////////////////////////////////////////////
 	errno = 0;
-	errno = fopen_s(&hFile, szFileName, "r"); // Funció Visual 2005 i 2010
+	errno = fopen_s(&hFile, szFileName, "r"); // Funciï¿½ Visual 2005 i 2010
 	
 // Success ?
 	if (errno != 0)
@@ -114,7 +114,7 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 	if (OBJInfo.iTexCoordCount)
 		pTexCoords = new Vector2D[OBJInfo.iTexCoordCount];
 	if (OBJInfo.iMaterialCount)
-		pMaterials = new Material[OBJInfo.iMaterialCount];
+		pMaterials = new Material[OBJInfo.iMaterialCount]{};
 
 	// Init structure that holds the current array index
 	memset(&CurrentIndex, 0, sizeof(OBJFileInfo));
@@ -222,8 +222,12 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 	{	qsort(pFaces, OBJInfo.iFaceCount, sizeof(Face), CompareFaceByMaterial);
 
 		// Copiar el vector pMaterials a un vector fixe vMaterials.
-		for (int i = 0; i < numMaterials; i++) vMaterials[i] = pMaterials[i];
+		materialCount = OBJInfo.iMaterialCount;
+		for (unsigned int i = 0; i < materialCount; ++i)
+			vMaterials[i] = pMaterials[i];
 	}
+	else
+		materialCount = 0;
 
 // Render all faces into a VAO
 	//auxVAO = RenderToVAOList(pFaces, OBJInfo.iFaceCount, pMaterials, prim_Id);
@@ -372,14 +376,14 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 	bool bFirstMaterial = TRUE;		// Only increase index after first 
 									// material has been set
 	FILE *hFileT = NULL;
-	int errno;
+	int err;
 
 ////////////////////////////////////////////////////////////////////////
 // Open library file
 ////////////////////////////////////////////////////////////////////////
-	errno = fopen_s(&hFileT,szFileName, "r");
+	err = fopen_s(&hFileT,szFileName, "r");
 	// Success ?
-	if (errno!=0) //(!hFile)
+	if (err!=0) //(!hFile)
 		return FALSE;
 
 ////////////////////////////////////////////////////////////////////////
@@ -473,7 +477,7 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 // index is always empty
 	(*iCurMaterialIndex)++;
 
-	numMaterials = *iCurMaterialIndex;
+	materialCount = *iCurMaterialIndex;
 	return TRUE;
 }
 
@@ -496,20 +500,16 @@ CVAO _stdcall COBJModel::RenderToVAOList(const Face* pFaces,
 
 	objVAO.vaoId = 0;	objVAO.vboId = 0;	objVAO.eboId = 0; objVAO.nVertexs = 0; objVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors, normals, textures;		// Definició vectors dinàmics per a vertexs i colors 
+	std::vector <double> vertices, colors, normals, textures;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i colors 
 	vertices.resize(0);		colors.resize(0);	normals.resize(0);		textures.resize(0);// Reinicialitzar vectors
 	
-// Obtenir color actual definit en OpenGL amb glColor();
-	GLfloat cColor[4];
-	glGetFloatv(GL_CURRENT_COLOR, cColor);
+// Legacy current-color state is unavailable in a core-profile context.
+const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 // Generate & save display list index
 	
 // Render model into the display list
 	//glNewList(m_iDisplayList, GL_COMPILE);
-
-		// Save texture bit to recover from the various texture state changes
-		glPushAttrib(GL_TEXTURE_BIT);
 
 			// Activate automatic texture coord generation if no coords loaded
 			if (!pFaces[0].pTexCoords)
@@ -714,11 +714,10 @@ CVAO _stdcall COBJModel::RenderToVAOList(const Face* pFaces,
 					vertices.push_back(pFaces[i].pVertices[j+1].fZ);
 				}
 			}
-		glPopAttrib();
 	//glEndList();
 
 // ----------------------- VAO
-// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 	objVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 
 	return objVAO;
@@ -742,16 +741,15 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 	CVAO objVAO;
 	objVAO.vaoId = 0;	objVAO.vboId = 0;	objVAO.eboId = 0;	 objVAO.nVertexs = 0; 	objVAO.nIndices = 0;
 
-	std::vector <double> vertices, colors, normals, textures;		// Definició vectors dinàmics per a vertexs i colors 
+	std::vector <double> vertices, colors, normals, textures;		// Definiciï¿½ vectors dinï¿½mics per a vertexs i colors 
 	vertices.resize(0);		colors.resize(0);	normals.resize(0);		textures.resize(0);// Reinicialitzar vectors
 
 	std::vector <int>::size_type nv = vertices.size();	// Tamany del vector vertices en elements.
 
 	netejaVAOList_OBJ();
 
-// Obtenir color actual definit en OpenGL amb glColor();
-	GLfloat cColor[4];
-	glGetFloatv(GL_CURRENT_COLOR, cColor);
+// Core profiles have no fixed-function current color state.
+	const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 // Activate automatic texture coord generation if no coords loaded
 	if (!pFaces[0].pTexCoords) GenTexCoords();
@@ -769,7 +767,7 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 				if (iPreviousMaterial != (int)pFaces[i].iMaterialIndex)
 				{	// Canvi de material per a les cares del fitxer OBJ
 					if (nv > 0) {
-						// Creació d'un VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+						// Creaciï¿½ d'un VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 						objVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 						Set_VAOList_OBJ(index_VAO, objVAO);
 						index_VAO = index_VAO + 1;
@@ -963,7 +961,7 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 	nv = vertices.size();	// Tamany del vector vertices en elements.
 
 	if (nv != 0) 
-	{	// Creació del darrer VAO i un VBO i càrrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
+	{	// Creaciï¿½ del darrer VAO i un VBO i cï¿½rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
 		objVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
 		Set_VAOList_OBJ(index_VAO, objVAO);
 	}
@@ -975,46 +973,10 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 
 void _stdcall COBJModel::UseMaterial(const Material *pMaterial)
 {
-////////////////////////////////////////////////////////////////////////
-// Make a given material the current one
-////////////////////////////////////////////////////////////////////////
-	float color[4] = { 1.0F, 0.0f, 0.0f, 1.0f};
-
-	//glColor3f(1.0,1.0,1.0);
-// Look for the presence of a texture and activate texturing if succeed
-	if (pMaterial!=NULL)
-	{ if (pMaterial->iTextureID)
-		{	glEnable(GL_TEXTURE_2D);
-			glBindTexture(GL_TEXTURE_2D, pMaterial->iTextureID);
-		}
-	else {	glDisable(GL_TEXTURE_2D);
-			//glMaterialfv(GL_FRONT, GL_EMISSION, pMaterial->fEmmissive);
-			
-			glColorMaterial(GL_FRONT, GL_AMBIENT);
-			color[0] = pMaterial->fAmbient[0];	color[1] = pMaterial->fAmbient[1];	color[2] = pMaterial->fAmbient[2];
-			//glMaterialfv(GL_FRONT, GL_AMBIENT, pMaterial->fAmbient);
-			glMaterialfv(GL_FRONT, GL_AMBIENT, color);
-			glColor4fv(color);
-
-			glColorMaterial(GL_FRONT, GL_DIFFUSE);
-			color[0] = pMaterial->fDiffuse[0];	color[1] = pMaterial->fDiffuse[1];	color[2] = pMaterial->fDiffuse[2];
-			//glMaterialfv(GL_FRONT, GL_DIFFUSE, pMaterial->fDiffuse);
-			glMaterialfv(GL_FRONT, GL_DIFFUSE, color);
-			glColor4fv(color);
-			
-			glColorMaterial(GL_FRONT, GL_SPECULAR);
-			color[0] = pMaterial->fSpecular[0];	color[1] = pMaterial->fSpecular[1];	color[2] = pMaterial->fSpecular[2];
-			//glMaterialfv(GL_FRONT, GL_SPECULAR, pMaterial->fSpecular);
-			glMaterialfv(GL_FRONT, GL_SPECULAR, color);
-			glColor4fv(color);
-
-			glMaterialf(GL_FRONT, GL_SHININESS, pMaterial->fShininess);
-
-			glEnable(GL_COLOR_MATERIAL);
-		}
-	}
-	else {	glDisable(GL_TEXTURE_2D);
-		}
+	if (pMaterial != nullptr && pMaterial->iTextureID != 0)
+		glBindTexture(GL_TEXTURE_2D, pMaterial->iTextureID);
+	else
+		glBindTexture(GL_TEXTURE_2D, 0);
 }
 
 
@@ -1027,55 +989,36 @@ void _stdcall COBJModel::UseMaterial_ShaderID(GLuint sh_programID, Material pMat
 
 	//glColor3f(1.0,1.0,1.0);
 // Look for the presence of a texture and activate texturing if succeed
-	if (pMaterial.szName != "")
+	if (pMaterial.szName[0] != '\0')
 	{
 		//glUniform4i(glGetUniformLocation(sh_programID, "sw_intensity"), false, true, true, true);
 		//glUniform1i(glGetUniformLocation(sh_programID, "sw_material"), true);
 
 		if (pMaterial.iTextureID)
 		{
-			glEnable(GL_TEXTURE_2D);
+			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, pMaterial.iTextureID);
 			glUniform1i(glGetUniformLocation(sh_programID, "texture0"), GLint(0));
-			//glUniform1i(glGetUniformLocation(sh_programID, "texture0"), pMaterial.iTextureID);
-
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-			glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-
+			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_TRUE);
 		}
 		else {
-			glDisable(GL_TEXTURE_2D);
-			//glMaterialfv(GL_FRONT, GL_EMISSION, pMaterial->fEmmissive);
+			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
 
-			//glColorMaterial(GL_FRONT, GL_AMBIENT);
 			color[0] = pMaterial.fAmbient[0];	color[1] = pMaterial.fAmbient[1];	color[2] = pMaterial.fAmbient[2];
-			//glMaterialfv(GL_FRONT, GL_AMBIENT, pMaterial->fAmbient);
-			//glMaterialfv(GL_FRONT, GL_AMBIENT, color);
-			//glColor4fv(color);
 			glUniform4f(glGetUniformLocation(sh_programID, "material.ambient"), color[0], color[1], color[2], color[3]);
 
-			//glColorMaterial(GL_FRONT, GL_DIFFUSE);
 			color[0] = pMaterial.fDiffuse[0];	color[1] = pMaterial.fDiffuse[1];	color[2] = pMaterial.fDiffuse[2];
-			//glMaterialfv(GL_FRONT, GL_DIFFUSE, pMaterial->fDiffuse);
-			//glMaterialfv(GL_FRONT, GL_DIFFUSE, color);
-			//glColor4fv(color);
 			glUniform4f(glGetUniformLocation(sh_programID, "material.diffuse"), color[0], color[1], color[2], color[3]);
 
-			//glColorMaterial(GL_FRONT, GL_SPECULAR);
 			color[0] = pMaterial.fSpecular[0];	color[1] = pMaterial.fSpecular[1];	color[2] = pMaterial.fSpecular[2];
-			//glMaterialfv(GL_FRONT, GL_SPECULAR, pMaterial->fSpecular);
-			//glMaterialfv(GL_FRONT, GL_SPECULAR, color);
-			//glColor4fv(color);
 			glUniform4f(glGetUniformLocation(sh_programID, "material.specular"), color[0], color[1], color[2], color[3]);
 
-			//glMaterialf(GL_FRONT, GL_SHININESS, pMaterial->fShininess);
 			glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), pMaterial.fShininess);
-
-			glEnable(GL_COLOR_MATERIAL);
-			}
+		}
+	}
+	else
+	{
+		glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
 	}
 }
 
@@ -1160,7 +1103,7 @@ void _stdcall COBJModel::GetFileInfo(FILE *hStream, OBJFileInfo *Info,
 	char szBasePath[_MAX_PATH];	 // Needed to append a filename to the base path
 	
 	FILE *hMaterialLib = NULL;
-	int errno;
+	int err;
 
 // Init structure
 	memset(Info, 0, sizeof(OBJFileInfo));
@@ -1199,9 +1142,9 @@ void _stdcall COBJModel::GetFileInfo(FILE *hStream, OBJFileInfo *Info,
 
 			// Open the library file
 //			FILE *hMaterialLib = fopen(szBasePath, "r");
-			errno = fopen_s(&hMaterialLib,szBasePath, "r");
+			err = fopen_s(&hMaterialLib,szBasePath, "r");
 			// Success ?
-			if (!errno) //(hMaterialLib)
+			if (!err) //(hMaterialLib)
 			{
 				// Quit reading when end of file has been reached
 				while (!feof(hMaterialLib))
@@ -1323,17 +1266,17 @@ int COBJModel::LoadTexture2(const char szFileName[_MAX_PATH])
 ////////////////////////////////////////////////////////////////////////
 
 	FILE *file=NULL;
-	int errno;
+	int err;
 	unsigned int iTexture = 0;
 
 	
 // Open the image file for reading
-// file=fopen(filename,"r");					// Funció Visual Studio 6.0
-   errno=fopen_s(&file,szFileName,"r");			// Funció Visual 2005
+// file=fopen(filename,"r");					// Funciï¿½ Visual Studio 6.0
+   err=fopen_s(&file,szFileName,"r");			// Funciï¿½ Visual 2005
 
 // If the file is empty (or non existent) print an error and return false
 // if (file == NULL)
-   if (errno!=0)
+   if (err!=0)
 	 {	//	printf("Could not open file '%s'.\n",filename) ;
 	    return false ;
 	}
@@ -1341,8 +1284,8 @@ int COBJModel::LoadTexture2(const char szFileName[_MAX_PATH])
 // Close the image file
  fclose(file);
 
-// SOIL_load_OGL_texture: Funció que llegeix la imatge del fitxer filename
-//				si és compatible amb els formats SOIL (BMP,JPG,GIF,TIF,TGA,etc.)
+// SOIL_load_OGL_texture: Funciï¿½ que llegeix la imatge del fitxer filename
+//				si ï¿½s compatible amb els formats SOIL (BMP,JPG,GIF,TIF,TGA,etc.)
 //				i defineix la imatge com a textura OpenGL retornant l'identificador 
 //				de textura OpenGL.
  iTexture = SOIL_load_OGL_texture
@@ -1391,7 +1334,7 @@ void _stdcall COBJModel::EliminaLlista(int prim_Id)
 	deleteVAOList(prim_Id);
 }
 
-// ------------------------ GESTIÓ VAOLIST
+// ------------------------ GESTIï¿½ VAOLIST
 void _stdcall COBJModel::initVAOList_OBJ()
 {
 	int i;
@@ -1428,19 +1371,17 @@ void _stdcall COBJModel::netejaVAOList_OBJ()
 void _stdcall COBJModel::netejaTextures_OBJ()
 {
 	int i;
-	GLboolean err;
 
-	for (i = 0; i <= numMaterials; i++)
-	{	if (vMaterials[i].iTextureID)
-		{	err = glIsTexture(vMaterials[i].iTextureID);
+	for (i = 0; i < static_cast<int>(materialCount); i++)
+	{
+		if (vMaterials[i].iTextureID)
+		{
 			glDeleteTextures(1, &vMaterials[i].iTextureID);
-			err = glIsTexture(vMaterials[i].iTextureID);
-			// Entorn VGI: Eliminar valors de textura
 			vMaterials[i].iTextureID = 0;
-			
 		}
 	}
-	numMaterials = 0; // Inicialitzar nombre de materials a 0
+	materialCount = 0;
+	numMaterials = 0;
 }
 
 void _stdcall COBJModel::deleteVAOList_OBJ(GLint k)
@@ -1495,9 +1436,13 @@ void _stdcall COBJModel::draw_TriVAO_OBJ(GLuint sh_programID)
 {
 	int i;
 
-	for (i = 0; i <= numMaterials; i++)
-	{	UseMaterial_ShaderID(sh_programID, vMaterials[i]);	// Activació Material i-èssim
-		
-		draw_TriVAO_Object_OBJ(i);							// Dibuix objecte i-èssim
+	for (i = 0; i < numMaterials; i++)
+	{
+		const int materialIndex = vector_Materials[i];
+		if (materialIndex >= 0 && static_cast<unsigned int>(materialIndex) < materialCount)
+			UseMaterial_ShaderID(sh_programID, vMaterials[materialIndex]);
+		else
+			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
+		draw_TriVAO_Object_OBJ(i);
 	}
 }

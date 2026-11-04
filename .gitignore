@@ -5,3 +5,40 @@
 # User-specific files
 *.user
 *.suo
+
+# Linux / CMake build artifacts
+build/
+build-*/
+cmake-build-*/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+compile_commands.json
+.ninja_deps
+.ninja_log
+*.ninja
+*.o
+*.a
+*.so
+*.so.*
+*.dylib
+*.dll
+*.exe
+*.lib
+*.exp
+*.pch
+*.pdb
+*.ilk
+*.iobj
+*.ipch
+*.obj.user
+*.vcxproj.user
+.DS_Store
+.cache/
+.vs/
+**/.vs/
+
+# Runtime output
+GLSL_Error.*
+extensions.txt
+imgui.ini

@@ -1,0 +1,57 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "CMake: configure selected preset",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--preset",
+                "${input:configurePreset}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: build selected preset",
+            "type": "shell",
+            "command": "cmake",
+            "args": [
+                "--build",
+                "--preset",
+                "${input:buildPreset}"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "CMake: run selected target",
+            "type": "shell",
+            "command": "${command:cmake.launchTargetPath}",
+            "options": { "cwd": "${workspaceFolder}/EntornVGI" },
+            "problemMatcher": []
+        }
+    ],
+    "inputs": [
+        {
+            "id": "configurePreset",
+            "type": "pickString",
+            "description": "Choose the configure preset for this host OS",
+            "options": [
+                "linux-debug", "linux-release",
+                "windows-debug", "windows-release",
+                "macos-debug", "macos-release"
+            ],
+            "default": "linux-debug"
+        },
+        {
+            "id": "buildPreset",
+            "type": "pickString",
+            "description": "Choose the build preset for this host OS",
+            "options": [
+                "linux-debug", "linux-release",
+                "windows-debug", "windows-release",
+                "macos-debug", "macos-release"
+            ],
+            "default": "linux-debug"
+        }
+    ]
+}

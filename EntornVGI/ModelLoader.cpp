@@ -3,7 +3,7 @@
 #include <assimp/postprocess.h>     // Post processing flags
 #include <string>
 #include <iostream>
-#include <Windows.h>
+#include "platform_compat.h"
 
 void DoTheSceneProcessing(const aiScene* scene)
 {

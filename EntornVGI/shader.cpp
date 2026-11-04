@@ -1,18 +1,18 @@
-//******** PRACTICA VISUALITZACIÓ GRÀFICA INTERACTIVA (Escola Enginyeria - UAB)
-//******** Entorn bàsic VS2026 MONOFINESTRA amb OpenGL 4.6, interfície GLFW 3.4, ImGui i llibreries GLM
-//******** Ferran Poveda, Marc Vivet, Carme Julià, Débora Gil, Enric Martí (Setembre 2026)
-// Shader.cpp: implementación de la clase Shader
+//******** PRACTICA VISUALITZACIï¿½ GRï¿½FICA INTERACTIVA (Escola Enginyeria - UAB)
+//******** Entorn bï¿½sic VS2026 MONOFINESTRA amb OpenGL 4.6, interfï¿½cie GLFW 3.4, ImGui i llibreries GLM
+//******** Ferran Poveda, Marc Vivet, Carme Juliï¿½, Dï¿½bora Gil, Enric Martï¿½ (Setembre 2026)
+// Shader.cpp: implementaciï¿½n de la clase Shader
 // FUNCIONS:		- Constructor (Shader)
-//					- Càrrega, compilació, linkedició del Vertex i Fragment Shader i definició del Program (loadFileShaders())
-//					- Càrrega, compilació, linkedició del Vertex, Geometry i Fragment Shader i definició del Program (loadFileShadersG())
+//					- Cï¿½rrega, compilaciï¿½, linkediciï¿½ del Vertex i Fragment Shader i definiciï¿½ del Program (loadFileShaders())
+//					- Cï¿½rrega, compilaciï¿½, linkediciï¿½ del Vertex, Geometry i Fragment Shader i definiciï¿½ del Program (loadFileShadersG())
 
 #include "framework.h"
-#include "Shader.h"	
+#include "shader.h"
 
 #include <string>
 
 /////////////////////////////////////////////////////////////////////////////
-// Construcción o destrucción de Shader
+// Construcciï¿½n o destrucciï¿½n de Shader
 /*****************************************************************************
 * loadFileShaders()
 *      Loads custom shader by specifying filename (expects frag/vert pair)
@@ -27,7 +27,8 @@ Shader::Shader()
 
 Shader::~Shader()
 {
-	glDeleteProgram(this->programID);		// Don't leak the program.
+	if (this->programID != 0 && this->programID != static_cast<unsigned int>(-1))
+		glDeleteProgram(this->programID);
 }
 
 
@@ -60,7 +61,7 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 	const char* fitxer_Frag = file_Frag.c_str();
 	fs = textFileRead(fitxer_Frag);
 
-	if ((vs == NULL) || (fs == NULL)) return GL_FALSE;	// Si no s’han trobat els fitxers, retornar GL_FALSE
+	if ((vs == NULL) || (fs == NULL)) return GL_FALSE;	// Si no sï¿½han trobat els fitxers, retornar GL_FALSE
 
 	const char* vv = vs;
 	const char* ff = fs;
@@ -71,10 +72,10 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 	free(vs);
 	free(fs);
 
-// COMPILACIÓ VERTEX SHADER (VS)
+// COMPILACIï¿½ VERTEX SHADER (VS)
 	glCompileShader(v);
 	glGetShaderiv(v, GL_COMPILE_STATUS, &compile_result);
-	// Llista error de compilació
+	// Llista error de compilaciï¿½
 	if (compile_result == GL_FALSE) {
 		GLint maxLength = 0;
 
@@ -84,7 +85,7 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 		glGetShaderInfoLog(v, maxLength, &maxLength, &errorLog[0]);
 
 		//DisplayMessageBox("Error compilacio Vertex Shader", file_Vert);
-		//AfxMessageBox(_T("Error compilació Vertex Shader"));
+		//AfxMessageBox(_T("Error compilaciï¿½ Vertex Shader"));
 		fprintf(stderr, "%s \n", "Error compilacio Vertex Shader");
 
 		// Volcar missatges error a fitxer GLSL_Error.VERT
@@ -94,7 +95,7 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 			fprintf(stderr, "%s \n", "GLSL_Error.VERT was not opened");
 			return GL_FALSE;
 		}
-		for (int i = 0; i <= maxLength; i = i++)
+		for (int i = 0; i < maxLength; ++i)
 		{
 			fprintf(fd, "%c", errorLog[i]);
 			fprintf(stderr, "%c", errorLog[i]);
@@ -108,10 +109,10 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 	}
 	else fprintf(stderr, "%s \n", "Compilacio Vertex Shader OK"); //DisplayMessageBox("Compilacio Vertex Shader OK", file_Vert); //AfxMessageBox(_T("Compilacio Vertex Shader OK"));
 
-// COMPILACIÓ FRAGMENT SHADER (FS)
+// COMPILACIï¿½ FRAGMENT SHADER (FS)
 	glCompileShader(f);
 	glGetShaderiv(f, GL_COMPILE_STATUS, &compile_result);
-	// Llista error de compilació
+	// Llista error de compilaciï¿½
 	if (compile_result == GL_FALSE) {
 		GLint maxLength = 0;
 
@@ -121,7 +122,7 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 		glGetShaderInfoLog(f, maxLength, &maxLength, &errorLog[0]);
 
 		//DisplayMessageBox("Error compilacio Fragment Shader", file_Frag);
-		//AfxMessageBox(_T("Error compilació Fragment Shader"));
+		//AfxMessageBox(_T("Error compilaciï¿½ Fragment Shader"));
 		fprintf(stderr, "%s \n", "Error compilacio Fragment Shader");
 
 		// Volcar missatges error a fitxer Compile_Error.FRAG
@@ -130,7 +131,7 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 			fprintf(stderr, "%s \n", "GLSL_Error.FRAG was not opened");
 			return GL_FALSE;
 		}
-		for (int i = 0; i <= maxLength; i = i++)
+		for (int i = 0; i < maxLength; ++i)
 		{	fprintf(fd, "%c", errorLog[i]);
 			fprintf(stderr, "%c", errorLog[i]);
 		}
@@ -141,22 +142,22 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 	}
 	else fprintf(stderr, "%s \n", "Compilacio Fragment Shader OK"); //DisplayMessageBox("Compilacio Fragment Shader OK", file_Frag); // AfxMessageBox(_T("Compilacio Fragment Shader OK"));
 
-// Creació del Program que inclou Vertex i Fragment Shader
+// Creaciï¿½ del Program que inclou Vertex i Fragment Shader
 	programID = glCreateProgram();
 	glAttachShader(programID, v);
 	glAttachShader(programID, f);
 
 // Attribute Locations must be setup before calling glLinkProgram()
-//	glBindAttribLocation(programID, 0, "in_Vertex"); // Vèrtexs
+//	glBindAttribLocation(programID, 0, "in_Vertex"); // Vï¿½rtexs
 //	glBindAttribLocation(programID, 1, "in_Normal"); // Normals
 //	glBindAttribLocation(programID, 2, "in_TexCoord"); // Textura
 //	glBindAttribLocation(programID, 3, "in_Color"); // Color
 
-// LINKEDICIÓ SHADER PROGRAM (programID)
+// LINKEDICIï¿½ SHADER PROGRAM (programID)
 	glLinkProgram(programID);
 	glGetProgramiv(programID, GL_LINK_STATUS, &link_result);
 
-	// Llista error de linkedició del Shader Program
+	// Llista error de linkediciï¿½ del Shader Program
 	if (link_result == GL_FALSE) {
 		GLint maxLength = 0;
 
@@ -174,7 +175,7 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 			fprintf(stderr, "%s \n", "GLSL_Error.LINK was not opened");
 			return GL_FALSE;
 		}
-		for (int i = 0; i <= maxLength; i = i++) fprintf(fd, "%c", errorLog[i]);
+		for (int i = 0; i < maxLength; ++i) fprintf(fd, "%c", errorLog[i]);
 		fclose(fd);
 
 		glDeleteShader(v);		// Don't leak the shader.
@@ -187,10 +188,10 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 	glDeleteShader(v);		// Don't leak the shader.
 	glDeleteShader(f);		// Don't leak the shader.
 
-// Activació del Programa
+// Activaciï¿½ del Programa
 	glUseProgram(programID);
 
-// Retorna referència al Program creat
+// Retorna referï¿½ncia al Program creat
 	return programID;
 }
 
@@ -202,7 +203,7 @@ GLuint Shader::loadFileShaders(std::string file_Vert, std::string file_Frag)
 //GLuint Shader::loadFileShaders(const char*  file_Vert, const char*  file_Frag, const char*  file_Geom = nullptr)
 GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, std::string file_Geom)
 {
-	GLuint v, f, g;
+	GLuint v, f, g = 0;
 	char* vs = NULL, * fs = NULL, * gs = NULL;
 	int info_log_length = 0, compile_result = 0, link_result = 0;
 	FILE* fd;
@@ -223,7 +224,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 	const char* fitxer_Frag = file_Frag.c_str();
 	fs = textFileRead(fitxer_Frag);
 
-	if ((vs == NULL) || (fs == NULL)) return GL_FALSE;	// Si no s’han trobat els fitxers, retornar GL_FALSE
+	if ((vs == NULL) || (fs == NULL)) return GL_FALSE;	// Si no sï¿½han trobat els fitxers, retornar GL_FALSE
 
 	const char* vv = vs;
 	const char* ff = fs;
@@ -234,10 +235,10 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 	free(vs);
 	free(fs);
 
-	// COMPILACIÓ VERTEX SHADER (VS)
+	// COMPILACIï¿½ VERTEX SHADER (VS)
 	glCompileShader(v);
 	glGetShaderiv(v, GL_COMPILE_STATUS, &compile_result);
-	// Llista error de compilació
+	// Llista error de compilaciï¿½
 	if (compile_result == GL_FALSE) {
 		GLint maxLength = 0;
 
@@ -247,7 +248,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 		glGetShaderInfoLog(v, maxLength, &maxLength, &errorLog[0]);
 
 		//DisplayMessageBox("Error compilacio Vertex Shader", file_Vert);
-		//AfxMessageBox(_T("Error compilació Vertex Shader"));
+		//AfxMessageBox(_T("Error compilaciï¿½ Vertex Shader"));
 		fprintf(stderr, "%s \n", "Error compilacio Vertex Shader");
 
 		// Volcar missatges error a fitxer GLSL_Error.VERT
@@ -257,7 +258,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 			fprintf(stderr, "%s \n", "GLSL_Error.VERT was not opened");
 			return GL_FALSE;
 		}
-		for (int i = 0; i <= maxLength; i = i++)
+		for (int i = 0; i < maxLength; ++i)
 		{
 			fprintf(fd, "%c", errorLog[i]);
 			fprintf(stderr, "%c", errorLog[i]);
@@ -271,10 +272,10 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 	}
 	else fprintf(stderr, "%s \n", "Compilacio Vertex Shader OK"); //DisplayMessageBox("Compilacio Vertex Shader OK", file_Vert);  //AfxMessageBox(_T("Compilacio Vertex Shader OK"));
 
-	// COMPILACIÓ FRAGMENT SHADER (FS)
+	// COMPILACIï¿½ FRAGMENT SHADER (FS)
 	glCompileShader(f);
 	glGetShaderiv(f, GL_COMPILE_STATUS, &compile_result);
-	// Llista error de compilació
+	// Llista error de compilaciï¿½
 	if (compile_result == GL_FALSE) {
 		GLint maxLength = 0;
 
@@ -284,7 +285,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 		glGetShaderInfoLog(f, maxLength, &maxLength, &errorLog[0]);
 
 		DisplayMessageBox("Error compilacio Fragment Shader", file_Frag);
-		//AfxMessageBox(_T("Error compilació Fragment Shader"));
+		//AfxMessageBox(_T("Error compilaciï¿½ Fragment Shader"));
 		//fprintf(stderr, "%s \n", "Error compilacio Fragment Shader");
 
 		// Volcar missatges error a fitxer Compile_Error.FRAG
@@ -293,7 +294,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 			fprintf(stderr, "%s \n", "GLSL_Error.FRAG was not opened");
 			return GL_FALSE;
 		}
-		for (int i = 0; i <= maxLength; i = i++)
+		for (int i = 0; i < maxLength; ++i)
 		{
 			fprintf(fd, "%c", errorLog[i]);
 			fprintf(stderr, "%c", errorLog[i]);
@@ -306,20 +307,23 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 	else fprintf(stderr, "%s \n", "Compilacio Fragment Shader OK"); //DisplayMessageBox("Compilacio Fragment Shader OK", file_Frag); //AfxMessageBox(_T("Compilacio Fragment Shader OK"));
 
 	// GEOMETRY SHADER (si definit)
-	if (file_Geom.c_str() != nullptr)
+	const bool hasGeometryShader = !file_Geom.empty();
+	if (hasGeometryShader)
 	{
 		g = glCreateShader(GL_GEOMETRY_SHADER);
 
 		const char* fitxer_Geom = file_Geom.c_str();
-		vs = textFileRead(fitxer_Geom);
+		gs = textFileRead(fitxer_Geom);
+		if (gs == NULL)
+			return GL_FALSE;
 		const char* gg = gs;
 		glShaderSource(g, 1, &gg, NULL);
 		free(gs);
 
-		// COMPILACIÓ GEOMETRY SHADER (GS)
+		// COMPILACIï¿½ GEOMETRY SHADER (GS)
 		glCompileShader(g);
 		glGetShaderiv(g, GL_COMPILE_STATUS, &compile_result);
-		// Llista error de compilació
+		// Llista error de compilaciï¿½
 		if (compile_result == GL_FALSE) {
 			GLint maxLength = 0;
 
@@ -329,7 +333,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 			glGetShaderInfoLog(g, maxLength, &maxLength, &errorLog[0]);
 
 			//DisplayMessageBox("Error compilacio Geometry Shader", file_Geom);
-			//AfxMessageBox(_T("Error compilació Geometry Shader"));
+			//AfxMessageBox(_T("Error compilaciï¿½ Geometry Shader"));
 			fprintf(stderr, "%s \n", "Error compilacio Geometry Shader");
 
 			// Volcar missatges error a fitxer Compile_Error.GEOM
@@ -338,7 +342,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 				fprintf(stderr, "%s \n", "GLSL_Error.GEOM was not opened");
 				return GL_FALSE;
 			}
-			for (int i = 0; i <= maxLength; i = i++)
+			for (int i = 0; i < maxLength; ++i)
 			{
 				fprintf(fd, "%c", errorLog[i]);
 				fprintf(stderr, "%c", errorLog[i]);
@@ -351,19 +355,19 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 		else fprintf(stderr, "%s \n", "Compilacio Geometry Shader OK"); //DisplayMessageBox("Compilacio Geometry Shader OK", file_Geom); //AfxMessageBox(_T("Compilacio Geometry Shader OK"));
 	}
 
-	// Creació del Program que inclou Vertex i Fragment Shader
+	// Creaciï¿½ del Program que inclou Vertex i Fragment Shader
 	programID = glCreateProgram();
 	glAttachShader(programID, v);
 	glAttachShader(programID, f);
 
-	// Inclusió Geometry Shader, si existeix
-	if (file_Geom.c_str() != nullptr) glAttachShader(programID, g);
+	// Inclusiï¿½ Geometry Shader, si existeix
+	if (hasGeometryShader) glAttachShader(programID, g);
 
-	// LINKEDICIÓ SHADER PROGRAM (programID)
+	// LINKEDICIï¿½ SHADER PROGRAM (programID)
 	glLinkProgram(programID);
 	glGetProgramiv(programID, GL_LINK_STATUS, &link_result);
 
-	// Llista error de linkedició del Shader Program
+	// Llista error de linkediciï¿½ del Shader Program
 	if (link_result == GL_FALSE) {
 		GLint maxLength = 0;
 
@@ -381,7 +385,7 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 			fprintf(stderr, "%s \n", "GLSL_Error.LINK was not opened");
 			return GL_FALSE;
 		}
-		for (int i = 0; i <= maxLength; i = i++) fprintf(fd, "%c", errorLog[i]);
+		for (int i = 0; i < maxLength; ++i) fprintf(fd, "%c", errorLog[i]);
 		fclose(fd);
 
 		glDeleteShader(v);		// Don't leak the shader.
@@ -393,19 +397,21 @@ GLuint Shader::loadFileShadersG(std::string file_Vert, std::string file_Frag, st
 
 	glDeleteShader(v);		// Don't leak the shader.
 	glDeleteShader(f);		// Don't leak the shader.
-	glDeleteShader(g);		// Don't leak the shader.
+	if (hasGeometryShader)
+		glDeleteShader(g);		// Don't leak the shader.
 
-// Activació del Programa
+// Activaciï¿½ del Programa
 	glUseProgram(programID);
 
-	// Retorna referència al Program creat
+	// Retorna referï¿½ncia al Program creat
 	return programID;
 }
 
 
 int Shader::DisplayMessageBox(std::string mess, std::string fileShader)
 {
-	// Conversió std::string --> LPCWSTR
+#ifdef _WIN32
+	// Conversiï¿½ std::string --> LPCWSTR
 	std::wstring stemp = std::wstring(mess.begin(), mess.end());
 	//LPCWSTR msg = stemp.c_str();
 
@@ -433,6 +439,11 @@ int Shader::DisplayMessageBox(std::string mess, std::string fileShader)
 	}
 
 	return msgboxID;
+#else
+	// En Linux no hay MessageBox: se muestra el error por la consola.
+	fprintf(stderr, "%s: %s\n", mess.c_str(), fileShader.c_str());
+	return 0;
+#endif
 }
 
 
@@ -566,5 +577,9 @@ void Shader::setMatrix4fv(const std::string &name, glm::mat4 trans)
 *****************************************************************************/
 void Shader::DeleteProgram()
 {
-	glDeleteProgram(this->programID);	// Don't leak the program.
+	if (this->programID != 0 && this->programID != static_cast<unsigned int>(-1))
+	{
+		glDeleteProgram(this->programID);
+	}
+	this->programID = static_cast<unsigned int>(-1);
 }

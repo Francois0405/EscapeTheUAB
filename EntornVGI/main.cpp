@@ -9,10 +9,10 @@
 // REAL FRANÇOIS
 
 // Entorn VGI.ImGui: Includes llibreria ImGui
-#include "ImGui\imgui.h"
-#include "ImGui\imgui_impl_glfw.h"
-#include "ImGui\imgui_impl_opengl3.h"
-#include "ImGui\nfd.h" // Native File Dialog
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_opengl3.h"
+#include "file_dialog_compat.h"
 
 #include "framework.h"
 #include "shader.h"
@@ -39,6 +39,51 @@ std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
 // Modelo permanente de los brazos del jugador.
 COBJModel* armsRigOBJ = nullptr;
+
+// Busca el directorio que contiene assets/, shaders/ y textures/ y lo fija como
+// directorio de trabajo. Así el programa funciona tanto si se lanza desde
+// EntornVGI/ como desde build-linux/bin/ (VS Code, terminal o GDB).
+static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
+{
+	namespace fs = std::filesystem;
+
+	std::error_code ec;
+	std::vector<fs::path> candidates;
+
+	// 1. Directorio actual.
+	candidates.push_back(fs::current_path(ec));
+
+	// 2. Directorio del ejecutable (build-linux/bin, con los recursos copiados).
+	if (executablePath != nullptr && executablePath[0] != '\0')
+	{
+		fs::path exe = fs::weakly_canonical(fs::path(executablePath), ec);
+		if (!ec)
+			candidates.push_back(exe.parent_path());
+	}
+
+	// 3. Directorios superiores del ejecutable (por si se ejecuta desde build/).
+	if (executablePath != nullptr && executablePath[0] != '\0')
+	{
+		fs::path exe = fs::weakly_canonical(fs::path(executablePath), ec);
+		if (!ec)
+		{
+			candidates.push_back(exe.parent_path().parent_path());
+			candidates.push_back(exe.parent_path().parent_path().parent_path());
+		}
+	}
+
+	for (const auto& candidate : candidates)
+	{
+		ec.clear();
+		if (fs::exists(candidate / "shaders" / "gouraud_shdrML.vert", ec) &&
+			fs::exists(candidate / "assets" / "scenes" / "habitacion_beta.txt", ec))
+		{
+			fs::current_path(candidate, ec);
+			if (!ec)
+				return;
+		}
+	}
+}
 
 void InitGL()
 {
@@ -283,17 +328,17 @@ void InitGL()
 	shaderLighting.releaseAllShaders();
 	// Càrrega Shader de Gouraud
 	fprintf(stderr, "Gouraud_shdrML: \n");
-	if (!shader_programID) shader_programID = shaderLighting.loadFileShaders(".\\shaders\\gouraud_shdrML.vert", ".\\shaders\\gouraud_shdrML.frag");
+	if (!shader_programID) shader_programID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
 	shader = GOURAUD_SHADER;
 
 	// Càrrega SHADERS
 	// Càrrega Shader Eixos
 	fprintf(stderr, "Eixos: \n");
-	if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders(".\\shaders\\eixos.VERT", ".\\shaders\\eixos.FRAG");
+	if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./shaders/eixos.vert", "./shaders/eixos.frag");
 
 	// Càrrega Shader Skybox
 	fprintf(stderr, "SkyBox: \n");
-	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders(".\\shaders\\skybox.VERT", ".\\shaders\\skybox.FRAG");
+	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./shaders/skybox.VERT", "./shaders/skybox.FRAG");
 
 	// Càrrega VAO Skybox Cube
 	if (skC_VAOID.vaoId == 0) skC_VAOID = loadCubeSkybox_VAO();
@@ -303,12 +348,12 @@ void InitGL()
 	{	// load Skybox textures
 		// -------------
 		std::vector<std::string> faces =
-		{ ".\\textures\\skybox\\right.jpg",
-			".\\textures\\skybox\\left.jpg",
-			".\\textures\\skybox\\top.jpg",
-			".\\textures\\skybox\\bottom.jpg",
-			".\\textures\\skybox\\front.jpg",
-			".\\textures\\skybox\\back.jpg"
+		{ "./textures/skybox/right.jpg",
+			"./textures/skybox/left.jpg",
+			"./textures/skybox/top.jpg",
+			"./textures/skybox/bottom.jpg",
+			"./textures/skybox/front.jpg",
+			"./textures/skybox/back.jpg"
 		};
 		cubemapTexture = loadCubemap(faces);
 	}
@@ -408,6 +453,7 @@ void InitAPI()
 	}
 
 	// Program
+#ifdef _WIN32
 	glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
 	glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
 	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
@@ -453,6 +499,9 @@ void InitAPI()
 	glBufferSubData = (PFNGLBUFFERSUBDATAPROC)wglGetProcAddress("glBufferSubData");
 	glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)wglGetProcAddress("glDeleteBuffers");
 	glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
+#else
+	// En Linux GLEW ya resuelve todas estas funciones al llamar a glewInit().
+#endif
 }
 
 
@@ -499,9 +548,13 @@ void OnPaint(GLFWwindow* window)
 	GLdouble vpv[3] = { 0.0, 0.0, 1.0 };
 
 	// Entorn VGI.ImGui: Menú ImGui condicionat al color de fons
-	if ((c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5))
-		ImGui::StyleColorsLight();
-	else ImGui::StyleColorsDark();
+	// (puede invocarse desde el callback de refresco antes de crear el contexto)
+	if (ImGui::GetCurrentContext() != nullptr)
+	{
+		if ((c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5))
+			ImGui::StyleColorsLight();
+		else ImGui::StyleColorsDark();
+	}
 
 	// Entorn VGI: Cridem a les funcions de l'escena i la projecció segons s'hagi 
 	// seleccionat una projecció o un altra
@@ -644,10 +697,10 @@ void OnPaint(GLFWwindow* window)
 	default:
 		// Entorn VGI: Càrrega SHADERS
 		// Entorn VGI: Càrrega Shader Eixos
-		if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders(".\\shaders\\eixos.VERT", ".\\shaders\\eixos.FRAG");
+		if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./shaders/eixos.vert", "./shaders/eixos.frag");
 
 		// Entorn VGI: Càrrega Shader de Gouraud
-		if (!shader_programID) shader_programID = shaderLighting.loadFileShaders(".\\shaders\\gouraud_shdrML.vert", ".\\shaders\\gouraud_shdrML.frag");
+		if (!shader_programID) shader_programID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
 
 		// Entorn VGI: Creació de la llista que dibuixarà els eixos Coordenades Món. Funció on està codi per dibuixar eixos	
 		if (!eixos_Id) eixos_Id = deixos();						// Funció que defineix els Eixos Coordenades Món com un VAO.
@@ -2514,12 +2567,12 @@ void OnArxiuObrirSkybox()
 		//		{	// load Skybox textures
 		//			// -------------
 		//			std::vector<std::string> faces =
-		//			{ ".\\textures\\skybox\\right.jpg",
-		//				".\\textures\\skybox\\left.jpg",
-		//				".\\textures\\skybox\\top.jpg",
-		//				".\\textures\\skybox\\bottom.jpg",
-		//				".\\textures\\skybox\\front.jpg",
-		//				".\\textures\\skybox\\back.jpg"
+		//			{ "./textures/skybox/right.jpg",
+		//				"./textures/skybox/left.jpg",
+		//				"./textures/skybox/top.jpg",
+		//				"./textures/skybox/bottom.jpg",
+		//				"./textures/skybox/front.jpg",
+		//				"./textures/skybox/back.jpg"
 		//			};
 
 		cubemapTexture = loadCubemap(faces);
@@ -2809,7 +2862,7 @@ void OnVistaSkyBox()
 	//SkyBoxCube = !SkyBoxCube;
 
 // Càrrega Shader Skybox
-	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders(".\\shaders\\skybox.VERT", ".\\shaders\\skybox.FRAG");
+	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./shaders/skybox.VERT", "./shaders/skybox.FRAG");
 
 	// Càrrega VAO Skybox Cube
 	if (skC_VAOID.vaoId == 0) skC_VAOID = loadCubeSkybox_VAO();
@@ -2819,12 +2872,12 @@ void OnVistaSkyBox()
 	{	// load Skybox textures
 		// -------------
 		std::vector<std::string> faces =
-		{ ".\\textures\\skybox\\right.jpg",
-			".\\textures\\skybox\\left.jpg",
-			".\\textures\\skybox\\top.jpg",
-			".\\textures\\skybox\\bottom.jpg",
-			".\\textures\\skybox\\front.jpg",
-			".\\textures\\skybox\\back.jpg"
+		{ "./textures/skybox/right.jpg",
+			"./textures/skybox/left.jpg",
+			"./textures/skybox/top.jpg",
+			"./textures/skybox/bottom.jpg",
+			"./textures/skybox/front.jpg",
+			"./textures/skybox/back.jpg"
 		};
 		cubemapTexture = loadCubemap(faces);
 	}
@@ -3483,7 +3536,7 @@ void OnIluminacioPlana()
 		// Elimina shader anterior
 		shaderLighting.DeleteProgram();
 		// Càrrega Flat shader
-		shader_programID = shaderLighting.loadFileShaders(".\\shaders\\flat_shdrML.vert", ".\\shaders\\flat_shdrML.frag");
+		shader_programID = shaderLighting.loadFileShaders("./shaders/flat_shdrML.vert", "./shaders/flat_shdrML.frag");
 	}
 }
 
@@ -3498,7 +3551,7 @@ void OnIluminacioSuau()
 		// Elimina shader anterior
 		shaderLighting.DeleteProgram();
 		// Càrrega Flat shader
-		shader_programID = shaderLighting.loadFileShaders(".\\shaders\\gouraud_shdrML.vert", ".\\shaders\\gouraud_shdrML.frag");
+		shader_programID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
 	}
 }
 
@@ -3742,7 +3795,7 @@ void OnShaderFlat()
 	// Elimina shader anterior
 	shaderLighting.DeleteProgram();	shader_programID = 0;
 	// Càrrega Flat shader
-	newShaderID = shaderLighting.loadFileShaders(".\\shaders\\flat_shdrML.vert", ".\\shaders\\flat_shdrML.frag");
+	newShaderID = shaderLighting.loadFileShaders("./shaders/flat_shdrML.vert", "./shaders/flat_shdrML.frag");
 
 	// Càrrega shaders dels fitxers
 	if (newShaderID) {
@@ -3768,7 +3821,7 @@ void OnShaderGouraud()
 	// Elimina shader anterior
 	shaderLighting.DeleteProgram();	shader_programID = 0;
 	// Càrrega Gouraud shader 
-	newShaderID = shaderLighting.loadFileShaders(".\\shaders\\gouraud_shdrML.vert", ".\\shaders\\gouraud_shdrML.frag");
+	newShaderID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
 
 	// Càrrega shaders dels fitxers
 	if (newShaderID) {
@@ -3795,7 +3848,7 @@ void OnShaderPhong()
 	// Elimina shader anterior
 	shaderLighting.DeleteProgram();	shader_programID = 0;
 	// Càrrega Phong Shader
-	newShaderID = shaderLighting.loadFileShaders(".\\shaders\\phong_shdrML.vert", ".\\shaders\\phong_shdrML.frag");
+	newShaderID = shaderLighting.loadFileShaders("./shaders/phong_shdrML.vert", "./shaders/phong_shdrML.frag");
 
 	// Càrrega shaders dels fitxers
 	if (newShaderID) {
@@ -4307,13 +4360,13 @@ void Teclat_Shift(int key, GLFWwindow* window)
 				{	// load Skybox textures
 					// -------------
 					std::vector<std::string> faces =
-						{	".\\textures\\skybox\\right.jpg",
-							".\\textures\\skybox\\right.jpg",
-							".\\textures\\skybox\\left.jpg",
-							".\\textures\\skybox\\top.jpg",
-							".\\textures\\skybox\\bottom.jpg",
-							".\\textures\\skybox\\front.jpg",
-							".\\textures\\skybox\\back.jpg"
+						{	"./textures/skybox/right.jpg",
+							"./textures/skybox/right.jpg",
+							"./textures/skybox/left.jpg",
+							"./textures/skybox/top.jpg",
+							"./textures/skybox/bottom.jpg",
+							"./textures/skybox/front.jpg",
+							"./textures/skybox/back.jpg"
 						};
 					cubemapTexture = loadCubemap(faces);
 				}
@@ -5547,7 +5600,7 @@ void Teclat_Pan(int key, int action)
 		switch (key)
 		{
 			// Tecla cursor amunt
-		case VK_UP:
+		case GLFW_KEY_UP:
 			tr_cpv.y -= fact_pan;
 			if (tr_cpv.y < -100000) tr_cpv.y = 100000;
 			break;
@@ -7037,9 +7090,12 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severi
 
 
 // main(): Funció principal del programa. Inicialitza la finestra, els callbacks i el bucle principal d'operació
-int main()
+int main(int argc, char** argv)
 {
 	//std::cout << "Hello World!\n";
+
+	// Situar el directorio de trabajo donde estén assets/, shaders/ y textures/.
+	SetWorkingDirectoryToAssetRoot(argc > 0 ? argv[0] : nullptr);
 
 //    GLFWwindow* window;
 // Entorn VGI. Timer: Variables
@@ -7070,17 +7126,22 @@ int main()
 	int countVM;
 	const GLFWvidmode* modes = glfwGetVideoModes(primary, &countVM);
 
-#ifdef __APPLE__
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // uncomment this statement to fix compilation on OS X
-#endif
-
-	// Solicitar OpenGL 3.3 como version minima.
 	glfwDefaultWindowHints();
 
+#ifdef __APPLE__
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 1);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_TRUE);
+#else
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_ANY_PROFILE);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GLFW_FALSE);
+#endif
+#ifndef NDEBUG
+	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
+#endif
 
 	// Create a windowed mode window and its OpenGL context */
 	window = glfwCreateWindow(2000, 1500, "Entorn Grafic VS2022 amb GLFW i OpenGL 3.3+ (Visualitzacio Grafica Interactiva - Grau en Enginyeria Informatica - Escola Enginyeria - UAB)", NULL, NULL);
@@ -7108,6 +7169,10 @@ int main()
 		return -1;
 	}
 
+	const bool nfdAvailable = NFD_InitCompat();
+	if (!nfdAvailable)
+		std::fprintf(stderr, "Failed to initialize Native File Dialog: %s\n", NFD_GetError());
+
 	std::cout << "OpenGL: "
 		<< glGetString(GL_VERSION)
 		<< std::endl;
@@ -7122,22 +7187,8 @@ int main()
 
 	const unsigned char* version = (unsigned char*)glGetString(GL_VERSION);
 
-	int major, minor;
-	GetGLVersion(&major, &minor);
-
 	// ------------- Entorn VGI: Configure OpenGL context
 	//	glfwWindowHint(GLFW_SAMPLES, 4);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor); // GL 4.6
-
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Si funcions deprecades són eliminades (no ARB_COMPATIBILITY)
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);  // Si funcions deprecades NO són eliminades (Si ARB_COMPATIBILITY)
-
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);	// Creació contexte CORE
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);	// Creació contexte ARB_COMPATIBILITY
-	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE); // comment this line in a release build! 
-
-
 	// ------------ - Entorn VGI : Enable OpenGL debug context if context allows for DEBUG CONTEXT (GL4.6)
 	if (GLEW_VERSION_4_6)
 	{
@@ -7161,7 +7212,7 @@ int main()
 	InitGL();
 	armsRigOBJ = new COBJModel();
 	
-	char armsPath[] = ".\\assets\\models\\arms_rig2.obj";	
+	char armsPath[] = "./assets/models/arms_rig2.obj";
 
 	int errorArms = armsRigOBJ->LoadModel(armsPath);
 
@@ -7188,7 +7239,6 @@ int main()
 	glfwSetErrorCallback(error_callback);											// Error callback
 	
 	glfwMaximizeWindow(window); // si lo pones despues del glfwSetWindowRefreshCallback peta duro xdxdxdxdxdxdx
-	glfwPollEvents();
 
 	glfwSetWindowRefreshCallback(window, (GLFWwindowrefreshfun)OnPaint);			// - Callback to refresh the screen
 
@@ -7239,6 +7289,7 @@ int main()
 	// Inicializar los backends de ImGui.
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
 	ImGui_ImplOpenGL3_Init("#version 130");
+	glfwPollEvents();
 
 	// Entorn VGI.ImGui: End Setup Dear ImGui context
 
@@ -7319,6 +7370,8 @@ int main()
 	objetosEscena.clear();
 
 	ImGui::DestroyContext();
+	if (nfdAvailable)
+		NFD_QuitCompat();
 
 	if (armsRigOBJ != nullptr)
 	{
