@@ -53,6 +53,7 @@ set(ENTORNVGI_SOURCES
 	MundoFisico.cpp
 	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
+	OpenXRManager.cpp
 	quatern.cpp
 	SceneLoader.cpp
 	shader.cpp
@@ -145,6 +146,7 @@ target_link_libraries(EntornVGI PRIVATE
 	${ENTORNVGI_GLM_TARGET}
 	soil2
 	EntornVGI_bullet
+	EntornVGI_openxr
 	Threads::Threads
 	${CMAKE_DL_LIBS}
 )

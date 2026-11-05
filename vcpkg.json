@@ -7,6 +7,18 @@
     "glew",
     "glm",
     "bullet3",
-    "nativefiledialog-extended"
-  ]
+    "nativefiledialog-extended",
+    {
+      "name": "openxr-loader",
+      "platform": "windows"
+    }
+  ],
+  "features": {
+    "openxr": {
+      "description": "Compila el soporte OpenXR tambien en plataformas donde no es el valor por defecto (p. ej. macOS, solo para probar la inicializacion)",
+      "dependencies": [
+        "openxr-loader"
+      ]
+    }
+  }
 }

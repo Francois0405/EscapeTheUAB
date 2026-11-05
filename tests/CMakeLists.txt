@@ -127,3 +127,22 @@ if(WIN32)
 			-StubPath "$<TARGET_FILE:LauncherTestStub>"
 	)
 endif()
+
+# OpenXR: pruebas SIN visor ni runtime (seleccion de modo, ausencia de runtime, activacion explicita,
+# limpieza tras un fallo). Las que necesitan un casco real NO estan aqui: ver docs/OPENXR.md.
+add_executable(OpenXRTests
+	OpenXRTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/OpenXRManager.cpp
+)
+target_include_directories(OpenXRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_link_libraries(OpenXRTests PRIVATE EntornVGI_openxr)
+if(WIN32)
+	add_custom_command(TARGET OpenXRTests POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_RUNTIME_DLLS:OpenXRTests>
+			"$<TARGET_FILE_DIR:OpenXRTests>"
+		COMMAND_EXPAND_LISTS
+	)
+endif()
+target_compile_features(OpenXRTests PRIVATE cxx_std_20)
+add_test(NAME OpenXRTests COMMAND OpenXRTests)

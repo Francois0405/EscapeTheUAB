@@ -159,6 +159,7 @@
     <ClCompile Include="MundoFisico.cpp" />
     <ClCompile Include="ObjetosAnimadosGLB.cpp" />
     <ClCompile Include="objLoader.cpp" />
+    <ClCompile Include="OpenXRManager.cpp" />
     <ClCompile Include="quatern.cpp" />
     <ClCompile Include="SceneLoader.cpp" />
     <ClCompile Include="shader.cpp" />
@@ -210,6 +211,7 @@
     <ClInclude Include="ObjetosAnimadosGLB.h" />
     <ClInclude Include="VistaEstereo.h" />
     <ClInclude Include="objLoader.h" />
+    <ClInclude Include="OpenXRManager.h" />
     <ClInclude Include="quatern.h" />
     <ClInclude Include="SceneLoader.h" />
     <ClInclude Include="shader.h" />

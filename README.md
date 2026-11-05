@@ -71,7 +71,7 @@ Instala las dependencias una sola vez:
 ```bash
 sudo apt update
 sudo apt install -y build-essential cmake ninja-build pkg-config \
-    libgl1-mesa-dev libglfw3-dev libglew-dev libglm-dev libbullet-dev libgtk-3-dev
+    libgl1-mesa-dev libglfw3-dev libglew-dev libglm-dev libbullet-dev libopenxr-dev libgtk-3-dev
 ```
 
 Después, desde la raíz del repositorio:

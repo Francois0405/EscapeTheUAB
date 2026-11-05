@@ -27,6 +27,7 @@
 #include "EscenaFisica.h"
 #include "DibujoColisionadores.h"
 #include "VistaEstereo.h"
+#include "OpenXRManager.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -81,6 +82,17 @@ namespace
 {
 	// F2: vista estereoscópica DE PRUEBA en pantalla (dos mitades). No es VR real: no hay OpenXR ni visor.
 	bool modoEstereoPrueba = false;
+	// OpenXR (VR real): SOLO se inicia cuando el usuario lo pide (F3 o el botón del panel de física).
+	// No tiene nada que ver con F2. Si no hay runtime o visor, el juego sigue en pantalla.
+	vr::GestorOpenXR gestorOpenXR;
+	GLFWwindow* ventanaPrincipal = nullptr;   // la necesita OpenXR para enlazar su sesión con el contexto OpenGL
+	int versionGLMayor = 0, versionGLMenor = 0;
+
+	void alternarOpenXR()
+	{
+		if (gestorOpenXR.TieneRecursos()) gestorOpenXR.Desactivar();
+		else gestorOpenXR.Activar(ventanaPrincipal, versionGLMayor, versionGLMenor);
+	}
 	bool fpsPausado = false;
 	bool fpsCapturaSolicitada = true;
 	bool fpsCursorCapturado = false;
@@ -1658,6 +1670,14 @@ void draw_Menu_ImGui()
 			escenaFisica->NumeroDeCuerpos(), escenaFisica->NumeroDeDinamicos());
 		ImGui::Text("pasos fisicos: %lld", mundoFisico.PasosTotales());
 		ImGui::Checkbox("Vista estereoscopica de prueba (F2) - NO es VR real", &modoEstereoPrueba);
+		ImGui::Separator();
+		ImGui::Text("OpenXR (VR real, F3): %s", vr::NombreDelEstado(gestorOpenXR.Estado()));
+		if (!vr::GestorOpenXR::EstaCompilado())
+			ImGui::TextUnformatted("No incluido en esta compilacion (macOS u OpenXR no instalado).");
+		else if (ImGui::Button(gestorOpenXR.TieneRecursos() ? "Desactivar OpenXR" : "Activar OpenXR"))
+			alternarOpenXR();
+		ImGui::TextWrapped("%s", gestorOpenXR.Mensaje().c_str());
+		ImGui::Separator();
 		if (escenaFisica->HayAgarre())
 		{
 			const int agarrado = escenaFisica->ObjetoAgarrado();
@@ -4459,6 +4479,12 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput))
 		{
 			interactuar();
+			return;
+		}
+		// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
+		if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
+		{
+			alternarOpenXR();
 			return;
 		}
 		// F2: alternar la vista estereoscópica de prueba (dos ojos en pantalla partida).
@@ -7398,6 +7424,9 @@ int main(int argc, char** argv)
 
 	int major, minor;
 	GetGLVersion(&major, &minor);
+	ventanaPrincipal = window;
+	versionGLMayor = major;
+	versionGLMenor = minor;
 
 // ------------- Entorn VGI: Configure OpenGL context
 // 	Quitado para que funcione en MACOS
@@ -7528,6 +7557,7 @@ int main(int argc, char** argv)
 		const bool animacionPausada = fpsPausado || !ventanaConFoco;
 		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
 		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
+		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado
 		// Físicas: 1) las hojas animadas mueven sus cuerpos cinemáticos, 2) Bullet avanza en pasos
 		// fijos de 1/60 s (con el juego en pausa el mundo se congela).
 		escenaFisica->SincronizarCinematicos(objetosAnimados);
@@ -7561,6 +7591,7 @@ int main(int argc, char** argv)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+	gestorOpenXR.Desactivar();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
 	NFD_QuitCompat();
 
 	for (auto& entrada : modelosHabitacion)
