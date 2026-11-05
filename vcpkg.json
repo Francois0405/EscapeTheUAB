@@ -6,6 +6,7 @@
     "glfw3",
     "glew",
     "glm",
+    "bullet3",
     "nativefiledialog-extended"
   ]
 }

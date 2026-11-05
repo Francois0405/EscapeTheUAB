@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\include;..\include\ImGui;..\third_party\SOIL2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\include\ImGui;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framdework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -128,7 +128,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\include;..\include\ImGui;..\third_party\SOIL2\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\include\ImGui;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -148,10 +148,16 @@
     <ClCompile Include="..\include\ImGui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\include\ImGui\imgui_tables.cpp" />
     <ClCompile Include="..\include\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="DibujoColisionadores.cpp" />
+    <ClCompile Include="DibujoGLB.cpp" />
+    <ClCompile Include="EscenaFisica.cpp" />
     <ClCompile Include="escena.cpp" />
     <ClCompile Include="glut_geometry.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="material.cpp" />
+    <ClCompile Include="ModeloGLB.cpp" />
+    <ClCompile Include="MundoFisico.cpp" />
+    <ClCompile Include="ObjetosAnimadosGLB.cpp" />
     <ClCompile Include="objLoader.cpp" />
     <ClCompile Include="quatern.cpp" />
     <ClCompile Include="SceneLoader.cpp" />
@@ -192,8 +198,17 @@
     <ClInclude Include="escena.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="glut_geometry.h" />
+    <ClInclude Include="AnimacionGLB.h" />
+    <ClInclude Include="AnimacionPuerta.h" />
+    <ClInclude Include="DibujoColisionadores.h" />
+    <ClInclude Include="DibujoGLB.h" />
+    <ClInclude Include="EscenaFisica.h" />
     <ClInclude Include="main.h" />
     <ClInclude Include="material.h" />
+    <ClInclude Include="ModeloGLB.h" />
+    <ClInclude Include="MundoFisico.h" />
+    <ClInclude Include="ObjetosAnimadosGLB.h" />
+    <ClInclude Include="VistaEstereo.h" />
     <ClInclude Include="objLoader.h" />
     <ClInclude Include="quatern.h" />
     <ClInclude Include="SceneLoader.h" />

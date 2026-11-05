@@ -20,6 +20,53 @@ target_compile_features(SceneLoaderTests PRIVATE cxx_std_20)
 
 add_test(NAME SceneLoaderTests COMMAND SceneLoaderTests)
 
+add_executable(GlbTests
+	GlbTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
+)
+target_include_directories(GlbTests PRIVATE
+	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/third_party/cgltf
+)
+target_compile_definitions(GlbTests PRIVATE
+	GLM_ENABLE_EXPERIMENTAL
+	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+)
+if(TARGET glm::glm)
+	target_link_libraries(GlbTests PRIVATE glm::glm)
+else()
+	target_link_libraries(GlbTests PRIVATE glm)
+endif()
+target_compile_features(GlbTests PRIVATE cxx_std_20)
+
+add_test(NAME GlbTests COMMAND GlbTests)
+
+add_executable(PhysicsTests
+	PhysicsTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/MundoFisico.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/EscenaFisica.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
+)
+target_include_directories(PhysicsTests PRIVATE
+	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/third_party/cgltf
+)
+target_compile_definitions(PhysicsTests PRIVATE
+	GLM_ENABLE_EXPERIMENTAL
+	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+)
+if(TARGET glm::glm)
+	target_link_libraries(PhysicsTests PRIVATE glm::glm EntornVGI_bullet)
+else()
+	target_link_libraries(PhysicsTests PRIVATE glm EntornVGI_bullet)
+endif()
+target_compile_features(PhysicsTests PRIVATE cxx_std_20)
+
+add_test(NAME PhysicsTests COMMAND PhysicsTests)
+
 find_package(OpenGL REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(GLEW REQUIRED)

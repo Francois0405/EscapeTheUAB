@@ -42,10 +42,16 @@ endif()
 add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_party/SOIL2")
 
 set(ENTORNVGI_SOURCES
+	DibujoColisionadores.cpp
+	DibujoGLB.cpp
+	EscenaFisica.cpp
 	escena.cpp
 	glut_geometry.cpp
 	main.cpp
 	material.cpp
+	ModeloGLB.cpp
+	MundoFisico.cpp
+	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
 	quatern.cpp
 	SceneLoader.cpp
@@ -69,6 +75,7 @@ target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${IMGUI_DIR}
 	${REPO_ROOT}/third_party/SOIL2/src
+	${REPO_ROOT}/third_party/cgltf
 )
 
 target_compile_definitions(EntornVGI PRIVATE
@@ -137,6 +144,7 @@ target_link_libraries(EntornVGI PRIVATE
 	${ENTORNVGI_GLEW_TARGET}
 	${ENTORNVGI_GLM_TARGET}
 	soil2
+	EntornVGI_bullet
 	Threads::Threads
 	${CMAKE_DL_LIBS}
 )

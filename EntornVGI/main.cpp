@@ -19,6 +19,14 @@
 #include "escena.h"
 #include "main.h"
 #include "SceneLoader.h"
+#include "AnimacionPuerta.h"
+#include "ModeloGLB.h"
+#include "ObjetosAnimadosGLB.h"
+#include "DibujoGLB.h"
+#include "MundoFisico.h"
+#include "EscenaFisica.h"
+#include "DibujoColisionadores.h"
+#include "VistaEstereo.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -71,7 +79,8 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 
 namespace
 {
-	bool modoVR = false;
+	// F2: vista estereoscópica DE PRUEBA en pantalla (dos mitades). No es VR real: no hay OpenXR ni visor.
+	bool modoEstereoPrueba = false;
 	bool fpsPausado = false;
 	bool fpsCapturaSolicitada = true;
 	bool fpsCursorCapturado = false;
@@ -96,6 +105,82 @@ namespace
 	float tiempoFPS = 0.0f;
 	float deltaFPS = 0.0f;
 
+	// --- DEMO FASE 1: puerta que se abre girando sobre su bisagra ---
+	// Keyframes: en 0 s la puerta está cerrada (0 grados), en 2 s abierta (90 grados).
+	// Para cambiar la duración o el ángulo basta con editar esta lista.
+	std::vector<animacion::KeyframeAngulo> keyframesPuertaDemo = { {0.0f, 0.0f}, {2.0f, 90.0f} };
+	animacion::Reproductor reproductorPuertaDemo;
+	float anguloPuertaDemo = 0.0f;                              // ángulo actual (se recalcula cada fotograma)
+	const glm::vec3 mitadTamanoPuertaDemo(0.05f, 0.5f, 1.0f);   // puerta de 1 m de ancho, 10 cm de grosor y 2 m de alto
+	const glm::vec3 bisagraPuertaDemo(6.0f, -0.5f, -1.7f);      // punto del mundo (a ras de suelo)
+
+	// Se llama una vez por fotograma: avanza el reloj y calcula el ángulo con los keyframes.
+	void actualizarPuertaDemo(float deltaSegundos)
+	{
+		reproductorPuertaDemo.Actualizar(deltaSegundos);
+		anguloPuertaDemo = animacion::AnguloEnTiempo(keyframesPuertaDemo, reproductorPuertaDemo.tiempo);
+	}
+
+	// Arranca la animación desde el principio (la puerta vuelve a estar cerrada).
+	void iniciarPuertaDemo()
+	{
+		reproductorPuertaDemo.Iniciar(keyframesPuertaDemo.back().tiempo);
+	}
+
+	// --- OBJETOS ANIMADOS GLB: las animaciones vienen de Blender (assets/animations/*.glb) ---
+	// No hay keyframes ni puertas escritas aquí: la lista "animated" del JSON de la habitación
+	// declara cada instancia (puerta, cajón...) y cargarYAplicarEscena() las crea.
+	// Varias instancias pueden usar el mismo .glb y se abren de forma independiente.
+	glb::EscenaAnimada objetosAnimados;
+	// --- FÍSICA (Bullet, Fase 1): cubo que cae sobre un suelo estático. Ver MundoFisico.h ---
+	// UN solo mundo físico para toda la partida. La habitación activa y la demo ponen cuerpos
+	// en él y cada una quita solo los suyos. No depende de GLFW ni de la cámara (válido para VR).
+	fisica::MundoFisico mundoFisico;
+	std::unique_ptr<fisica::EscenaFisica> escenaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
+	fisica::DemoCuboCaida demoFisica(mundoFisico);
+	bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
+	bool objetosAnimadosListos = false;   // true cuando los modelos ya están en la GPU
+
+	// ÚNICO sitio que conoce la cámara FPS: convierte "lo que ve el jugador" en una posición y una
+	// dirección del mundo. Todo el sistema de interacción (puertas y agarre) solo recibe esos dos
+	// vectores; con VR se llamaría igual, pero con los de la mano o el mando.
+	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
+	{
+		origen = glm::vec3(opvN.x, opvN.y, opvN.z);                              // posición de la vista
+		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
+	}
+
+	// Acción "interactuar" (tecla E). Prioridad:
+	//   1) Si ya se lleva un objeto en la mano, se suelta (con las manos ocupadas no se abren puertas).
+	//   2) Si se mira un objeto agarrable (dinámico) al alcance, se agarra.
+	//   3) Si no, se intenta con la puerta que se tiene delante.
+	// Quien la llame debe comprobar antes la pausa, el foco y el teclado de ImGui (PuedeInteractuar).
+	void interactuar()
+	{
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		if (escenaFisica->HayAgarre()) { escenaFisica->SoltarAgarre(); return; }
+		if (escenaFisica->IntentarAgarrar(origen, direccion) >= 0) return;
+		glb::InteractuarConObjeto(objetosAnimados, origen, direccion);
+	}
+
+	// Cada fotograma de juego: la "mano" sigue a la mirada. Solo si se puede jugar (sin pausa, sin
+	// paneles F1 y con foco); si no, el objeto se queda donde estaba.
+	void actualizarAgarreDelJugador(bool puedeJugar)
+	{
+		if (!puedeJugar) return;
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		escenaFisica->ActualizarAgarre(origen, direccion);
+	}
+
+	void liberarObjetosAnimados()
+	{
+		if (objetosAnimadosListos) glb::LiberarEscenaAnimadaDeGPU(objetosAnimados);
+		glb::VaciarEscenaAnimada(objetosAnimados);
+		objetosAnimadosListos = false;
+	}
+
 	bool modoJuegoFPS()
 	{
 		return camera == CAM_NAVEGA && projeccio == PERSPECT;
@@ -114,53 +199,6 @@ namespace
 	{
 		const bool capturar = modoJuegoFPS() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
 		fijarCapturaCursor(window, capturar);
-	}
-
-	std::string objetoEnManoId = "";
-
-	void intentarInteractuar() 
-	{
-		// Posición y dirección de la vista/mano (en PC usamos la cámara opvN -> n)
-		glm::vec3 origen(opvN.x, opvN.y, opvN.z);
-		glm::vec3 dir = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
-
-		// Punto virtual de la "mano" a 1.2 metros delante del jugador
-		glm::vec3 posMano = origen + dir * 1.2f;
-
-		// Si ya tenemos un objeto en la mano, lo soltamos
-		if (!objetoEnManoId.empty()) {
-			objetoEnManoId = "";
-			return;
-		}
-
-		// Buscar el objeto interactuable ("objects") más cercano al punto de mira/mano
-		float minDist = 1.0f; // Radio máximo de agarre
-		for (auto& obj : objetosEscena) {
-			if (obj.categoria != "objects") continue; // Ignorar paredes/arquitectura
-
-			float dist = glm::distance(posMano, obj.posicion);
-			if (dist < minDist) {
-				minDist = dist;
-				objetoEnManoId = obj.id;
-				std::cout << "Interaccion con: " << obj.id << "\n";
-			}
-		}
-	}
-
-	void actualizarObjetoEnMano()
-	{
-		if (objetoEnManoId.empty()) return;
-
-		glm::vec3 origen(opvN.x, opvN.y, opvN.z);
-		glm::vec3 dir = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
-		glm::vec3 posMano = origen + dir * 1.2f; // A 1.2m delante de tu vista
-
-		for (auto& obj : objetosEscena) {
-			if (obj.id == objetoEnManoId) {
-				obj.posicion = posMano;
-				break;
-			}
-		}
 	}
 }
 
@@ -202,7 +240,33 @@ namespace
 		n[2] = opvN.z + longitud * sin(inclinacion);
 	}
 
-	void moverJugadorFPS(GLFWwindow* window, double delta)
+	// --- JUGADOR FÍSICO (Fase 3) ---------------------------------------------------------
+	// Reparto de trabajo (el mismo que se usará con VR):
+	//   * El teclado (o el mando, en VR) solo dice "quiero ir en esta dirección a 3 m/s".
+	//   * Bullet (la cápsula del jugador) decide hasta dónde se puede llegar: choca, desliza, cae.
+	//   * La cámara se COLOCA donde quedó la cápsula (ojos = pies + 1,7 m). La cámara nunca
+	//     mueve a la cápsula, salvo al salir del modo FPS (ver sincronizarJugadorYCamara).
+	// La orientación (ratón) NO pasa por Bullet: sigue siendo cosa de la cámara.
+	constexpr double velocidadJugador = 3.0;   // m/s caminando
+
+	glm::vec3 posicionPiesDesdeCamara()
+	{
+		return glm::vec3(opvN.x, opvN.y, opvN.z - fisica::MedidasJugador::AlturaOjos);
+	}
+
+	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
+	// el suelo ya exista y el jugador no caiga al vacío.
+	void crearJugadorFisico()
+	{
+		if (mundoFisico.HayJugador()) return;
+		glm::vec3 pies = posicionPiesDesdeCamara();
+		pies.z += 0.02f;   // 2 cm de margen: nace sin tocar el suelo y se apoya solo
+		mundoFisico.CrearJugador(pies);
+		std::cout << "Jugador fisico creado con los pies en (" << pies.x << ", " << pies.y << ", " << pies.z << ")." << std::endl;
+	}
+
+	// Convierte las teclas WASD en una velocidad horizontal DEL MUNDO (sin tocar la posición).
+	void moverJugadorFPS(GLFWwindow* window)
 	{
 		const double dx = n[0] - opvN.x;
 		const double dy = n[1] - opvN.y;
@@ -211,7 +275,6 @@ namespace
 
 		const double delanteX = dx / longitud;
 		const double delanteY = dy / longitud;
-		const double velocidad = 3.0 * delta;
 		double moverX = 0.0;
 		double moverY = 0.0;
 
@@ -222,12 +285,28 @@ namespace
 
 		const double distancia = sqrt(moverX * moverX + moverY * moverY);
 		if (distancia == 0.0) return;
-		moverX = moverX / distancia * velocidad;
-		moverY = moverY / distancia * velocidad;
-		opvN.x += moverX;
-		opvN.y += moverY;
-		n[0] += moverX;
-		n[1] += moverY;
+		// Normalizado: en diagonal no se va más rápido.
+		mundoFisico.FijarVelocidadJugador(glm::vec3(moverX / distancia * velocidadJugador,
+			moverY / distancia * velocidadJugador, 0.0));
+	}
+
+	// Después de simular: la cámara va a donde está la cápsula (conservando hacia dónde mira).
+	// Si NO estamos en modo FPS (cámaras de depuración), ocurre lo contrario: la cápsula sigue a la
+	// cámara, para que al volver al modo FPS esté donde toca y no haya un salto.
+	void sincronizarJugadorYCamara()
+	{
+		if (!mundoFisico.HayJugador()) return;
+		if (!modoJuegoFPS())
+		{
+			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+			mundoFisico.TeletransportarJugador(posicionPiesDesdeCamara());
+			return;
+		}
+		const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
+		const double ojosX = pies.x, ojosY = pies.y, ojosZ = pies.z + fisica::MedidasJugador::AlturaOjos;
+		const double mueveX = ojosX - opvN.x, mueveY = ojosY - opvN.y, mueveZ = ojosZ - opvN.z;
+		opvN.x += mueveX;  opvN.y += mueveY;  opvN.z += mueveZ;
+		n[0] += mueveX;    n[1] += mueveY;    n[2] += mueveZ;   // el punto mirado se desplaza igual: la dirección no cambia
 	}
 
 	void actualizarMovimientoMovil(GLFWwindow* window, float deltaTime)
@@ -256,22 +335,23 @@ namespace
 
 	bool cargarYAplicarEscena(const std::filesystem::path& ruta)
 	{
-		std::vector<SceneObject> objetosLeidos;
+		// 1) Leer y validar el JSON (si falla, no se ha tocado nada).
+		DatosEscena datos;
 		std::string error;
-		std::string nombre;
-		if (!CargarEscenaJSON(ruta, objetosLeidos, error, nombre))
+		if (!CargarDatosEscenaJSON(ruta, datos, error))
 		{
 			std::cerr << "No se cargo la escena: " << error << '\n';
 			return false;
 		}
 
+		// 2) Cargar los modelos OBJ en estructuras TEMPORALES.
 		std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
 		std::vector<SceneObject> objetosValidos;
 		auto liberarModelosTemporales = [&nuevosModelos]()
 		{
 			for (auto& entrada : nuevosModelos) entrada.second->netejaTextures_OBJ();
 		};
-		for (auto& obj : objetosLeidos)
+		for (auto& obj : datos.objetos)
 		{
 			const auto rutaObj = std::filesystem::absolute(ruta.parent_path() / obj.modelo).lexically_normal();
 			if (!std::filesystem::exists(rutaObj) || !std::filesystem::is_regular_file(rutaObj))
@@ -300,19 +380,48 @@ namespace
 			objetosValidos.push_back(std::move(obj));
 		}
 
-		if (objetosValidos.empty()) return false;
-		// Sustituir solo despues de validar la escena y cargar todos sus modelos.
+		// 3) Objetos animados GLB de la lista "animated", también temporales.
+		glb::EscenaAnimada nuevosAnimados;
+		if (!fisica::CargarObjetosAnimadosDeEscena(datos.animados, std::filesystem::absolute(ruta.parent_path()),
+			nuevosAnimados, error))
+		{
+			std::cerr << "No se cargo la escena: " << error << '\n';
+			liberarModelosTemporales();
+			return false;
+		}
+		for (const auto& modelo : nuevosAnimados.modelos)
+			for (const std::string& aviso : modelo.second.avisos)
+				std::cerr << modelo.first << ": " << aviso << '\n';
+
+		// 4) Cuerpos físicos NUEVOS (los de la habitación anterior siguen en el mundo hasta el final).
+		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
+		if (!nuevaFisica->Crear(objetosValidos, nuevosAnimados, datos.animados, error))
+		{
+			std::cerr << "No se cargo la escena (fisicas): " << error << '\n';
+			liberarModelosTemporales();
+			return false;
+		}
+		if (objetosValidos.empty() && datos.animados.empty()) return false;
+
+		// 5) Todo ha ido bien: AHORA se sustituye la habitación anterior.
+		escenaFisica->Vaciar();                        // retira sus colisiones del mundo
+		escenaFisica = std::move(nuevaFisica);
 		for (auto& entrada : modelosHabitacion) entrada.second->netejaTextures_OBJ();
 		modelosHabitacion = std::move(nuevosModelos);
 		objetosEscena = std::move(objetosValidos);
-		nombreEscenaActiva = std::move(nombre);
+		liberarObjetosAnimados();                      // libera de la GPU los GLB anteriores
+		objetosAnimados = std::move(nuevosAnimados);
+		glb::SubirEscenaAnimadaAGPU(objetosAnimados);  // el contexto OpenGL ya existe en este punto
+		objetosAnimadosListos = true;
+		nombreEscenaActiva = std::move(datos.nombre);
 		objecte = OBJOBJ;
 		textura = true;
 		tFlag_invert_Y = false;
 		glUseProgram(shader_programID);
 		glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
 		glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
-		std::cout << "Escena cargada: " << nombreEscenaActiva << " (" << objetosEscena.size() << " instancias).\n";
+		std::cout << "Escena cargada: " << nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
+			<< " animadas, " << escenaFisica->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
 		return true;
 	}
 }
@@ -333,8 +442,6 @@ namespace
 		}
 	}
 }
-
-
 
 void InitGL()
 {
@@ -860,6 +967,32 @@ void OnFramebufferSize(GLFWwindow* window, int width, int height)
 
 
 // OnPaint: Funció de dibuix i visualització en frame buffer del frame
+// Vista estereoscópica de PRUEBA (F2): dibuja la escena dos veces, una en cada mitad de la pantalla.
+// Reutiliza Vista_Navega del profesor para la vista CENTRAL (limpia los buffers, iluminación, culling,
+// profundidad, pan) y solo desplaza esa matriz para cada ojo. No toca la física ni la posición del jugador.
+static void dibujarEscenaEstereo(int anchoVentana, int altoVentana)
+{
+	GLdouble arriba[3] = { 0.0, 0.0, 1.0 };   // Z es "arriba" en este juego
+	const glm::mat4 vistaCentral = Vista_Navega(shader_programID, opvN, n, arriba, pan, tr_cpv, tr_cpvF, c_fons, col_obj,
+		objecte, true, pas, front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+		eixos, grid, hgrid);
+
+	for (const estereo::Ojo ojo : { estereo::Ojo::Izquierdo, estereo::Ojo::Derecho })
+	{
+		const estereo::Rectangulo mitad = estereo::MitadDePantalla(ojo, anchoVentana);
+		// Cada mitad tiene SU relación de aspecto (la mitad de ancho): Projeccio_Perspectiva fija el viewport y la proyección.
+		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, mitad.x, 0, mitad.ancho, altoVentana, OPV.R);
+		ViewMatrix = estereo::VistaDeOjo(vistaCentral, ojo);
+
+		glUseProgram(shader_programID);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
+
+		configura_Escena();
+		dibuixa_Escena();   // habitación, objetos GLB, física de depuración... exactamente lo mismo que en PC
+	}
+}
+
 void OnPaint(GLFWwindow* window)
 {
 // TODO: Agregue aquí su código de controlador de mensajes
@@ -960,58 +1093,61 @@ void OnPaint(GLFWwindow* window)
 		break;
 
 	case PERSPECT:
-		glDisable(GL_SCISSOR_TEST);
+		// Entorn VGI: PROJECCIÓ PERSPECTIVA
+				//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // Set Perspective Calculations To Most Accurate
+		glDisable(GL_SCISSOR_TEST);		// Desactivació del retall de pantalla
+
+		// Entorn VGI: Activar shader Visualització Escena
 		glUseProgram(shader_programID);
 
-		if (!modoVR) 
+		// Vista estereoscópica de prueba (F2): solo con la cámara de navegación; el resto de cámaras
+		// del profesor (esférica, geode) se dibujan siempre como antes.
+		if (modoEstereoPrueba && camera == CAM_NAVEGA)
 		{
-			// --- MODO PC NORMAL (Lo que ya tenéis) ---
-			ProjectionMatrix = Projeccio_Perspectiva(shader_programID, 0, 0, w, h, OPV.R);
-			if (camera == CAM_NAVEGA) {
-				vpv[0] = 0.0; vpv[1] = 0.0; vpv[2] = 1.0; // POLARZ
-				ViewMatrix = Vista_Navega(shader_programID, opvN, n, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
-					front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides, eixos, grid, hgrid);
-			}
-			configura_Escena();
-			dibuixa_Escena();
+			dibujarEscenaEstereo(w, h);
+			break;
 		}
-		else 
-		{
-			// --- MODO VR / SIMULADOR ESTÉREO EN CASA (Pantalla Partida) ---
-			Fons(c_fons); // Limpiamos pantalla completa una sola vez
-			if (oculta) glEnable(GL_DEPTH_TEST);
 
-			// Calculamos la vista central base a partir de vuestro opvN y n
-			glm::vec3 eyePos(opvN.x, opvN.y, opvN.z);
-			glm::vec3 centerPos(n[0], n[1], n[2]);
-			glm::vec3 upVec(0.0f, 0.0f, 1.0f); // En vuestro juego POLARZ es Z arriba
-			glm::mat4 baseView = glm::lookAt(eyePos, centerPos, upVec);
+		// Entorn VGI: Definició de Viewport, Projecció i Càmara
+		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, 0, 0, w, h, OPV.R);
 
-			// Distancia interpupilar (IPD = 6.4 cm -> +-0.032m en eje X de cámara)
-			const float halfIPD = 0.032f;
-
-			for (int eye = 0; eye < 2; ++eye) 
-			{
-				int viewX = (eye == 0) ? 0 : w / 2;
-				int viewW = w / 2;
-
-				// 1. Proyección de medio monitor (o textura del ojo en OpenXR)
-				ProjectionMatrix = Projeccio_Perspectiva(shader_programID, viewX, 0, viewW, h, OPV.R);
-
-				// 2. Desplazar matriz de vista a izquierda (+halfIPD) o derecha (-halfIPD) en espacio cámara
-				float offset = (eye == 0) ? halfIPD : -halfIPD;
-				ViewMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(offset, 0.0f, 0.0f)) * baseView;
-
-				// 3. Subir ViewMatrix e Iluminación al shader
-				glUseProgram(shader_programID);
-				glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
-				Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
-
-				// 4. Dibujar la habitación y el móvil para este ojo
-				configura_Escena();
-				dibuixa_Escena();
-			}
+		// Entorn VGI: Definició de la càmera.
+		if (camera == CAM_ESFERICA) {
+			n[0] = 0;		n[1] = 0;		n[2] = 0;
+			ViewMatrix = Vista_Esferica(shader_programID, OPV, Vis_Polar, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, mida, pas,
+				front_faces, oculta, test_vis, back_line,
+				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+				eixos, grid, hgrid);
 		}
+		else if (camera == CAM_NAVEGA) {
+			if (Vis_Polar == POLARZ) {
+				vpv[0] = 0.0;	vpv[1] = 0.0;	vpv[2] = 1.0;
+				}
+			else if (Vis_Polar == POLARY) {
+				vpv[0] = 0.0;	vpv[1] = 1.0;	vpv[2] = 0.0;
+				}
+			else if (Vis_Polar == POLARX) {
+				vpv[0] = 1.0;	vpv[1] = 0.0;	vpv[2] = 0.0;
+				}
+			ViewMatrix = Vista_Navega(shader_programID, opvN, //false, 
+				n, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
+				front_faces, oculta, test_vis, back_line,
+				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+				eixos, grid, hgrid);
+			}
+		else if (camera == CAM_GEODE) {
+			ViewMatrix = Vista_Geode(shader_programID, OPV_G, Vis_Polar, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, mida, pas,
+				front_faces, oculta, test_vis, back_line,
+				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+				eixos, grid, hgrid);
+			}
+
+		// Entorn VGI: Dibuix de l'Objecte o l'Escena
+		configura_Escena();     // Aplicar Transformacions Geometriques segons persiana Transformacio i configurar objectes.
+		dibuixa_Escena();		// Dibuix geometria de l'escena amb comandes GL.
+
+		// Entorn VGI: Transferència del buffer OpenGL a buffer de pantalla
+		//glfwSwapBuffers(window);
 		break;
 
 	default:
@@ -1062,33 +1198,22 @@ void dibuixa_Escena() {
 	// Dibuja cada objeto de la habitacion con su transformacion.
 	if (!objetosEscena.empty())
 	{
-		for (const SceneObject& obj : objetosEscena)
+		for (std::size_t i = 0; i < objetosEscena.size(); ++i)
 		{
+			const SceneObject& obj = objetosEscena[i];
 			auto it = modelosHabitacion.find(obj.modelo);
 
 			if (it == modelosHabitacion.end())
 				continue;
 
-			glm::mat4 matriz(1.0f);
-
-			matriz = glm::translate(matriz, obj.posicion);
-
-			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.z),
-				glm::vec3(0.0f, 0.0f, 1.0f));
-
-			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.y),
-				glm::vec3(0.0f, 1.0f, 0.0f));
-
-			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.x),
-				glm::vec3(1.0f, 0.0f, 0.0f));
-
-			matriz = glm::scale(matriz, obj.escala);
+			// Estáticos y objetos sin físicas: matriz de la escena. Dinámicos: la que calcula Bullet.
+			const glm::mat4 matriz = escenaFisica->MatrizVisualDe(static_cast<int>(i), obj);
 
 			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
 			dibuixa_EscenaGL(
 				shader_programID, eixos, eixos_Id, grid, hgrid,
 				OBJOBJ, col_obj, sw_material,
-				textura, texturesID, textura_map, tFlag_invert_Y,
+				false, texturesID, textura_map, tFlag_invert_Y,
 				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 				it->second.get(), matriz
 			);
@@ -1102,6 +1227,50 @@ void dibuixa_Escena() {
 			textura, texturesID, textura_map, tFlag_invert_Y,
 			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 			ObOBJ, GTMatrix);
+	}
+
+	// DEMO FASE 1: la puerta usa el cubo test.obj ya cargado por la escena.
+	for (const auto& modelo : modelosHabitacion)
+	{
+		if (!modelo.first.ends_with("test.obj")) continue;
+		dibuixa_EscenaGL(
+			shader_programID, eixos, eixos_Id, grid, hgrid,
+			OBJOBJ, col_obj, sw_material,
+			false, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+			modelo.second.get(),
+			animacion::MatrizPuertaConBisagra(mitadTamanoPuertaDemo, bisagraPuertaDemo, anguloPuertaDemo)
+		);
+		break;
+	}
+
+	// DEMO FÍSICA: dibuja el cubo con la pose que calcula Bullet (reutiliza test.obj, de ±1 m).
+	if (demoFisica.EstaActiva())
+	{
+		for (const auto& modelo : modelosHabitacion)
+		{
+			if (!modelo.first.ends_with("test.obj")) continue;
+			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
+			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
+			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
+				* glm::mat4_cast(pose.rotacion)
+				* glm::scale(glm::mat4(1.0f), demoFisica.MitadTamanoCubo());
+			dibuixa_EscenaGL(
+				shader_programID, eixos, eixos_Id, grid, hgrid,
+				OBJOBJ, col_obj, sw_material,
+				false, texturesID, textura_map, tFlag_invert_Y,
+				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+				modelo.second.get(), matrizCubo
+			);
+			break;
+		}
+	}
+
+	// Objetos animados GLB (puertas...): mismo shader y cámara que el resto de la escena.
+	if (objetosAnimadosListos)
+	{
+		glUseProgram(shader_programID);
+		glb::DibujarObjetosAnimados(objetosAnimados, shader_programID);
 	}
 
 	if (modoJuegoFPS() && mostrarMovil && phoneOBJ != nullptr)
@@ -1130,6 +1299,10 @@ void dibuixa_Escena() {
 			phoneOBJ, matrizMovil);
 		textura = texturaAnterior;
 	}
+
+	// Depuración: cajas del mundo físico (solo se dibujan si está activada la opción en el panel).
+	if (mostrarColisionadores)
+		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
 }
 
 
@@ -1393,8 +1566,6 @@ void draw_Menu_ImGui()
 		ImGui::SameLine();
 		ImGui::Checkbox("EntornVGI Window", &show_EntornVGI_window);
 		static bool preset = true;
-		if (ImGui::Checkbox("Preset", &preset) && preset)
-			aplicarPresetJuego();
 		ImGui::Separator();
 		ImGui::Spacing();
 
@@ -1472,6 +1643,69 @@ void draw_Menu_ImGui()
 		ImGui::SliderFloat("Intensidad walking", &intensidadWalking, 0.0f, 0.08f, "%.3f");
 		ImGui::SliderFloat("Intensidad mouse", &intensidadMouse, 0.0f, 0.003f, "%.4f");
 		ImGui::Text("deltaTime: %.4f s", deltaFPS);
+		ImGui::End();
+
+		ImGui::Begin("Demo puerta");
+		if (ImGui::Button("Abrir puerta")) iniciarPuertaDemo();
+		ImGui::Text("tiempo: %.2f / %.2f s", reproductorPuertaDemo.tiempo, reproductorPuertaDemo.duracion);
+		ImGui::Text("angulo: %.1f grados", anguloPuertaDemo);
+		ImGui::End();
+
+		ImGui::Begin("Fisica (Bullet)");
+		ImGui::Checkbox("Mostrar colisionadores", &mostrarColisionadores);
+		ImGui::TextUnformatted("azul: estatico  verde: dinamico  naranja: cinematico");
+		ImGui::Text("cuerpos en el mundo: %d (habitacion: %d, dinamicos: %d)", mundoFisico.NumeroDeCuerpos(),
+			escenaFisica->NumeroDeCuerpos(), escenaFisica->NumeroDeDinamicos());
+		ImGui::Text("pasos fisicos: %lld", mundoFisico.PasosTotales());
+		ImGui::Checkbox("Vista estereoscopica de prueba (F2) - NO es VR real", &modoEstereoPrueba);
+		if (escenaFisica->HayAgarre())
+		{
+			const int agarrado = escenaFisica->ObjetoAgarrado();
+			ImGui::Text("en la mano: %s (E para soltar)", objetosEscena[agarrado].id.c_str());
+		}
+		else ImGui::TextUnformatted("mano vacia (E sobre un objeto dinamico para agarrarlo)");
+		if (mundoFisico.HayJugador())
+		{
+			const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
+			ImGui::Text("jugador (pies): (%.2f, %.2f, %.2f) m  %s", pies.x, pies.y, pies.z,
+				mundoFisico.JugadorEnSuelo() ? "en el suelo" : "en el aire");
+		}
+		ImGui::Separator();
+		ImGui::TextUnformatted("Demo: cubo que cae (independiente de la habitacion)");
+		if (!demoFisica.EstaActiva())
+		{
+			if (ImGui::Button("Activar demo cubo")) demoFisica.Iniciar();
+		}
+		else
+		{
+			if (ImGui::Button("Reiniciar demo")) demoFisica.Iniciar();
+			ImGui::SameLine();
+			if (ImGui::Button("Quitar demo")) demoFisica.Detener();
+			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
+			const glm::vec3 velocidad = demoFisica.VelocidadCubo();
+			const glm::vec3 gravedad = mundoFisico.Gravedad();
+			ImGui::Text("gravedad: (%.2f, %.2f, %.2f) m/s2", gravedad.x, gravedad.y, gravedad.z);
+			ImGui::Text("cubo pos: (%.3f, %.3f, %.3f) m", pose.posicion.x, pose.posicion.y, pose.posicion.z);
+			ImGui::Text("cubo vel: (%.3f, %.3f, %.3f) m/s", velocidad.x, velocidad.y, velocidad.z);
+			ImGui::Text("estado: %s", demoFisica.CuboEnReposo() ? "en reposo (dormido)" : "en movimiento");
+		}
+		ImGui::End();
+
+		ImGui::Begin("Objetos animados GLB");
+		ImGui::Text("Objetos animados GLB (Blender)");
+		if (objetosAnimados.objetos.empty())
+			ImGui::TextUnformatted("Ninguno cargado (ver consola)");
+		for (glb::ObjetoAnimado& objeto : objetosAnimados.objetos)
+		{
+			ImGui::PushID(objeto.id.c_str());   // cada fila necesita un ID distinto para sus botones
+			if (ImGui::Button("Abrir")) glb::IniciarAnimacion(objeto);     // depuración: reinicia la apertura
+			ImGui::SameLine();
+			if (ImGui::Button("Alternar")) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
+			ImGui::SameLine();
+			ImGui::Text("%s  %s  %.2f / %.2f s", objeto.id.c_str(), glb::NombreDelEstado(objeto.estado),
+				objeto.reproductor.tiempo, objeto.reproductor.duracion);
+			ImGui::PopID();
+		}
 		ImGui::End();
 	}
 
@@ -1551,6 +1785,8 @@ void ShowArxiusOptions()
 	if (ImGui::MenuItem("New")) {}
 	if (ImGui::MenuItem("Cargar habitacion JSON"))
 		cargarYAplicarEscena("assets/scenes/habitacion_beta.json");
+	if (ImGui::MenuItem("Cargar ejemplo fisica JSON"))
+		cargarYAplicarEscena("assets/scenes/ejemplo_fisica.json");
 
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;
@@ -4218,17 +4454,18 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			sincronizarCursorFPS(window);
 			return;
 		}
-		// --- NUEVO: Alternar Modo VR Estéreo con F2 ---
-		if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
+		// E: agarrar/soltar el objeto que miramos o abrir/cerrar la puerta (no si hay pausa, falta foco o se escribe en ImGui).
+		if (key == GLFW_KEY_E && action == GLFW_PRESS &&
+			glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput))
 		{
-			modoVR = !modoVR;
-			std::cout << "Modo VR Estereo: " << (modoVR ? "ON" : "OFF") << "\n";
+			interactuar();
 			return;
 		}
-		// --- NUEVO: Coger / Soltar objeto con tecla E ---
-		if (key == GLFW_KEY_E && action == GLFW_PRESS)
+		// F2: alternar la vista estereoscópica de prueba (dos ojos en pantalla partida).
+		if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
 		{
-			intentarInteractuar();
+			modoEstereoPrueba = !modoEstereoPrueba;
+			std::cout << "Vista estereoscopica de prueba: " << (modoEstereoPrueba ? "ON" : "OFF") << std::endl;
 			return;
 		}
 		if (fpsPausado || !ventanaConFoco) return;
@@ -4261,8 +4498,6 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		else if (!sw_color) Teclat_ColorFons(key, action);
 		else Teclat_ColorObjecte(key, action);
 	}
-
-	
 	// Crida a OnPaint() per redibuixar l'escena
 		//OnPaint(window);
 
@@ -7247,6 +7482,7 @@ int main(int argc, char** argv)
 	// Arrancar directamente con la habitación y la configuración de juego.
 	aplicarPresetJuego();
 	cargarYAplicarEscena("assets/scenes/habitacion_beta.json");
+	crearJugadorFisico();   // con la habitación ya cargada: el suelo existe
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
 	OnFramebufferSize(window, w, h);
@@ -7281,10 +7517,24 @@ int main(int argc, char** argv)
 		sincronizarCursorFPS(window);
 
 		// Actualitzar moviment continu de navegació (WASD) per frame.
+		// Cada fotograma se parte de "quieto"; las teclas pedidas (si se puede jugar) fijan la velocidad.
+		mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
 		if (!fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS())
-			moverJugadorFPS(window, delta);
-			actualizarObjetoEnMano();
+			moverJugadorFPS(window);
 		actualizarMovimientoMovil(window, static_cast<float>(delta));
+		// La animación se considera PAUSADA cuando el juego está en pausa (ESC) o la ventana
+		// ha perdido el foco. Abrir los paneles de depuración (F1) NO la pausa, porque el
+		// botón "Abrir puerta" está justamente en esos paneles.
+		const bool animacionPausada = fpsPausado || !ventanaConFoco;
+		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
+		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
+		// Físicas: 1) las hojas animadas mueven sus cuerpos cinemáticos, 2) Bullet avanza en pasos
+		// fijos de 1/60 s (con el juego en pausa el mundo se congela).
+		escenaFisica->SincronizarCinematicos(objetosAnimados);
+		actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
+		mundoFisico.FijarPausa(animacionPausada);
+		mundoFisico.Actualizar(static_cast<float>(delta));
+		sincronizarJugadorYCamara();
 
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
@@ -7318,6 +7568,10 @@ int main(int argc, char** argv)
 
 	modelosHabitacion.clear();
 	objetosEscena.clear();
+	liberarObjetosAnimados();
+	mundoFisico.EliminarJugador();
+	escenaFisica.reset();                       // quita las colisiones de la habitacion antes de cerrar
+	fisica::LiberarDibujoColisionadores();
 
 	if (phoneOBJ != nullptr)
 	{

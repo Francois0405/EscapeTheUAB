@@ -1,0 +1,43 @@
+{
+  "version": 1,
+  "name": "ejemplo_fisica",
+  "architecture": [
+    { "id": "suelo", "model": "../models/test.obj", "position": [5, 0, -1.85], "rotation": [0, 0, 0], "scale": [8, 5, 0.15], "physics": { "type": "static", "halfSize": [1, 1, 1] } }
+  ],
+  "objects": [
+    { "id": "mesa", "model": "../models/TaulaRara.obj", "position": [5, 0, -1.7], "rotation": [90, 0, 0], "scale": [1, 1, 1],
+      "physics": { "type": "static", "halfSize": [1.295, 0.5788, 1.015], "offset": [0.0, 0.5812, 0.0] } },
+    { "id": "caja_sobre_mesa", "model": "../models/test.obj", "position": [5, 0, 1.0], "rotation": [0, 0, 0], "scale": [0.25, 0.25, 0.25],
+      "physics": { "type": "dynamic", "halfSize": [1, 1, 1], "mass": 2.0 } },
+    { "id": "caja_girada", "model": "../models/test.obj", "position": [5.9, 0.4, 0.2], "rotation": [0, 0, 30], "scale": [0.2, 0.2, 0.2],
+      "physics": { "type": "dynamic", "halfSize": [1, 1, 1], "mass": 1.0 } },
+    { "id": "caja_al_suelo", "model": "../models/test.obj", "position": [8, -3, 0.5], "rotation": [20, 10, 0], "scale": [0.3, 0.3, 0.3],
+      "physics": { "type": "dynamic", "halfSize": [1, 1, 1], "mass": 3.0 } }
+  ],
+  "animated": [
+    {
+      "id": "puerta_a",
+      "model": "../animations/Puerta.glb",
+      "position": [0, -2, -1.7],
+      "rotation": [0, 0, -90],
+      "colliders": [
+        { "node": "DoorFrame", "type": "static",    "halfSize": [0.05, 1.05, 0.04],  "offset": [-0.45, 1.05, -0.013] },
+        { "node": "DoorFrame", "type": "static",    "halfSize": [0.05, 1.05, 0.04],  "offset": [0.45, 1.05, -0.013] },
+        { "node": "DoorFrame", "type": "static",    "halfSize": [0.4, 0.05, 0.04],   "offset": [0.0, 2.05, -0.013] },
+        { "node": "Door",      "type": "kinematic", "halfSize": [0.418, 1.005, 0.017], "offset": [-0.418, -0.041, -0.017] }
+      ]
+    },
+    {
+      "id": "puerta_b",
+      "model": "../animations/Puerta.glb",
+      "position": [0, 2, -1.7],
+      "rotation": [0, 0, -90],
+      "colliders": [
+        { "node": "DoorFrame", "type": "static",    "halfSize": [0.05, 1.05, 0.04],  "offset": [-0.45, 1.05, -0.013] },
+        { "node": "DoorFrame", "type": "static",    "halfSize": [0.05, 1.05, 0.04],  "offset": [0.45, 1.05, -0.013] },
+        { "node": "DoorFrame", "type": "static",    "halfSize": [0.4, 0.05, 0.04],   "offset": [0.0, 2.05, -0.013] },
+        { "node": "Door",      "type": "kinematic", "halfSize": [0.418, 1.005, 0.017], "offset": [-0.418, -0.041, -0.017] }
+      ]
+    }
+  ]
+}
