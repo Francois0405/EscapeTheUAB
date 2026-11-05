@@ -251,7 +251,7 @@ namespace
 
 	glm::vec3 posicionPiesDesdeCamara()
 	{
-		return glm::vec3(opvN.x, opvN.y, opvN.z - fisica::MedidasJugador::AlturaOjos);
+		return glm::vec3(opvN.x, opvN.y, opvN.z - mundoFisico.AlturaOjosJugador());
 	}
 
 	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
@@ -303,7 +303,7 @@ namespace
 			return;
 		}
 		const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
-		const double ojosX = pies.x, ojosY = pies.y, ojosZ = pies.z + fisica::MedidasJugador::AlturaOjos;
+		const double ojosX = pies.x, ojosY = pies.y, ojosZ = pies.z + mundoFisico.AlturaOjosJugador();
 		const double mueveX = ojosX - opvN.x, mueveY = ojosY - opvN.y, mueveZ = ojosZ - opvN.z;
 		opvN.x += mueveX;  opvN.y += mueveY;  opvN.z += mueveZ;
 		n[0] += mueveX;    n[1] += mueveY;    n[2] += mueveZ;   // el punto mirado se desplaza igual: la dirección no cambia
@@ -473,7 +473,7 @@ void InitGL()
 	OPV_G.R = 15.0;		OPV_G.alfa = 0.0;	OPV_G.beta = 0.0;	// Origen PV en esfèriques per a Vista_Geode
 
 // Entorn VGI: Variables de control per Menú VISTA: Pantalla Completa, Pan, dibuixar eixos i grids 
-	fullscreen = false;
+	fullscreen = true;
 	pan = false;
 	eixos = true;	eixos_programID = 0;  eixos_Id = 0;
 	sw_grid = false;
@@ -837,119 +837,6 @@ void InitGL()
 	initVAOList();
 }
 
-
-void InitAPI()
-{
-	// Vendor, Renderer, Version, Shading Laguage Version i Extensions suportades per la placa gràfica gravades en fitxer extensions.txt
-	std::string nomf = "extensions.txt";
-	char const* nomExt = "";
-	const char* nomfitxer;
-	nomfitxer = nomf.c_str();	// Conversió tipus string --> char *
-	int num_Ext;
-
-	char* str = (char*)glGetString(GL_VENDOR);
-	FILE* f = fopen(nomfitxer, "w");
-	if (f) {
-		fprintf(f, "VENDOR: %s\n", str);
-		fprintf(stderr, "VENDOR: %s\n", str);
-		str = (char*)glGetString(GL_RENDERER);
-		fprintf(f, "RENDERER: %s\n", str);
-		fprintf(stderr, "RENDERER: %s\n", str);
-		str = (char*)glGetString(GL_VERSION);
-		fprintf(f, "VERSION: %s\n", str);
-		fprintf(stderr, "VERSION: %s\n", str);
-		str = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-		fprintf(f, "SHADING_LANGUAGE_VERSION: %s\n", str);
-		fprintf(stderr, "SHADING_LANGUAGE_VERSION: %s\n", str);
-		glGetIntegerv(GL_NUM_EXTENSIONS, &num_Ext);
-		fprintf(f, "EXTENSIONS: \n");
-		fprintf(stderr, "EXTENSIONS: \n");
-		for (int i = 0; i < num_Ext; i++)
-		{
-			nomExt = (char const*)glGetStringi(GL_EXTENSIONS, i);
-			fprintf(f, "%s \n", nomExt);
-			//fprintf(stderr, "%s", nomExt);	// Displaiar extensions per pantalla
-		}
-		//fprintf(stderr, "\n");				// Displaiar <cr> per pantalla després extensions
-//				str = (char*)glGetString(GL_EXTENSIONS);
-//				fprintf(f, "EXTENSIONS: %s\n", str);
-				//fprintf(stderr, "EXTENSIONS: %s\n", str);
-		fclose(f);
-	}
-
-	// Program
-#ifdef _WIN32
-	glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
-	glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
-	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
-	glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
-	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
-	glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
-	glGetProgramiv = (PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv");
-	glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
-	glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
-	glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
-	glUniform1iv = (PFNGLUNIFORM1IVPROC)wglGetProcAddress("glUniform1iv");
-	glUniform2iv = (PFNGLUNIFORM2IVPROC)wglGetProcAddress("glUniform2iv");
-	glUniform3iv = (PFNGLUNIFORM3IVPROC)wglGetProcAddress("glUniform3iv");
-	glUniform4iv = (PFNGLUNIFORM4IVPROC)wglGetProcAddress("glUniform4iv");
-	glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
-	glUniform1fv = (PFNGLUNIFORM1FVPROC)wglGetProcAddress("glUniform1fv");
-	glUniform2fv = (PFNGLUNIFORM2FVPROC)wglGetProcAddress("glUniform2fv");
-	glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
-	glUniform4fv = (PFNGLUNIFORM4FVPROC)wglGetProcAddress("glUniform4fv");
-	glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)wglGetProcAddress("glUniformMatrix4fv");
-	glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)wglGetProcAddress("glGetAttribLocation");
-	glVertexAttrib1f = (PFNGLVERTEXATTRIB1FPROC)wglGetProcAddress("glVertexAttrib1f");
-	glVertexAttrib1fv = (PFNGLVERTEXATTRIB1FVPROC)wglGetProcAddress("glVertexAttrib1fv");
-	glVertexAttrib2fv = (PFNGLVERTEXATTRIB2FVPROC)wglGetProcAddress("glVertexAttrib2fv");
-	glVertexAttrib3fv = (PFNGLVERTEXATTRIB3FVPROC)wglGetProcAddress("glVertexAttrib3fv");
-	glVertexAttrib4fv = (PFNGLVERTEXATTRIB4FVPROC)wglGetProcAddress("glVertexAttrib4fv");
-	glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
-	glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glDisableVertexAttribArray");
-	glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)wglGetProcAddress("glBindAttribLocation");
-	glGetActiveUniform = (PFNGLGETACTIVEUNIFORMPROC)wglGetProcAddress("glGetActiveUniform");
-
-	// Shader
-	glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
-	glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
-	glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
-	glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
-	glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
-
-	// VBO
-	glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
-	glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
-	glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
-	glBufferSubData = (PFNGLBUFFERSUBDATAPROC)wglGetProcAddress("glBufferSubData");
-	glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)wglGetProcAddress("glDeleteBuffers");
-	glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
-#else
-	// GLEW loads these functions after glewInit() on Linux and macOS.
-#endif
-}
-
-
-void GetGLVersion(int* major, int* minor)
-{
-	// for all versions
-	char* ver = (char*)glGetString(GL_VERSION); // ver = "3.2.0"
-
-	*major = ver[0] - '0';
-	if (*major >= 3)
-	{
-		// for GL 3.x
-		glGetIntegerv(GL_MAJOR_VERSION, major);		// major = 3
-		glGetIntegerv(GL_MINOR_VERSION, minor);		// minor = 2
-	}
-	else
-	{
-		*minor = ver[2] - '0';
-	}
-
-	// GLSL
-	ver = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);	// 1.50 NVIDIA via Cg compiler
-}
 
 void OnSize(GLFWwindow* window, int width, int height)
 {
@@ -4510,14 +4397,6 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 */
 }
 
-void OnKeyUp(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-}
-
-void OnTextDown(GLFWwindow* window, unsigned int codepoint)
-{
-}
-
 // Teclat_Shift: Shortcuts per Pop Ups Fitxer, Finestra, Vista, Projecció i Objecte
 void Teclat_Shift(int key, GLFWwindow* window)
 {
@@ -6858,245 +6737,6 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 
 
 /* ------------------------------------------------------------------------- */
-/*                           CONTROL DEL GAMEPAD / JOYSTICK                  */
-/* ------------------------------------------------------------------------- */
-
-/*
-// OnGamepadMove: Funció de tractament de Gamepad (funció que es crida quan es prem una tecla o comandament d'un joystick)
-//   PARÀMETRES:
-//    - jid: Identificador del gamepad (GLFW_JOYSTICK_1, GLFW_JOYSTICK_2, GLFW_JOYSTICK_3, etc.) connectat o desconnectat
-//    - event: et retorna si el gamepad està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
-void OnGamepadMove(int jid, int event)
-{
-	GLFWgamepadstate estat;		// Variable que obté l'estat (valors) del botons i eixos dels stocks i triggers del Gamepad.
-
-	//	if (event == GLFW_CONNECTED)	// NO FUNCIONA
-	if (glfwGetGamepadState(GLFW_JOYSTICK_1, &estat))
-	{
-		// BOTONS-----------------------------------
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_A])
-		{
-			fprintf(stderr, "%s \n", "Botó <A> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_B])
-		{
-			fprintf(stderr, "%s \n", "Botó <B> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_X])
-		{
-			fprintf(stderr, "%s \n", "Botó <X> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_Y])
-		{
-			fprintf(stderr, "%s \n", "Botó <Y> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER])
-		{
-			fprintf(stderr, "%s \n", "Left Bumper (LB) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER])
-		{
-			fprintf(stderr, "%s \n", "Right Bumper (RB) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_BACK])
-		{
-			fprintf(stderr, "%s \n", "Botó <Back> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_START])
-		{
-			fprintf(stderr, "%s \n", "Botó <Start> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB])
-		{
-			fprintf(stderr, "%s \n", "Stick esquerra (click) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB])
-		{
-			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP])
-		{
-			fprintf(stderr, "%s \n", "Fletxa amunt pulsada");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT])
-		{
-			fprintf(stderr, "%s \n", "Fletxa dreta pulsada");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN])
-		{
-			fprintf(stderr, "%s \n", "Fletxa avall pulsada");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT])
-		{
-			fprintf(stderr, "%s \n", "Fletxa esquerra pulsada");
-		}
-
-		// EIXOS (DIRECCIONS) DE STICKS i TRIGGERS -----------------------------------
-
-		// STICK ESQUERRE
-		fprintf(stderr, "%s %f %s %f \n", "Stick esquerre X: ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X], "Y: ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-
-		// STICK DRET
-		fprintf(stderr, "%s %f %s %f \n", "Stick dret X: ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X], "Y: ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-
-		// TRIGGERS LT i RT
-		fprintf(stderr, "%s %f \n", "Trigger esquerre (LT): ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER]);
-		fprintf(stderr, "%s %f \n", "Trigger dret (RT): ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]);
-	}
-	else fprintf(stderr, "%s %i %s \n", "Gamepad ", jid, " desconnectat");
-}
-
-
-// OnJoystickMove: Funció de tractament de joystick (funció que es crida quan es prem una tecla o comandament d'un joystick)
-//   PARÀMETRES:
-//    - jid: Identificador del joystick (GLFW_JOYSTICK_1, GLFW_JOYSTICK_2, GLFW_JOYSTICK_3, etc.) connectat o desconnectat
-//    - event: et retorna si el joystick està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
-void OnJoystickMove(int jid, int event)
-{
-	int buttonCount;	// Variable que obté l'estat dels botons del Joystick / Gamepad. 
-	int axisCount;		// Variable que obté l'estat dels eixos dels sticks i triggers del Joystick / Gamepad.
-
-//	if (event == GLFW_CONNECTED)	// NO FUNCIONA
-	if (glfwJoystickPresent(GLFW_JOYSTICK_1))
-	{
-		// BOTONS-----------------------------------
-		// Obtenir botons del Gamepad: GLFW_PRESS si botó apretat, GLFW_RELEASE si botó s'ha deixat de pressionar.
-		const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttonCount);
-
-		if (buttons[0] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <A> pulsat");
-		}
-
-		if (buttons[1] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <B> pulsat");
-		}
-
-		if (buttons[2] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <X> pulsat");
-		}
-
-		if (buttons[3] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <Y> pulsat");
-		}
-
-		if (buttons[4] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Left Bumper (LB) pulsat");
-		}
-
-		if (buttons[5] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Right Bumper (RB) pulsat");
-		}
-
-		if (buttons[6] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <Back> pulsat");
-		}
-
-		if (buttons[7] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <Start> pulsat");
-		}
-
-		if (buttons[8] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Stick esquerra (click) pulsat");
-		}
-
-		if (buttons[9] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
-		}
-
-		if (buttons[10] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa amunt pulsada");
-		}
-
-		if (buttons[11] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa dreta pulsada");
-		}
-
-		if (buttons[12] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa avall pulsada");
-		}
-
-		if (buttons[13] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa esquerra pulsada");
-		}
-
-		if (buttons[14] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
-		}
-
-		// EIXOS (DIRECCIONS) DE STICKS i TRIGGERS -----------------------------------
-		// Obtenir direccions pulsades d'algun stick o trigger si s'han pulsat.
-		const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axisCount);
-
-		// STICK ESQUERRE
-		if (axisCount > 0)
-		{	fprintf(stderr, "%s %f %s %f \n", "Stick esquerre X: ", axes[0], "Y: ", axes[1]);
-			if (axes[0] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-			if (axes[0] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-			if (axes[1] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-			if (axes[1] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-		}
-
-		// STICK DRET
-		if (axisCount > 2)
-		{	fprintf(stderr, "%s %f %s %f \n", "Stick dret X: ", axes[2], "Y: ", axes[3]);
-			if (axes[2] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-			if (axes[2] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-			if (axes[3] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-			if (axes[3] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-		}
-
-		// TRIGGERS LT i RT
-		if (axisCount > 4)
-		{
-			fprintf(stderr, "%s %f \n", "Trigger esquerre (LT): ", axes[4]);
-			fprintf(stderr, "%s %f \n", "Trigger dret (RT): ", axes[5]);
-		}
-	}
-	else fprintf(stderr, "%s %i %s \n", "Joystick ", jid, " desconnectat");
-}
-*/
-
-
-/* ------------------------------------------------------------------------- */
-/*					     TIMER (ANIMACIÓ)									 */
-/* ------------------------------------------------------------------------- */
 void OnTimer()
 {
 // TODO: Agregue aquí su código de controlador de mensajes o llame al valor predeterminado
@@ -7248,30 +6888,6 @@ void error_callback(int code, const char* description)
 }
 
 
-GLenum glCheckError_(const char* file, int line)
-{	GLenum errorCode;
-	while ((errorCode = glGetError()) != GL_NO_ERROR)
-	{
-		std::string error;
-		switch (errorCode)
-		{
-		case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
-		case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
-		case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
-		case GL_STACK_OVERFLOW:                error = "STACK_OVERFLOW"; break;
-		case GL_STACK_UNDERFLOW:               error = "STACK_UNDERFLOW"; break;
-		case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
-		case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
-		}
-		fprintf(stderr, "ERROR %s | File: %s | Line ( %3i ) \n", error.c_str(), file, line);
-		//fprintf(stderr, "ERROR %s | ", error.c_str());
-		//fprintf(stderr, "File: %s | ", file);
-		//fprintf(stderr, "Line ( %3i ) \n", line);
-	}
-	return errorCode;
-}
-#define glCheckError() glCheckError_(__FILE__, __LINE__)
-
 void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 	const GLchar* message, const void* userParam)
 {
@@ -7335,19 +6951,21 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-// Retrieving main monitor
 	primary = glfwGetPrimaryMonitor();
+	if (primary == nullptr)
+	{
+		fprintf(stderr, "Failed to get the primary monitor for fullscreen mode\n");
+		glfwTerminate();
+		return -1;
+	}
 
-	// To get current video mode of a monitor
 	mode = glfwGetVideoMode(primary);
-
-// Retrieving monitors
-//    int countM;
-//   GLFWmonitor** monitors = glfwGetMonitors(&countM);
-
-// Retrieving video modes of the monitor
-	int countVM;
-	const GLFWvidmode* modes = glfwGetVideoModes(primary, &countVM);
+	if (mode == nullptr)
+	{
+		fprintf(stderr, "Failed to get the primary monitor video mode\n");
+		glfwTerminate();
+		return -1;
+	}
 
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -7364,8 +6982,8 @@ int main(int argc, char** argv)
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 
-// Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(1280, 720, "EscapeTheUAB", NULL, NULL);
+// Create the game directly in fullscreen on the primary monitor.
+	window = glfwCreateWindow(mode->width, mode->height, "EscapeTheUAB", primary, NULL);
 	if (!window)
 	{	fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 4.6 compatible. Try the 2.1 version of the tutorials.\n");
 		getchar();
@@ -7394,25 +7012,6 @@ int main(int argc, char** argv)
 	if (!nfdAvailable)
 		std::fprintf(stderr, "Failed to initialize Native File Dialog: %s\n", NFD_GetError());
 
-	const unsigned char* version = (unsigned char*)glGetString(GL_VERSION);
-
-	int major, minor;
-	GetGLVersion(&major, &minor);
-
-// ------------- Entorn VGI: Configure OpenGL context
-// 	Quitado para que funcione en MACOS
-//	glfwWindowHint(GLFW_SAMPLES, 4);
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major);
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor); // GL 4.6
-
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Si funcions deprecades són eliminades (no ARB_COMPATIBILITY)
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);  // Si funcions deprecades NO són eliminades (Si ARB_COMPATIBILITY)
-
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);	// Creació contexte CORE
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);	// Creació contexte ARB_COMPATIBILITY
-	//glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE); // comment this line in a release build! 
-
-
 // ------------ - Entorn VGI : Enable OpenGL debug context if context allows for DEBUG CONTEXT (GL4.6)
 	if (GLEW_VERSION_4_6)
 	{	GLint flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -7426,9 +7025,6 @@ int main(int argc, char** argv)
 
 // Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
-
-// Initialize API
-	//InitAPI();
 
 // Initialize Application control varibles
 	InitGL();
@@ -7451,7 +7047,6 @@ int main(int argc, char** argv)
 	glfwSetCursorPosCallback(window, (GLFWcursorposfun)OnMouseMove);				// - Directly redirect GLFW mouse position events
 	glfwSetScrollCallback(window, (GLFWscrollfun)OnMouseWheel);						// - Directly redirect GLFW mouse wheel events
 	glfwSetKeyCallback(window, (GLFWkeyfun)OnKeyDown);								// - Directly redirect GLFW key events
-	//glfwSetCharCallback(window, OnTextDown);										// - Directly redirect GLFW char events
 	glfwSetErrorCallback(error_callback);											// Error callback
 	glfwSetWindowRefreshCallback(window, (GLFWwindowrefreshfun)OnPaint);			// - Callback to refresh the screen
 
@@ -7502,19 +7097,14 @@ int main(int argc, char** argv)
 		time -= delta;
 		if ((time <= 0.0) && (satelit || anima)) OnTimer();
 
-/*
-		// Entorn VGI: GAMEPAD. Variable que retorna si el joystick està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
-		int event = 0;	
-
-		// Entorn VGI: GAMEPAD. Comprovació si tenim un Joystick / Gamepad connectat per anar a la funció de callback.
-		//	if (glfwJoystickPresent(GLFW_JOYSTICK_1)) OnJoystickMove(GLFW_JOYSTICK_1,event);		// - Directly redirect GLFW joystick events
-		if (glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) OnGamepadMove(GLFW_JOYSTICK_1, event);	// - Directly redirect GLFW gamepad events (equivalent)
-			else fprintf(stderr, "%s \n", "No hi ha Gamepad");
-*/
-
 		// Poll for and process events
 		glfwPollEvents();
 		sincronizarCursorFPS(window);
+
+		const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+			glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+		mundoFisico.ActualizarJugadorAgachado(
+			modoJuegoFPS() && ventanaConFoco && ctrlPulsado, static_cast<float>(delta));
 
 		// Actualitzar moviment continu de navegació (WASD) per frame.
 		// Cada fotograma se parte de "quieto"; las teclas pedidas (si se puede jugar) fijan la velocidad.
