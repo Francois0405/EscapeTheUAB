@@ -68,6 +68,9 @@ inline void NFD_QuitCompat()
 {
 	NFD_Quit();
 }
+#ifdef NFD_OpenDialog
+#undef NFD_OpenDialog
+#endif
 #define NFD_OpenDialog(filterList, defaultPath, outPath) \
 	NFD_OpenDialogCompat(filterList, defaultPath, outPath)
 #else

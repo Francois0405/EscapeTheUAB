@@ -76,6 +76,12 @@ if(ENTORNVGI_USE_SYSTEM_DEPENDENCIES)
 	target_link_libraries(EntornVGI PRIVATE nfd)
 else()
 	target_compile_definitions(EntornVGI PRIVATE ENTORNVGI_USE_NFD_EXTENDED)
+	set_property(TARGET EntornVGI PROPERTY NO_SYSTEM_FROM_IMPORTED ON)
+	# The repository also contains an older include/ImGui/nfd.h. Put the
+	# vcpkg package headers first so file_dialog_compat.h gets NFD Extended.
+	target_include_directories(EntornVGI BEFORE PRIVATE
+		"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include"
+	)
 	target_link_libraries(EntornVGI PRIVATE ${ENTORNVGI_NFD_TARGET})
 endif()
 

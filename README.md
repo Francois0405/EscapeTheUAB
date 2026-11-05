@@ -63,34 +63,51 @@ es otro.
    destino `EntornVGI`.
 
 Los presets usan MSVC y el manifiesto instala GLFW, GLEW, GLM y Native File
-Dialog Extended. No hace falta configurar rutas absolutas. Para construir desde
-un terminal de desarrollador:
+Dialog Extended. Para construir desde Developer PowerShell de Visual Studio,
+define las rutas que usan los presets y compila:
 
 ```powershell
+$env:VCPKG_ROOT = 'D:\vcpkg'
+$env:NINJA = 'D:\Visual Studio\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'
 cmake --preset windows-debug
 cmake --build --preset windows-debug --parallel
+.\build\windows-debug\bin\EntornVGI.exe
 ```
+
+Sustituye `D:\vcpkg` por la ruta donde inicializaste vcpkg. Si CMake no está
+en `PATH`, invoca `cmake.exe` desde la instalación de Visual Studio.
 
 El proyecto anterior `EntornVGI.slnx` y `EntornVGI/EntornVGI.vcxproj` se
 mantiene disponible para usuarios que necesiten el flujo heredado.
 
-## macOS (VS Code)
+## macOS (Apple Silicon e Intel)
 
-Instala Xcode Command Line Tools, CMake, Ninja y vcpkg. Define `VCPKG_ROOT` en
-el entorno y abre la raiz del repositorio en VS Code:
+Instala Xcode Command Line Tools, Homebrew, CMake y Ninja. Inicializa vcpkg una
+vez y define `VCPKG_ROOT` en la terminal desde la que vayas a configurar el
+proyecto:
 
 ```bash
 xcode-select --install
 brew install cmake ninja
+git clone https://github.com/microsoft/vcpkg.git "$HOME/vcpkg"
+"$HOME/vcpkg/bootstrap-vcpkg.sh"
+export VCPKG_ROOT="$HOME/vcpkg"
+```
+
+Desde la raíz del repositorio, configura, compila y ejecuta:
+
+```bash
 cmake --preset macos-debug
 cmake --build --preset macos-debug --parallel
 ./build/macos-debug/bin/EntornVGI
 ```
 
-Para Release, sustituye `macos-debug` por `macos-release`. En VS Code instala
-las extensiones recomendadas **CMake Tools** y **C/C++**, selecciona el preset
-de tu sistema operativo y usa los controles de configurar, compilar y ejecutar
-de CMake Tools.
+Para Release, sustituye `macos-debug` por `macos-release` en los comandos de
+configuración y compilación; el ejecutable queda en
+`build/macos-release/bin/EntornVGI`. En VS Code instala las extensiones
+recomendadas **CMake Tools** y **C/C++**, abre VS Code desde la terminal donde
+definiste `VCPKG_ROOT`, selecciona el preset macOS y usa los controles de
+configurar, compilar y ejecutar.
 
 macOS solicita un contexto OpenGL 4.1 Core con compatibilidad forward, y los
 shaders GLSL 330 del proyecto son compatibles con ese contexto. Apple ha
@@ -127,10 +144,11 @@ camara, navegacion, texturas, ImGui o los dialogos. Los builds siguen
 produciendo avisos heredados, principalmente inicializadores incompletos y
 variables no usadas en la geometria antigua.
 
-Windows y macOS no se pudieron compilar ni ejecutar en este entorno; deben
-validarse con MSVC/vcpkg y Apple Clang/vcpkg en sus sistemas nativos. Un build
-Linux no certifica esas plataformas. La carga de los dialogos nativos requiere
-un entorno de escritorio compatible.
+Windows se configuró y compiló con MSVC, Ninja y vcpkg; el ejecutable inició en
+esta sesión, pero no se hizo una validación visual o interactiva completa.
+macOS no se pudo compilar desde este entorno Windows y debe validarse con Apple
+Clang/vcpkg en macOS. Un build Linux no certifica macOS. La carga de los
+diálogos nativos requiere un entorno de escritorio compatible.
 
 El codigo contiene rutinas GLUT antiguas junto con rutas de dibujo modernas
 basadas en VAO/EBO. Las rutas heredadas que aun dependan de OpenGL inmediato no

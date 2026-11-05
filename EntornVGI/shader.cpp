@@ -418,7 +418,7 @@ int Shader::DisplayMessageBox(std::string mess, std::string fileShader)
 	std::wstring stemp2 = std::wstring(fileShader.begin(), fileShader.end());
 	//LPCWSTR msg = stemp.c_str();
 
-	int msgboxID = MessageBox(
+	int msgboxID = MessageBoxW(
 		NULL,
 		(LPCWSTR)stemp.c_str(),
 		(LPCWSTR)stemp2.c_str(),
