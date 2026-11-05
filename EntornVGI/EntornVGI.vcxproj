@@ -70,6 +70,9 @@
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
+  <PropertyGroup>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)</LocalDebuggerWorkingDirectory>
+  </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
       <WarningLevel>Level3</WarningLevel>
@@ -184,6 +187,8 @@
     <ClInclude Include="..\include\ImGui\imstb_textedit.h" />
     <ClInclude Include="..\include\ImGui\nfd.h" />
     <ClInclude Include="constants.h" />
+    <ClInclude Include="file_dialog_compat.h" />
+    <ClInclude Include="third_party\nlohmann\json.hpp" />
     <ClInclude Include="escena.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="glut_geometry.h" />
@@ -196,6 +201,9 @@
     <ClInclude Include="visualitzacio.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
+  <Target Name="CopyX64RuntimeLibraries" AfterTargets="Build" Condition="'$(Platform)' == 'x64'">
+    <Copy SourceFiles="$(SolutionDir)lib\x64\glfw3.dll;$(SolutionDir)lib\x64\glew32.dll" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
 </Project>

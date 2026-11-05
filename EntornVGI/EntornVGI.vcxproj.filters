@@ -74,6 +74,12 @@
     <ClInclude Include="constants.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="file_dialog_compat.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="third_party\nlohmann\json.hpp">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
     <ClInclude Include="escena.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
