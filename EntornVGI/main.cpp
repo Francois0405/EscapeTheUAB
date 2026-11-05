@@ -23,12 +23,14 @@
 #include <algorithm>
 #include <cmath>
 
+
 // CODI NOSTRE
 
 #include <filesystem>
 #include <memory>
 #include <unordered_map>
 #include <glm/gtc/matrix_transform.hpp>
+#include "OpenXRManager.h"
 
 // ---------------------------
 
@@ -7163,6 +7165,10 @@ int main(int argc, char** argv)
 
 	int major, minor;
 	GetGLVersion(&major, &minor);
+
+	if (InicializarOpenXRInstance() && ObtenerSistemaOpenXR()) {
+    CrearSesionOpenXR(window);
+	}
 
 // ------------- Entorn VGI: Configure OpenGL context
 // 	Quitado para que funcione en MACOS

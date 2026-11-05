@@ -51,6 +51,7 @@ set(ENTORNVGI_SOURCES
 	SceneLoader.cpp
 	shader.cpp
 	visualitzacio.cpp
+	OpenXRManager.cpp
 )
 
 set(IMGUI_SOURCES
@@ -69,6 +70,7 @@ target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${IMGUI_DIR}
 	${REPO_ROOT}/third_party/SOIL2/src
+	${REPO_ROOT}/third_party/OpenXR-SDK/include
 )
 
 target_compile_definitions(EntornVGI PRIVATE
