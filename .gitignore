@@ -399,3 +399,4 @@ compile_commands.json
 GLSL_Error.*
 extensions.txt
 imgui.ini
+/third_party/OpenXR-SDK-main/src/external/jnipp
