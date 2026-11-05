@@ -79,7 +79,7 @@ class OBJLOADER_CLASS_DECL COBJModel
 	void _stdcall draw_TriVAO_OBJ(GLuint sh_programID);
 
 private:
-	void _stdcall ReadNextString(char szString[], FILE *hStream);
+	bool _stdcall ReadNextString(char szString[], FILE *hStream);
 //	  int _stdcall LoadTexture(const char szFileName[_MAX_PATH]);
 	  int _stdcall LoadTexture2(const char szFileName[_MAX_PATH]);
 	  void _stdcall UseMaterial(const Material *pMaterial);
@@ -93,8 +93,9 @@ private:
 	void _stdcall loadToVAOList(const Face* pFaces, const unsigned int iFaceCount,
 				const Material* pMaterials);
 	void _stdcall GetFaceNormal(float fNormalOut[3], const Face *pFace);
-	void _stdcall ParseFaceString(char szFaceString[], Face *FaceOut, const Vector3D *pVertices,
-			  const Vector3D *pNormals, const Vector2D *pTexCoords, const unsigned int iMaterialIndex);
+	bool _stdcall ParseFaceString(char szFaceString[], Face *FaceOut, const Vector3D *pVertices,
+			  unsigned int vertexCount, const Vector3D *pNormals, unsigned int normalCount,
+			  const Vector2D *pTexCoords, unsigned int texCoordCount, const unsigned int iMaterialIndex);
 	void _stdcall GetFileInfo(FILE *hStream, OBJFileInfo *Stat, const char szConstBasePath[]);
  	void _stdcall GenTexCoords();
 

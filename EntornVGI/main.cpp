@@ -188,7 +188,7 @@ namespace
 		tiempoFPS += deltaTime;
 		deltaFPS = deltaTime;
 
-		const bool caminando = !fpsPausado && ventanaConFoco && modoJuegoFPS() &&
+		const bool caminando = !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS() &&
 			(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
 			 glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS);
 		const float factor = 1.0f - std::exp(-8.0f * deltaTime);
@@ -7207,7 +7207,7 @@ int main(int argc, char** argv)
 		sincronizarCursorFPS(window);
 
 		// Actualitzar moviment continu de navegació (WASD) per frame.
-		if (!fpsPausado && ventanaConFoco && modoJuegoFPS())
+		if (!fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS())
 			moverJugadorFPS(window, delta);
 		actualizarMovimientoMovil(window, static_cast<float>(delta));
 
@@ -7252,13 +7252,34 @@ int main(int argc, char** argv)
 		phoneOBJ = nullptr;
 	}
 
+	if (Get_VAOId(CUBE_SKYBOX) != 0) deleteVAOList(CUBE_SKYBOX);
+	netejaVAOList();
+	if (eixos_Id != 0) glDeleteVertexArrays(1, &eixos_Id);
+	for (int textureIndex = 0; textureIndex < NUM_MAX_TEXTURES; ++textureIndex)
+	{
+		if (texturesID[textureIndex] != 0)
+		{
+			glDeleteTextures(1, &texturesID[textureIndex]);
+			texturesID[textureIndex] = 0;
+		}
+	}
+	if (cubemapTexture != 0)
+	{
+		glDeleteTextures(1, &cubemapTexture);
+		cubemapTexture = 0;
+	}
+
+	// Delete GPU programs while the OpenGL context that created them is current.
+	if (shaderLighting.getProgramID() != -1) shaderLighting.DeleteProgram();
+	if (shaderSkyBox.getProgramID() != -1) shaderSkyBox.DeleteProgram();
+	if (shaderEixos.getProgramID() != -1) shaderEixos.DeleteProgram();
+	if (shader_SkyBoxC.getProgramID() != -1) shader_SkyBoxC.DeleteProgram();
+
 	glfwDestroyWindow(window);
 
 // Terminating GLFW: Destroy the windows, monitors and cursor objects
 	glfwTerminate();
 
-	if (shaderLighting.getProgramID() != -1) shaderLighting.DeleteProgram();
-	if (shaderSkyBox.getProgramID() != -1) shaderSkyBox.DeleteProgram();
 	return 0;
 
 }

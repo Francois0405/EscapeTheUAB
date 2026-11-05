@@ -77,11 +77,16 @@ if(ENTORNVGI_USE_SYSTEM_DEPENDENCIES)
 else()
 	target_compile_definitions(EntornVGI PRIVATE ENTORNVGI_USE_NFD_EXTENDED)
 	set_property(TARGET EntornVGI PROPERTY NO_SYSTEM_FROM_IMPORTED ON)
-	# The repository also contains an older include/ImGui/nfd.h. Put the
-	# vcpkg package headers first so file_dialog_compat.h gets NFD Extended.
-	target_include_directories(EntornVGI BEFORE PRIVATE
-		"${VCPKG_INSTALLED_DIR}/${VCPKG_TARGET_TRIPLET}/include"
-	)
+	# The repository also contains an older include/ImGui/nfd.h. Resolve the
+	# Extended header path from its imported target instead of assuming vcpkg
+	# toolchain variables are set by every CMake caller.
+	get_target_property(ENTORNVGI_NFD_INCLUDE_DIRS
+		${ENTORNVGI_NFD_TARGET} INTERFACE_INCLUDE_DIRECTORIES)
+	if(ENTORNVGI_NFD_INCLUDE_DIRS)
+		target_include_directories(EntornVGI BEFORE PRIVATE ${ENTORNVGI_NFD_INCLUDE_DIRS})
+	else()
+		message(FATAL_ERROR "The Native File Dialog target did not provide its include directory.")
+	endif()
 	target_link_libraries(EntornVGI PRIVATE ${ENTORNVGI_NFD_TARGET})
 endif()
 
@@ -119,6 +124,16 @@ target_link_libraries(EntornVGI PRIVATE
 	${CMAKE_DL_LIBS}
 )
 
+if(WIN32)
+	add_custom_command(TARGET EntornVGI POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_RUNTIME_DLLS:EntornVGI>
+			"$<TARGET_FILE_DIR:EntornVGI>"
+		COMMAND_EXPAND_LISTS
+		COMMENT "Copying runtime DLL dependencies next to EntornVGI"
+	)
+endif()
+
 # Avisos activados pero nunca tratados como errores.
 if(MSVC)
 	target_compile_options(EntornVGI PRIVATE /W3)
@@ -130,11 +145,33 @@ set_target_properties(EntornVGI PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
 
+# Treat every runtime asset as a build input. This updates a changed JSON,
+# model, texture or shader without relinking the executable, while
+# copy_if_different avoids rewriting unchanged large assets.
+set(ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS)
 foreach(resource assets shaders textures)
-	add_custom_command(TARGET EntornVGI POST_BUILD
-		COMMAND ${CMAKE_COMMAND} -E copy_directory
-			"${CMAKE_CURRENT_SOURCE_DIR}/${resource}"
-			"$<TARGET_FILE_DIR:EntornVGI>/${resource}"
-		COMMENT "Copying ${resource}/ next to the executable"
+	file(GLOB_RECURSE resource_files CONFIGURE_DEPENDS
+		LIST_DIRECTORIES false
+		"${CMAKE_CURRENT_SOURCE_DIR}/${resource}/*"
 	)
+	foreach(source_file IN LISTS resource_files)
+		file(RELATIVE_PATH resource_relative_path
+			"${CMAKE_CURRENT_SOURCE_DIR}/${resource}"
+			"${source_file}"
+		)
+		set(destination_file "${CMAKE_BINARY_DIR}/bin/${resource}/${resource_relative_path}")
+		get_filename_component(destination_directory "${destination_file}" DIRECTORY)
+		add_custom_command(OUTPUT "${destination_file}"
+			COMMAND ${CMAKE_COMMAND} -E make_directory "${destination_directory}"
+			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${source_file}" "${destination_file}"
+			DEPENDS "${source_file}"
+			VERBATIM
+			COMMENT "Syncing ${resource}/${resource_relative_path}"
+		)
+		list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${destination_file}")
+	endforeach()
 endforeach()
+add_custom_target(EntornVGI_runtime_resources ALL
+	DEPENDS ${ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS}
+)
+add_dependencies(EntornVGI EntornVGI_runtime_resources)

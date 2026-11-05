@@ -364,6 +364,9 @@ FodyWeavers.xsd
 # Objetos de compilación C++
 *.obj
 
+# Copia temporal heredada de main.cpp; se mantiene en el repositorio hasta revisión.
+EntornVGI/main.cpp~RF31ab74.TMP
+
 # Modelos Blender que sí queremos guardar
 !EntornVGI/assets/models/**/*.obj
 

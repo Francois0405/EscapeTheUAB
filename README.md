@@ -13,8 +13,8 @@ del repositorio (la carpeta que contiene `CMakePresets.json`):
 | Sistema | Compilar y ejecutar | Compilar sin abrir | Release |
 | --- | --- | --- | --- |
 | **Windows** | Doble clic en `run-windows.cmd` o `./run-windows.cmd` en PowerShell | `./run-windows.cmd -NoRun` | `./run-windows.cmd -Configuration Release` |
-| **Linux** | `./run-linux.sh` | `./run-linux.sh --no-run` | `./run-linux.sh --release` |
-| **macOS** | `./run-macos.sh` | `./run-macos.sh --no-run` | `./run-macos.sh --release` |
+| **Linux** | `bash run-linux.sh` | `bash run-linux.sh --no-run` | `bash run-linux.sh --release` |
+| **macOS** | `bash run-macos.sh` | `bash run-macos.sh --no-run` | `bash run-macos.sh --release` |
 
 En Windows, el lanzador localiza Visual Studio y vcpkg, inicializa **MSVC x64**,
 configura el preset, compila y abre `build/windows-debug/bin/EntornVGI.exe`.
@@ -28,8 +28,10 @@ En Linux y macOS se usa el compilador de CMake, Ninja y los presets del sistema.
 Los scripts **no instalan paquetes, no actualizan Git, no cambian de rama y no
 hacen commits ni merges**. Ejecutan lo que tengas actualmente en tu copia local.
 
-Si los lanzadores `.sh` no son ejecutables tras descomprimir, usa
-`bash run-linux.sh` o `bash run-macos.sh`, según el sistema.
+Los scripts Bash se pueden ejecutar con `bash` aunque Git o el sistema de
+archivos no conserve el permiso ejecutable. Si el checkout conserva ese
+permiso, también se pueden llamar directamente con `./run-linux.sh` o
+`./run-macos.sh`.
 
 ## Requisitos por plataforma
 
@@ -75,8 +77,8 @@ sudo apt install -y build-essential cmake ninja-build pkg-config \
 Después, desde la raíz del repositorio:
 
 ```bash
-./run-linux.sh
-# o: ./run-linux.sh --release
+bash run-linux.sh
+# o: bash run-linux.sh --release
 ```
 
 El preset Linux usa GCC/Clang y las bibliotecas de la distribución, incluido
@@ -97,8 +99,8 @@ git clone https://github.com/microsoft/vcpkg.git "$HOME/vcpkg"
 Después:
 
 ```bash
-./run-macos.sh
-# o: ./run-macos.sh --release
+bash run-macos.sh
+# o: bash run-macos.sh --release
 ```
 
 El lanzador detecta `~/vcpkg` automáticamente. Si lo has instalado en otra
@@ -130,17 +132,32 @@ lib/                          Bibliotecas Windows heredadas
 build/<preset>/bin/           Ejecutables generados por CMake
 ```
 
-Los recursos (`assets/`, `shaders/` y `textures/`) se copian junto al ejecutable
-**tras compilar**. El programa busca automáticamente la raíz de recursos. Al
-importar un OBJ con `.mtl`, las texturas deben referenciarse con nombres o
+Los recursos (`assets/`, `shaders/` y `textures/`) se sincronizan junto al
+ejecutable en cada build. CMake registra cada archivo como entrada y usa
+`copy_if_different`, así que al modificar JSON, OBJ, MTL, PNG o shaders se
+actualiza su copia sin volver a enlazar el juego ni reescribir recursos que no
+cambiaron. El programa busca automáticamente la raíz de recursos. Al importar
+un OBJ con `.mtl`, las texturas deben referenciarse con nombres o
 rutas **relativas** (por ejemplo `map_Kd Phone_BaseColor.png`), nunca con una
 ruta `C:\...` o `D:\...`: Linux y macOS no conocen esas rutas.
 
-La habitación de prueba está en `EntornVGI/assets/scenes/habitacion_beta.json`,
-con sus instancias y transformaciones. El modelo visible en primera persona
-se configura en el código de la versión local que estés ejecutando; un modelo
-OBJ no aporta por sí solo animaciones esqueléticas ni emite luz. No confundas
-una sustitución de modelo con una integración ya comprobada de la iluminación.
+La habitación inicial es `EntornVGI/assets/scenes/habitacion_beta.json` y tiene
+12 instancias. El formato JSON versión 1 define nombre, arquitectura y objetos;
+cada elemento incluye ID, ruta OBJ relativa, posición, rotación y escala. Las
+rutas se resuelven desde la carpeta del JSON y una escena inválida no sustituye
+la que ya está activa.
+
+En modo FPS se muestra `EntornVGI/assets/models/Phone.obj` con
+`Phone_BaseColor.png`. El movimiento incluye idle sway, walking bob y mouse
+sway. El panel **Movil FPS** aparece con F1. El cargador utiliza `map_Kd` para
+la textura difusa; `Phone_Roughness.png` se conserva como recurso, pero
+`map_Ns` no se interpreta y no hay sombreado PBR ni flash trasero. El cargador
+acepta índices OBJ positivos; rechaza índices relativos negativos en vez de
+acceder fuera de los arrays.
+
+Controles: WASD mueve al jugador, el ratón orienta la cámara, ESC pausa y libera
+el cursor, y F1 abre/cierra los paneles ImGui. Mientras esos paneles están
+abiertos, WASD no mueve al jugador.
 
 ## Qué hacer cuando algo no funciona
 
@@ -156,7 +173,8 @@ Comprueba que el lanzador terminó con éxito y no ejecutaste un EXE antiguo.
 El ejecutable CMake Debug es `build/windows-debug/bin/EntornVGI.exe` en Windows;
 el de Linux/macOS está bajo el directorio de su preset. La solución `.slnx`
 puede producir ejecutables en otra ubicación. Si has modificado un modelo o
-una textura, recompila mediante el lanzador para volver a copiar recursos.
+una textura, ejecuta el build mediante el lanzador para sincronizar los
+recursos; no hace falta forzar una recompilación del código.
 
 **No carga una textura / un OBJ.** Confirma que el `.obj` referencia un
 `mtllib` válido, que `.mtl` tiene `map_Kd` con ruta relativa y que los archivos
@@ -175,21 +193,31 @@ Adjunta el primer `error:` o `fatal error:` de la compilación, no solo los
 warnings heredados. Para problemas gráficos, incluye la salida de ejecución,
 GPU, driver y versión de OpenGL.
 
-## Validación y limitaciones
+## Pruebas y estado de validación
 
-- **Windows:** en noviembre de 2026 se verificó que el preset `windows-debug`
-  configura y compila con MSVC, Ninja y vcpkg y el programa arranca con la
-  habitación de 12 instancias. El nuevo lanzador debe probarse en un Windows
-  real después de incorporarlo al repositorio.
-- **Linux:** la documentación anterior registra configuración, compilación y
-  arranque de Debug/Release en Ubuntu con GCC y NVIDIA GTX 1650/OpenGL 3.3;
-  no todas las interacciones, texturas o diálogos quedaron validados.
-- **macOS:** está preparado el preset, pero requiere compilación y prueba
-  reales con Apple Clang/vcpkg; no se puede declarar verificado a partir de
-  una compilación de Windows o Linux.
-- El código académico conserva funciones OpenGL heredadas: algunas pueden
-  fallar bajo un contexto Core. No se ha implementado aquí Bullet Physics ni
-  OpenXR; son posibles ampliaciones posteriores.
+Las pruebas de escenas y OBJ se compilan como targets CTest cuando se configura
+CMake. Ejecútalas con `ctest --test-dir build/<preset> --output-on-failure`.
+`ObjLoaderTests` necesita un contexto OpenGL oculto; si no hay sesión gráfica o
+no se puede crear el contexto, CTest lo marca como omitido.
+
+Estado de esta revisión (5 de noviembre de 2026):
+
+- **Windows/MSVC:** `EntornVGI.slnx`, Debug|x64, compiló con MSBuild 18.10 en
+  `build/msbuild-debug/`, con 0 warnings y 0 errores. Las pruebas
+  `SceneLoaderTests` pasaron. El preset CMake `windows-debug` no pudo completar
+  la configuración: vcpkg intentó consultar el registro Git remoto y este
+  entorno bloqueó la operación. No se abrió el juego ni se validaron sus
+  controles visualmente.
+- **Linux:** no se ejecutó en esta revisión. Se solicitó el registro completo
+  del equipo Linux antes de diagnosticar sus errores; la plataforma queda
+  pendiente.
+- **macOS:** no se ejecutó en esta revisión y queda pendiente Apple Clang,
+  vcpkg, contexto OpenGL 4.1 y comprobación interactiva.
+- `SceneLoaderTests` pasó al compilarse y ejecutarse directamente con MSVC.
+  `ObjLoaderTests` está preparado para CTest y requiere un contexto gráfico,
+  pero no se ejecutó porque la configuración CMake no llegó a completarse.
+  No se declara validada la carga gráfica del teléfono.
+- No se implementaron Bullet Physics ni OpenXR.
 
 `ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
 no estaba incluido en el proyecto original. `SceneLoader` y el cargador propio

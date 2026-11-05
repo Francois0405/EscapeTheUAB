@@ -13,6 +13,9 @@
 
 #include "framework.h"
 #include "objLoader.h"
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
 
 // OBJ File string indentifiers
 #define VERTEX_ID		 "v"
@@ -81,7 +84,8 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 	initVAOList_OBJ();
 
 // Get base path
-	strcpy(szBasePath, szFileName);
+	if (strcpy_s(szBasePath, szFileName) != 0)
+		return ERANGE;
 	MakePath(szBasePath);
 
 ////////////////////////////////////////////////////////////////////////
@@ -100,6 +104,11 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
  
 // Which data types are stored in the file ? How many of each type ?
 	GetFileInfo(hFile, &OBJInfo, szBasePath);
+	if (OBJInfo.iMaterialCount > MAX_SIZE_VAOLIST)
+	{
+		fclose(hFile);
+		return EOVERFLOW;
+	}
 
 // Vertices and faces
 	Vector3D	*pVertices	= new Vector3D[OBJInfo.iVertexCount];
@@ -118,6 +127,28 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 
 	// Init structure that holds the current array index
 	memset(&CurrentIndex, 0, sizeof(OBJFileInfo));
+	auto failLoad = [&](int errorCode)
+	{
+		fclose(hFile);
+		for (unsigned int faceIndex = 0; faceIndex < CurrentIndex.iFaceCount; ++faceIndex)
+		{
+			delete[] pFaces[faceIndex].pNormals;
+			delete[] pFaces[faceIndex].pTexCoords;
+			delete[] pFaces[faceIndex].pVertices;
+		}
+		delete[] pFaces;
+		delete[] pVertices;
+		delete[] pNormals;
+		delete[] pTexCoords;
+		if (pMaterials)
+		{
+			for (unsigned int materialIndex = 0; materialIndex < OBJInfo.iMaterialCount; ++materialIndex)
+				if (pMaterials[materialIndex].iTextureID != 0)
+					glDeleteTextures(1, &pMaterials[materialIndex].iTextureID);
+		}
+		delete[] pMaterials;
+		return errorCode;
+	};
 
 ////////////////////////////////////////////////////////////////////////
 // Read the file contents
@@ -127,19 +158,20 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 	rewind(hFile);
 	
 // Quit reading when end of file has been reached
-	while (!feof(hFile))
+	while (ReadNextString(szString, hFile))
 	{
-		// Get next string
-		ReadNextString(szString, hFile);
-
 		// Next three elements are floats of a vertex
 		if (!strncmp(szString, VERTEX_ID, sizeof(VERTEX_ID)))
 		{
+			if (CurrentIndex.iVertexCount >= OBJInfo.iVertexCount)
+				return failLoad(EINVAL);
 			// Read three floats out of the file
 			nScanReturn = fscanf_s(hFile, "%f %f %f",
 				&pVertices[CurrentIndex.iVertexCount].fX,
 				&pVertices[CurrentIndex.iVertexCount].fY,
 				&pVertices[CurrentIndex.iVertexCount].fZ);
+			if (nScanReturn != 3)
+				return failLoad(EINVAL);
 			// Next vertex
 			CurrentIndex.iVertexCount++;
 		}
@@ -147,10 +179,14 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 		// Next two elements are floats of a texture coordinate
 		if (!strncmp(szString, TEXCOORD_ID, sizeof(TEXCOORD_ID)))
 		{
+			if (!pTexCoords || CurrentIndex.iTexCoordCount >= OBJInfo.iTexCoordCount)
+				return failLoad(EINVAL);
 			// Read two floats out of the file
 			nScanReturn = fscanf_s(hFile, "%f %f",
 				&pTexCoords[CurrentIndex.iTexCoordCount].fX,
 				&pTexCoords[CurrentIndex.iTexCoordCount].fY);
+			if (nScanReturn != 2)
+				return failLoad(EINVAL);
 			// Next texture coordinate
 			CurrentIndex.iTexCoordCount++;
 		}
@@ -158,11 +194,15 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 		// Next three elements are floats of a vertex normal
 		if (!strncmp(szString, NORMAL_ID, sizeof(NORMAL_ID)))
 		{
+			if (!pNormals || CurrentIndex.iNormalCount >= OBJInfo.iNormalCount)
+				return failLoad(EINVAL);
 			// Read three floats out of the file
 			nScanReturn = fscanf_s(hFile, "%f %f %f",
 				&pNormals[CurrentIndex.iNormalCount].fX,
 				&pNormals[CurrentIndex.iNormalCount].fY,
 				&pNormals[CurrentIndex.iNormalCount].fZ);
+			if (nScanReturn != 3)
+				return failLoad(EINVAL);
 			// Next normal
 			CurrentIndex.iNormalCount++;
 		}
@@ -170,10 +210,14 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 		// Rest of the line contains face information
 		if (!strncmp(szString, FACE_ID, sizeof(FACE_ID)))
 		{	// Read the rest of the line (the complete face)
+			if (CurrentIndex.iFaceCount >= OBJInfo.iFaceCount)
+				return failLoad(EINVAL);
 			GetTokenParameter(szString, sizeof(szString) ,hFile);
 			// Convert string into a face structure
-			ParseFaceString(szString, &pFaces[CurrentIndex.iFaceCount],
-				pVertices, pNormals, pTexCoords, iCurMaterial);
+			if (!ParseFaceString(szString, &pFaces[CurrentIndex.iFaceCount], pVertices,
+				OBJInfo.iVertexCount, pNormals, OBJInfo.iNormalCount,
+				pTexCoords, OBJInfo.iTexCoordCount, iCurMaterial))
+				return failLoad(EINVAL);
 			// Next face
 			CurrentIndex.iFaceCount++;
 		}
@@ -260,107 +304,98 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 	return 0;
 }
 
-void _stdcall COBJModel::ParseFaceString(char szFaceString[], Face *FaceOut, 
-								const Vector3D *pVertices, 
-								const Vector3D *pNormals,
-								const Vector2D *pTexCoords,
+bool _stdcall COBJModel::ParseFaceString(char szFaceString[], Face *FaceOut,
+								const Vector3D *pVertices, unsigned int vertexCount,
+								const Vector3D *pNormals, unsigned int normalCount,
+								const Vector2D *pTexCoords, unsigned int texCoordCount,
 								const unsigned int iMaterialIndex)
 {
-////////////////////////////////////////////////////////////////////////
-// Convert face string from the OBJ file into a face structure
-////////////////////////////////////////////////////////////////////////
-	
-	int i;
-	int iVertex = 0, iTextureCoord = 0, iNormal = 0;
-
-	// Pointer to the face string. Will be incremented later to
-	// advance to the next triplet in the string.
-	char *pFaceString = szFaceString;
-
-	// Save the string positions of all triplets
-	int iTripletPos[MAX_VERTICES];
-	int iCurTriplet = 0;
-
-	// Init the face structure
 	memset(FaceOut, 0, sizeof(Face));
+	int vertexIndices[MAX_VERTICES]{};
+	int texCoordIndices[MAX_VERTICES]{};
+	int normalIndices[MAX_VERTICES]{};
+	unsigned int faceVertexCount = 0;
+	char* cursor = szFaceString;
 
-////////////////////////////////////////////////////////////////////////
-// Get number of vertices in the face
-////////////////////////////////////////////////////////////////////////
-
-// Loop trough the whole string
-	for (i=0; i<(int) strlen(szFaceString); i++)
-	{	// Each triplet is separated by spaces
-		if (szFaceString[i] == ' ')
-		{	// One more vertex
-			FaceOut->iNumVertices++;
-			// Save position of triplet
-			iTripletPos[iCurTriplet] = i;
-			// Next triplet
-			iCurTriplet++;
-		}
-	}
-
-// Face has more vertices than spaces that separate them
-	FaceOut->iNumVertices++;
-
-////////////////////////////////////////////////////////////////////////
-// Allocate space for structures that hold the face data
-////////////////////////////////////////////////////////////////////////
-
-// Vertices
-	FaceOut->pVertices		= new Vector3D[FaceOut->iNumVertices];
-
-// Allocate space for normals and texture coordinates only if present
-	if (pNormals)
-		FaceOut->pNormals	= new Vector3D[FaceOut->iNumVertices];
-	if (pTexCoords)
-		FaceOut->pTexCoords = new Vector2D[FaceOut->iNumVertices];
-	
-////////////////////////////////////////////////////////////////////////
-// Copy vertex, normal, material and texture data into the structure
-////////////////////////////////////////////////////////////////////////
-
-// Set material
-	FaceOut->iMaterialIndex = iMaterialIndex;
-
-// Process per-vertex data
-	for (i=0; i<(int) FaceOut->iNumVertices; i++)
+	while (*cursor != '\0')
 	{
-		// Read one triplet from the face string
+		while (*cursor == ' ' || *cursor == '\t' || *cursor == '\r' || *cursor == '\n')
+			++cursor;
+		if (*cursor == '\0' || *cursor == '#') break;
+		if (faceVertexCount >= MAX_VERTICES) return false;
 
-		// Are vertices, normals and texture coordinates present ?
-		if (pNormals && pTexCoords)
-			// Yes
-			sscanf_s(pFaceString, "%i/%i/%i", 
-				&iVertex, &iTextureCoord, &iNormal);
-		else if (pNormals && !pTexCoords)
-			// Vertices and normals but no texture coordinates
-			sscanf_s(pFaceString, "%i//%i", &iVertex, &iNormal);
-		else if (pTexCoords && !pNormals)
-			// Vertices and texture coordinates but no normals
-			sscanf_s(pFaceString, "%i/%i", &iVertex, &iTextureCoord);
-		else
-			// Only vertices
-			sscanf_s(pFaceString, "%i", &iVertex);
+		char* tokenEnd = cursor;
+		while (*tokenEnd != '\0' && *tokenEnd != ' ' && *tokenEnd != '\t' &&
+			*tokenEnd != '\r' && *tokenEnd != '\n')
+			++tokenEnd;
+		const char savedEnd = *tokenEnd;
+		*tokenEnd = '\0';
 
-		// Copy vertex into the face. Also check for normals and texture 
-		// coordinates and copy them if present.
-		memcpy(&FaceOut->pVertices[i], &pVertices[iVertex - 1], 
-			sizeof(Vector3D));
-		if (pTexCoords)
-			memcpy(&FaceOut->pTexCoords[i], 
-			&pTexCoords[iTextureCoord - 1], sizeof(Vector2D));
-		if (pNormals)
-			memcpy(&FaceOut->pNormals[i], 
-			&pNormals[iNormal - 1], sizeof(Vector3D));
-
-		// Set string pointer to the next triplet
-		if (i + 1 < (int)FaceOut->iNumVertices)
+		char* indexCursor = cursor;
+		auto readIndex = [&indexCursor](int& index)
 		{
-			pFaceString = &szFaceString[iTripletPos[i]];
+			char* end = nullptr;
+			errno = 0;
+			const long parsed = std::strtol(indexCursor, &end, 10);
+			if (end == indexCursor || errno == ERANGE || parsed < INT_MIN || parsed > INT_MAX)
+				return false;
+			index = static_cast<int>(parsed);
+			indexCursor = end;
+			return true;
+		};
+		bool validToken = readIndex(vertexIndices[faceVertexCount]);
+		if (validToken && pNormals && pTexCoords)
+		{
+			validToken = *indexCursor == '/';
+			if (validToken) ++indexCursor;
+			validToken = validToken && readIndex(texCoordIndices[faceVertexCount]);
+			validToken = validToken && *indexCursor == '/';
+			if (validToken) ++indexCursor;
+			validToken = validToken && readIndex(normalIndices[faceVertexCount]);
 		}
+		else if (validToken && pNormals)
+		{
+			validToken = indexCursor[0] == '/' && indexCursor[1] == '/';
+			if (validToken) indexCursor += 2;
+			validToken = validToken && readIndex(normalIndices[faceVertexCount]);
+		}
+		else if (validToken && pTexCoords)
+		{
+			validToken = *indexCursor == '/';
+			if (validToken) ++indexCursor;
+			validToken = validToken && readIndex(texCoordIndices[faceVertexCount]);
+		}
+		validToken = validToken && *indexCursor == '\0';
+		*tokenEnd = savedEnd;
+		if (!validToken) return false;
+		if (vertexIndices[faceVertexCount] <= 0 ||
+			static_cast<unsigned int>(vertexIndices[faceVertexCount]) > vertexCount)
+			return false;
+		if (pTexCoords && (texCoordIndices[faceVertexCount] <= 0 ||
+			static_cast<unsigned int>(texCoordIndices[faceVertexCount]) > texCoordCount))
+			return false;
+		if (pNormals && (normalIndices[faceVertexCount] <= 0 ||
+			static_cast<unsigned int>(normalIndices[faceVertexCount]) > normalCount))
+			return false;
+
+		++faceVertexCount;
+		cursor = tokenEnd;
 	}
+	if (faceVertexCount < 3) return false;
+
+	FaceOut->iNumVertices = faceVertexCount;
+	FaceOut->iMaterialIndex = iMaterialIndex;
+	FaceOut->pVertices = new Vector3D[faceVertexCount];
+	if (pNormals) FaceOut->pNormals = new Vector3D[faceVertexCount];
+	if (pTexCoords) FaceOut->pTexCoords = new Vector2D[faceVertexCount];
+
+	for (unsigned int i = 0; i < faceVertexCount; ++i)
+	{
+		FaceOut->pVertices[i] = pVertices[vertexIndices[i] - 1];
+		if (pNormals) FaceOut->pNormals[i] = pNormals[normalIndices[i] - 1];
+		if (pTexCoords) FaceOut->pTexCoords[i] = pTexCoords[texCoordIndices[i] - 1];
+	}
+	return true;
 }
 
 bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[], 
@@ -391,11 +426,8 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 ////////////////////////////////////////////////////////////////////////
 
 // Quit reading when end of file has been reached
-	while (!feof(hFileT))
+	while (ReadNextString(szString, hFileT))
 	{
-		// Get next string
-		ReadNextString(szString, hFileT);
-
 		// Is it a "new material" identifier ?
 		if (!strncmp(szString, NEW_MTL_ID, sizeof(NEW_MTL_ID)))
 		{	// Only increase index after first material has been set
@@ -1112,11 +1144,8 @@ void _stdcall COBJModel::GetFileInfo(FILE *hStream, OBJFileInfo *Info,
 	rewind(hStream);
 
 // Quit reading when end of file has been reached
-	while (!feof(hStream))
+	while (ReadNextString(szString, hStream))
 	{
-		// Get next string
-		ReadNextString(szString, hStream);
-
 // Vertex ?
 		if (!strncmp(szString, VERTEX_ID, sizeof(VERTEX_ID)))
 			Info->iVertexCount++;	
@@ -1147,10 +1176,8 @@ void _stdcall COBJModel::GetFileInfo(FILE *hStream, OBJFileInfo *Info,
 			if (!err) //(hMaterialLib)
 			{
 				// Quit reading when end of file has been reached
-				while (!feof(hMaterialLib))
+				while (fscanf(hMaterialLib, "%1023s", szString) == 1)
 				{
-					// Read next string
-					fscanf(hMaterialLib, "%s" ,szString);
 					// Is it a "new material" identifier ?
 					if (!strncmp(szString, NEW_MTL_ID, sizeof(NEW_MTL_ID)))
 						// One more material defined
@@ -1166,29 +1193,29 @@ void _stdcall COBJModel::GetFileInfo(FILE *hStream, OBJFileInfo *Info,
 	}
 }
 
-void _stdcall COBJModel::ReadNextString(char szString[], FILE *hStream)
+bool _stdcall COBJModel::ReadNextString(char szString[], FILE *hStream)
 {
 ////////////////////////////////////////////////////////////////////////
 // Read the next string that isn't a comment
 ////////////////////////////////////////////////////////////////////////
 
-	bool bSkipLine = FALSE;	// Skip the current line ?
-	int nScanReturn = 0;	// Return value of fscanf
-
-	// Skip all strings that contain comments
-	do
+	for (;;)
 	{
-		// Read new string
-		nScanReturn = fscanf(hStream, "%s", szString);
-		// Is rest of the line a comment ?
-		if (!strncmp(szString, COMMENT_ID, sizeof(COMMENT_ID)))
+		// Every caller supplies the fixed MAX_STR_SIZE buffer (1024 bytes).
+		if (fscanf(hStream, "%1023s", szString) != 1)
 		{
-			// Skip the rest of the line
-			fgets(szString, sizeof(szString), hStream);
-			bSkipLine = TRUE;
+			szString[0] = '\0';
+			return false;
 		}
-		else bSkipLine = FALSE;
-	} while (bSkipLine == TRUE);
+		// Is rest of the line a comment ?
+		if (strncmp(szString, COMMENT_ID, sizeof(COMMENT_ID)) != 0)
+		{
+			return true;
+		}
+		// Skip the whole comment even if it exceeds the token buffer.
+		int character = 0;
+		while ((character = fgetc(hStream)) != '\n' && character != EOF) {}
+	}
 }
 
 
