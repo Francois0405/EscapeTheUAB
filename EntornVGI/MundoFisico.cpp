@@ -254,22 +254,58 @@ namespace fisica
 	namespace
 	{
 		// La cápsula mide 'Altura' en total: cilindro + una semiesfera arriba y otra abajo.
-		constexpr float AlturaCilindro = MedidasJugador::Altura - 2.0f * MedidasJugador::Radio;
-		// Distancia del centro de la cápsula a los pies.
-		constexpr float CentroSobrePies = MedidasJugador::Altura * 0.5f;
+		constexpr float AlturaCilindroDePie = MedidasJugador::Altura - 2.0f * MedidasJugador::Radio;
+		float EscalaVerticalJugador(float altura)
+		{
+			return (altura - 2.0f * MedidasJugador::Radio) / AlturaCilindroDePie;
+		}
 
-		btVector3 CentroDesdePies(const glm::vec3& pies) { return ABullet(pies + glm::vec3(0.0f, 0.0f, CentroSobrePies)); }
+		btVector3 CentroDesdePies(const glm::vec3& pies, float altura)
+		{
+			return ABullet(pies + glm::vec3(0.0f, 0.0f, altura * 0.5f));
+		}
+
+		class ComprobarEspacioParaLevantarse : public btCollisionWorld::ContactResultCallback
+		{
+		public:
+			ComprobarEspacioParaLevantarse(const btCollisionObject& jugador, float alturaMinimaContacto)
+				: objetoJugador(jugador), alturaMinimaContacto(alturaMinimaContacto)
+			{
+				m_collisionFilterGroup = btBroadphaseProxy::CharacterFilter;
+				m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
+			}
+
+			btScalar addSingleResult(btManifoldPoint& contacto,
+				const btCollisionObjectWrapper* objetoA, int, int,
+				const btCollisionObjectWrapper* objetoB, int, int) override
+			{
+				if (contacto.getDistance() >= 0.0f) return 0.0f;
+				const btVector3 punto = objetoA->getCollisionObject() == &objetoJugador
+					? contacto.getPositionWorldOnA()
+					: contacto.getPositionWorldOnB();
+				if (punto.z() > alturaMinimaContacto) hayObstaculo = true;
+				return 0.0f;
+			}
+
+			bool HayObstaculo() const { return hayObstaculo; }
+
+		private:
+			const btCollisionObject& objetoJugador;
+			float alturaMinimaContacto;
+			bool hayObstaculo = false;
+		};
 	}
 
 	bool MundoFisico::CrearJugador(const glm::vec3& posicionPies)
 	{
 		if (HayJugador()) return false;
-		impl->formaJugador = std::make_unique<btCapsuleShapeZ>(MedidasJugador::Radio, AlturaCilindro);
+		alturaJugador = MedidasJugador::Altura;
+		impl->formaJugador = std::make_unique<btCapsuleShapeZ>(MedidasJugador::Radio, AlturaCilindroDePie);
 
 		impl->fantasmaJugador = std::make_unique<btPairCachingGhostObject>();
 		btTransform t;
 		t.setIdentity();
-		t.setOrigin(CentroDesdePies(posicionPies));
+		t.setOrigin(CentroDesdePies(posicionPies, MedidasJugador::Altura));
 		impl->fantasmaJugador->setWorldTransform(t);
 		impl->fantasmaJugador->setCollisionShape(impl->formaJugador.get());
 		impl->fantasmaJugador->setCollisionFlags(btCollisionObject::CF_CHARACTER_OBJECT);
@@ -301,6 +337,7 @@ namespace fisica
 		impl->controladorJugador.reset();   // el controlador apunta al fantasma: muere primero
 		impl->fantasmaJugador.reset();
 		impl->formaJugador.reset();
+		alturaJugador = MedidasJugador::Altura;
 	}
 
 	bool MundoFisico::HayJugador() const { return impl->controladorJugador != nullptr; }
@@ -314,16 +351,57 @@ namespace fisica
 		impl->controladorJugador->setWalkDirection(ABullet(porPaso));
 	}
 
+	bool MundoFisico::ActualizarJugadorAgachado(bool agachado, float deltaSegundos)
+	{
+		if (!HayJugador()) return false;
+
+		const float alturaObjetivo = agachado ? MedidasJugador::AlturaAgachado : MedidasJugador::Altura;
+		const float diferencia = alturaObjetivo - alturaJugador;
+		if (std::abs(diferencia) <= 0.001f) return true;
+
+		const float avance = MedidasJugador::VelocidadCambioAltura * std::max(deltaSegundos, 0.0f);
+		const float alturaNueva = alturaJugador + std::copysign(std::min(std::abs(diferencia), avance), diferencia);
+		const glm::vec3 pies = PosicionPiesJugador();
+
+		if (alturaNueva > alturaJugador)
+		{
+			btCapsuleShapeZ formaCandidata(MedidasJugador::Radio,
+				alturaNueva - 2.0f * MedidasJugador::Radio);
+			btCollisionObject prueba;
+			btTransform transformacion;
+			transformacion.setIdentity();
+			transformacion.setOrigin(CentroDesdePies(pies, alturaNueva));
+			prueba.setWorldTransform(transformacion);
+			prueba.setCollisionShape(&formaCandidata);
+
+			ComprobarEspacioParaLevantarse comprobar(prueba, pies.z + alturaJugador - 0.01f);
+			impl->mundo.contactTest(&prueba, comprobar);
+			if (comprobar.HayObstaculo()) return false;
+		}
+
+		impl->formaJugador->setLocalScaling(btVector3(1.0f, 1.0f, EscalaVerticalJugador(alturaNueva)));
+		impl->controladorJugador->warp(CentroDesdePies(pies, alturaNueva));
+		impl->mundo.updateSingleAabb(impl->fantasmaJugador.get());
+		alturaJugador = alturaNueva;
+		return true;
+	}
+
 	void MundoFisico::TeletransportarJugador(const glm::vec3& posicionPies)
 	{
 		if (!HayJugador()) return;
-		impl->controladorJugador->warp(CentroDesdePies(posicionPies));
+		impl->controladorJugador->warp(CentroDesdePies(posicionPies, alturaJugador));
 	}
 
 	glm::vec3 MundoFisico::PosicionPiesJugador() const
 	{
 		if (!HayJugador()) return glm::vec3(0.0f);
-		return AGlm(impl->fantasmaJugador->getWorldTransform().getOrigin()) - glm::vec3(0.0f, 0.0f, CentroSobrePies);
+		return AGlm(impl->fantasmaJugador->getWorldTransform().getOrigin())
+			- glm::vec3(0.0f, 0.0f, alturaJugador * 0.5f);
+	}
+
+	float MundoFisico::AlturaOjosJugador() const
+	{
+		return alturaJugador - (MedidasJugador::Altura - MedidasJugador::AlturaOjos);
 	}
 
 	bool MundoFisico::JugadorEnSuelo() const { return HayJugador() && impl->controladorJugador->onGround(); }

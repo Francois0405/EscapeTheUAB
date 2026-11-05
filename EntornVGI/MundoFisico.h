@@ -51,7 +51,9 @@ namespace fisica
 	{
 		constexpr float Radio = 0.25f;         // 50 cm de ancho: cabe por el hueco de 80 cm de una puerta (con la hoja abierta quedan ~72 cm)
 		constexpr float Altura = 1.80f;        // de los pies a la coronilla
+		constexpr float AlturaAgachado = 1.00f; // altura total de la cápsula al agacharse; ajustar aquí
 		constexpr float AlturaOjos = 1.70f;    // pies -> ojos (solo para la cámara FPS; en VR manda el visor)
+		constexpr float VelocidadCambioAltura = 2.0f; // m/s al agacharse o incorporarse
 		constexpr float AlturaEscalon = 0.10f; // lo máximo que sube sin saltar (no queremos trepar a cajas)
 	}
 
@@ -140,6 +142,13 @@ namespace fisica
 		// pone la gravedad. Se mantiene hasta que se vuelva a llamar; (0,0,0) = quieto.
 		void FijarVelocidadJugador(const glm::vec3& metrosPorSegundo);
 
+		// Avanza gradualmente hacia la altura objetivo manteniendo los pies en su sitio.
+		// Devuelve false si un obstáculo impide seguir incorporándose.
+		bool ActualizarJugadorAgachado(bool agachado, float deltaSegundos);
+		bool JugadorAgachado() const { return alturaJugador < MedidasJugador::Altura - 0.001f; }
+		float AlturaJugador() const { return alturaJugador; }
+		float AlturaOjosJugador() const;
+
 		// Coloca al jugador sin pasar por las paredes (cambio de habitación, depuración).
 		void TeletransportarJugador(const glm::vec3& posicionPies);
 
@@ -180,6 +189,7 @@ namespace fisica
 
 		float acumulador = 0.0f;      // tiempo real pendiente de simular
 		bool pausa = false;
+		float alturaJugador = MedidasJugador::Altura;
 		long long pasosTotales = 0;
 	};
 

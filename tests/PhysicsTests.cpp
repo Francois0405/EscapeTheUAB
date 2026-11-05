@@ -550,6 +550,50 @@ namespace
 		comprobar(mundo.PosicionPiesJugador().x < 5.0f - MedidasJugador::Radio + 0.03f, "seguir empujando no atraviesa");
 	}
 
+	void PruebaJugadorSeAgachaYRespetaTecho()
+	{
+		MundoFisico mundo;
+		CrearSuelo(mundo);
+		mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		Avanzar(mundo, 1.0f);
+
+		const glm::vec3 piesDePie = mundo.PosicionPiesJugador();
+		comprobar(mundo.ActualizarJugadorAgachado(true, 0.1f), "el jugador empieza a agacharse");
+		comprobar(mundo.AlturaJugador() < MedidasJugador::Altura &&
+			mundo.AlturaJugador() > MedidasJugador::AlturaAgachado,
+			"la altura cambia gradualmente en lugar de instantaneamente");
+		comprobar(mundo.AlturaOjosJugador() < MedidasJugador::AlturaOjos,
+			"la altura de la camara tambien cambia gradualmente");
+		for (int i = 0; i < 10; ++i)
+			mundo.ActualizarJugadorAgachado(true, 0.1f);
+		comprobar(mundo.JugadorAgachado(), "el estado del jugador indica que esta agachado");
+		comprobar(casi(mundo.AlturaJugador(), MedidasJugador::AlturaAgachado, 1e-3f),
+			"la transicion termina en la altura agachada configurada");
+		comprobar(casi(mundo.PosicionPiesJugador().z, piesDePie.z, 1e-3f),
+			"agacharse mantiene los pies en el suelo");
+
+		// El techo deja espacio para la cápsula agachada, pero no para la de pie.
+		const float techoInferior = SueloZ + MedidasJugador::AlturaAgachado + 0.15f;
+		mundo.CrearCajaEstatica({ 0, 0, techoInferior + 0.1f }, { 2, 2, 0.1f });
+		bool puedeSeguirLevantandose = true;
+		for (int i = 0; i < 10 && puedeSeguirLevantandose; ++i)
+			puedeSeguirLevantandose = mundo.ActualizarJugadorAgachado(false, 0.1f);
+		comprobar(!puedeSeguirLevantandose, "el techo impide seguir levantandose");
+		comprobar(mundo.JugadorAgachado(), "el jugador sigue agachado bajo el techo");
+
+		MundoFisico espacioAbierto;
+		CrearSuelo(espacioAbierto);
+		espacioAbierto.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		Avanzar(espacioAbierto, 1.0f);
+		for (int i = 0; i < 10; ++i)
+			espacioAbierto.ActualizarJugadorAgachado(true, 0.1f);
+		bool puedeLevantarse = true;
+		for (int i = 0; i < 10 && puedeLevantarse; ++i)
+			puedeLevantarse = espacioAbierto.ActualizarJugadorAgachado(false, 0.1f);
+		comprobar(puedeLevantarse, "se puede levantar sin obstaculos");
+		comprobar(!espacioAbierto.JugadorAgachado(), "el estado vuelve a estar de pie");
+	}
+
 	void PruebaJugadorSeDesliza()
 	{
 		MundoFisico mundo;
@@ -932,6 +976,7 @@ int main()
 	PruebaJugadorSueloYGravedad();
 	PruebaJugadorAndaLibre();
 	PruebaJugadorChocaConPared();
+	PruebaJugadorSeAgachaYRespetaTecho();
 	PruebaJugadorSeDesliza();
 	PruebaJugadorChocaConObjetoEstatico();
 	PruebaJugadorIndependienteDeLosFps();
