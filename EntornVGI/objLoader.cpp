@@ -1329,8 +1329,8 @@ int COBJModel::LoadTexture2(const char szFileName[_MAX_PATH])
 	glBindTexture(GL_TEXTURE_2D, iTexture);
 
 // Build mip-maps
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	
 	return iTexture;
 }

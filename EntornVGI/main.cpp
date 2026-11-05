@@ -71,6 +71,7 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 
 namespace
 {
+	bool modoVR = false;
 	bool fpsPausado = false;
 	bool fpsCapturaSolicitada = true;
 	bool fpsCursorCapturado = false;
@@ -113,6 +114,53 @@ namespace
 	{
 		const bool capturar = modoJuegoFPS() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
 		fijarCapturaCursor(window, capturar);
+	}
+
+	std::string objetoEnManoId = "";
+
+	void intentarInteractuar() 
+	{
+		// Posición y dirección de la vista/mano (en PC usamos la cámara opvN -> n)
+		glm::vec3 origen(opvN.x, opvN.y, opvN.z);
+		glm::vec3 dir = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
+
+		// Punto virtual de la "mano" a 1.2 metros delante del jugador
+		glm::vec3 posMano = origen + dir * 1.2f;
+
+		// Si ya tenemos un objeto en la mano, lo soltamos
+		if (!objetoEnManoId.empty()) {
+			objetoEnManoId = "";
+			return;
+		}
+
+		// Buscar el objeto interactuable ("objects") más cercano al punto de mira/mano
+		float minDist = 1.0f; // Radio máximo de agarre
+		for (auto& obj : objetosEscena) {
+			if (obj.categoria != "objects") continue; // Ignorar paredes/arquitectura
+
+			float dist = glm::distance(posMano, obj.posicion);
+			if (dist < minDist) {
+				minDist = dist;
+				objetoEnManoId = obj.id;
+				std::cout << "Interaccion con: " << obj.id << "\n";
+			}
+		}
+	}
+
+	void actualizarObjetoEnMano()
+	{
+		if (objetoEnManoId.empty()) return;
+
+		glm::vec3 origen(opvN.x, opvN.y, opvN.z);
+		glm::vec3 dir = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
+		glm::vec3 posMano = origen + dir * 1.2f; // A 1.2m delante de tu vista
+
+		for (auto& obj : objetosEscena) {
+			if (obj.id == objetoEnManoId) {
+				obj.posicion = posMano;
+				break;
+			}
+		}
 	}
 }
 
@@ -285,6 +333,8 @@ namespace
 		}
 	}
 }
+
+
 
 void InitGL()
 {
@@ -910,53 +960,58 @@ void OnPaint(GLFWwindow* window)
 		break;
 
 	case PERSPECT:
-		// Entorn VGI: PROJECCIÓ PERSPECTIVA
-				//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // Set Perspective Calculations To Most Accurate
-		glDisable(GL_SCISSOR_TEST);		// Desactivació del retall de pantalla
-
-		// Entorn VGI: Activar shader Visualització Escena
+		glDisable(GL_SCISSOR_TEST);
 		glUseProgram(shader_programID);
 
-		// Entorn VGI: Definició de Viewport, Projecció i Càmara
-		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, 0, 0, w, h, OPV.R);
-
-		// Entorn VGI: Definició de la càmera.
-		if (camera == CAM_ESFERICA) {
-			n[0] = 0;		n[1] = 0;		n[2] = 0;
-			ViewMatrix = Vista_Esferica(shader_programID, OPV, Vis_Polar, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, mida, pas,
-				front_faces, oculta, test_vis, back_line,
-				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
-				eixos, grid, hgrid);
+		if (!modoVR) 
+		{
+			// --- MODO PC NORMAL (Lo que ya tenéis) ---
+			ProjectionMatrix = Projeccio_Perspectiva(shader_programID, 0, 0, w, h, OPV.R);
+			if (camera == CAM_NAVEGA) {
+				vpv[0] = 0.0; vpv[1] = 0.0; vpv[2] = 1.0; // POLARZ
+				ViewMatrix = Vista_Navega(shader_programID, opvN, n, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
+					front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides, eixos, grid, hgrid);
+			}
+			configura_Escena();
+			dibuixa_Escena();
 		}
-		else if (camera == CAM_NAVEGA) {
-			if (Vis_Polar == POLARZ) {
-				vpv[0] = 0.0;	vpv[1] = 0.0;	vpv[2] = 1.0;
-				}
-			else if (Vis_Polar == POLARY) {
-				vpv[0] = 0.0;	vpv[1] = 1.0;	vpv[2] = 0.0;
-				}
-			else if (Vis_Polar == POLARX) {
-				vpv[0] = 1.0;	vpv[1] = 0.0;	vpv[2] = 0.0;
-				}
-			ViewMatrix = Vista_Navega(shader_programID, opvN, //false, 
-				n, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
-				front_faces, oculta, test_vis, back_line,
-				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
-				eixos, grid, hgrid);
-			}
-		else if (camera == CAM_GEODE) {
-			ViewMatrix = Vista_Geode(shader_programID, OPV_G, Vis_Polar, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, mida, pas,
-				front_faces, oculta, test_vis, back_line,
-				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
-				eixos, grid, hgrid);
-			}
+		else 
+		{
+			// --- MODO VR / SIMULADOR ESTÉREO EN CASA (Pantalla Partida) ---
+			Fons(c_fons); // Limpiamos pantalla completa una sola vez
+			if (oculta) glEnable(GL_DEPTH_TEST);
 
-		// Entorn VGI: Dibuix de l'Objecte o l'Escena
-		configura_Escena();     // Aplicar Transformacions Geometriques segons persiana Transformacio i configurar objectes.
-		dibuixa_Escena();		// Dibuix geometria de l'escena amb comandes GL.
+			// Calculamos la vista central base a partir de vuestro opvN y n
+			glm::vec3 eyePos(opvN.x, opvN.y, opvN.z);
+			glm::vec3 centerPos(n[0], n[1], n[2]);
+			glm::vec3 upVec(0.0f, 0.0f, 1.0f); // En vuestro juego POLARZ es Z arriba
+			glm::mat4 baseView = glm::lookAt(eyePos, centerPos, upVec);
 
-		// Entorn VGI: Transferència del buffer OpenGL a buffer de pantalla
-		//glfwSwapBuffers(window);
+			// Distancia interpupilar (IPD = 6.4 cm -> +-0.032m en eje X de cámara)
+			const float halfIPD = 0.032f;
+
+			for (int eye = 0; eye < 2; ++eye) 
+			{
+				int viewX = (eye == 0) ? 0 : w / 2;
+				int viewW = w / 2;
+
+				// 1. Proyección de medio monitor (o textura del ojo en OpenXR)
+				ProjectionMatrix = Projeccio_Perspectiva(shader_programID, viewX, 0, viewW, h, OPV.R);
+
+				// 2. Desplazar matriz de vista a izquierda (+halfIPD) o derecha (-halfIPD) en espacio cámara
+				float offset = (eye == 0) ? halfIPD : -halfIPD;
+				ViewMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(offset, 0.0f, 0.0f)) * baseView;
+
+				// 3. Subir ViewMatrix e Iluminación al shader
+				glUseProgram(shader_programID);
+				glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+				Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
+
+				// 4. Dibujar la habitación y el móvil para este ojo
+				configura_Escena();
+				dibuixa_Escena();
+			}
+		}
 		break;
 
 	default:
@@ -1033,7 +1088,7 @@ void dibuixa_Escena() {
 			dibuixa_EscenaGL(
 				shader_programID, eixos, eixos_Id, grid, hgrid,
 				OBJOBJ, col_obj, sw_material,
-				false, texturesID, textura_map, tFlag_invert_Y,
+				textura, texturesID, textura_map, tFlag_invert_Y,
 				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 				it->second.get(), matriz
 			);
@@ -4163,6 +4218,19 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			sincronizarCursorFPS(window);
 			return;
 		}
+		// --- NUEVO: Alternar Modo VR Estéreo con F2 ---
+		if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
+		{
+			modoVR = !modoVR;
+			std::cout << "Modo VR Estereo: " << (modoVR ? "ON" : "OFF") << "\n";
+			return;
+		}
+		// --- NUEVO: Coger / Soltar objeto con tecla E ---
+		if (key == GLFW_KEY_E && action == GLFW_PRESS)
+		{
+			intentarInteractuar();
+			return;
+		}
 		if (fpsPausado || !ventanaConFoco) return;
 		if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D) return;
 		if (key == GLFW_KEY_PRINT_SCREEN && mods == 0 && action == GLFW_PRESS)
@@ -4193,6 +4261,8 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		else if (!sw_color) Teclat_ColorFons(key, action);
 		else Teclat_ColorObjecte(key, action);
 	}
+
+	
 	// Crida a OnPaint() per redibuixar l'escena
 		//OnPaint(window);
 
@@ -7213,6 +7283,7 @@ int main(int argc, char** argv)
 		// Actualitzar moviment continu de navegació (WASD) per frame.
 		if (!fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS())
 			moverJugadorFPS(window, delta);
+			actualizarObjetoEnMano();
 		actualizarMovimientoMovil(window, static_cast<float>(delta));
 
 
