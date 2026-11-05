@@ -1,0 +1,9 @@
+Horror Player Item Pack V2.0
+Author: 3Dexter3D
+Source: https://3dexter.itch.io/retrohorrorkit
+License: CC0 1.0 Universal (per publisher on itch.io, verified 2026-11-02)
+Original download: HorrorKit-V2.0.zip supplied by project contributor
+Extracted in this archive: flashlight (body + button), key.
+OBJ meshes have been separated, recentered and uniformly normalized to 1.0 longest dimension.
+Textures are the original 512px variants; MTL files were fixed to use relative paths.
+Not included: animations, hand/arm meshes, light source or gameplay code.

@@ -36,6 +36,7 @@
 std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
 COBJModel* armsRigOBJ = nullptr;
+COBJModel* flashlightOBJ = nullptr;
 
 // Locate copied resources beside the executable or in the source tree.
 static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
@@ -79,6 +80,21 @@ namespace
 	bool mostrarPanelesDebug = false;
 	double fpsUltimoX = 0.0;
 	double fpsUltimoY = 0.0;
+	bool mostrarLinterna = true;
+	glm::vec3 linternaPosicion(-0.34f, -0.27f, -0.78f);
+	glm::vec3 linternaRotacion(0.0f, 90.0f, 0.0f);
+	float linternaEscala = 0.43f;
+	float intensidadIdle = 0.002f;
+	float intensidadWalking = 0.018f;
+	float intensidadMouse = 0.0008f;
+	float pesoCaminata = 0.0f;
+	float faseCaminata = 0.0f;
+	float mouseSwayX = 0.0f;
+	float mouseSwayY = 0.0f;
+	double mouseDeltaX = 0.0;
+	double mouseDeltaY = 0.0;
+	float tiempoFPS = 0.0f;
+	float deltaFPS = 0.0f;
 
 	bool modoJuegoFPS()
 	{
@@ -165,6 +181,30 @@ namespace
 		opvN.y += moverY;
 		n[0] += moverX;
 		n[1] += moverY;
+	}
+
+	void actualizarMovimientoLinterna(GLFWwindow* window, float deltaTime)
+	{
+		deltaTime = std::clamp(deltaTime, 0.0f, 0.05f);
+		tiempoFPS += deltaTime;
+		deltaFPS = deltaTime;
+
+		const bool caminando = !fpsPausado && ventanaConFoco && modoJuegoFPS() &&
+			(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+			 glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS);
+		const float factor = 1.0f - std::exp(-8.0f * deltaTime);
+		pesoCaminata += ((caminando ? 1.0f : 0.0f) - pesoCaminata) * factor;
+		if (caminando) faseCaminata += deltaTime * 9.0f;
+
+		const float limiteMouse = 0.12f;
+		mouseSwayX = std::clamp(mouseSwayX + static_cast<float>(mouseDeltaX) * intensidadMouse,
+			-limiteMouse, limiteMouse);
+		mouseSwayY = std::clamp(mouseSwayY + static_cast<float>(mouseDeltaY) * intensidadMouse,
+			-limiteMouse, limiteMouse);
+		mouseDeltaX = mouseDeltaY = 0.0;
+		const float retornoMouse = 1.0f - std::exp(-5.0f * deltaTime);
+		mouseSwayX += (0.0f - mouseSwayX) * retornoMouse;
+		mouseSwayY += (0.0f - mouseSwayY) * retornoMouse;
 	}
 
 	bool cargarYAplicarEscena(const std::filesystem::path& ruta)
@@ -515,12 +555,12 @@ void InitGL()
 	{	// load Skybox textures
 		// -------------
 		std::vector<std::string> faces =
-		{ "./textures/skybox\\right.jpg",
-			"./textures/skybox\\left.jpg",
-			"./textures/skybox\\top.jpg",
-			"./textures/skybox\\bottom.jpg",
-			"./textures/skybox\\front.jpg",
-			"./textures/skybox\\back.jpg"
+		{ "./textures/skybox/right.jpg",
+			"./textures/skybox/left.jpg",
+			"./textures/skybox/top.jpg",
+			"./textures/skybox/bottom.jpg",
+			"./textures/skybox/front.jpg",
+			"./textures/skybox/back.jpg"
 		};
 		cubemapTexture = loadCubemap(faces);
 	}
@@ -994,7 +1034,7 @@ void dibuixa_Escena() {
 			dibuixa_EscenaGL(
 				shader_programID, eixos, eixos_Id, grid, hgrid,
 				OBJOBJ, col_obj, sw_material,
-				textura, texturesID, textura_map, tFlag_invert_Y,
+				false, texturesID, textura_map, tFlag_invert_Y,
 				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 				it->second.get(), matriz
 			);
@@ -1010,20 +1050,30 @@ void dibuixa_Escena() {
 			ObOBJ, GTMatrix);
 	}
 
-	if (modoJuegoFPS() && armsRigOBJ != nullptr)
+	if (modoJuegoFPS() && mostrarLinterna && flashlightOBJ != nullptr)
 	{
-		glm::mat4 matrizCamara(1.0f);
-		matrizCamara = glm::translate(matrizCamara, glm::vec3(0.0f, -0.165f, -0.01f));
-		matrizCamara = glm::rotate(matrizCamara, glm::radians(180.0f), glm::vec3(0.0f, 1.0f, 0.0f));
-		matrizCamara = glm::scale(matrizCamara, glm::vec3(0.1f));
-		const glm::mat4 matrizBrazos = glm::inverse(ViewMatrix) * matrizCamara;
+		const float idle = intensidadIdle;
+		const float bob = pesoCaminata * intensidadWalking;
+		glm::mat4 matrizLocal(1.0f);
+		matrizLocal = glm::translate(matrizLocal, linternaPosicion + glm::vec3(
+			std::sin(faseCaminata) * bob * 0.45f,
+			std::sin(tiempoFPS * 1.4f) * idle + std::abs(std::sin(faseCaminata)) * bob,
+			0.0f));
+		matrizLocal = glm::rotate(matrizLocal, glm::radians(linternaRotacion.x) +
+			std::sin(tiempoFPS * 1.4f) * idle + mouseSwayY, glm::vec3(1.0f, 0.0f, 0.0f));
+		matrizLocal = glm::rotate(matrizLocal, glm::radians(linternaRotacion.y) -
+			std::sin(faseCaminata) * bob * 0.8f - mouseSwayX, glm::vec3(0.0f, 1.0f, 0.0f));
+		matrizLocal = glm::rotate(matrizLocal, glm::radians(linternaRotacion.z) +
+			std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0.0f, 0.0f, 1.0f));
+		matrizLocal = glm::scale(matrizLocal, glm::vec3(linternaEscala));
+		const glm::mat4 matrizLinterna = glm::inverse(ViewMatrix) * matrizLocal;
 
 		const bool texturaAnterior = textura;
 		textura = true;
 		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
 			textura, texturesID, textura_map, tFlag_invert_Y,
 			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-			armsRigOBJ, matrizBrazos);
+			flashlightOBJ, matrizLinterna);
 		textura = texturaAnterior;
 	}
 }
@@ -1356,6 +1406,19 @@ void draw_Menu_ImGui()
 		ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 		ImGui::End();
 	}
+	}
+	if (modoJuegoFPS() && mostrarPanelesDebug)
+	{
+		ImGui::Begin("Linterna FPS");
+		ImGui::Checkbox("Mostrar linterna", &mostrarLinterna);
+		ImGui::InputFloat3("Posicion", &linternaPosicion.x, "%.3f");
+		ImGui::InputFloat3("Rotacion (grados)", &linternaRotacion.x, "%.1f");
+		ImGui::SliderFloat("Escala", &linternaEscala, 0.05f, 1.0f, "%.2f");
+		ImGui::SliderFloat("Intensidad idle", &intensidadIdle, 0.0f, 0.02f, "%.4f");
+		ImGui::SliderFloat("Intensidad walking", &intensidadWalking, 0.0f, 0.08f, "%.3f");
+		ImGui::SliderFloat("Intensidad mouse", &intensidadMouse, 0.0f, 0.003f, "%.4f");
+		ImGui::Text("deltaTime: %.4f s", deltaFPS);
+		ImGui::End();
 	}
 
 // Rendering ImGui Menus
@@ -2593,12 +2656,12 @@ void OnArxiuObrirSkybox()
 //	{	// load Skybox textures
 //		// -------------
 //		std::vector<std::string> faces =
-//		{ "./textures/skybox\\right.jpg",
-//		"./textures/skybox\\left.jpg",
-//		"./textures/skybox\\top.jpg",
-//		"./textures/skybox\\bottom.jpg",
-//		"./textures/skybox\\front.jpg",
-//		"./textures/skybox\\back.jpg"
+//		{ "./textures/skybox/right.jpg",
+//		"./textures/skybox/left.jpg",
+//		"./textures/skybox/top.jpg",
+//		"./textures/skybox/bottom.jpg",
+//		"./textures/skybox/front.jpg",
+//		"./textures/skybox/back.jpg"
 //	};
 
 	cubemapTexture = loadCubemap(faces);
@@ -2889,12 +2952,12 @@ void OnVistaSkyBox()
 		{	// load Skybox textures
 			// -------------
 			std::vector<std::string> faces =
-			{ "./textures/skybox\\right.jpg",
-				"./textures/skybox\\left.jpg",
-				"./textures/skybox\\top.jpg",
-				"./textures/skybox\\bottom.jpg",
-				"./textures/skybox\\front.jpg",
-				"./textures/skybox\\back.jpg"
+			{ "./textures/skybox/right.jpg",
+				"./textures/skybox/left.jpg",
+				"./textures/skybox/top.jpg",
+				"./textures/skybox/bottom.jpg",
+				"./textures/skybox/front.jpg",
+				"./textures/skybox/back.jpg"
 			};
 		cubemapTexture = loadCubemap(faces);
 	}
@@ -4387,13 +4450,13 @@ void Teclat_Shift(int key, GLFWwindow* window)
 				{	// load Skybox textures
 					// -------------
 					std::vector<std::string> faces =
-						{	"./textures/skybox\\right.jpg",
-							"./textures/skybox\\right.jpg",
-							"./textures/skybox\\left.jpg",
-							"./textures/skybox\\top.jpg",
-							"./textures/skybox\\bottom.jpg",
-							"./textures/skybox\\front.jpg",
-							"./textures/skybox\\back.jpg"
+						{	"./textures/skybox/right.jpg",
+							"./textures/skybox/right.jpg",
+							"./textures/skybox/left.jpg",
+							"./textures/skybox/top.jpg",
+							"./textures/skybox/bottom.jpg",
+							"./textures/skybox/front.jpg",
+							"./textures/skybox/back.jpg"
 						};
 					cubemapTexture = loadCubemap(faces);
 				}
@@ -6154,6 +6217,8 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 		const double deltaY = ypos - fpsUltimoY;
 		fpsUltimoX = xpos;
 		fpsUltimoY = ypos;
+		mouseDeltaX += deltaX;
+		mouseDeltaY += deltaY;
 
 		if (Vis_Polar == POLARZ)
 		{
@@ -7063,13 +7128,21 @@ int main(int argc, char** argv)
 
 // Initialize Application control varibles
 	InitGL();
-	char armsPath[] = "./assets/models\\arms_rig2.obj";
+	char armsPath[] = "./assets/models/arms_rig2.obj";
 	armsRigOBJ = new COBJModel();
 	if (armsRigOBJ->LoadModel(armsPath) != 0)
 	{
 		std::cerr << "No se pudieron cargar los brazos del jugador.\n";
 		delete armsRigOBJ;
 		armsRigOBJ = nullptr;
+	}
+	char flashlightPath[] = "./assets/models/items/3dexter/flashlight.obj";
+	flashlightOBJ = new COBJModel();
+	if (flashlightOBJ->LoadModel(flashlightPath) != 0)
+	{
+		std::cerr << "No se pudo cargar la linterna del jugador.\n";
+		delete flashlightOBJ;
+		flashlightOBJ = nullptr;
 	}
 
 // ------------- Entorn VGI: Callbacks
@@ -7144,6 +7217,7 @@ int main(int argc, char** argv)
 		// Actualitzar moviment continu de navegació (WASD) per frame.
 		if (!fpsPausado && ventanaConFoco && modoJuegoFPS())
 			moverJugadorFPS(window, delta);
+		actualizarMovimientoLinterna(window, static_cast<float>(delta));
 
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
@@ -7183,6 +7257,13 @@ int main(int argc, char** argv)
 		armsRigOBJ->netejaTextures_OBJ();
 		delete armsRigOBJ;
 		armsRigOBJ = nullptr;
+	}
+	if (flashlightOBJ != nullptr)
+	{
+		flashlightOBJ->netejaVAOList_OBJ();
+		flashlightOBJ->netejaTextures_OBJ();
+		delete flashlightOBJ;
+		flashlightOBJ = nullptr;
 	}
 
 	glfwDestroyWindow(window);

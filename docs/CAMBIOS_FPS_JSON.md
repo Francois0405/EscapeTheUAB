@@ -40,6 +40,14 @@ Los OBJ y MTL de la habitación y de los brazos, además de `arms_01.png`, está
 
 ## Validación
 
+### Materiales de color y texturas de imagen
+
+Un material OBJ/MTL puede definir propiedades de iluminación y color (por ejemplo `Kd`) sin asignar una imagen. `test.mtl` tiene un material de este tipo y no declara `map_Kd`; por tanto, el modelo debe dibujarse usando el color/material y no una muestra de imagen. La linterna FPS usa `flashlight.mtl` y `flashlight.png`; los brazos siguen disponibles como asset, pero permanecen ocultos durante la exploración FPS.
+
+El booleano `textur` enviado a `dibuixa_EscenaGL()` controla el uniform del shader: cuando vale `true`, los fragment shaders muestrean `texture0`; cuando vale `false`, entregan el color calculado por el material. La bandera global `textura` se activa al cargar el JSON y no indica que cada OBJ de la habitación tenga una imagen. Si se deja activa para todos, un modelo sin mapa puede muestrear la textura que haya quedado enlazada y teñirse. Por eso las instancias de la habitación se dibujan con `false`, el objeto OBJ seleccionado conserva su ajuste y la linterna fuerza temporalmente `true` durante su dibujo.
+
+Una mejora futura, si hacen falta imágenes distintas por OBJ, es guardar por modelo/material la presencia e identificador de su mapa y seleccionar y enlazar esa textura al dibujar cada material. Esta corrección no introduce ese sistema.
+
 ### Ejecutada en esta integración
 
 - MSBuild 18.10.1 compiló `EntornVGI.slnx` en `Debug|x64`; el ejecutable se generó correctamente.
@@ -51,5 +59,7 @@ Los OBJ y MTL de la habitación y de los brazos, además de `arms_01.png`, está
 
 - No se abrió la aplicación para comprobar visualmente habitación, materiales, brazos, tamaño de ImGui ni comportamiento interactivo de ratón, WASD, F1 y ESC.
 - No se probaron configuraciones Release o Win32 ni la ejecución desde otra carpeta de trabajo.
+
+La revisión de código confirma que F1 alterna `mostrarPanelesDebug`, hace visible la ventana académica principal al abrirlos y llama a `sincronizarCursorFPS()`. El menú omite los paneles académicos del modo juego cuando la bandera está desactivada; al cerrarlos, la captura del cursor se recupera si sigue en modo juego activo. La interacción real de F1/cursor sigue pendiente de prueba en ejecución.
 
 La compilación y las comprobaciones estructurales no sustituyen una prueba gráfica en ejecución.
