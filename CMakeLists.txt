@@ -7,7 +7,13 @@ include(CTest)
 # Bullet Physics (fisica). vcpkg (Windows/macOS) y libbullet-dev (Linux) instalan el
 # mismo BulletConfig.cmake, que define BULLET_INCLUDE_DIRS y BULLET_LIBRARIES.
 # Se agrupa en un unico target para que el juego y las pruebas enlacen igual.
-find_package(Bullet CONFIG REQUIRED)
+# Linux: utilizar el módulo FindBullet de CMake.
+# Windows/macOS: utilizar el paquete CONFIG de vcpkg.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(Bullet MODULE REQUIRED)
+else()
+    find_package(Bullet CONFIG REQUIRED)
+endif()
 add_library(EntornVGI_bullet INTERFACE)
 target_include_directories(EntornVGI_bullet SYSTEM INTERFACE ${BULLET_INCLUDE_DIRS})
 target_link_libraries(EntornVGI_bullet INTERFACE ${BULLET_LIBRARIES})
