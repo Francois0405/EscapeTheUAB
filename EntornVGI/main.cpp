@@ -5414,7 +5414,7 @@ void Teclat_Pan(int key, int action)
 	{	switch (key)
 		{
 		// Tecla cursor amunt
-		case VK_UP:
+		case GLFW_KEY_UP:
 			tr_cpv.y -= fact_pan;
 			if (tr_cpv.y < -100000) tr_cpv.y = 100000;
 			break;
@@ -7076,7 +7076,7 @@ int main(int argc, char** argv)
 	glfwGetFramebufferSize(window, &w, &h);
 
 // Initialize GLEW
-	if (GLEW_VERSION_3_3) glewExperimental = GL_TRUE; // Needed for core profile
+	glewExperimental = GL_TRUE; // Needed for core profile
 	if (glewInit() != GLEW_OK) {
 		glGetError();	// Esborrar codi error generat per bug a llibreria GLEW
 		fprintf(stderr, "Failed to initialize GLEW\n");
@@ -7168,7 +7168,11 @@ int main(int argc, char** argv)
 
 // Entorn VGI.ImGui: Setup Platform/Renderer backends
 	ImGui_ImplGlfw_InitForOpenGL(window, true);
+#ifdef __APPLE__
+	ImGui_ImplOpenGL3_Init("#version 150");
+#else
 	ImGui_ImplOpenGL3_Init("#version 130");
+#endif
 
 	// Arrancar directamente con la habitación y la configuración de juego.
 	aplicarPresetJuego();

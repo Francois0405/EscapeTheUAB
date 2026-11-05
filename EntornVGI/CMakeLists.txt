@@ -8,6 +8,10 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 set(IMGUI_DIR "${REPO_ROOT}/include/ImGui")
 
+if(APPLE)
+	# Prefer the system OpenGL.framework over XQuartz (/opt/X11), which has no Cocoa context.
+	set(CMAKE_FIND_FRAMEWORK FIRST)
+endif()
 find_package(OpenGL REQUIRED)
 find_package(Threads REQUIRED)
 
@@ -96,6 +100,19 @@ elseif(TARGET glfw3::glfw)
 	set(ENTORNVGI_GLFW_TARGET glfw3::glfw)
 else()
 	message(FATAL_ERROR "The GLFW package did not define a supported target.")
+endif()
+
+if(APPLE)
+	# vcpkg's GLEW records XQuartz's libGL as a dependency; drop it so only OpenGL.framework is linked.
+	foreach(_glew_tgt GLEW::GLEW GLEW::glew GLEW::glew_s)
+		if(TARGET ${_glew_tgt})
+			get_target_property(_glew_libs ${_glew_tgt} INTERFACE_LINK_LIBRARIES)
+			if(_glew_libs)
+				list(FILTER _glew_libs EXCLUDE REGEX "X11")
+				set_target_properties(${_glew_tgt} PROPERTIES INTERFACE_LINK_LIBRARIES "${_glew_libs}")
+			endif()
+		endif()
+	endforeach()
 endif()
 
 if(TARGET GLEW::GLEW)
