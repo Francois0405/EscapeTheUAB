@@ -35,8 +35,7 @@
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
-COBJModel* armsRigOBJ = nullptr;
-COBJModel* flashlightOBJ = nullptr;
+COBJModel* phoneOBJ = nullptr;
 
 // Locate copied resources beside the executable or in the source tree.
 static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
@@ -80,10 +79,10 @@ namespace
 	bool mostrarPanelesDebug = false;
 	double fpsUltimoX = 0.0;
 	double fpsUltimoY = 0.0;
-	bool mostrarLinterna = true;
-	glm::vec3 linternaPosicion(-0.34f, -0.27f, -0.78f);
-	glm::vec3 linternaRotacion(0.0f, 90.0f, 0.0f);
-	float linternaEscala = 0.43f;
+	bool mostrarMovil = true;
+	glm::vec3 movilPosicion(-0.30f, -0.28f, -0.65f);
+	glm::vec3 movilRotacion(90.0f, 0.0f, -12.0f);
+	float movilEscala = 0.09f;
 	float intensidadIdle = 0.002f;
 	float intensidadWalking = 0.018f;
 	float intensidadMouse = 0.0008f;
@@ -183,7 +182,7 @@ namespace
 		n[1] += moverY;
 	}
 
-	void actualizarMovimientoLinterna(GLFWwindow* window, float deltaTime)
+	void actualizarMovimientoMovil(GLFWwindow* window, float deltaTime)
 	{
 		deltaTime = std::clamp(deltaTime, 0.0f, 0.05f);
 		tiempoFPS += deltaTime;
@@ -1050,30 +1049,30 @@ void dibuixa_Escena() {
 			ObOBJ, GTMatrix);
 	}
 
-	if (modoJuegoFPS() && mostrarLinterna && flashlightOBJ != nullptr)
+	if (modoJuegoFPS() && mostrarMovil && phoneOBJ != nullptr)
 	{
 		const float idle = intensidadIdle;
 		const float bob = pesoCaminata * intensidadWalking;
 		glm::mat4 matrizLocal(1.0f);
-		matrizLocal = glm::translate(matrizLocal, linternaPosicion + glm::vec3(
+		matrizLocal = glm::translate(matrizLocal, movilPosicion + glm::vec3(
 			std::sin(faseCaminata) * bob * 0.45f,
 			std::sin(tiempoFPS * 1.4f) * idle + std::abs(std::sin(faseCaminata)) * bob,
 			0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(linternaRotacion.x) +
+		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.x) +
 			std::sin(tiempoFPS * 1.4f) * idle + mouseSwayY, glm::vec3(1.0f, 0.0f, 0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(linternaRotacion.y) -
+		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.y) -
 			std::sin(faseCaminata) * bob * 0.8f - mouseSwayX, glm::vec3(0.0f, 1.0f, 0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(linternaRotacion.z) +
+		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.z) +
 			std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0.0f, 0.0f, 1.0f));
-		matrizLocal = glm::scale(matrizLocal, glm::vec3(linternaEscala));
-		const glm::mat4 matrizLinterna = glm::inverse(ViewMatrix) * matrizLocal;
+		matrizLocal = glm::scale(matrizLocal, glm::vec3(movilEscala));
+		const glm::mat4 matrizMovil = glm::inverse(ViewMatrix) * matrizLocal;
 
 		const bool texturaAnterior = textura;
 		textura = true;
 		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
 			textura, texturesID, textura_map, tFlag_invert_Y,
 			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-			flashlightOBJ, matrizLinterna);
+			phoneOBJ, matrizMovil);
 		textura = texturaAnterior;
 	}
 }
@@ -1409,11 +1408,11 @@ void draw_Menu_ImGui()
 	}
 	if (modoJuegoFPS() && mostrarPanelesDebug)
 	{
-		ImGui::Begin("Linterna FPS");
-		ImGui::Checkbox("Mostrar linterna", &mostrarLinterna);
-		ImGui::InputFloat3("Posicion", &linternaPosicion.x, "%.3f");
-		ImGui::InputFloat3("Rotacion (grados)", &linternaRotacion.x, "%.1f");
-		ImGui::SliderFloat("Escala", &linternaEscala, 0.05f, 1.0f, "%.2f");
+		ImGui::Begin("Movil FPS");
+		ImGui::Checkbox("Mostrar movil", &mostrarMovil);
+		ImGui::InputFloat3("Posicion", &movilPosicion.x, "%.3f");
+		ImGui::InputFloat3("Rotacion (grados)", &movilRotacion.x, "%.1f");
+		ImGui::SliderFloat("Escala", &movilEscala, 0.02f, 0.40f, "%.3f");
 		ImGui::SliderFloat("Intensidad idle", &intensidadIdle, 0.0f, 0.02f, "%.4f");
 		ImGui::SliderFloat("Intensidad walking", &intensidadWalking, 0.0f, 0.08f, "%.3f");
 		ImGui::SliderFloat("Intensidad mouse", &intensidadMouse, 0.0f, 0.003f, "%.4f");
@@ -7128,21 +7127,14 @@ int main(int argc, char** argv)
 
 // Initialize Application control varibles
 	InitGL();
-	char armsPath[] = "./assets/models/arms_rig2.obj";
-	armsRigOBJ = new COBJModel();
-	if (armsRigOBJ->LoadModel(armsPath) != 0)
+
+	char phonePath[] = "./assets/models/Phone.obj";
+	phoneOBJ = new COBJModel();
+	if (phoneOBJ->LoadModel(phonePath) != 0)
 	{
-		std::cerr << "No se pudieron cargar los brazos del jugador.\n";
-		delete armsRigOBJ;
-		armsRigOBJ = nullptr;
-	}
-	char flashlightPath[] = "./assets/models/items/3dexter/flashlight.obj";
-	flashlightOBJ = new COBJModel();
-	if (flashlightOBJ->LoadModel(flashlightPath) != 0)
-	{
-		std::cerr << "No se pudo cargar la linterna del jugador.\n";
-		delete flashlightOBJ;
-		flashlightOBJ = nullptr;
+		std::cerr << "No se pudo cargar Phone.obj. Comprueba la ruta y el MTL.\n";
+		delete phoneOBJ;
+		phoneOBJ = nullptr;
 	}
 
 // ------------- Entorn VGI: Callbacks
@@ -7217,7 +7209,7 @@ int main(int argc, char** argv)
 		// Actualitzar moviment continu de navegació (WASD) per frame.
 		if (!fpsPausado && ventanaConFoco && modoJuegoFPS())
 			moverJugadorFPS(window, delta);
-		actualizarMovimientoLinterna(window, static_cast<float>(delta));
+		actualizarMovimientoMovil(window, static_cast<float>(delta));
 
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
@@ -7251,19 +7243,13 @@ int main(int argc, char** argv)
 
 	modelosHabitacion.clear();
 	objetosEscena.clear();
-	if (armsRigOBJ != nullptr)
+
+	if (phoneOBJ != nullptr)
 	{
-		armsRigOBJ->netejaVAOList_OBJ();
-		armsRigOBJ->netejaTextures_OBJ();
-		delete armsRigOBJ;
-		armsRigOBJ = nullptr;
-	}
-	if (flashlightOBJ != nullptr)
-	{
-		flashlightOBJ->netejaVAOList_OBJ();
-		flashlightOBJ->netejaTextures_OBJ();
-		delete flashlightOBJ;
-		flashlightOBJ = nullptr;
+		phoneOBJ->netejaVAOList_OBJ();
+		phoneOBJ->netejaTextures_OBJ();
+		delete phoneOBJ;
+		phoneOBJ = nullptr;
 	}
 
 	glfwDestroyWindow(window);

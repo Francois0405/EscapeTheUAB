@@ -1,29 +1,70 @@
-# EntornVGI
+# EscapeTheUAB — EntornVGI
 
-EntornVGI es un entorno grafico 3D docente basado en C++20, OpenGL, GLFW,
-GLEW, GLM, SOIL2, Dear ImGui, Native File Dialog y un cargador OBJ/MTL propio.
-El codigo fuente y los recursos son comunes a Windows, Linux y macOS. El
-proyecto Visual Studio existente se conserva; CMake es el sistema de
-compilacion comun recomendado.
+Proyecto académico de visualización gráfica 3D basado en el entorno del profesor.
+Utiliza **C++20, OpenGL, GLFW, GLEW, GLM, SOIL2, Dear ImGui**, carga de
+modelos **OBJ/MTL** y escenas en **JSON**. Se conserva la solución original de
+Visual Studio y se utiliza **CMake** para las compilaciones multiplataforma.
 
-## Requisitos
+## Inicio rápido — una sola orden
 
-- CMake 3.25 o posterior y Ninja.
-- Compilador C++20: MSVC (Visual Studio 2026), GCC/Clang o Apple Clang.
-- OpenGL y un driver que soporte al menos OpenGL 3.3; macOS usa OpenGL 4.1
-  Core, el maximo disponible en esa plataforma.
-- vcpkg en Windows/macOS. Linux usa paquetes de la distribucion para GLFW,
-  GLEW y GLM.
+Después de instalar los requisitos de tu sistema **una vez**, desde la raíz
+del repositorio (la carpeta que contiene `CMakePresets.json`):
 
-SOIL2 y Dear ImGui se compilan desde fuentes conservadas en el repositorio.
-GLFW, GLEW, GLM y Native File Dialog Extended se resuelven mediante el
-manifiesto `vcpkg.json` en Windows/macOS. El preset Linux usa los paquetes del
-sistema y el backend GTK3 de Native File Dialog incluido en `third_party/`.
-No se enlazan las bibliotecas `.lib` antiguas fuera de Windows.
+| Sistema | Compilar y ejecutar | Compilar sin abrir | Release |
+| --- | --- | --- | --- |
+| **Windows** | Doble clic en `run-windows.cmd` o `./run-windows.cmd` en PowerShell | `./run-windows.cmd -NoRun` | `./run-windows.cmd -Configuration Release` |
+| **Linux** | `./run-linux.sh` | `./run-linux.sh --no-run` | `./run-linux.sh --release` |
+| **macOS** | `./run-macos.sh` | `./run-macos.sh --no-run` | `./run-macos.sh --release` |
 
-## Linux (Ubuntu)
+En Windows, el lanzador localiza Visual Studio y vcpkg, inicializa **MSVC x64**,
+configura el preset, compila y abre `build/windows-debug/bin/EntornVGI.exe`.
+**Si la compilación falla, no ejecuta un EXE antiguo.** No es necesario
+configurar `$env:INCLUDE`, `$env:NINJA` o `$env:VCPKG_ROOT` manualmente en cada
+terminal, siempre que las herramientas estén instaladas en una ruta detectable.
+Se respeta `VCPKG_ROOT` si ya está definido. CMake reutiliza los resultados de
+compilación: los cambios posteriores se compilan incrementalmente.
 
-Instala el toolchain, Ninja, OpenGL, GLFW, GLEW, GLM y GTK3:
+En Linux y macOS se usa el compilador de CMake, Ninja y los presets del sistema.
+Los scripts **no instalan paquetes, no actualizan Git, no cambian de rama y no
+hacen commits ni merges**. Ejecutan lo que tengas actualmente en tu copia local.
+
+Si los lanzadores `.sh` no son ejecutables tras descomprimir, usa
+`bash run-linux.sh` o `bash run-macos.sh`, según el sistema.
+
+## Requisitos por plataforma
+
+### Windows 10/11 — Visual Studio con C++
+
+Instala Visual Studio 2026 con los componentes **Desarrollo de escritorio con
+C++**, **MSVC x64**, **Windows SDK**, **CMake** y **Ninja**. El proyecto utiliza
+`vcpkg.json` para gestionar GLFW, GLEW, GLM y Native File Dialog Extended.
+
+En el equipo donde se preparó el lanzador se detecta Visual Studio en
+`D:\Visual Studio` y vcpkg en `D:\Visual Studio\VC\vcpkg`. También se
+intenta localizar Visual Studio mediante `vswhere` y vcpkg con `VCPKG_ROOT`
+o en `~/vcpkg`. No es obligatorio utilizar esas rutas concretas.
+
+Desde PowerShell:
+
+```powershell
+cd F:\EscapeTheUAB\EscapeTheUAB  # cambia la ruta si clonaste el repo en otro sitio
+.\run-windows.cmd
+```
+
+Para compilar únicamente:
+
+```powershell
+.\run-windows.cmd -NoRun
+```
+
+En Visual Studio también puedes abrir la raíz como proyecto CMake y seleccionar
+`windows-debug` o `windows-release`. Se conserva `EntornVGI.slnx` y el proyecto
+`.vcxproj` original, pero **no debes confundir su salida con la de CMake**:
+son compilaciones distintas.
+
+### Linux (Ubuntu / derivados)
+
+Instala las dependencias una sola vez:
 
 ```bash
 sudo apt update
@@ -31,133 +72,137 @@ sudo apt install -y build-essential cmake ninja-build pkg-config \
     libgl1-mesa-dev libglfw3-dev libglew-dev libglm-dev libgtk-3-dev
 ```
 
-Desde la raiz del repositorio:
-   
-```bash
-cmake --preset linux-debug
-cmake --build --preset linux-debug --parallel
-./build/linux-debug/bin/EntornVGI
-```
-
-Para Release:
+Después, desde la raíz del repositorio:
 
 ```bash
-cmake --preset linux-release
-cmake --build --preset linux-release --parallel
-./build/linux-release/bin/EntornVGI
+./run-linux.sh
+# o: ./run-linux.sh --release
 ```
 
-El backend Linux de dialogos necesita GTK3 y una sesion grafica activa. CMake
-copia `assets/`, `shaders/` y `textures/` al directorio del ejecutable; al
-arrancar, el programa localiza la raiz de recursos aun si el directorio actual
-es otro.
+El preset Linux usa GCC/Clang y las bibliotecas de la distribución, incluido
+GTK3 para los diálogos de archivos. Necesitas una sesión gráfica activa y un
+driver que soporte OpenGL 3.3 o superior. No hace falta vcpkg para este preset.
 
-## Windows 10/11 (Visual Studio Community 2026)
+### macOS (Apple Silicon o Intel)
 
-1. Instala Visual Studio 2026 con **Desktop development with C++**, CMake y
-   Ninja.
-2. Clona e inicializa vcpkg siguiendo su guia oficial; define `VCPKG_ROOT` en
-   el entorno antes de abrir Visual Studio.
-3. Abre la carpeta raiz del repositorio en Visual Studio. Selecciona
-   `windows-debug` o `windows-release` en los presets de CMake y compila el
-   destino `EntornVGI`.
-
-Los presets usan MSVC y el manifiesto instala GLFW, GLEW, GLM y Native File
-Dialog Extended. Para construir desde Developer PowerShell de Visual Studio,
-define las rutas que usan los presets y compila:
-
-```powershell
-$env:VCPKG_ROOT = 'D:\vcpkg'
-$env:NINJA = 'D:\Visual Studio\Common7\IDE\CommonExtensions\Microsoft\CMake\Ninja\ninja.exe'
-cmake --preset windows-debug
-cmake --build --preset windows-debug --parallel
-.\build\windows-debug\bin\EntornVGI.exe
-```
-
-Sustituye `D:\vcpkg` por la ruta donde inicializaste vcpkg. Si CMake no está
-en `PATH`, invoca `cmake.exe` desde la instalación de Visual Studio.
-
-El proyecto anterior `EntornVGI.slnx` y `EntornVGI/EntornVGI.vcxproj` se
-mantiene disponible para usuarios que necesiten el flujo heredado.
-
-## macOS (Apple Silicon e Intel)
-
-Instala Xcode Command Line Tools, Homebrew, CMake y Ninja. Inicializa vcpkg una
-vez y define `VCPKG_ROOT` en la terminal desde la que vayas a configurar el
-proyecto:
+Instala una sola vez las herramientas de Xcode, Homebrew, CMake, Ninja y vcpkg:
 
 ```bash
 xcode-select --install
 brew install cmake ninja
 git clone https://github.com/microsoft/vcpkg.git "$HOME/vcpkg"
 "$HOME/vcpkg/bootstrap-vcpkg.sh"
-export VCPKG_ROOT="$HOME/vcpkg"
 ```
 
-Desde la raíz del repositorio, configura, compila y ejecuta:
+Después:
 
 ```bash
-cmake --preset macos-debug
-cmake --build --preset macos-debug --parallel
-./build/macos-debug/bin/EntornVGI
+./run-macos.sh
+# o: ./run-macos.sh --release
 ```
 
-Para Release, sustituye `macos-debug` por `macos-release` en los comandos de
-configuración y compilación; el ejecutable queda en
-`build/macos-release/bin/EntornVGI`. En VS Code instala las extensiones
-recomendadas **CMake Tools** y **C/C++**, abre VS Code desde la terminal donde
-definiste `VCPKG_ROOT`, selecciona el preset macOS y usa los controles de
-configurar, compilar y ejecutar.
+El lanzador detecta `~/vcpkg` automáticamente. Si lo has instalado en otra
+carpeta, define `export VCPKG_ROOT="/ruta/a/vcpkg"` una sola vez en tu perfil de
+shell o antes de ejecutar el script. El contexto OpenGL solicitado en macOS es
+**4.1 Core (forward-compatible)** y se usan shaders GLSL 330. Algunas rutas
+antiguas del código del profesor no admiten OpenGL Core y deben probarse.
+OpenGL está deprecado por Apple: el soporte macOS requiere validación real.
 
-macOS solicita un contexto OpenGL 4.1 Core con compatibilidad forward, y los
-shaders GLSL 330 del proyecto son compatibles con ese contexto. Apple ha
-declarado OpenGL obsoleto; no se puede usar un contexto de compatibilidad
-heredado en macOS.
-
-## Dependencias y estructura
+## Estructura del proyecto
 
 ```text
-CMakeLists.txt                 Configuracion CMake comun
-CMakePresets.json              Presets Debug/Release de cada plataforma
-vcpkg.json                     Dependencias multiplataforma de vcpkg
-EntornVGI/                     Aplicacion, cargadores y shaders
-EntornVGI/assets/              Modelos OBJ/MTL, escenas y texturas
-include/ImGui/                 Fuentes y backends Dear ImGui
-third_party/SOIL2/             Fuentes SOIL2
-third_party/nativefiledialog/  Backend GTK3 usado por Linux
-lib/                           Bibliotecas heredadas de Windows
+CMakeLists.txt                Compilación común
+CMakePresets.json             Presets para Windows, Linux y macOS
+vcpkg.json                    Dependencias Windows/macOS
+run-windows.cmd/.ps1          Lanzador Windows: MSVC + CMake + ejecutar
+run-linux.sh                  Lanzador Linux
+run-macos.sh                  Lanzador macOS
+EntornVGI/main.cpp            Entrada, renderizado y controles
+EntornVGI/SceneLoader.*       Lectura de escenas JSON
+EntornVGI/objLoader.*         Importador OBJ/MTL del profesor
+EntornVGI/assets/models/     Modelos y materiales
+EntornVGI/assets/scenes/     Escenas JSON
+EntornVGI/shaders/           Shaders GLSL
+include/ImGui/                Dear ImGui
+third_party/SOIL2/           Carga de texturas
+third_party/nativefiledialog/ Backend GTK3 para Linux
+lib/                          Bibliotecas Windows heredadas
+build/<preset>/bin/           Ejecutables generados por CMake
 ```
 
-`ModelLoader.cpp` no se incluye en el ejecutable: tampoco forma parte de la
-lista de compilacion original de Visual Studio y depende de Assimp. El flujo de
-carga de escenas usado por la aplicacion es `SceneLoader` junto con el cargador
-OBJ/MTL propio.
+Los recursos (`assets/`, `shaders/` y `textures/`) se copian junto al ejecutable
+**tras compilar**. El programa busca automáticamente la raíz de recursos. Al
+importar un OBJ con `.mtl`, las texturas deben referenciarse con nombres o
+rutas **relativas** (por ejemplo `map_Kd Phone_BaseColor.png`), nunca con una
+ruta `C:\...` o `D:\...`: Linux y macOS no conocen esas rutas.
 
-## Validacion y limitaciones
+La habitación de prueba está en `EntornVGI/assets/scenes/habitacion_beta.json`,
+con sus instancias y transformaciones. El modelo visible en primera persona
+se configura en el código de la versión local que estés ejecutando; un modelo
+OBJ no aporta por sí solo animaciones esqueléticas ni emite luz. No confundas
+una sustitución de modelo con una integración ya comprobada de la iluminación.
 
-En Ubuntu con GCC y una NVIDIA GTX 1650/OpenGL 3.3 se configuraron y compilaron
-los presets `linux-debug` y `linux-release`. Se iniciaron ambos ejecutables:
-los shaders de iluminacion, ejes y skybox compilaron y enlazaron, se cargo
-`arms_rig.obj` y `SceneLoader` leyo los 12 objetos de la escena. La validacion
-fue de arranque; no se verifico visualmente ni de forma interactiva toda la
-camara, navegacion, texturas, ImGui o los dialogos. Los builds siguen
-produciendo avisos heredados, principalmente inicializadores incompletos y
-variables no usadas en la geometria antigua.
+## Qué hacer cuando algo no funciona
 
-Windows se configuró y compiló con MSVC, Ninja y vcpkg; el ejecutable inició en
-esta sesión, pero no se hizo una validación visual o interactiva completa.
-macOS no se pudo compilar desde este entorno Windows y debe validarse con Apple
-Clang/vcpkg en macOS. Un build Linux no certifica macOS. La carga de los
-diálogos nativos requiere un entorno de escritorio compatible.
+**Windows: `fatal error C1083: Cannot open include file: float.h`.**
+Ocurre si `cl.exe` se ejecuta fuera del entorno MSVC o falta el Windows SDK.
+Usa `run-windows.cmd`: inicializa automáticamente
+`Launch-VsDevShell.ps1`. El hecho de que `float.h` no aparezca dentro de la
+carpeta de MSVC no implica un error; suele estar en la UCRT del Windows SDK.
+Si persiste, verifica la instalación de **Desktop development with C++** y SDK.
 
-El codigo contiene rutinas GLUT antiguas junto con rutas de dibujo modernas
-basadas en VAO/EBO. Las rutas heredadas que aun dependan de OpenGL inmediato no
-son compatibles con un perfil Core; las opciones activas en macOS deben
-validarse visualmente y migrarse si se ejercitan esas rutinas.
+**Los cambios no aparecen y se siguen viendo modelos antiguos.**
+Comprueba que el lanzador terminó con éxito y no ejecutaste un EXE antiguo.
+El ejecutable CMake Debug es `build/windows-debug/bin/EntornVGI.exe` en Windows;
+el de Linux/macOS está bajo el directorio de su preset. La solución `.slnx`
+puede producir ejecutables en otra ubicación. Si has modificado un modelo o
+una textura, recompila mediante el lanzador para volver a copiar recursos.
 
-## Archivos generados
+**No carga una textura / un OBJ.** Confirma que el `.obj` referencia un
+`mtllib` válido, que `.mtl` tiene `map_Kd` con ruta relativa y que los archivos
+están presentes en `assets/models/` (o en sus subcarpetas). El cargador OBJ
+actual utiliza `map_Kd` para color; un mapa PBR `map_Ns` de rugosidad **no es
+una garantía de soporte de roughness**. Revisa los mensajes de consola.
 
-`.gitignore` excluye directorios CMake, artefactos de compilacion, ejecutables,
-bibliotecas generadas y estado local del IDE. Los modelos `*.obj`, materiales
-`*.mtl`, texturas, shaders y escenas **no** se ignoran. `.vscode/` contiene
-solo presets y configuracion compartida, sin rutas personales.
+**Linux/macOS no compilan o no arrancan.** Guarda el registro completo con:
+
+```bash
+bash run-linux.sh --no-run 2>&1 | tee build-linux.log
+# macOS: bash run-macos.sh --no-run 2>&1 | tee build-macos.log
+```
+
+Adjunta el primer `error:` o `fatal error:` de la compilación, no solo los
+warnings heredados. Para problemas gráficos, incluye la salida de ejecución,
+GPU, driver y versión de OpenGL.
+
+## Validación y limitaciones
+
+- **Windows:** en noviembre de 2026 se verificó que el preset `windows-debug`
+  configura y compila con MSVC, Ninja y vcpkg y el programa arranca con la
+  habitación de 12 instancias. El nuevo lanzador debe probarse en un Windows
+  real después de incorporarlo al repositorio.
+- **Linux:** la documentación anterior registra configuración, compilación y
+  arranque de Debug/Release en Ubuntu con GCC y NVIDIA GTX 1650/OpenGL 3.3;
+  no todas las interacciones, texturas o diálogos quedaron validados.
+- **macOS:** está preparado el preset, pero requiere compilación y prueba
+  reales con Apple Clang/vcpkg; no se puede declarar verificado a partir de
+  una compilación de Windows o Linux.
+- El código académico conserva funciones OpenGL heredadas: algunas pueden
+  fallar bajo un contexto Core. No se ha implementado aquí Bullet Physics ni
+  OpenXR; son posibles ampliaciones posteriores.
+
+`ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
+no estaba incluido en el proyecto original. `SceneLoader` y el cargador propio
+OBJ/MTL son la ruta actualmente utilizada. El repositorio ignora salidas CMake,
+artefactos temporales, ImGui y archivos generados. Las rutas de assets y las
+escenas deben conservarse en control de versiones cuando sus licencias lo
+permitan.
+
+## Contribuciones del equipo
+
+Antes de incorporar los cambios, ejecuta `git status -sb` y confirma qué rama
+estás utilizando. Respeta el trabajo de tus compañeros; no uses `git reset
+--hard`, `git clean` ni copies un `main.cpp` antiguo sobre cambios nuevos.
+Mantén `master` para versiones comprobadas y desarrolla funcionalidades en la
+rama de trabajo acordada con el grupo; solicita revisión antes del merge.
+Los scripts de ejecución no hacen ninguna operación Git.
