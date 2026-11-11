@@ -29,6 +29,8 @@
 #include "VistaEstereo.h"
 #include "OpenXRManager.h"
 #include "MovimientoFPS.h"
+#include "Editor/EditorEscenas.h"
+#include "Editor/SerializadorEscenas.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -45,6 +47,9 @@
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
+editor::EditorEscenas editorEscenas;
+editor::SerializadorEscenas serializadorEscena;
+std::vector<SceneObjetoAnimado> datosAnimadosEscena;
 COBJModel* phoneOBJ = nullptr;
 
 // Locate copied resources beside the executable or in the source tree.
@@ -218,7 +223,7 @@ namespace
 
 	void sincronizarCursorFPS(GLFWwindow* window)
 	{
-		const bool capturar = modoJuegoFPS() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
+		const bool capturar = modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
 		fijarCapturaCursor(window, capturar);
 	}
 }
@@ -356,7 +361,7 @@ namespace
 	// Estado del juego FPS que permite la entrada (no hay pausa, ni foco perdido, ni paneles de depuracion).
 	bool entradaFPSActiva()
 	{
-		return modoJuegoFPS() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
+		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
 	}
 
 	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
@@ -401,6 +406,12 @@ namespace
 		if (!CargarDatosEscenaJSON(ruta, datos, error))
 		{
 			std::cerr << "No se cargo la escena: " << error << '\n';
+			return false;
+		}
+		editor::SerializadorEscenas nuevoSerializador;
+		if (!nuevoSerializador.Cargar(ruta, error))
+		{
+			std::cerr << "No se pudo preparar la persistencia de la escena: " << error << '\n';
 			return false;
 		}
 
@@ -474,6 +485,14 @@ namespace
 		glb::SubirEscenaAnimadaAGPU(objetosAnimados);  // el contexto OpenGL ya existe en este punto
 		objetosAnimadosListos = true;
 		nombreEscenaActiva = std::move(datos.nombre);
+		datosAnimadosEscena = std::move(datos.animados);
+		serializadorEscena = std::move(nuevoSerializador);
+		editorEscenas.NuevaEscena();
+		{
+			std::error_code rutaModelos;
+			const auto raiz = std::filesystem::absolute(ruta.parent_path() / ".." / "models", rutaModelos).lexically_normal();
+			if (!rutaModelos && std::filesystem::is_directory(raiz)) editorEscenas.FijarRaizModelos(raiz);
+		}
 		objecte = OBJOBJ;
 		textura = true;
 		tFlag_invert_Y = false;
@@ -482,6 +501,38 @@ namespace
 		glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 		std::cout << "Escena cargada: " << nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
 			<< " animadas, " << escenaFisica->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
+		return true;
+	}
+
+	bool reconstruirFisicaTrasEdicion(std::string& error)
+	{
+		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
+		if (!nuevaFisica->Crear(objetosEscena, objetosAnimados, datosAnimadosEscena, error)) return false;
+		escenaFisica->Vaciar();
+		escenaFisica = std::move(nuevaFisica);
+		return true;
+	}
+
+	bool cargarModeloParaEditor(const std::filesystem::path& ruta, std::string& modeloCargado, std::string& error)
+	{
+		std::error_code ec;
+		const auto absoluta = std::filesystem::absolute(ruta, ec).lexically_normal();
+		if (ec || !std::filesystem::is_regular_file(absoluta, ec))
+		{
+			error = "El archivo OBJ seleccionado no existe.";
+			return false;
+		}
+		modeloCargado = absoluta.string();
+		if (modelosHabitacion.contains(modeloCargado)) return true;
+		auto modelo = std::make_unique<COBJModel>();
+		std::string rutaMutable = modeloCargado;
+		if (modelo->LoadModel(rutaMutable.data()) != 0)
+		{
+			modelo->netejaTextures_OBJ();
+			error = "El cargador OBJ rechazó el modelo seleccionado.";
+			return false;
+		}
+		modelosHabitacion.emplace(modeloCargado, std::move(modelo));
 		return true;
 	}
 }
@@ -499,6 +550,15 @@ namespace
 		else
 		{
 			fpsTienePosicionAnterior = false;
+		}
+	}
+
+	void OnWindowCloseRequest(GLFWwindow* window)
+	{
+		if (editorEscenas.HayCambiosSinGuardar())
+		{
+			glfwSetWindowShouldClose(window, GLFW_FALSE);
+			editorEscenas.SolicitarConfirmacionCierre();
 		}
 	}
 }
@@ -1029,6 +1089,24 @@ void OnPaint(GLFWwindow* window)
 // TODO: Agregue aquí su código de controlador de mensajes
 	if (w <= 0 || h <= 0) return;
 	GLdouble vpv[3] = { 0.0, 0.0, 1.0 };
+	if (editorEscenas.Activo())
+	{
+		glDisable(GL_SCISSOR_TEST);
+		glViewport(0, 0, w, h);
+		FonsB();
+		const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		const float aspecto = std::max(1.0f, displaySize.x) / std::max(1.0f, displaySize.y);
+		editorEscenas.Matrices(aspecto, ViewMatrix, ProjectionMatrix);
+		glUseProgram(shader_programID);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		glUseProgram(eixos_programID);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		configura_Escena();
+		dibuixa_Escena();
+		return;
+	}
 
 // Entorn VGI.ImGui: Menú ImGui condicionat al color de fons
 	if ((c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5))
@@ -1237,13 +1315,16 @@ void dibuixa_Escena() {
 		for (std::size_t i = 0; i < objetosEscena.size(); ++i)
 		{
 			const SceneObject& obj = objetosEscena[i];
+			if (!editorEscenas.ObjetoVisible(i)) continue;   // visibilidad TEMPORAL de la vista de edicion
 			auto it = modelosHabitacion.find(obj.modelo);
 
 			if (it == modelosHabitacion.end())
 				continue;
 
 			// Estáticos y objetos sin físicas: matriz de la escena. Dinámicos: la que calcula Bullet.
-			const glm::mat4 matriz = escenaFisica->MatrizVisualDe(static_cast<int>(i), obj);
+			const glm::mat4 matriz = editorEscenas.Activo()
+				? fisica::MatrizDeObjeto(obj)
+				: escenaFisica->MatrizVisualDe(static_cast<int>(i), obj);
 
 			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
 			dibuixa_EscenaGL(
@@ -1303,13 +1384,13 @@ void dibuixa_Escena() {
 	}
 
 	// Objetos animados GLB (puertas...): mismo shader y cámara que el resto de la escena.
-	if (objetosAnimadosListos)
+	if (objetosAnimadosListos && editorEscenas.MostrarAnimados())
 	{
 		glUseProgram(shader_programID);
 		glb::DibujarObjetosAnimados(objetosAnimados, shader_programID);
 	}
 
-	if (modoJuegoFPS() && mostrarMovil && phoneOBJ != nullptr)
+	if (modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr)
 	{
 		const float idle = intensidadIdle;
 		const float bob = pesoCaminata * intensidadWalking;
@@ -1336,8 +1417,28 @@ void dibuixa_Escena() {
 		textura = texturaAnterior;
 	}
 
-	// Depuración: cajas del mundo físico (solo se dibujan si está activada la opción en el panel).
-	if (mostrarColisionadores)
+	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
+	if (editorEscenas.Activo() && editorEscenas.MostrarColisionadores())
+	{
+		std::vector<fisica::CajaColision> cajasEditor;
+		for (std::size_t indiceObjeto = 0; indiceObjeto < objetosEscena.size(); ++indiceObjeto)
+		{
+			const SceneObject& objeto = objetosEscena[indiceObjeto];
+			if (!objeto.fisica.presente || !editorEscenas.ObjetoVisible(indiceObjeto)) continue;
+			glm::mat4 giro(1.0f);
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
+			fisica::CajaColision caja;
+			caja.tipo = objeto.fisica.tipo;
+			caja.pose.posicion = objeto.posicion + glm::vec3(giro * glm::vec4(objeto.escala * objeto.fisica.desplazamiento, 0.0f));
+			caja.pose.rotacion = glm::quat_cast(glm::mat3(giro));
+			caja.mitadTamano = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
+			cajasEditor.push_back(caja);
+		}
+		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, cajasEditor);
+	}
+	else if (mostrarColisionadores && !editorEscenas.Activo())
 		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
 }
 
@@ -1568,7 +1669,7 @@ void Barra_Estat()
 // Aparece al correr o mientras no esta llena y se desvanece sola. Solo se ve en la ventana, nunca dentro del visor VR.
 static void dibujarBarraEstamina()
 {
-	if (!modoJuegoFPS() || barraEstamina.visible < 0.01f) return;
+	if (!modoJuegoFPS() || editorEscenas.Activo() || barraEstamina.visible < 0.01f) return;
 	const ImGuiIO& io = ImGui::GetIO();
 	const float ancho = std::min(260.0f, io.DisplaySize.x * 0.4f), alto = 8.0f;
 	const float x0 = (io.DisplaySize.x - ancho) * 0.5f, y0 = io.DisplaySize.y - 48.0f;
@@ -1823,6 +1924,9 @@ void draw_Menu_ImGui()
 		}
 		ImGui::End();
 	}
+
+	editorEscenas.DibujarInterfaz(editor::ContextoEscena{ objetosEscena, datosAnimadosEscena, objetosAnimados },
+		static_cast<int>(ImGui::GetIO().DisplaySize.x), static_cast<int>(ImGui::GetIO().DisplaySize.y));
 
 // Rendering ImGui Menus
 	ImGui::Render();
@@ -4547,6 +4651,19 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
+	if (editorEscenas.Activo())
+	{
+		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
+		sincronizarCursorFPS(window);
+		return;
+	}
+	if (key == GLFW_KEY_E && action == GLFW_PRESS &&
+		(mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_ALT))
+	{
+		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
+		fijarCapturaCursor(window, false);
+		return;
+	}
 	if (modoJuegoFPS())
 	{
 		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -4599,7 +4716,11 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // (2) ONLY forward mouse data to your underlying app/game.
 	if (!io.WantCaptureKeyboard) { //<Tractament mouse de l'aplicació>}
 		// EntornVGI: Si tecla pulsada és ESCAPE, tancar finestres i aplicació.
-		if (mods == 0 && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(window, GL_TRUE);
+		if (mods == 0 && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		{
+			if (editorEscenas.HayCambiosSinGuardar()) editorEscenas.SolicitarConfirmacionCierre();
+			else glfwSetWindowShouldClose(window, GL_TRUE);
+		}
 		else if (mods == 0 && key == GLFW_KEY_PRINT_SCREEN && action == GLFW_PRESS) statusB = !statusB;
 		else if ((mods == 1) && (action == GLFW_PRESS)) Teclat_Shift(key, window);	// Shorcuts Shift Key
 		else if ((mods == 2) && (action == GLFW_PRESS)) Teclat_Ctrl(key);	// Shortcuts Ctrl Key
@@ -6560,6 +6681,7 @@ void OnMouseButton(GLFWwindow* window, int button, int action, int mods)
 	ImGuiIO& io = ImGui::GetIO();
 
 	// (2) ONLY forward mouse data to your underlying app/game.
+	if (editorEscenas.Activo()) return;
 	if (modoJuegoFPS()) return;
 
 	if (!io.WantCaptureMouse) { //<Tractament mouse de l'aplicació>}
@@ -6909,6 +7031,11 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 {
 // TODO: Agregue aquí su código de controlador de mensajes o llame al valor predeterminado
+	if (editorEscenas.Activo())
+	{	// la rueda es de la camara solo sobre el viewport; sobre un panel ImGui desplaza el panel
+		editorEscenas.RuedaRaton(static_cast<float>(yoffset));
+		return;
+	}
 	double modul = 0;
 	GLdouble vdir[3] = { 0, 0, 0 };
 
@@ -6917,7 +7044,7 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 	ImGuiIO& io = ImGui::GetIO();
 
 // (2) ONLY forward mouse data to your underlying app/game.
-	if (modoJuegoFPS()) return;
+	if (editorEscenas.Activo() || modoJuegoFPS()) return;
 	if (!io.WantCaptureMouse) { // <Tractament mouse de l'aplicació>}
 		// Funció de zoom quan està activada la funció pan o les T. Geomètriques
 		if ((zzoom || zzoomO) || (transX) || (transY) || (transZ))
@@ -7298,6 +7425,8 @@ int main(int argc, char** argv)
 	glfwSetWindowSizeCallback(window, OnSize);										// - Windows Size in screen Coordinates
 	glfwSetFramebufferSizeCallback(window, OnFramebufferSize);							// - Medidas del framebuffer en píxeles
 	glfwSetWindowFocusCallback(window, OnWindowFocus);
+	glfwSetWindowCloseCallback(window, OnWindowCloseRequest);
+	editorEscenas.FijarCargadorModelos(cargarModeloParaEditor);
 	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun)OnMouseButton);			// - Directly redirect GLFW mouse button events
 	glfwSetCursorPosCallback(window, (GLFWcursorposfun)OnMouseMove);				// - Directly redirect GLFW mouse position events
 	glfwSetScrollCallback(window, (GLFWscrollfun)OnMouseWheel);						// - Directly redirect GLFW mouse wheel events
@@ -7354,13 +7483,14 @@ int main(int argc, char** argv)
 
 		// Poll for and process events
 		glfwPollEvents();
+		editorEscenas.Actualizar(window, static_cast<float>(delta));
 		sincronizarCursorFPS(window);
 
 		const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
 			glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 		// Postura: en pausa, sin foco o con paneles de depuracion abiertos se CONGELA (delta 0): ni se agacha ni se levanta.
 		// Fuera del modo FPS (camaras de depuracion) se sigue levantando como antes.
-		const float deltaPostura = (modoJuegoFPS() && !entradaFPSActiva()) ? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
+		const float deltaPostura = (editorEscenas.Activo() || (modoJuegoFPS() && !entradaFPSActiva())) ? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
 		mundoFisico.ActualizarJugadorAgachado(modoJuegoFPS() && ctrlPulsado, deltaPostura);
 
 		// Actualitzar moviment continu de navegació (WASD) per frame.
@@ -7368,7 +7498,7 @@ int main(int argc, char** argv)
 		mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
 		{
 			fps::EntradaMovimiento entrada;
-			entrada.activo = entradaFPSActiva() && mundoFisico.HayJugador();
+			entrada.activo = !editorEscenas.Activo() && entradaFPSActiva() && mundoFisico.HayJugador();
 			entrada.quiereMoverse = entrada.activo && hayTeclaDeMovimiento(window);
 			entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
 				glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
@@ -7383,7 +7513,7 @@ int main(int argc, char** argv)
 		// La animación se considera PAUSADA cuando el juego está en pausa (ESC) o la ventana
 		// ha perdido el foco. Abrir los paneles de depuración (F1) NO la pausa, porque el
 		// botón "Abrir puerta" está justamente en esos paneles.
-		const bool animacionPausada = fpsPausado || !ventanaConFoco;
+		const bool animacionPausada = editorEscenas.Activo() || fpsPausado || !ventanaConFoco;
 		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
 		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
 		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado
@@ -7399,6 +7529,39 @@ int main(int argc, char** argv)
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
 		draw_Menu_ImGui();
+		if (editorEscenas.ConsumeGuardarRequest())
+		{
+			std::string errorGuardado;
+			if (serializadorEscena.Guardar(objetosEscena, datosAnimadosEscena, errorGuardado))
+			{
+				editorEscenas.MarcarGuardado();
+				editorEscenas.InformarEstado("Saved: " + serializadorEscena.Ruta().filename().string());
+				std::cout << "Escena guardada en " << serializadorEscena.Ruta() << '\n';
+				if (editorEscenas.ConsumeCerrarTrasGuardar()) glfwSetWindowShouldClose(window, GLFW_TRUE);
+			}
+			else
+			{
+				editorEscenas.InformarEstado("Save failed: " + errorGuardado, true);
+				std::cerr << "No se guardó la escena: " << errorGuardado << '\n';
+			}
+		}
+		if (editorEscenas.ConsumeCerrarConfirmado()) glfwSetWindowShouldClose(window, GLFW_TRUE);
+		if (editorEscenas.ConsumeEntradaPlay())
+		{
+			std::string errorEditor;
+			if (!reconstruirFisicaTrasEdicion(errorEditor))
+			{
+				std::cerr << "No se pudo reconstruir Bullet al salir del editor: " << errorEditor << '\n';
+				editorEscenas.Activar(true);
+			}
+			else
+				mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+			// Sin saltos: se descartan el ultimo cursor, los deltas del raton y la referencia del balanceo.
+			fpsTienePosicionAnterior = false;
+			mouseDeltaX = mouseDeltaY = 0.0;
+			hayPiesFotogramaAnterior = false;
+			sincronizarCursorFPS(window);
+		}
 
 		// Con VR en marcha, la escena se dibuja en el visor (y se refleja en la ventana). Sin VR, o si el visor
 		// no está mostrando imagen, se dibuja la vista de escritorio de siempre.
@@ -7410,7 +7573,7 @@ int main(int argc, char** argv)
 				glfwSwapInterval(vrEnMarcha ? 0 : 1);
 				vrEnMarchaAntes = vrEnMarcha;
 			}
-			const bool vrDibujado = vrEnMarcha && dibujarEscenaVR();
+			const bool vrDibujado = !editorEscenas.Activo() && vrEnMarcha && dibujarEscenaVR();
 			if (!vrDibujado) OnPaint(window);
 		}
 

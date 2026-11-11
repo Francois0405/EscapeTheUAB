@@ -44,9 +44,15 @@ add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_par
 set(ENTORNVGI_SOURCES
 	DibujoColisionadores.cpp
 	DibujoGLB.cpp
+	Editor/EditorEscenas.cpp
+	Editor/LimitesModelo.cpp
+	Editor/SelectorObjetos.cpp
+	Editor/SerializadorEscenas.cpp
+	Editor/VisibilidadEditor.cpp
 	EscenaFisica.cpp
 	escena.cpp
 	glut_geometry.cpp
+	third_party/ImGuizmo.cpp
 	main.cpp
 	material.cpp
 	ModeloGLB.cpp
@@ -75,6 +81,7 @@ add_executable(EntornVGI ${ENTORNVGI_SOURCES} ${IMGUI_SOURCES})
 target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${IMGUI_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/third_party
 	${REPO_ROOT}/third_party/SOIL2/src
 	${REPO_ROOT}/third_party/cgltf
 )
