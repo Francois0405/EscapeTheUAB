@@ -594,6 +594,107 @@ namespace
 		comprobar(!espacioAbierto.JugadorAgachado(), "el estado vuelve a estar de pie");
 	}
 
+	// Agachado suave: curva de Hermite (despacio al empezar y al llegar), pies fijos, sin hundirse ni saltar.
+	void PruebaAgachadoSuaveYEstable()
+	{
+		MundoFisico mundo;
+		CrearSuelo(mundo);
+		mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		Avanzar(mundo, 1.0f);
+		const float piesZ = mundo.PosicionPiesJugador().z;
+		comprobar(mundo.JugadorEnSuelo(), "de pie: en el suelo");
+
+		// Con delta 0 (pausa) no cambia nada.
+		mundo.ActualizarJugadorAgachado(true, 0.0f);
+		comprobar(!mundo.JugadorAgachado() && mundo.FraccionAgachado() == 0.0f, "delta 0: la postura se congela");
+
+		// Bajar: la altura es monotona, el primer y el ultimo tramo avanzan menos que el central.
+		std::vector<float> alturas;
+		for (int i = 0; i < 40; ++i)
+		{
+			mundo.ActualizarJugadorAgachado(true, MundoFisico::PasoFijo);
+			mundo.Actualizar(MundoFisico::PasoFijo);
+			alturas.push_back(mundo.AlturaJugador());
+			comprobar(std::abs(mundo.PosicionPiesJugador().z - piesZ) < 0.01f, "los pies no se mueven al cambiar de postura");
+		}
+		bool monotona = true;
+		for (std::size_t i = 1; i < alturas.size(); ++i) monotona = monotona && alturas[i] <= alturas[i - 1] + 1e-6f;
+		comprobar(monotona, "la altura baja siempre, sin rebotes");
+		const float primerPaso = MedidasJugador::Altura - alturas[0];
+		const float pasoCentral = alturas[19] - alturas[20];
+		comprobar(primerPaso < pasoCentral * 0.3f, "el arranque es mas lento que el tramo central (curva suave)");
+		comprobar(mundo.JugadorEnSuelo(), "agachando sigue apoyado en el suelo");
+
+		// Subir con el techo libre hasta de pie: misma altura de pies, y alturas de ojos coherentes.
+		for (int i = 0; i < 60; ++i)
+		{
+			mundo.ActualizarJugadorAgachado(false, MundoFisico::PasoFijo);
+			mundo.Actualizar(MundoFisico::PasoFijo);
+		}
+		comprobar(!mundo.JugadorAgachado() && casi(mundo.AlturaJugador(), MedidasJugador::Altura, 1e-3f), "vuelve a la altura de pie");
+		comprobar(std::abs(mundo.PosicionPiesJugador().z - piesZ) < 0.01f, "tras agacharse y levantarse los pies estan donde estaban");
+		comprobar(casi(mundo.AlturaOjosJugador(), MedidasJugador::AlturaOjos, 1e-3f), "los ojos vuelven a 1,70 m");
+	}
+
+	// Cambio de postura andando contra un muro y bajo un techo: nunca atraviesa colisionadores.
+	void PruebaAgachadoAndandoYTecho()
+	{
+		MundoFisico mundo;
+		CrearSuelo(mundo);
+		CrearParedX(mundo, 5.0f);
+		// Techo bajo (1,3 m) en x > 2: de pie (1,8 m) no cabe, agachado (1,0 m) si.
+		mundo.CrearCajaEstatica({ 3.5f, 0, SueloZ + 1.3f + 0.1f }, { 1.5f, 3, 0.1f });
+		mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		Avanzar(mundo, 0.5f);
+
+		for (int i = 0; i < 40; ++i)
+		{
+			mundo.ActualizarJugadorAgachado(true, MundoFisico::PasoFijo);
+			mundo.FijarVelocidadJugador({ 1.4f, 0, 0 });
+			mundo.Actualizar(MundoFisico::PasoFijo);
+		}
+		Andar(mundo, { 1.4f, 0, 0 }, 3.0f, MundoFisico::PasoFijo);
+		comprobar(mundo.PosicionPiesJugador().x > 2.5f, "agachado pasa bajo el techo bajo");
+		comprobar(mundo.PosicionPiesJugador().x < 5.0f - MedidasJugador::Radio + 0.03f, "agachado no atraviesa la pared");
+
+		// Soltar Ctrl bajo el techo: no se levanta.
+		bool sigue = true;
+		for (int i = 0; i < 60; ++i)
+		{
+			sigue = mundo.ActualizarJugadorAgachado(false, MundoFisico::PasoFijo) && sigue;
+			mundo.Actualizar(MundoFisico::PasoFijo);
+		}
+		comprobar(!sigue && mundo.JugadorAgachado(), "bajo el techo bajo se queda agachado");
+		comprobar(mundo.FraccionAgachado() > 0.5f, "la fraccion de agachado lo refleja");
+
+		// Sale a campo abierto y entonces se levanta.
+		Andar(mundo, { -1.4f, 0, 0 }, 3.0f, MundoFisico::PasoFijo);
+		for (int i = 0; i < 60; ++i)
+		{
+			mundo.ActualizarJugadorAgachado(false, MundoFisico::PasoFijo);
+			mundo.Actualizar(MundoFisico::PasoFijo);
+		}
+		comprobar(!mundo.JugadorAgachado(), "fuera del techo se levanta");
+	}
+
+	// El mismo agachado a 30, 60 y 120 FPS acaba en la misma altura en el mismo tiempo.
+	void PruebaAgachadoIndependienteDeLosFps()
+	{
+		float finales[3];
+		int k = 0;
+		for (int fps : { 30, 60, 120 })
+		{
+			MundoFisico mundo;
+			CrearSuelo(mundo);
+			mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+			Avanzar(mundo, 0.5f);
+			for (int i = 0; i < fps / 5; ++i)   // 0,2 s
+				mundo.ActualizarJugadorAgachado(true, 1.0f / fps);
+			finales[k++] = mundo.AlturaJugador();
+		}
+		comprobar(casi(finales[0], finales[1], 2e-3f) && casi(finales[1], finales[2], 2e-3f), "el agachado no depende de los FPS");
+	}
+
 	void PruebaJugadorSeDesliza()
 	{
 		MundoFisico mundo;
@@ -977,6 +1078,9 @@ int main()
 	PruebaJugadorAndaLibre();
 	PruebaJugadorChocaConPared();
 	PruebaJugadorSeAgachaYRespetaTecho();
+	PruebaAgachadoSuaveYEstable();
+	PruebaAgachadoAndandoYTecho();
+	PruebaAgachadoIndependienteDeLosFps();
 	PruebaJugadorSeDesliza();
 	PruebaJugadorChocaConObjetoEstatico();
 	PruebaJugadorIndependienteDeLosFps();

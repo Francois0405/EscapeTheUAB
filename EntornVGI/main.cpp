@@ -28,6 +28,7 @@
 #include "DibujoColisionadores.h"
 #include "VistaEstereo.h"
 #include "OpenXRManager.h"
+#include "MovimientoFPS.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
@@ -116,6 +117,14 @@ namespace
 	double mouseDeltaY = 0.0;
 	float tiempoFPS = 0.0f;
 	float deltaFPS = 0.0f;
+
+	// --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
+	fps::MovimientoJugador movimientoJugador;
+	fps::BalanceoCamara balanceoCamara;
+	fps::BarraEstamina barraEstamina;
+	bool mostrarPorcentajeEstamina = true;
+	glm::vec3 piesFotogramaAnterior(0.0f);
+	bool hayPiesFotogramaAnterior = false;
 
 	// --- DEMO FASE 1: puerta que se abre girando sobre su bisagra ---
 	// Keyframes: en 0 s la puerta está cerrada (0 grados), en 2 s abierta (90 grados).
@@ -259,7 +268,13 @@ namespace
 	//   * La cámara se COLOCA donde quedó la cápsula (ojos = pies + 1,7 m). La cámara nunca
 	//     mueve a la cápsula, salvo al salir del modo FPS (ver sincronizarJugadorYCamara).
 	// La orientación (ratón) NO pasa por Bullet: sigue siendo cosa de la cámara.
-	constexpr double velocidadJugador = 3.0;   // m/s caminando
+	// (las velocidades -caminar, agachado, sprint- viven en fps::ParametrosMovimiento, editables en F1)
+
+	bool hayTeclaDeMovimiento(GLFWwindow* window)
+	{
+		return glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+			glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+	}
 
 	glm::vec3 posicionPiesDesdeCamara()
 	{
@@ -278,7 +293,7 @@ namespace
 	}
 
 	// Convierte las teclas WASD en una velocidad horizontal DEL MUNDO (sin tocar la posición).
-	void moverJugadorFPS(GLFWwindow* window)
+	void moverJugadorFPS(GLFWwindow* window, double velocidadJugador)
 	{
 		const double dx = n[0] - opvN.x;
 		const double dy = n[1] - opvN.y;
@@ -327,13 +342,6 @@ namespace
 		tiempoFPS += deltaTime;
 		deltaFPS = deltaTime;
 
-		const bool caminando = !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS() &&
-			(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
-			 glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS);
-		const float factor = 1.0f - std::exp(-8.0f * deltaTime);
-		pesoCaminata += ((caminando ? 1.0f : 0.0f) - pesoCaminata) * factor;
-		if (caminando) faseCaminata += deltaTime * 9.0f;
-
 		const float limiteMouse = 0.12f;
 		mouseSwayX = std::clamp(mouseSwayX + static_cast<float>(mouseDeltaX) * intensidadMouse,
 			-limiteMouse, limiteMouse);
@@ -343,6 +351,46 @@ namespace
 		const float retornoMouse = 1.0f - std::exp(-5.0f * deltaTime);
 		mouseSwayX += (0.0f - mouseSwayX) * retornoMouse;
 		mouseSwayY += (0.0f - mouseSwayY) * retornoMouse;
+	}
+
+	// Estado del juego FPS que permite la entrada (no hay pausa, ni foco perdido, ni paneles de depuracion).
+	bool entradaFPSActiva()
+	{
+		return modoJuegoFPS() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
+	}
+
+	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
+	// asi que la camara y el movil comparten la misma fase y se quedan quietos al chocar con una pared.
+	void actualizarBalanceoVisual(float delta)
+	{
+		const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : glm::vec3(0.0f);
+		float distancia = 0.0f;
+		if (hayPiesFotogramaAnterior)
+			distancia = glm::length(glm::vec2(pies.x - piesFotogramaAnterior.x, pies.y - piesFotogramaAnterior.y));
+		piesFotogramaAnterior = pies;
+		hayPiesFotogramaAnterior = mundoFisico.HayJugador();
+		if (distancia > 1.0f) distancia = 0.0f;   // teletransporte o cambio de habitacion: no es un paso
+
+		const float fraccion = mundoFisico.FraccionAgachado();
+		balanceoCamara.Actualizar(delta, distancia, mundoFisico.JugadorEnSuelo(), entradaFPSActiva() && mundoFisico.HayJugador(),
+			movimientoJugador.Velocidad(), movimientoJugador.parametros, fraccion);
+
+		// El movil usa la misma fase; su amplitud crece al correr y baja al agacharse.
+		pesoCaminata = balanceoCamara.Peso() * balanceoCamara.FactorDeAmplitud();
+		faseCaminata = balanceoCamara.Fase();
+	}
+
+	// Desplazamiento SOLO VISUAL del ojo en pantalla (derecha y arriba de la camara). No modifica opvN/n, que usan la
+	// fisica, las puertas y el agarre. No se aplica en VR: alli manda la cabeza real.
+	glm::dvec3 desplazamientoVisualDeCamara()
+	{
+		if (!modoJuegoFPS() || !mundoFisico.HayJugador()) return glm::dvec3(0.0);
+		const fps::DesplazamientoVisual d = balanceoCamara.Desplazamiento();
+		const double dx = n[0] - opvN.x, dy = n[1] - opvN.y;
+		const double largo = std::sqrt(dx * dx + dy * dy);
+		glm::dvec3 resultado(0.0, 0.0, d.vertical);
+		if (largo > 1e-6) resultado += glm::dvec3(dy / largo, -dx / largo, 0.0) * static_cast<double>(d.lateral);
+		return resultado;
 	}
 
 	bool cargarYAplicarEscena(const std::filesystem::path& ruta)
@@ -877,7 +925,11 @@ void OnFramebufferSize(GLFWwindow* window, int width, int height)
 static void dibujarEscenaEstereo(int anchoVentana, int altoVentana)
 {
 	GLdouble arriba[3] = { 0.0, 0.0, 1.0 };   // Z es "arriba" en este juego
-	const glm::mat4 vistaCentral = Vista_Navega(shader_programID, opvN, n, arriba, pan, tr_cpv, tr_cpvF, c_fons, col_obj,
+	const glm::dvec3 balanceo = desplazamientoVisualDeCamara();
+	CPunt3D ojoVisual = opvN;
+	ojoVisual.x += balanceo.x; ojoVisual.y += balanceo.y; ojoVisual.z += balanceo.z;
+	GLdouble objetivoVisual[3] = { n[0] + balanceo.x, n[1] + balanceo.y, n[2] + balanceo.z };
+	const glm::mat4 vistaCentral = Vista_Navega(shader_programID, ojoVisual, objetivoVisual, arriba, pan, tr_cpv, tr_cpvF, c_fons, col_obj,
 		objecte, true, pas, front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
 		eixos, grid, hgrid);
 
@@ -1108,8 +1160,13 @@ void OnPaint(GLFWwindow* window)
 			else if (Vis_Polar == POLARX) {
 				vpv[0] = 1.0;	vpv[1] = 0.0;	vpv[2] = 0.0;
 				}
-			ViewMatrix = Vista_Navega(shader_programID, opvN, //false, 
-				n, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
+			// El balanceo se aplica solo a la imagen: mismo desplazamiento al ojo y al punto mirado (la direccion no cambia).
+			const glm::dvec3 balanceo = desplazamientoVisualDeCamara();
+			CPunt3D ojoVisual = opvN;
+			ojoVisual.x += balanceo.x; ojoVisual.y += balanceo.y; ojoVisual.z += balanceo.z;
+			GLdouble objetivoVisual[3] = { n[0] + balanceo.x, n[1] + balanceo.y, n[2] + balanceo.z };
+			ViewMatrix = Vista_Navega(shader_programID, ojoVisual, //false,
+				objetivoVisual, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
 				front_faces, oculta, test_vis, back_line,
 				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
 				eixos, grid, hgrid);
@@ -1507,12 +1564,37 @@ void Barra_Estat()
 // Entorn VGI: Dibuixa el menú principal ImGui que controla colors i permet activar altres menús:
 //		- menú standard Imgui [show_demo_window()]
 //		- menú propi de l'aplicació EntornVGI [show_EntornVGI_window()]
+// Barra de estamina: se dibuja en la lista de primer plano de ImGui (no es una ventana: no recibe raton ni toma el foco).
+// Aparece al correr o mientras no esta llena y se desvanece sola. Solo se ve en la ventana, nunca dentro del visor VR.
+static void dibujarBarraEstamina()
+{
+	if (!modoJuegoFPS() || barraEstamina.visible < 0.01f) return;
+	const ImGuiIO& io = ImGui::GetIO();
+	const float ancho = std::min(260.0f, io.DisplaySize.x * 0.4f), alto = 8.0f;
+	const float x0 = (io.DisplaySize.x - ancho) * 0.5f, y0 = io.DisplaySize.y - 48.0f;
+	const float a = barraEstamina.visible;
+	const bool agotada = movimientoJugador.Agotada();
+	const ImU32 fondo = IM_COL32(10, 10, 10, static_cast<int>(150 * a));
+	const ImU32 relleno = agotada ? IM_COL32(200, 60, 50, static_cast<int>(230 * a))
+		: IM_COL32(220, 220, 205, static_cast<int>(210 * a));
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	dl->AddRectFilled(ImVec2(x0 - 2, y0 - 2), ImVec2(x0 + ancho + 2, y0 + alto + 2), fondo, 3.0f);
+	dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ancho * std::clamp(barraEstamina.mostrada, 0.0f, 1.0f), y0 + alto), relleno, 2.0f);
+	if (mostrarPorcentajeEstamina)
+	{
+		char texto[16];
+		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(movimientoJugador.FraccionEstamina() * 100.0f + 0.5f));
+		dl->AddText(ImVec2(x0 + ancho + 8, y0 - 4), IM_COL32(230, 230, 220, static_cast<int>(200 * a)), texto);
+	}
+}
+
 void draw_Menu_ImGui()
 {
 	// Start the Dear ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	dibujarBarraEstamina();
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
 
@@ -1622,6 +1704,40 @@ void draw_Menu_ImGui()
 		ImGui::SliderFloat("Intensidad walking", &intensidadWalking, 0.0f, 0.08f, "%.3f");
 		ImGui::SliderFloat("Intensidad mouse", &intensidadMouse, 0.0f, 0.003f, "%.4f");
 		ImGui::Text("deltaTime: %.4f s", deltaFPS);
+		ImGui::End();
+
+		ImGui::Begin("Movimiento FPS");
+		{
+			fps::ParametrosMovimiento& pm = movimientoJugador.parametros;
+			fps::ParametrosBalanceo& pb = balanceoCamara.parametros;
+			ImGui::Text("Estamina: %.1f / %.1f%s", movimientoJugador.Estamina(), pm.estaminaMaxima,
+				movimientoJugador.Agotada() ? "  (AGOTADA)" : (movimientoJugador.Sprintando() ? "  (corriendo)" : ""));
+			ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", movimientoJugador.Velocidad(),
+				mundoFisico.FraccionAgachado() * 100.0f, mundoFisico.JugadorEnSuelo() ? "si" : "no");
+			ImGui::Checkbox("Porcentaje junto a la barra", &mostrarPorcentajeEstamina);
+			if (ImGui::Button("Rellenar estamina")) movimientoJugador.Reiniciar();
+			ImGui::SeparatorText("Velocidades (m/s)");
+			ImGui::SliderFloat("Caminar", &pm.velocidadCaminar, 0.5f, 6.0f, "%.2f");
+			ImGui::SliderFloat("Agachado", &pm.velocidadAgachado, 0.3f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Sprint", &pm.velocidadSprint, 1.0f, 9.0f, "%.2f");
+			ImGui::SliderFloat("Suavizado de velocidad", &pm.suavizadoVelocidad, 1.0f, 30.0f, "%.1f");
+			ImGui::SeparatorText("Estamina");
+			ImGui::SliderFloat("Maxima", &pm.estaminaMaxima, 10.0f, 300.0f, "%.0f");
+			ImGui::SliderFloat("Consumo / s", &pm.consumoPorSegundo, 1.0f, 100.0f, "%.1f");
+			ImGui::SliderFloat("Recuperacion / s", &pm.recuperacionPorSegundo, 1.0f, 100.0f, "%.1f");
+			ImGui::SliderFloat("Retardo de recuperacion (s)", &pm.retardoRecuperacion, 0.0f, 5.0f, "%.2f");
+			ImGui::SliderFloat("Minimo tras agotarse", &pm.minimoTrasAgotarse, 0.0f, 100.0f, "%.0f");
+			ImGui::SeparatorText("Balanceo de camara y movil");
+			ImGui::SliderFloat("Intensidad global", &pb.multiplicador, 0.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Amplitud caminar (m)", &pb.amplitudCaminar, 0.0f, 0.05f, "%.4f");
+			ImGui::SliderFloat("Amplitud correr (m)", &pb.amplitudCorrer, 0.0f, 0.08f, "%.4f");
+			ImGui::SliderFloat("Amplitud agachado (m)", &pb.amplitudAgachado, 0.0f, 0.03f, "%.4f");
+			ImGui::SliderFloat("Lateral relativo", &pb.lateralRelativo, 0.0f, 1.5f, "%.2f");
+			ImGui::SliderFloat("Zancada caminar (m)", &pb.zancadaCaminar, 0.5f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Zancada correr (m)", &pb.zancadaCorrer, 0.5f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Amortiguacion al parar", &pb.salida, 1.0f, 20.0f, "%.1f");
+			ImGui::Text("fase: %.2f rad | peso: %.2f", balanceoCamara.Fase(), balanceoCamara.Peso());
+		}
 		ImGui::End();
 
 		ImGui::Begin("Demo puerta");
@@ -7242,14 +7358,27 @@ int main(int argc, char** argv)
 
 		const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
 			glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-		mundoFisico.ActualizarJugadorAgachado(
-			modoJuegoFPS() && ventanaConFoco && ctrlPulsado, static_cast<float>(delta));
+		// Postura: en pausa, sin foco o con paneles de depuracion abiertos se CONGELA (delta 0): ni se agacha ni se levanta.
+		// Fuera del modo FPS (camaras de depuracion) se sigue levantando como antes.
+		const float deltaPostura = (modoJuegoFPS() && !entradaFPSActiva()) ? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
+		mundoFisico.ActualizarJugadorAgachado(modoJuegoFPS() && ctrlPulsado, deltaPostura);
 
 		// Actualitzar moviment continu de navegació (WASD) per frame.
 		// Cada fotograma se parte de "quieto"; las teclas pedidas (si se puede jugar) fijan la velocidad.
 		mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
-		if (!fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS())
-			moverJugadorFPS(window);
+		{
+			fps::EntradaMovimiento entrada;
+			entrada.activo = entradaFPSActiva() && mundoFisico.HayJugador();
+			entrada.quiereMoverse = entrada.activo && hayTeclaDeMovimiento(window);
+			entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+				glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+			entrada.enSuelo = mundoFisico.JugadorEnSuelo();
+			entrada.fraccionAgachado = mundoFisico.FraccionAgachado();
+			const float velocidad = movimientoJugador.Actualizar(static_cast<float>(delta), entrada);
+			if (entrada.activo)
+				moverJugadorFPS(window, velocidad);
+			barraEstamina.Actualizar(static_cast<float>(delta), movimientoJugador.FraccionEstamina(), movimientoJugador.Sprintando());
+		}
 		actualizarMovimientoMovil(window, static_cast<float>(delta));
 		// La animación se considera PAUSADA cuando el juego está en pausa (ESC) o la ventana
 		// ha perdido el foco. Abrir los paneles de depuración (F1) NO la pausa, porque el
@@ -7265,6 +7394,7 @@ int main(int argc, char** argv)
 		mundoFisico.FijarPausa(animacionPausada);
 		mundoFisico.Actualizar(static_cast<float>(delta));
 		sincronizarJugadorYCamara();
+		actualizarBalanceoVisual(static_cast<float>(delta));
 
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui

@@ -255,6 +255,12 @@ namespace fisica
 	{
 		// La cápsula mide 'Altura' en total: cilindro + una semiesfera arriba y otra abajo.
 		constexpr float AlturaCilindroDePie = MedidasJugador::Altura - 2.0f * MedidasJugador::Radio;
+		float SuavizadoHermite(float t)
+		{
+			t = std::clamp(t, 0.0f, 1.0f);
+			return t * t * (3.0f - 2.0f * t);
+		}
+
 		float EscalaVerticalJugador(float altura)
 		{
 			return (altura - 2.0f * MedidasJugador::Radio) / AlturaCilindroDePie;
@@ -338,6 +344,7 @@ namespace fisica
 		impl->fantasmaJugador.reset();
 		impl->formaJugador.reset();
 		alturaJugador = MedidasJugador::Altura;
+		progresoAgachado = 0.0f;
 	}
 
 	bool MundoFisico::HayJugador() const { return impl->controladorJugador != nullptr; }
@@ -355,12 +362,18 @@ namespace fisica
 	{
 		if (!HayJugador()) return false;
 
-		const float alturaObjetivo = agachado ? MedidasJugador::AlturaAgachado : MedidasJugador::Altura;
-		const float diferencia = alturaObjetivo - alturaJugador;
-		if (std::abs(diferencia) <= 0.001f) return true;
+		// El tiempo avanza de forma lineal (progreso 0..1) y la altura se obtiene con una curva suave
+		// (arranca y llega con velocidad 0): el cambio se nota progresivo, sin tirones al empezar/terminar.
+		const float objetivo = agachado ? 1.0f : 0.0f;
+		if (progresoAgachado == objetivo) return true;
 
-		const float avance = MedidasJugador::VelocidadCambioAltura * std::max(deltaSegundos, 0.0f);
-		const float alturaNueva = alturaJugador + std::copysign(std::min(std::abs(diferencia), avance), diferencia);
+		const float duracion = (MedidasJugador::Altura - MedidasJugador::AlturaAgachado) / MedidasJugador::VelocidadCambioAltura;
+		const float avance = std::max(deltaSegundos, 0.0f) / duracion;
+		const float progresoNuevo = progresoAgachado + std::copysign(
+			std::min(std::abs(objetivo - progresoAgachado), avance), objetivo - progresoAgachado);
+		const float alturaNueva = MedidasJugador::Altura -
+			(MedidasJugador::Altura - MedidasJugador::AlturaAgachado) * SuavizadoHermite(progresoNuevo);
+		if (progresoNuevo == progresoAgachado) return true;   // delta 0 (pausa): no se toca Bullet
 		const glm::vec3 pies = PosicionPiesJugador();
 
 		if (alturaNueva > alturaJugador)
@@ -376,13 +389,16 @@ namespace fisica
 
 			ComprobarEspacioParaLevantarse comprobar(prueba, pies.z + alturaJugador - 0.01f);
 			impl->mundo.contactTest(&prueba, comprobar);
-			if (comprobar.HayObstaculo()) return false;
+			if (comprobar.HayObstaculo()) return false;   // el techo manda: el progreso no avanza
 		}
 
+		// Solo se llega aquí cuando la altura cambia de verdad (no en todos los fotogramas). 'warp' recoloca el centro
+		// para que los pies no se muevan al cambiar la altura; no toca la velocidad vertical del controlador.
 		impl->formaJugador->setLocalScaling(btVector3(1.0f, 1.0f, EscalaVerticalJugador(alturaNueva)));
 		impl->controladorJugador->warp(CentroDesdePies(pies, alturaNueva));
 		impl->mundo.updateSingleAabb(impl->fantasmaJugador.get());
 		alturaJugador = alturaNueva;
+		progresoAgachado = progresoNuevo;
 		return true;
 	}
 

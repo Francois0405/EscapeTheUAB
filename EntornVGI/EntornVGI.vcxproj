@@ -213,6 +213,7 @@
     <ClInclude Include="objLoader.h" />
     <ClInclude Include="OpenXRManager.h" />
     <ClInclude Include="VistaVR.h" />
+    <ClInclude Include="MovimientoFPS.h" />
     <ClInclude Include="quatern.h" />
     <ClInclude Include="SceneLoader.h" />
     <ClInclude Include="shader.h" />

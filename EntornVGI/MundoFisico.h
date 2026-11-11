@@ -146,6 +146,11 @@ namespace fisica
 		// Devuelve false si un obstáculo impide seguir incorporándose.
 		bool ActualizarJugadorAgachado(bool agachado, float deltaSegundos);
 		bool JugadorAgachado() const { return alturaJugador < MedidasJugador::Altura - 0.001f; }
+		// 0 = de pie ... 1 = agachado del todo (altura ya suavizada). Para velocidad y balanceo de la cámara.
+		float FraccionAgachado() const
+		{
+			return (MedidasJugador::Altura - alturaJugador) / (MedidasJugador::Altura - MedidasJugador::AlturaAgachado);
+		}
 		float AlturaJugador() const { return alturaJugador; }
 		float AlturaOjosJugador() const;
 
@@ -190,6 +195,7 @@ namespace fisica
 		float acumulador = 0.0f;      // tiempo real pendiente de simular
 		bool pausa = false;
 		float alturaJugador = MedidasJugador::Altura;
+		float progresoAgachado = 0.0f;   // 0..1 lineal en el tiempo; la altura sale de suavizarlo (curva de Hermite)
 		long long pasosTotales = 0;
 	};
 

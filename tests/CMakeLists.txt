@@ -160,3 +160,11 @@ else()
 endif()
 target_compile_features(VistaVRTests PRIVATE cxx_std_20)
 add_test(NAME VistaVRTests COMMAND VistaVRTests)
+
+# Velocidad, sprint, estamina y balanceo de camara (sin ventana ni fisica).
+add_executable(MovimientoFPSTests
+	MovimientoFPSTests.cpp
+)
+target_include_directories(MovimientoFPSTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_compile_features(MovimientoFPSTests PRIVATE cxx_std_20)
+add_test(NAME MovimientoFPSTests COMMAND MovimientoFPSTests)
