@@ -1,0 +1,670 @@
+{
+  "version": 1,
+  "name": "aula_informatica_demo",
+  "architecture": [
+    {
+      "id": "suelo",
+      "model": "../models/escape_pack/arquitectura/suelo.obj",
+      "position": [
+        5.0,
+        0.0,
+        -1.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        8.0,
+        5.0,
+        0.15
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "techo",
+      "model": "../models/escape_pack/arquitectura/techo.obj",
+      "position": [
+        5.0,
+        0.0,
+        1.85
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        8.0,
+        5.0,
+        0.15
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "pared_oeste",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "position": [
+        -3.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.15,
+        5.0,
+        1.7
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "pared_este",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "position": [
+        13.0,
+        0.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        0.15,
+        5.0,
+        1.7
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "pared_norte",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "position": [
+        5.0,
+        5.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        8.0,
+        0.15,
+        1.7
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          1,
+          1,
+          1
+        ]
+      }
+    },
+    {
+      "id": "pared_sur",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "position": [
+        5.0,
+        -5.0,
+        0.0
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        8.0,
+        0.15,
+        1.7
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          1,
+          1,
+          1
+        ]
+      }
+    }
+  ],
+  "objects": [
+    {
+      "id": "pizarra_estanteria",
+      "model": "../models/escape_pack/kenney/bookcaseClosed.obj",
+      "position": [
+        -1.5,
+        3.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.4,
+          0.25,
+          0.85
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.85
+        ]
+      }
+    },
+    {
+      "id": "archivador",
+      "model": "../models/escape_pack/kenney/bookcaseOpen.obj",
+      "position": [
+        1.0,
+        3.4,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.4,
+          0.25,
+          0.88
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.88
+        ]
+      }
+    },
+    {
+      "id": "mesa_profesor",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        3.5,
+        3.0,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.7345,
+          0.3923,
+          0.3844
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844
+        ]
+      }
+    },
+    {
+      "id": "silla_profesor",
+      "model": "../models/escape_pack/kenney/chairDesk.obj",
+      "position": [
+        3.3,
+        2.0,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.335,
+          0.3143,
+          0.6076
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.6076
+        ]
+      }
+    },
+    {
+      "id": "portatil_profesor",
+      "model": "../models/escape_pack/kenney/laptop.obj",
+      "position": [
+        3.5,
+        3.0,
+        -0.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "mesa_alumno_1",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        -1.2,
+        -2.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.7345,
+          0.3923,
+          0.3844
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844
+        ]
+      }
+    },
+    {
+      "id": "silla_alumno_1",
+      "model": "../models/escape_pack/kenney/chair.obj",
+      "position": [
+        -1.2,
+        -1.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.2,
+          0.2,
+          0.47
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.47
+        ]
+      }
+    },
+    {
+      "id": "monitor_alumno_1",
+      "model": "../models/escape_pack/kenney/computerScreen.obj",
+      "position": [
+        -1.2,
+        -2.5,
+        -0.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "teclado_alumno_1",
+      "model": "../models/escape_pack/kenney/computerKeyboard.obj",
+      "position": [
+        -1.2,
+        -2.0,
+        -0.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "mesa_alumno_2",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        1.6,
+        -2.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.7345,
+          0.3923,
+          0.3844
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844
+        ]
+      }
+    },
+    {
+      "id": "silla_alumno_2",
+      "model": "../models/escape_pack/kenney/chair.obj",
+      "position": [
+        1.6,
+        -1.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.2,
+          0.2,
+          0.47
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.47
+        ]
+      }
+    },
+    {
+      "id": "monitor_alumno_2",
+      "model": "../models/escape_pack/kenney/computerScreen.obj",
+      "position": [
+        1.6,
+        -2.5,
+        -0.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "mesa_alumno_3",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        4.4,
+        -2.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.7345,
+          0.3923,
+          0.3844
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844
+        ]
+      }
+    },
+    {
+      "id": "silla_alumno_3",
+      "model": "../models/escape_pack/kenney/chair.obj",
+      "position": [
+        4.4,
+        -1.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.2,
+          0.2,
+          0.47
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.47
+        ]
+      }
+    },
+    {
+      "id": "monitor_alumno_3",
+      "model": "../models/escape_pack/kenney/computerScreen.obj",
+      "position": [
+        4.4,
+        -2.5,
+        -0.9
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    },
+    {
+      "id": "sillon_olvidado",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        8.5,
+        3.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "static",
+        "halfSize": [
+          0.2,
+          0.2,
+          0.46
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46
+        ]
+      }
+    },
+    {
+      "id": "cajas_abandonadas",
+      "model": "../models/escape_pack/kenney/cardboardBoxClosed.obj",
+      "position": [
+        10.5,
+        -3.5,
+        -1.7
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ],
+      "physics": {
+        "type": "dynamic",
+        "halfSize": [
+          0.2125,
+          0.2125,
+          0.281
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.281
+        ],
+        "mass": 1.5
+      }
+    },
+    {
+      "id": "luz_techo_clase",
+      "model": "../models/escape_pack/kenney/lampSquareCeiling.obj",
+      "position": [
+        5.0,
+        0.0,
+        1.24
+      ],
+      "rotation": [
+        0,
+        0,
+        0
+      ],
+      "scale": [
+        1,
+        1,
+        1
+      ]
+    }
+  ],
+  "animated": []
+}
