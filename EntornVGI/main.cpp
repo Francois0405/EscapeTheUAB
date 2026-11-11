@@ -699,6 +699,11 @@ void InitGL()
 	fprintf(stderr, "Eixos: \n");
 	if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./shaders/eixos.vert", "./shaders/eixos.frag");
 
+// VAO dels eixos: es crea aqui perque OnPaint() nomes el creava a la branca 'default', que mai
+// s'executa (els shaders ja es carreguen en aquesta inicialitzacio). Sense VAO es dibuixava amb
+// el VAO 0 i Core Profile generava GL_INVALID_OPERATION (1282) "Array object is not active".
+	if (!eixos_Id) eixos_Id = deixos();
+
 // Entorn VGI: Càrrega Shader Skybox
 	fprintf(stderr, "SkyBox: \n");
 	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./shaders/skybox.VERT", "./shaders/skybox.FRAG");
