@@ -212,6 +212,7 @@
     <ClInclude Include="VistaEstereo.h" />
     <ClInclude Include="objLoader.h" />
     <ClInclude Include="OpenXRManager.h" />
+    <ClInclude Include="VistaVR.h" />
     <ClInclude Include="quatern.h" />
     <ClInclude Include="SceneLoader.h" />
     <ClInclude Include="shader.h" />

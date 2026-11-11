@@ -135,7 +135,8 @@ add_executable(OpenXRTests
 	${PROJECT_SOURCE_DIR}/EntornVGI/OpenXRManager.cpp
 )
 target_include_directories(OpenXRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
-target_link_libraries(OpenXRTests PRIVATE EntornVGI_openxr)
+# OpenXRManager.cpp usa GLEW/OpenGL para los framebuffers de los swapchains (solo se llaman con sesion real).
+target_link_libraries(OpenXRTests PRIVATE EntornVGI_openxr OpenGL::GL ${TEST_GLEW_TARGET})
 if(WIN32)
 	add_custom_command(TARGET OpenXRTests POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
@@ -146,3 +147,16 @@ if(WIN32)
 endif()
 target_compile_features(OpenXRTests PRIVATE cxx_std_20)
 add_test(NAME OpenXRTests COMMAND OpenXRTests)
+
+# Matematica de la vista VR (OpenXR -> motor con Z arriba, proyeccion asimetrica): sin visor ni ventana.
+add_executable(VistaVRTests
+	VistaVRTests.cpp
+)
+target_include_directories(VistaVRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+if(TARGET glm::glm)
+	target_link_libraries(VistaVRTests PRIVATE glm::glm)
+else()
+	target_link_libraries(VistaVRTests PRIVATE glm)
+endif()
+target_compile_features(VistaVRTests PRIVATE cxx_std_20)
+add_test(NAME VistaVRTests COMMAND VistaVRTests)

@@ -1,16 +1,18 @@
 # OpenXR (VR real) en EscapeTheUAB
 
-> **Estado honesto:** hay una base OpenXR compilable (Etapas A y B). **Nada de esto se ha probado con un visor ni en
-> Windows.** No se afirma compatibilidad con Meta Quest 2.
+> **Estado honesto:** el ciclo completo de OpenXR (Etapas A, B y C) está implementado y **compila en Windows**; la matemática de la
+> vista tiene tests sin hardware. **El renderizado VR NO se ha probado con un visor**: está pendiente de la prueba con las Quest 3.
+> Solo imagen y seguimiento de cabeza (sin manos, mandos ni teleportación).
 
 ## Lo que hay y lo que no
 
 | Etapa | Qué | Estado |
 |---|---|---|
-| A | Instancia OpenXR, runtime, visor, extensión OpenGL, versión de OpenGL | Hecha. **Probada en macOS sin runtime** (rutas de fallo). Con visor: sin probar |
-| B | Sesión enlazada al contexto OpenGL (WGL) y eventos de estado | Escrita **solo para Windows**; **no compilada ni probada** |
-| C | Espacios de referencia, swapchains, `xrWaitFrame/BeginFrame/EndFrame`, proyección por ojo, dibujo en el visor | **No implementada** |
-| – | Manos, mandos, agarre con mandos, locomoción VR | No implementado |
+| A | Instancia OpenXR, runtime, visor, extensión OpenGL, versión de OpenGL | Hecha. Rutas de fallo probadas sin visor |
+| B | Sesión enlazada al contexto OpenGL (WGL) y eventos de estado | Hecha (solo Windows). **Sin probar con visor** |
+| C | Espacio STAGE/LOCAL, vistas, swapchains + framebuffers, `READY/FOCUSED/STOPPING/pérdida`, `xrBegin/EndSession`, bucle `xrWaitFrame → xrBeginFrame → xrLocateViews → xrEndFrame`, capa de proyección | Hecha (solo Windows). **Compila; sin probar con visor** |
+| – | Conversión OpenXR → motor (Z arriba), proyección asimétrica por ojo (`VistaVR.h`) | Hecha y con tests (`VistaVRTests`) |
+| – | Manos, mandos, agarre con mandos, teleportación | No implementado (a propósito) |
 
 **F2 no es VR:** es la vista estereoscópica de prueba en pantalla (`VistaEstereo.h`). OpenXR se activa aparte.
 
@@ -57,17 +59,54 @@ las del SDK). La copia sigue intacta en la rama `VR` por si se necesita; no se h
 activación explícita, reintento y liberación tras fallos. **Requieren casco y no están automatizadas:** crear la sesión, eventos
 reales, versión de OpenGL aceptada, bucle de fotogramas.
 
-## Probar un Meta Quest 2 con Quest Link (Windows) cuando haya visor
+## Cómo funciona la Etapa C
 
-1. Instala la app Meta Quest Link, conecta el casco por USB-C (o Air Link) y activa Quest Link en el casco.
-2. En Meta Quest Link → Ajustes → General, marca **Meta Quest Link como runtime activo de OpenXR**.
-3. `.\run-windows.cmd` (compila con vcpkg → `openxr-loader`). Debe aparecer `OpenXR: ON` en la configuración de CMake.
-4. Entra en el juego, pulsa **F3** (o el botón del panel). Esperado en consola: `[OpenXR] Sesion creada: ...`.
-   Si no, el mensaje indica la causa. Después `F3` otra vez para cerrar.
-5. Solo comprobarás creación de sesión y eventos: **aún no se dibuja nada en el visor** (falta la Etapa C).
+* **Sin tamaños fijos:** el tamaño de cada ojo sale de `xrEnumerateViewConfigurationViews` (recomendado), el formato de
+  `xrEnumerateSwapchainFormats` (prefiere `GL_SRGB8_ALPHA8`, luego `RGBA8`…), el campo de visión y la separación entre ojos de
+  `xrLocateViews` (cada ojo trae su pose y su FOV, posiblemente asimétrico) y el ritmo de `xrWaitFrame`.
+* **Espacio:** `STAGE` si el runtime lo ofrece (origen en el suelo), si no `LOCAL` (origen en la cabeza).
+* **Coordenadas:** OpenXR es X derecha, Y arriba, −Z delante; el motor usa **Z arriba**. `VistaVR.h` ancla el origen de OpenXR al
+  jugador (los **pies** con STAGE, los **ojos** con LOCAL) y lo gira con la orientación FPS (ratón), así *delante de OpenXR = delante de la
+  cámara FPS*. La cabeza real mueve la **cámara**; la **cápsula de Bullet no se toca**. Unidades: 1 unidad del motor = 1 m.
+* **Dibujo:** `dibujarEscenaVR()` (main.cpp) usa el mismo `configura_Escena()/dibuixa_Escena()` que la pantalla (OBJ, GLB, puertas,
+  Bullet, colisionadores). Planos 0,05 m – 500 m en VR. El ojo izquierdo se copia a la ventana como espejo.
+* **Sin VR o sin visor:** el juego sigue en pantalla. Si el visor no está mostrando imagen (`shouldRender = false`) se dibuja el
+  escritorio normal. La sincronía vertical del monitor se apaga mientras la sesión VR está en marcha.
+* **OpenGL:** la ventana pide ahora un contexto **4.6 core** y, si no existe, vuelve a 3.3 (en macOS sigue 4.1). La depuración OpenGL sigue activa.
+* **F2** sigue siendo la vista estereoscópica de prueba en pantalla; **F3** activa/desactiva OpenXR.
 
-## Próximo paso: Etapa C
+## Tests
 
-`xrCreateReferenceSpace` (LOCAL/STAGE), `xrEnumerateViewConfigurationViews`, un swapchain OpenGL por ojo, `xrBeginSession` en `READY`,
-y por fotograma `xrWaitFrame → xrBeginFrame → xrLocateViews → dibujar con la pose y el FOV de cada ojo → xrEndFrame`.
-La pose del visor irá aparte de la cápsula del jugador (`MundoFisico`); Bullet no moverá la cabeza.
+* `OpenXRTests` (sin hardware): selección de modo, no activa nada al crearse, ausencia de runtime, activación explícita, limpieza tras fallos.
+* `VistaVRTests` (sin hardware): ejes OpenXR→motor, anclaje pies/ojos, escala, giro de cabeza, matriz de vista, proyección simétrica ==
+  `glm::perspective` y bordes de una proyección asimétrica.
+* **Necesitan casco:** sesión real, versión de OpenGL aceptada, swapchains, bucle de fotogramas, escala y confort.
+
+## Prueba con Meta Quest 3 (Meta Horizon Link, Windows 11)
+
+1. Instala **Meta Horizon Link** (antes Quest Link) en el PC, enciende las Quest 3 y conéctalas por USB-C (o Air Link). En el casco acepta
+   **Activar Link**. Define el límite/suelo (Guardian) para que exista el espacio STAGE.
+2. En la app Meta Horizon Link → **Ajustes → General** marca **Meta Horizon Link como runtime activo de OpenXR**.
+3. En PowerShell, en la raíz del repositorio: `.\run-windows.cmd` (compila con vcpkg → `openxr-loader`; en la configuración debe salir `OpenXR: ON`).
+4. Con el juego en pantalla y la ventana con el foco, pulsa **F3** (o el botón del panel *Fisica (Bullet)*, F1).
+   En consola se verá `[OpenXR] Sesion creada: ...` y un **Diagnostico** (también en el panel, desplegable *Diagnostico OpenXR*).
+5. Ponte el casco: la sesión pasa a `READY` → `SYNCHRONIZED` → `VISIBLE` → `FOCUSED` y la habitación aparece dentro del visor.
+   Camina con WASD y gira con el ratón como siempre. **F3** otra vez cierra la sesión VR sin cerrar el juego.
+
+### Qué comprobar
+1. ¿Aparece EscapeTheUAB dentro del visor? 2. ¿Cada ojo ve la habitación bien (sin doble imagen ni ojos invertidos)?
+3. ¿Sigue la cabeza (girar, agacharse, inclinarse)? 4. ¿La escala y las distancias son reales (puertas ≈ 2 m, techo, altura de los ojos)?
+5. ¿El modo escritorio sigue igual con VR desactivada?
+
+### Diagnóstico (consola y panel)
+Estado de la sesión (`NombreEstadoSesion`), runtime y versión, nombre del visor y seguimiento, GPU y versión de OpenGL frente al mínimo
+del runtime, extensiones, espacios disponibles/elegido, formatos de swapchain (elegido), y por ojo: tamaño, máximo, nº de imágenes y muestras.
+
+| Síntoma | Causa probable |
+|---|---|
+| `Sin runtime OpenXR` | Horizon Link cerrado o no marcado como runtime activo de OpenXR |
+| `Sin visor` | Casco apagado o Link no activado |
+| `OpenGL insuficiente` | El controlador no dio 4.x; la ventana volvió a 3.3 (ver `Diagnostico`) |
+| Sesión creada pero pantalla negra en el casco | Aún no está en `READY`/`FOCUSED` (ponte el casco); mirar el estado en el panel |
+| `Framebuffer del ojo incompleto` | Formato de swapchain no renderizable; enviar el `Diagnostico` |
+| Imagen muy oscura/clara | Formato elegido distinto de sRGB (ver *Formato elegido* en el diagnóstico) |

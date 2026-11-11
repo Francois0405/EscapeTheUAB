@@ -50,6 +50,14 @@ int main()
 		gestor.Desactivar();        // desactivar sin haber activado es seguro
 		gestor.Desactivar();        // y repetirlo tambien
 		comprobar(!gestor.TieneRecursos(), "desactivar sin activar es seguro");
+		// Bucle de fotogramas sin sesion: todo es inerte y no toca OpenGL.
+		comprobar(!gestor.SesionEnMarcha() && !gestor.Enfocada(), "sin sesion no hay sesion en marcha");
+		comprobar(gestor.EmpezarFotograma() == ResultadoFotograma::NoActivo, "sin sesion no hay fotograma");
+		OjoVR ojo;
+		comprobar(!gestor.AdquirirOjo(0, ojo), "sin sesion no se adquiere ningun ojo");
+		gestor.LiberarOjo(0);
+		gestor.TerminarFotograma();   // sin fotograma abierto: no hace nada
+		comprobar(gestor.NumeroDeOjos() == 0 && gestor.Espacio() == EspacioReferencia::Ninguno, "sin sesion no hay ojos ni espacio");
 	}
 
 	// 3) Activacion explicita sin visor/runtime: falla con un motivo, sin recursos a medias.

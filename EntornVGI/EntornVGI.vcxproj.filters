@@ -122,6 +122,9 @@
     <ClInclude Include="OpenXRManager.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="VistaVR.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
     <ClInclude Include="quatern.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
