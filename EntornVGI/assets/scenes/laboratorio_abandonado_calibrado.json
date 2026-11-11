@@ -1,13 +1,13 @@
 {
   "version": 1,
-  "name": "laboratorio_abandonado_demo",
+  "name": "laboratorio_abandonado_calibrado",
   "architecture": [
     {
       "id": "suelo",
       "model": "../models/escape_pack/arquitectura/suelo.obj",
       "position": [
-        5.0,
-        0.0,
+        5,
+        0,
         -1.85
       ],
       "rotation": [
@@ -16,8 +16,8 @@
         0
       ],
       "scale": [
-        8.0,
-        5.0,
+        7,
+        4,
         0.15
       ],
       "physics": {
@@ -33,9 +33,9 @@
       "id": "techo",
       "model": "../models/escape_pack/arquitectura/techo.obj",
       "position": [
-        5.0,
-        0.0,
-        1.85
+        5,
+        0,
+        1.35
       ],
       "rotation": [
         0,
@@ -43,8 +43,8 @@
         0
       ],
       "scale": [
-        8.0,
-        5.0,
+        7,
+        4,
         0.15
       ],
       "physics": {
@@ -60,9 +60,9 @@
       "id": "pared_oeste",
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "position": [
-        -3.0,
-        0.0,
-        0.0
+        -2,
+        0,
+        -0.25
       ],
       "rotation": [
         0,
@@ -71,8 +71,8 @@
       ],
       "scale": [
         0.15,
-        5.0,
-        1.7
+        4,
+        1.45
       ],
       "physics": {
         "type": "static",
@@ -87,9 +87,9 @@
       "id": "pared_este",
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "position": [
-        13.0,
-        0.0,
-        0.0
+        12,
+        0,
+        -0.25
       ],
       "rotation": [
         0,
@@ -98,8 +98,8 @@
       ],
       "scale": [
         0.15,
-        5.0,
-        1.7
+        4,
+        1.45
       ],
       "physics": {
         "type": "static",
@@ -114,9 +114,9 @@
       "id": "pared_norte",
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "position": [
-        5.0,
-        5.0,
-        0.0
+        5,
+        4,
+        -0.25
       ],
       "rotation": [
         0,
@@ -124,9 +124,9 @@
         0
       ],
       "scale": [
-        8.0,
+        7,
         0.15,
-        1.7
+        1.45
       ],
       "physics": {
         "type": "static",
@@ -141,9 +141,9 @@
       "id": "pared_sur",
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "position": [
-        5.0,
-        -5.0,
-        0.0
+        5,
+        -4,
+        -0.25
       ],
       "rotation": [
         0,
@@ -151,9 +151,9 @@
         0
       ],
       "scale": [
-        8.0,
+        7,
         0.15,
-        1.7
+        1.45
       ],
       "physics": {
         "type": "static",
@@ -170,8 +170,8 @@
       "id": "mesa_experimentos_A",
       "model": "../models/escape_pack/lab/counter_counter_3_shelves/counter_counter_3_shelves.obj",
       "position": [
-        -1.4,
-        -3.55,
+        -0.8,
+        -3.12,
         -1.7
       ],
       "rotation": [
@@ -180,9 +180,9 @@
         0
       ],
       "scale": [
-        1.3,
-        1.3,
-        1.3
+        2.22,
+        1.05,
+        1.28
       ],
       "physics": {
         "type": "static",
@@ -202,8 +202,8 @@
       "id": "mesa_experimentos_B",
       "model": "../models/escape_pack/lab/counter_counter_sink/counter_counter_sink.obj",
       "position": [
-        1.2,
-        -3.5,
+        0.8,
+        -3.12,
         -1.7
       ],
       "rotation": [
@@ -212,9 +212,9 @@
         0
       ],
       "scale": [
-        1,
-        1,
-        1
+        2.22,
+        1.05,
+        1.28
       ],
       "physics": {
         "type": "static",
@@ -234,8 +234,8 @@
       "id": "mesa_experimentos_C",
       "model": "../models/escape_pack/lab/counter_counter/counter_counter.obj",
       "position": [
-        3.9,
-        -3.55,
+        2.4,
+        -3.12,
         -1.7
       ],
       "rotation": [
@@ -244,9 +244,9 @@
         0
       ],
       "scale": [
-        1.3,
-        1.3,
-        1.3
+        2.22,
+        1.05,
+        1.28
       ],
       "physics": {
         "type": "static",
@@ -266,8 +266,8 @@
       "id": "mesa_experimentos_D",
       "model": "../models/escape_pack/lab/counter_counter_2_shelves/counter_counter_2_shelves.obj",
       "position": [
-        6.6,
-        -3.55,
+        4.0,
+        -3.12,
         -1.7
       ],
       "rotation": [
@@ -276,9 +276,9 @@
         0
       ],
       "scale": [
-        1.3,
-        1.3,
-        1.3
+        2.22,
+        1.05,
+        1.28
       ],
       "physics": {
         "type": "static",
@@ -298,8 +298,8 @@
       "id": "armario_laboratorio_A",
       "model": "../models/escape_pack/lab/cabinet_cabinet/cabinet_cabinet.obj",
       "position": [
-        0.5,
-        3.55,
+        -0.95,
+        3.16,
         -1.7
       ],
       "rotation": [
@@ -310,7 +310,7 @@
       "scale": [
         2,
         2,
-        2
+        3.07
       ],
       "physics": {
         "type": "static",
@@ -330,8 +330,8 @@
       "id": "armario_laboratorio_B",
       "model": "../models/escape_pack/lab/cabinet_cabinet_two_shelves/cabinet_cabinet_two_shelves.obj",
       "position": [
-        2.4,
-        3.55,
+        0.65,
+        3.16,
         -1.7
       ],
       "rotation": [
@@ -342,7 +342,7 @@
       "scale": [
         2,
         2,
-        2
+        3.07
       ],
       "physics": {
         "type": "static",
@@ -362,7 +362,7 @@
       "id": "escritorio_vigilancia",
       "model": "../models/escape_pack/kenney/desk.obj",
       "position": [
-        5.1,
+        6.35,
         2.65,
         -1.7
       ],
@@ -394,8 +394,8 @@
       "id": "silla_vigilancia",
       "model": "../models/escape_pack/kenney/chairDesk.obj",
       "position": [
-        5.1,
-        1.55,
+        6.35,
+        1.58,
         -1.7
       ],
       "rotation": [
@@ -426,9 +426,9 @@
       "id": "monitor_seguridad",
       "model": "../models/escape_pack/kenney/computerScreen.obj",
       "position": [
-        5.1,
-        2.65,
-        -0.9
+        6.35,
+        2.79,
+        -0.92
       ],
       "rotation": [
         0,
@@ -445,9 +445,9 @@
       "id": "teclado_seguridad",
       "model": "../models/escape_pack/kenney/computerKeyboard.obj",
       "position": [
-        5.1,
-        2.2,
-        -0.9
+        6.35,
+        2.38,
+        -0.92
       ],
       "rotation": [
         0,
@@ -464,8 +464,8 @@
       "id": "puerta_decorativa_marco",
       "model": "../models/escape_pack/kenney/doorwayOpen.obj",
       "position": [
-        -1.25,
-        0.0,
+        -1.77,
+        0,
         -1.7
       ],
       "rotation": [
@@ -483,8 +483,8 @@
       "id": "banco_espera",
       "model": "../models/escape_pack/kenney/bench.obj",
       "position": [
-        8.5,
-        3.6,
+        8.55,
+        3.08,
         -1.7
       ],
       "rotation": [
@@ -493,9 +493,9 @@
         0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.15,
+        1.15,
+        1.0
       ],
       "physics": {
         "type": "static",
@@ -515,8 +515,8 @@
       "id": "papelera",
       "model": "../models/escape_pack/kenney/trashcan.obj",
       "position": [
-        7.3,
-        3.7,
+        10.35,
+        3.06,
         -1.7
       ],
       "rotation": [
@@ -547,9 +547,9 @@
       "id": "microscopio",
       "model": "../models/escape_pack/lab/machine_microscope/machine_microscope.obj",
       "position": [
-        -1.45,
-        -3.5,
-        -0.79
+        -1.1,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -566,9 +566,9 @@
       "id": "centrifugadora",
       "model": "../models/escape_pack/lab/machine_centrifuge/machine_centrifuge.obj",
       "position": [
-        1.2,
-        -3.5,
-        -0.615
+        2.0,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -585,9 +585,9 @@
       "id": "bascula",
       "model": "../models/escape_pack/lab/machine_electronic_scale/machine_electronic_scale.obj",
       "position": [
-        3.9,
-        -3.55,
-        -0.79
+        3.8,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -604,9 +604,9 @@
       "id": "mechero",
       "model": "../models/escape_pack/lab/heating_equipment_bunsen_burner/heating_equipment_bunsen_burner.obj",
       "position": [
-        6.6,
-        -3.55,
-        -0.79
+        4.45,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -623,9 +623,9 @@
       "id": "gradilla",
       "model": "../models/escape_pack/lab/bottle_test_tube_rack/bottle_test_tube_rack.obj",
       "position": [
-        -0.9,
-        -3.55,
-        -0.79
+        -0.46,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -642,9 +642,9 @@
       "id": "vaso_precipitados",
       "model": "../models/escape_pack/lab/bottle_glassware_beaker_medium/bottle_glassware_beaker_medium.obj",
       "position": [
-        4.5,
-        -3.55,
-        -0.79
+        2.52,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -661,9 +661,9 @@
       "id": "matraz",
       "model": "../models/escape_pack/lab/bottle_glassware_erlenmeyer_flask_medium/bottle_glassware_erlenmeyer_flask_medium.obj",
       "position": [
-        5.0,
-        -3.55,
-        -0.79
+        2.92,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -680,9 +680,9 @@
       "id": "placa_petri",
       "model": "../models/escape_pack/lab/dish_petridish/dish_petridish.obj",
       "position": [
-        6.0,
-        -3.55,
-        -0.79
+        3.25,
+        -3.12,
+        -0.81
       ],
       "rotation": [
         0,
@@ -699,8 +699,8 @@
       "id": "cajas_olvidadas_A",
       "model": "../models/escape_pack/kenney/cardboardBoxClosed.obj",
       "position": [
-        9.0,
-        -3.5,
+        8.4,
+        -2.9,
         -1.7
       ],
       "rotation": [
@@ -732,8 +732,8 @@
       "id": "cajas_olvidadas_B",
       "model": "../models/escape_pack/kenney/cardboardBoxOpen.obj",
       "position": [
-        10.3,
-        -3.5,
+        9.18,
+        -2.9,
         -1.7
       ],
       "rotation": [
@@ -765,9 +765,9 @@
       "id": "luz_de_techo",
       "model": "../models/escape_pack/kenney/lampSquareCeiling.obj",
       "position": [
-        5.0,
-        0.0,
-        1.24
+        5,
+        0,
+        0.74
       ],
       "rotation": [
         0,

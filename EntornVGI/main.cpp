@@ -7331,7 +7331,7 @@ int main(int argc, char** argv)
 
 	// Arrancar directamente con la habitación y la configuración de juego.
 	aplicarPresetJuego();
-	cargarYAplicarEscena("assets/scenes/laboratorio_abandonado_demo.json");
+	cargarYAplicarEscena("assets/scenes/aula_informatica_calibrada.json");
 	crearJugadorFisico();   // con la habitación ya cargada: el suelo existe
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
