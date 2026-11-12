@@ -359,6 +359,13 @@ namespace
 		const std::vector<CajaColision> hojasCerradas = cajasCinematicas();
 		const std::vector<glm::vec3> estaticasAntes = posicionesEstaticas();
 		comprobar(hojasCerradas.size() == 2, "una hoja cinematica por puerta");
+		const glm::vec3 ojosFrentePuerta(4.5f, 3.0f, -0.65f);
+		const glm::vec3 miradaPuerta(1.0f, 0.0f, 0.0f);
+		const IdCuerpo impactoPuerta = mundo.CuerpoAlFinalDelRayo(
+			ojosFrentePuerta, miradaPuerta, glb::RADIO_INTERACCION);
+		comprobar(habitacion.fisica->ObjetoAnimadoDeCuerpo(impactoPuerta) == 1 &&
+			glb::BuscarObjetoInteractuable(anim, ojosFrentePuerta, miradaPuerta) == &anim.objetos[1],
+			"el raycast visible y la consulta de puerta identifican el mismo objetivo");
 		// Hoja cerrada: centro a 1.0 m del suelo (-1.7), entre los dos postes del marco, sobre el eje de la puerta.
 		for (const CajaColision& h : hojasCerradas)
 			comprobar(casi(h.pose.posicion.z, -1.7f + 1.009f, 0.01f) && casi(h.pose.posicion.x, 6.0f, 0.05f),
@@ -1027,6 +1034,32 @@ namespace
 		comprobar(!escena.HayAgarre(), "un objeto atascado lejos de la mano se suelta solo");
 	}
 
+	void PruebaSeleccionInteraccionConObstruccion()
+	{
+		MundoFisico mundo;
+		EscenaFisica escena(mundo);
+		std::string error;
+		const SceneObject pared = ObjetoCaja("pared", { 4.0f, 0, 0 }, { 0, 0, 0 }, { 1, 1, 1 },
+			TipoCuerpo::Estatico, { 0.15f, 2, 2 }, { 0, 0, 0 }, 0.0f);
+		const SceneObject caja = ObjetoCaja("caja", { 6.0f, 0, 0 }, { 0, 0, 0 }, { 0.25f, 0.25f, 0.25f },
+			TipoCuerpo::Dinamico, { 1, 1, 1 }, { 0, 0, 0 }, 1.0f);
+		comprobar(Crear(escena, { pared, caja }, error), "crear una caja interactuable tras una pared");
+
+		const glm::vec3 origen(2.0f, 0.0f, 0.0f);
+		const IdCuerpo primerImpacto = mundo.CuerpoAlFinalDelRayo(origen, glm::vec3(1, 0, 0), 5.0f);
+		comprobar(primerImpacto != CuerpoInvalido && escena.ObjetoDinamicoDeCuerpo(primerImpacto) == -1,
+			"el primer impacto es la pared, no el objeto dinamico que queda detras");
+		comprobar(escena.IntentarAgarrar(origen, glm::vec3(1, 0, 0)) == -1 && !escena.HayAgarre(),
+			"no se puede recoger un objeto a traves de la pared");
+
+		const glm::vec3 origenVisible(4.2f, 0.0f, 0.0f);
+		const IdCuerpo cajaVisible = mundo.CuerpoAlFinalDelRayo(origenVisible, glm::vec3(1, 0, 0), 2.0f);
+		comprobar(escena.ObjetoDinamicoDeCuerpo(cajaVisible) == 1,
+			"el mismo raycast identifica la caja cuando queda visible y en rango");
+		comprobar(escena.IntentarAgarrar(origenVisible, glm::vec3(1, 0, 0)) == 1,
+			"la caja visible se puede recoger");
+	}
+
 	// Cambiar de habitacion con un objeto en la mano: se suelta y no queda ninguna referencia colgando.
 	void PruebaCambioDeHabitacionConObjetoAgarrado()
 	{
@@ -1090,6 +1123,7 @@ int main()
 	PruebaVistaEstereo();
 	PruebaAgarreConBullet();
 	PruebaAgarreContraPared();
+	PruebaSeleccionInteraccionConObstruccion();
 	PruebaCambioDeHabitacionConObjetoAgarrado();
 
 	if (fallos == 0) std::cout << "PhysicsTests: todas las pruebas pasan\n";

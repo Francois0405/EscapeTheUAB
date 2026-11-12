@@ -184,13 +184,14 @@ set_target_properties(EntornVGI PROPERTIES
 # copy_if_different avoids rewriting unchanged large assets.
 set(ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS)
 foreach(resource assets shaders textures)
+	set(resource_source "${CMAKE_CURRENT_SOURCE_DIR}/${resource}")
 	file(GLOB_RECURSE resource_files CONFIGURE_DEPENDS
 		LIST_DIRECTORIES false
-		"${CMAKE_CURRENT_SOURCE_DIR}/${resource}/*"
+		"${resource_source}/*"
 	)
 	foreach(source_file IN LISTS resource_files)
 		file(RELATIVE_PATH resource_relative_path
-			"${CMAKE_CURRENT_SOURCE_DIR}/${resource}"
+			"${resource_source}"
 			"${source_file}"
 		)
 		set(destination_file "${CMAKE_BINARY_DIR}/bin/${resource}/${resource_relative_path}")
@@ -205,6 +206,16 @@ foreach(resource assets shaders textures)
 		list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${destination_file}")
 	endforeach()
 endforeach()
+set(hand_texture_source "${REPO_ROOT}/res/ui/hand.png")
+set(hand_texture_output "${CMAKE_BINARY_DIR}/bin/res/ui/hand.png")
+add_custom_command(OUTPUT "${hand_texture_output}"
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/res/ui"
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different "${hand_texture_source}" "${hand_texture_output}"
+	DEPENDS "${hand_texture_source}"
+	VERBATIM
+	COMMENT "Syncing res/ui/hand.png"
+)
+list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${hand_texture_output}")
 add_custom_target(EntornVGI_runtime_resources ALL
 	DEPENDS ${ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS}
 )

@@ -78,6 +78,11 @@ namespace fisica
 
 		// Agarra el objeto dinámico que se mira. Devuelve su índice en la lista de la escena (-1 si no hay).
 		int IntentarAgarrar(const glm::vec3& origen, const glm::vec3& direccion);
+		// Devuelve el objeto dinámico o animado asociado a un cuerpo físico, o -1 si no corresponde.
+		int ObjetoDinamicoDeCuerpo(IdCuerpo cuerpo) const;
+		int ObjetoAnimadoDeCuerpo(IdCuerpo cuerpo) const;
+		// Sujeta el cuerpo dinámico previamente seleccionado por el raycast.
+		bool SujetarObjetoDinamico(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion);
 		// Coloca la "mano" para este fotograma y suelta el objeto si se ha quedado atascado lejos.
 		void ActualizarAgarre(const glm::vec3& origen, const glm::vec3& direccion);
 		void SoltarAgarre();

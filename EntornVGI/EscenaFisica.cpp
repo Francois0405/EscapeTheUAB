@@ -183,15 +183,35 @@ namespace fisica
 	int EscenaFisica::IntentarAgarrar(const glm::vec3& origen, const glm::vec3& direccion)
 	{
 		const IdCuerpo mirado = mundo.CuerpoAlFinalDelRayo(origen, direccion, AlcanceDeAgarre);
-		if (mirado == CuerpoInvalido) return -1;
-		for (const Dinamico& d : dinamicos)   // solo los dinámicos de ESTA habitación
+		const int indice = ObjetoDinamicoDeCuerpo(mirado);
+		if (!SujetarObjetoDinamico(indice, origen, direccion)) return -1;
+		return indice;
+	}
+
+	int EscenaFisica::ObjetoDinamicoDeCuerpo(IdCuerpo cuerpo) const
+	{
+		for (const Dinamico& d : dinamicos)
+			if (d.cuerpo == cuerpo && cuerpo != CuerpoInvalido) return d.indiceObjeto;
+		return -1;
+	}
+
+	int EscenaFisica::ObjetoAnimadoDeCuerpo(IdCuerpo cuerpo) const
+	{
+		for (const Colision& c : colisionesNodo)
+			if (c.cuerpo == cuerpo && cuerpo != CuerpoInvalido) return c.indiceAnimado;
+		return -1;
+	}
+
+	bool EscenaFisica::SujetarObjetoDinamico(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion)
+	{
+		for (const Dinamico& d : dinamicos)
 		{
-			if (d.cuerpo != mirado) continue;
-			if (!mundo.SujetarCuerpo(mirado)) return -1;
+			if (d.indiceObjeto != indiceObjeto) continue;
+			if (!mundo.SujetarCuerpo(d.cuerpo)) return false;
 			mundo.FijarDestinoDeSujecion(PuntoDeLaMano(origen, direccion));
-			return d.indiceObjeto;
+			return true;
 		}
-		return -1;   // se mira una pared, un mueble, una puerta...: no es agarrable
+		return false;
 	}
 
 	void EscenaFisica::ActualizarAgarre(const glm::vec3& origen, const glm::vec3& direccion)
