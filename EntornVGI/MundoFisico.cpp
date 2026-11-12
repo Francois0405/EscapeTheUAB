@@ -32,6 +32,7 @@ namespace fisica
 		struct Cuerpo
 		{
 			TipoCuerpo tipo = TipoCuerpo::Estatico;
+			bool interactuable = false;
 			std::unique_ptr<btBoxShape> forma;
 			std::unique_ptr<btDefaultMotionState> estadoMovimiento;
 			std::unique_ptr<btRigidBody> cuerpo;
@@ -429,6 +430,7 @@ namespace fisica
 		if (glm::length(direccion) < 1.0e-6f) return CuerpoInvalido;
 		const glm::vec3 fin = origen + glm::normalize(direccion) * alcance;
 		btCollisionWorld::ClosestRayResultCallback resultado(ABullet(origen), ABullet(fin));
+		
 		// El jugador (grupo "Character") no cuenta: el ojo está dentro de su propia cápsula.
 		resultado.m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
 		impl->mundo.rayTest(ABullet(origen), ABullet(fin), resultado);
@@ -495,6 +497,24 @@ namespace fisica
 		return puntos;
 	}
 
+	// 
+	void MundoFisico::setInteractuable(IdCuerpo id, bool interactuable)
+	{
+		if (impl->Buscar(id) == nullptr) {
+			return;
+		}
+		impl->cuerpos[id].interactuable = interactuable;
+	}
+
+	
+	bool MundoFisico::getInteractuable(IdCuerpo id) const
+	{
+		if (impl->Buscar(id) == nullptr) {
+			return false;
+		} 
+		return impl->cuerpos[id].interactuable;
+	}
+
 	// ---- DemoCuboCaida -------------------------------------------------------
 
 	void DemoCuboCaida::Iniciar()
@@ -510,6 +530,7 @@ namespace fisica
 		// Cubo dinámico: empieza en el aire, en una zona libre de la sala.
 		const glm::vec3 centroCubo(6.0f, -1.0f, AlturaInicialCentro);
 		cubo = mundo.CrearCajaDinamica(centroCubo, glm::vec3(MitadCubo), MasaCuboKg);
+		mundo.setInteractuable(cubo, true);
 		activa = true;
 	}
 

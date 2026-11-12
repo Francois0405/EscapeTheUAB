@@ -34,7 +34,7 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
-
+#include "stb_image.h"
 // CODI NOSTRE
 
 #include <filesystem>
@@ -43,6 +43,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 // ---------------------------
+
 
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
@@ -1689,6 +1690,35 @@ static void dibujarBarraEstamina()
 	}
 }
 
+
+GLuint cargarTexturaPNG(const char* filename)
+{
+    int width, height, channels;
+    unsigned char* data = stbi_load(filename, &width, &height, &channels, 4);
+    if (data) {
+		GLuint textura;
+		glGenTextures(1, &textura);
+		glBindTexture(GL_TEXTURE_2D, textura);
+		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA,width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, data);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
+		stbi_image_free(data);
+		return textura;
+	}
+    return 0;
+}
+
+static void dibujarInteractuable(GLuint textura)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    float ancho = 64.0f;
+    float alto = 64.0f;
+    ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5, io.DisplaySize.y * 0.5), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    ImGui::Begin("Interactuable", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoBackground | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
+    ImGui::Image((ImTextureID)(intptr_t)textura,ImVec2(ancho, alto));
+    ImGui::End();
+}
+
 void draw_Menu_ImGui()
 {
 	// Start the Dear ImGui frame
@@ -1696,6 +1726,19 @@ void draw_Menu_ImGui()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 	dibujarBarraEstamina();
+	
+	if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, ImGui::GetIO().WantTextInput))
+    {
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		fisica::IdCuerpo mirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, fisica::EscenaFisica::AlcanceDeAgarre);
+		char filename[] = "./assets/mano.png";
+		GLuint iconoInteractuar = cargarTexturaPNG(filename);
+		if (mirado != fisica::CuerpoInvalido && mundoFisico.getInteractuable(mirado) && !escenaFisica->HayAgarre()) {
+			dibujarInteractuable(iconoInteractuar);
+		}
+    }
+
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
 
@@ -4687,11 +4730,11 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			return;
 		}
 		// E: agarrar/soltar el objeto que miramos o abrir/cerrar la puerta (no si hay pausa, falta foco o se escribe en ImGui).
-		if (key == GLFW_KEY_E && action == GLFW_PRESS &&
-			glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput))
-		{
-			interactuar();
-			return;
+		if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput)) {
+			if (key == GLFW_KEY_E && action == GLFW_PRESS) {
+				interactuar();
+				return;
+			}
 		}
 		// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
 		if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
@@ -7244,8 +7287,8 @@ void error_callback(int code, const char* description)
 	//int codi = glfwGetError(&descripcio);
 
  //   display_error_message(code, description);
-	fprintf(stderr, "Codi Error: %i", code);
-	fprintf(stderr, "Descripcio: %s\n", description);
+	fprintf(stderr, "Codi Error: %i ", code);
+	fprintf(stderr, "Descripcio: %s\n ", description);
 }
 
 
@@ -7431,7 +7474,7 @@ int main(int argc, char** argv)
 	glfwSetCursorPosCallback(window, (GLFWcursorposfun)OnMouseMove);				// - Directly redirect GLFW mouse position events
 	glfwSetScrollCallback(window, (GLFWscrollfun)OnMouseWheel);						// - Directly redirect GLFW mouse wheel events
 	glfwSetKeyCallback(window, (GLFWkeyfun)OnKeyDown);								// - Directly redirect GLFW key events
-	glfwSetErrorCallback(error_callback);											// Error callback
+	//glfwSetErrorCallback(error_callback);											// Error callback
 	glfwSetWindowRefreshCallback(window, (GLFWwindowrefreshfun)OnPaint);			// - Callback to refresh the screen
 
 // Entorn VGI; Timer: Lectura temps

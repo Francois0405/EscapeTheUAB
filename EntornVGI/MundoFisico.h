@@ -126,6 +126,8 @@ namespace fisica
 
 		int NumeroDeCuerpos() const;   // cuerpos rígidos (el jugador no cuenta)
 
+		void setInteractuable(IdCuerpo id, bool interactuable);
+		bool getInteractuable(IdCuerpo id) const;
 		// --- Jugador (Fase 3) --------------------------------------------------------------
 		// El jugador es UN cuerpo "de personaje" de Bullet (btKinematicCharacterController):
 		// no es un cuerpo rígido normal. Cada paso fijo Bullet intenta mover la cápsula la

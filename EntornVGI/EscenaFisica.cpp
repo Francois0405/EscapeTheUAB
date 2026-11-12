@@ -101,8 +101,10 @@ namespace fisica
 			if (id == CuerpoInvalido)
 				return fallar("no se pudo crear la caja fisica de '" + objeto.id + "' (tamano o masa no validos)");
 			todos.push_back(id);
-			if (objeto.fisica.tipo == TipoCuerpo::Dinamico)
+			if (objeto.fisica.tipo == TipoCuerpo::Dinamico) {
 				dinamicos.push_back({ i, id, desplazamiento, objeto.escala });
+				mundo.setInteractuable(id, true);
+			}
 		}
 
 		// 2) Colisionadores de los objetos animados.
@@ -189,7 +191,7 @@ namespace fisica
 			if (d.cuerpo != mirado) continue;
 			if (!mundo.SujetarCuerpo(mirado)) return -1;
 			mundo.FijarDestinoDeSujecion(PuntoDeLaMano(origen, direccion));
-			return d.indiceObjeto;
+			return d.indiceObjeto;	
 		}
 		return -1;   // se mira una pared, un mueble, una puerta...: no es agarrable
 	}

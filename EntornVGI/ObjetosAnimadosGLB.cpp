@@ -186,6 +186,7 @@ namespace glb
 
 	ObjetoAnimado* InteractuarConObjeto(EscenaAnimada& escena, const glm::vec3& origen, const glm::vec3& direccion)
 	{
+		
 		ObjetoAnimado* objeto = BuscarObjetoInteractuable(escena, origen, direccion);
 		if (objeto != nullptr) AlternarPuerta(*objeto);
 		return objeto;
