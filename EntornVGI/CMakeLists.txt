@@ -42,6 +42,7 @@ endif()
 add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_party/SOIL2")
 
 set(ENTORNVGI_SOURCES
+	AudioManager.cpp
 	DibujoColisionadores.cpp
 	DibujoGLB.cpp
 	Editor/EditorEscenas.cpp
@@ -84,6 +85,7 @@ target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}/third_party
 	${REPO_ROOT}/third_party/SOIL2/src
 	${REPO_ROOT}/third_party/cgltf
+	${REPO_ROOT}/third_party/miniaudio
 )
 
 target_compile_definitions(EntornVGI PRIVATE
@@ -157,6 +159,14 @@ target_link_libraries(EntornVGI PRIVATE
 	Threads::Threads
 	${CMAKE_DL_LIBS}
 )
+
+if(APPLE)
+	target_link_libraries(EntornVGI PRIVATE
+		"-framework CoreAudio"
+		"-framework AudioToolbox"
+		"-framework CoreFoundation"
+	)
+endif()
 
 if(WIN32)
 	add_custom_command(TARGET EntornVGI POST_BUILD
