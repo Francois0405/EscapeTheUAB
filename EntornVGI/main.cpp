@@ -593,7 +593,7 @@ void InitGL()
 	OPV_G.R = 15.0;		OPV_G.alfa = 0.0;	OPV_G.beta = 0.0;	// Origen PV en esfèriques per a Vista_Geode
 
 // Entorn VGI: Variables de control per Menú VISTA: Pantalla Completa, Pan, dibuixar eixos i grids 
-	fullscreen = true;
+	fullscreen = false;	// La finestra s'inicia en mode finestra; F11 alterna pantalla completa
 	pan = false;
 	eixos = true;	eixos_programID = 0;  eixos_Id = 0;
 	sw_grid = false;
@@ -5321,9 +5321,9 @@ void Teclat_Shift(int key, GLFWwindow* window)
 		OnObjectePuntsControl();
 		break;
 
-	// Tecla Triedre de Frenet?
+	// Tecla F11: alternar pantalla completa
 	case GLFW_KEY_F11:
-		OnCorbesTriedreFrenet();
+		OnFull_Screen(primary, window);
 		break;
 
 	// Tecla Triedre de Darboux?
@@ -7343,28 +7343,35 @@ int main(int argc, char** argv)
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 
-// Create the game directly in fullscreen on the primary monitor.
+// Create the game in a regular window (80% of the monitor); F11 toggles fullscreen.
+	const int startW = (int)(mode->width * 0.8);
+	const int startH = (int)(mode->height * 0.8);
+	fullscreen = false;
 #ifndef __APPLE__
 	// OpenXR/OpenGL suele exigir 4.3+ en Windows. Un contexto core 3.3 puede quedarse en 3.3 en algunos
 	// controladores, asi que se pide primero 4.6 (core) y, si no existe, se vuelve al 3.3 de siempre.
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
-	window = glfwCreateWindow(mode->width, mode->height, "EscapeTheUAB", primary, NULL);
+	window = glfwCreateWindow(startW, startH, "EscapeTheUAB", NULL, NULL);
 	if (!window)
 	{
 		fprintf(stderr, "OpenGL 4.6 no disponible; se usa OpenGL 3.3 (sin VR si el runtime pide mas).\n");
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
-		window = glfwCreateWindow(mode->width, mode->height, "EscapeTheUAB", primary, NULL);
+		window = glfwCreateWindow(startW, startH, "EscapeTheUAB", NULL, NULL);
 	}
 #else
-	window = glfwCreateWindow(mode->width, mode->height, "EscapeTheUAB", primary, NULL);
+	window = glfwCreateWindow(startW, startH, "EscapeTheUAB", NULL, NULL);
 #endif
 	if (!window)
 	{	fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 4.6 compatible. Try the 2.1 version of the tutorials.\n");
 		getchar();
 		glfwTerminate();
 		return -1;
+	}
+	{	int mx = 0, my = 0;
+		glfwGetMonitorPos(primary, &mx, &my);
+		glfwSetWindowPos(window, mx + (mode->width - startW) / 2, my + (mode->height - startH) / 2);
 	}
 
 // Make the window's context current

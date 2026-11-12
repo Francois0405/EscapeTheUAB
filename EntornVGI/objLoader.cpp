@@ -16,6 +16,97 @@
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
+#include <cctype>
+#include <filesystem>
+#include <sstream>
+#include <string>
+
+// ---------------------------------------------------------------------------
+// Resolucion de rutas portable (macOS/Linux distinguen mayusculas, usan '/'
+// y los MTL exportados en Windows contienen '\\' o rutas absolutas "C:/...").
+// ---------------------------------------------------------------------------
+namespace {
+namespace fs = std::filesystem;
+
+std::string LowerStr(std::string v)
+{
+	for (char& c : v) c = (char)std::tolower((unsigned char)c);
+	return v;
+}
+
+// Busca "name" dentro de "dir" ignorando mayusculas/minusculas.
+bool FindNoCase(const fs::path& dir, const std::string& name, fs::path& out)
+{
+	std::error_code ec;
+	fs::path direct = dir / name;
+	if (fs::exists(direct, ec)) { out = direct; return true; }
+	const std::string lname = LowerStr(name);
+	for (fs::directory_iterator it(dir.empty() ? fs::path(".") : dir, ec), end; !ec && it != end; it.increment(ec))
+		if (LowerStr(it->path().filename().string()) == lname) { out = it->path(); return true; }
+	return false;
+}
+
+// Resuelve una ruta relativa componente a componente sin distinguir mayusculas.
+bool ResolveNoCase(const fs::path& base, const std::string& rel, fs::path& out)
+{
+	fs::path cur = base;
+	std::stringstream ss(rel);
+	std::string part;
+	while (std::getline(ss, part, '/'))
+	{
+		if (part.empty() || part == ".") continue;
+		if (part == "..") { cur = cur.parent_path(); continue; }
+		fs::path next;
+		if (!FindNoCase(cur, part, next)) return false;
+		cur = next;
+	}
+	out = cur;
+	std::error_code ec;
+	return fs::is_regular_file(cur, ec);
+}
+
+std::string ResolveAssetPath(const std::string& baseDir, std::string name)
+{
+	for (char& c : name) if (c == '\\') c = '/';
+	while (!name.empty() && std::isspace((unsigned char)name.back())) name.pop_back();
+	size_t st = 0;
+	while (st < name.size() && std::isspace((unsigned char)name[st])) st++;
+	name.erase(0, st);
+	if (name.empty()) return baseDir;
+
+	const std::string original = baseDir + name;
+	std::error_code ec;
+	fs::path base = baseDir.empty() ? fs::path(".") : fs::path(baseDir);
+	fs::path found;
+
+	// Ruta tal cual (relativa al OBJ) y variante sin distinguir mayusculas.
+	bool winAbs = name.size() > 1 && name[1] == ':';
+	if (!winAbs)
+	{
+		if (name[0] == '/') { if (fs::is_regular_file(name, ec)) return name; }
+		else
+		{
+			if (fs::is_regular_file(base / name, ec)) return original;
+			if (ResolveNoCase(base, name, found)) return found.string();
+		}
+	}
+
+	// Ruta absoluta de otra maquina: usar solo el nombre de archivo.
+	std::string file = name.substr(name.find_last_of('/') == std::string::npos ? 0 : name.find_last_of('/') + 1);
+	if (ResolveNoCase(base, file, found)) return found.string();
+
+	// Buscar por nombre de archivo en el directorio del modelo y subcarpetas.
+	const std::string lfile = LowerStr(file);
+	int visited = 0;
+	for (fs::recursive_directory_iterator it(base, fs::directory_options::skip_permission_denied, ec), end;
+		!ec && it != end && visited < 20000; it.increment(ec), ++visited)
+		if (it->is_regular_file(ec) && LowerStr(it->path().filename().string()) == lfile)
+			return it->path().string();
+
+	return original;
+}
+} // namespace
+
 
 // OBJ File string indentifiers
 #define VERTEX_ID		 "v"
@@ -245,8 +336,10 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 				GetTokenParameter(szString, sizeof(szString), hFile);
 				// Append material library filename to the model's base path
 				char szLibraryFile[_MAX_PATH];
-				strcpy_s(szLibraryFile, szBasePath);
-				strcat_s(szLibraryFile, szString);
+				{
+					std::string resolved = ResolveAssetPath(szBasePath, szString);
+					strcpy_s(szLibraryFile, resolved.c_str());
+				}
 				// Load the material library
 				LoadMaterialLib(szLibraryFile, pMaterials, 
 					&CurrentIndex.iMaterialCount, szBasePath);
@@ -484,8 +577,10 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 			GetTokenParameter(szString, sizeof(szString), hFileT);
 			// Append material library filename to the model's base path
 			char szTextureFile[_MAX_PATH];
-			strcpy_s(szTextureFile, szBasePath);
-			strcat_s(szTextureFile, szString);
+			{
+				std::string resolved = ResolveAssetPath(szBasePath, szString);
+				strcpy_s(szTextureFile, resolved.c_str());
+			}
 			// Store texture filename in the structure
 			strcpy_s(pMaterials[*iCurMaterialIndex].szTexture, szTextureFile);
 			// Load texture and store its ID in the structure
@@ -1165,9 +1260,10 @@ void _stdcall COBJModel::GetFileInfo(FILE *hStream, OBJFileInfo *Info,
 			// Read the filename of the library
 			GetTokenParameter(szString, sizeof(szString), hStream);
 			// Copy the model's base path into a none-constant string
-			strcpy_s(szBasePath, szConstBasePath);
-			// Append material library filename to the model's base path
-			strcat_s(szBasePath, szString);
+			{
+				std::string resolved = ResolveAssetPath(szConstBasePath, szString);
+				strcpy_s(szBasePath, resolved.c_str());
+			}
 
 			// Open the library file
 //			FILE *hMaterialLib = fopen(szBasePath, "r");
