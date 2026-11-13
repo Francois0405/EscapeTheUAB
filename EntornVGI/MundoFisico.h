@@ -175,6 +175,8 @@ namespace fisica
 		// Empieza a sujetar un cuerpo dinámico (suelta el anterior). Falso si no se puede.
 		bool SujetarCuerpo(IdCuerpo id);
 		void SoltarCuerpoSujeto();
+		// Suelta el cuerpo sujeto conservando la velocidad inicial indicada.
+		bool LanzarCuerpoSujeto(const glm::vec3& velocidad);
 		IdCuerpo CuerpoSujeto() const;
 		// Punto del mundo hacia el que se lleva el cuerpo sujeto (se puede cambiar cada fotograma).
 		void FijarDestinoDeSujecion(const glm::vec3& destino);

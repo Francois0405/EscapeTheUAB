@@ -225,6 +225,7 @@ namespace fisica
 	}
 
 	void EscenaFisica::SoltarAgarre() { mundo.SoltarCuerpoSujeto(); }
+	bool EscenaFisica::LanzarAgarre(const glm::vec3& velocidad) { return mundo.LanzarCuerpoSujeto(velocidad); }
 	bool EscenaFisica::HayAgarre() const { return ObjetoAgarrado() >= 0; }
 
 	int EscenaFisica::ObjetoAgarrado() const

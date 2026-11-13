@@ -461,13 +461,19 @@ namespace fisica
 
 	void MundoFisico::SoltarCuerpoSujeto()
 	{
+		LanzarCuerpoSujeto(glm::vec3(0.0f));
+	}
+
+	bool MundoFisico::LanzarCuerpoSujeto(const glm::vec3& velocidad)
+	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(impl->cuerpoSujeto));
 		impl->cuerpoSujeto = CuerpoInvalido;
-		if (cuerpo == nullptr) return;
+		if (cuerpo == nullptr) return false;
 		cuerpo->setFlags(cuerpo->getFlags() & ~BT_DISABLE_WORLD_GRAVITY);
 		cuerpo->setGravity(impl->mundo.getGravity());
-		cuerpo->setLinearVelocity(btVector3(0, 0, 0));   // se suelta, no se lanza (lanzar es otra fase)
+		cuerpo->setLinearVelocity(ABullet(velocidad));
 		cuerpo->activate(true);
+		return true;
 	}
 
 	IdCuerpo MundoFisico::CuerpoSujeto() const { return impl->cuerpoSujeto; }

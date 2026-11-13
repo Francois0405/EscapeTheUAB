@@ -277,7 +277,7 @@ ha probado a mano; Windows, Linux y VR tampoco.
 Saltos, agacharse, escaleras, empujar cajas con el cuerpo, físicas de manos, OpenXR.
 
 
-# Integración con la rama VR: vista estéreo de prueba y agarre (E)
+# Integración con la rama VR: vista estéreo de prueba y objetos (E)
 
 ## Vista estereoscópica de prueba (F2) — NO es VR real
 
@@ -289,23 +289,25 @@ funciona en un Meta Quest 2.** Con VR real, OpenXR dará la pose y la proyecció
 * Reutiliza `Vista_Navega` para la vista central y desplaza solo la matriz de cada ojo (`estereo::VistaDeOjo`).
 * No toca la física ni al jugador: solo cambia cómo se dibuja.
 
-## Agarrar y soltar con E
+## Agarrar y lanzar con E
 
-Una sola acción, `interactuar()` en `main.cpp`, con esta prioridad:
+Con la mano vacía, al mirar un objeto **dinámico** a menos de 2 m aparece únicamente el icono de la mano; no se muestra
+una tarjeta ni texto. `E` lo agarra mediante un rayo de Bullet (si hay una pared en medio no se agarra, y suelos, muebles
+estáticos y puertas nunca son agarrables). Las puertas conservan su interacción con `E`, pero no muestran el icono de agarre.
 
-1. Con un objeto en la mano → lo suelta (con las manos ocupadas no se abren puertas).
-2. Si se mira un objeto **dinámico** a menos de 2 m → lo agarra (un rayo de Bullet: si hay una pared en medio no se agarra, y
-   suelos, muebles estáticos y puertas nunca son agarrables).
-3. Si no → la puerta que se tiene delante, como antes.
+Con un objeto sujeto, mantener `E` muestra una barra de carga y soltar la tecla lo lanza en la dirección de la mirada.
+La carga llega al máximo en 1,25 s y escala la velocidad inicial de 3 a 15 m/s.
 
 El objeto agarrado **sigue siendo el mismo cuerpo de Bullet**: sin gravedad y con una velocidad (máx. 6 m/s) que cada paso fijo
 lo lleva hacia un punto 1,1 m delante de los ojos. Por eso choca con paredes en vez de atravesarlas (penetración medida ≤ 3 cm),
-lo que se dibuja es exactamente la pose de Bullet, y al soltarlo recupera la gravedad y cae. Si queda atascado a más de 2 m de la
-mano, se suelta solo. Pausa/foco/F1: la mano no se actualiza y el objeto se queda donde está. Al cambiar de habitación el agarre
-se elimina. En `habitacion_beta`, `box_large` (8 kg) y `box_small` (1 kg) son ahora `dynamic`, así que son los agarrables.
+lo que se dibuja es exactamente la pose de Bullet. Al lanzarlo recupera la gravedad y conserva la velocidad inicial del tiro.
+Si queda atascado a más de 2 m de la mano, se suelta solo. Pausa/foco/F1: la mano no se actualiza, la carga se cancela y el
+objeto se queda donde está. Al cambiar de habitación el agarre se elimina. En `habitacion_beta`, `box_large` (8 kg) y
+`box_small` (1 kg) son ahora `dynamic`, así que son los agarrables.
 
-Funciones: `MundoFisico::CuerpoAlFinalDelRayo / SujetarCuerpo / SoltarCuerpoSujeto / FijarDestinoDeSujecion` y
-`EscenaFisica::IntentarAgarrar / ActualizarAgarre / SoltarAgarre`. Reciben solo origen y dirección del mundo (en VR: mano o mando).
+Funciones: `MundoFisico::CuerpoAlFinalDelRayo / SujetarCuerpo / SoltarCuerpoSujeto / LanzarCuerpoSujeto / FijarDestinoDeSujecion` y
+`EscenaFisica::IntentarAgarrar / ActualizarAgarre / SoltarAgarre / LanzarAgarre`. Reciben solo origen y dirección del mundo
+(en VR: mano o mando).
 
-**Pendiente (subfase):** lanzar objetos, rotarlos con la mano, que el objeto no pueda empujar al jugador contra una pared, agarrar con
-dos manos y manos físicas VR.
+**Pendiente (subfase):** rotar objetos con la mano, impedir que el objeto empuje al jugador contra una pared, agarrar con dos
+manos y manos físicas VR.

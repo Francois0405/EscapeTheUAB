@@ -173,6 +173,24 @@ namespace
 			"un cuerpo dinámico con masa 0 se rechaza");
 		comprobar(mundo.PoseDe(CuerpoInvalido).posicion == glm::vec3(0.0f), "pedir la pose de un id inválido no falla");
 	}
+
+	void PruebaLanzamientoDeObjetoAgarrado()
+	{
+		MundoFisico mundo;
+		const IdCuerpo cubo = mundo.CrearCajaDinamica(glm::vec3(0.0f), glm::vec3(0.2f), 1.0f);
+		comprobar(mundo.SujetarCuerpo(cubo), "se puede sujetar el objeto antes de lanzarlo");
+		comprobar(mundo.LanzarCuerpoSujeto(glm::vec3(8.0f, 0.0f, 3.0f)),
+			"lanzar devuelve verdadero cuando habia un objeto sujeto");
+		comprobar(mundo.CuerpoSujeto() == CuerpoInvalido, "lanzar libera la sujecion");
+		const glm::vec3 velocidad = mundo.VelocidadDe(cubo);
+		comprobar(casi(velocidad.x, 8.0f, 1e-4f) && casi(velocidad.y, 0.0f, 1e-4f) &&
+			casi(velocidad.z, 3.0f, 1e-4f), "el objeto conserva la velocidad del lanzamiento");
+
+		mundo.Actualizar(MundoFisico::PasoFijo);
+		comprobar(mundo.VelocidadDe(cubo).z < 3.0f, "el objeto lanzado vuelve a recibir gravedad");
+		comprobar(!mundo.LanzarCuerpoSujeto(glm::vec3(1.0f, 0.0f, 0.0f)),
+			"lanzar sin objeto sujeto informa que no hubo lanzamiento");
+	}
 	// ======================================================================
 	// Fase 2: escena JSON -> cuerpos de Bullet
 	// ======================================================================
@@ -1102,6 +1120,7 @@ int main()
 	PruebaPausa();
 	PruebaSuelo();
 	PruebaMasaInvalida();
+	PruebaLanzamientoDeObjetoAgarrado();
 	PruebaColisionadorTransformado();
 	PruebaEstaticoNoCae();
 	PruebaDinamicoCaeYChoca();

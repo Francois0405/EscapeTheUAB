@@ -168,6 +168,9 @@ namespace
 	bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
 	bool objetosAnimadosListos = false;   // true cuando los modelos ya están en la GPU
 	GLuint texturaManoInteraccion = 0;
+	bool cargaLanzamientoActiva = false;
+	float tiempoCargaLanzamiento = 0.0f;
+	constexpr float TiempoMaximoCargaLanzamiento = 1.25f;
 
 	void cargarTexturaManoInteraccion()
 	{
@@ -216,7 +219,7 @@ namespace
 		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
 	}
 
-	enum class AccionInteraccion { Ninguna, Soltar, Recoger, Abrir, Cerrar };
+	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
 
 	struct ObjetivoInteraccion
 	{
@@ -227,8 +230,7 @@ namespace
 
 	ObjetivoInteraccion buscarObjetivoInteraccion()
 	{
-		if (escenaFisica->HayAgarre())
-			return { AccionInteraccion::Soltar };
+		if (escenaFisica->HayAgarre()) return {};
 
 		glm::vec3 origen, direccion;
 		origenYDireccionDeLaMirada(origen, direccion);
@@ -254,25 +256,17 @@ namespace
 		return { accion, -1, puerta };
 	}
 
-	const char* textoAccionInteraccion(AccionInteraccion accion)
+	void iniciarCargaLanzamiento()
 	{
-		switch (accion)
-		{
-		case AccionInteraccion::Soltar: return "E - Soltar";
-		case AccionInteraccion::Recoger: return "E - Recoger";
-		case AccionInteraccion::Abrir: return "E - Abrir";
-		case AccionInteraccion::Cerrar: return "E - Cerrar";
-		case AccionInteraccion::Ninguna: break;
-		}
-		return "";
+		if (!escenaFisica->HayAgarre()) return;
+		cargaLanzamientoActiva = true;
+		tiempoCargaLanzamiento = 0.0f;
 	}
 
 	void interactuar()
 	{
 		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
-		if (objetivo.accion == AccionInteraccion::Soltar)
-			escenaFisica->SoltarAgarre();
-		else if (objetivo.accion == AccionInteraccion::Recoger)
+		if (objetivo.accion == AccionInteraccion::Recoger)
 		{
 			glm::vec3 origen, direccion;
 			origenYDireccionDeLaMirada(origen, direccion);
@@ -457,6 +451,37 @@ namespace
 		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
 	}
 
+	void cancelarCargaLanzamiento()
+	{
+		cargaLanzamientoActiva = false;
+		tiempoCargaLanzamiento = 0.0f;
+	}
+
+	void lanzarObjetoCargado()
+	{
+		if (!cargaLanzamientoActiva) return;
+		const float carga = std::clamp(tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f);
+		cancelarCargaLanzamiento();
+		if (!escenaFisica->HayAgarre()) return;
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		const float rapidez = 3.0f + 12.0f * carga;
+		escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez);
+	}
+
+	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
+	{
+		if (!cargaLanzamientoActiva) return;
+		if (!entradaFPSActiva() || !escenaFisica->HayAgarre())
+		{
+			cancelarCargaLanzamiento();
+			return;
+		}
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+			tiempoCargaLanzamiento = std::min(tiempoCargaLanzamiento + std::max(delta, 0.0f), TiempoMaximoCargaLanzamiento);
+	}
+
 	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
 	// asi que la camara y el movil comparten la misma fase y se quedan quietos al chocar con una pared.
 	void actualizarBalanceoVisual(float delta)
@@ -638,6 +663,7 @@ namespace
 		ventanaConFoco = focused == GLFW_TRUE;
 		if (!ventanaConFoco)
 		{
+			cancelarCargaLanzamiento();
 			fijarCapturaCursor(window, false);
 		}
 		else
@@ -1785,36 +1811,34 @@ static void dibujarBarraEstamina()
 static void dibujarHUDInteraccion()
 {
 	const ImGuiIO& io = ImGui::GetIO();
-	if (!entradaFPSActiva() || gestorOpenXR.SesionEnMarcha() || texturaManoInteraccion == 0 ||
-		io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse ||
+	if (!entradaFPSActiva() || gestorOpenXR.SesionEnMarcha() ||
 		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
 		return;
 
-	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
-	if (objetivo.accion == AccionInteraccion::Ninguna) return;
-
-	const char* texto = textoAccionInteraccion(objetivo.accion);
-	const ImVec2 tamanoTexto = ImGui::CalcTextSize(texto);
-	const float padding = 9.0f;
-	const float tamanoIcono = 22.0f;
-	const float separacion = 7.0f;
-	const float ancho = padding * 2.0f + tamanoIcono + separacion + tamanoTexto.x;
-	const float alto = std::max(tamanoIcono, tamanoTexto.y) + padding * 2.0f;
-	const float x = (io.DisplaySize.x - ancho) * 0.5f;
-	const float y = std::min(io.DisplaySize.y * 0.5f + 27.0f, io.DisplaySize.y - alto - 12.0f);
-	const ImVec2 minimo(x, y);
-	const ImVec2 maximo(x + ancho, y + alto);
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
-	dl->AddCircleFilled(ImVec2(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f),
-		2.0f, IM_COL32(255, 255, 255, 220));
-	dl->AddRectFilled(minimo, maximo, IM_COL32(0, 0, 0, 170), 6.0f);
+	if (cargaLanzamientoActiva)
+	{
+		const float ancho = 140.0f, alto = 8.0f;
+		const float x = (io.DisplaySize.x - ancho) * 0.5f;
+		const float y = io.DisplaySize.y * 0.5f + 36.0f;
+		dl->AddRectFilled(ImVec2(x - 2.0f, y - 2.0f), ImVec2(x + ancho + 2.0f, y + alto + 2.0f),
+			IM_COL32(0, 0, 0, 190), 3.0f);
+		dl->AddRectFilled(ImVec2(x, y), ImVec2(x + ancho * std::clamp(
+			tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f), y + alto),
+			IM_COL32(235, 220, 150, 245), 2.0f);
+	}
 
-	const ImVec2 iconoMinimo(x + padding, y + (alto - tamanoIcono) * 0.5f);
-	const ImVec2 iconoMaximo(iconoMinimo.x + tamanoIcono, iconoMinimo.y + tamanoIcono);
+	if (texturaManoInteraccion == 0 || io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
+		return;
+	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+	if (objetivo.accion != AccionInteraccion::Recoger) return;
+
+	const float tamanoIcono = 34.0f;
+	const float x = (io.DisplaySize.x - tamanoIcono) * 0.5f;
+	const float y = std::min(io.DisplaySize.y * 0.5f + 24.0f, io.DisplaySize.y - tamanoIcono - 12.0f);
 	const ImTextureID textura = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texturaManoInteraccion));
-	dl->AddImage(textura, iconoMinimo, iconoMaximo, ImVec2(0.0f, 1.0f), ImVec2(1.0f, 0.0f));
-	dl->AddText(ImVec2(iconoMaximo.x + separacion, y + (alto - tamanoTexto.y) * 0.5f),
-		IM_COL32(245, 245, 245, 245), texto);
+	dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
+		ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
 }
 
 void draw_Menu_ImGui()
@@ -2006,7 +2030,7 @@ void draw_Menu_ImGui()
 		if (escenaFisica->HayAgarre())
 		{
 			const int agarrado = escenaFisica->ObjetoAgarrado();
-			ImGui::Text("en la mano: %s (E para soltar)", objetosEscena[agarrado].id.c_str());
+			ImGui::Text("en la mano: %s (mantener E para cargar y lanzar)", objetosEscena[agarrado].id.c_str());
 		}
 		else ImGui::TextUnformatted("mano vacia (E sobre un objeto dinamico para agarrarlo)");
 		if (mundoFisico.HayJugador())
@@ -4780,6 +4804,15 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
+	if (key == GLFW_KEY_E && action == GLFW_RELEASE && cargaLanzamientoActiva)
+	{
+		if (entradaFPSActiva() && !io.WantTextInput && !io.WantCaptureKeyboard &&
+			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha())
+			lanzarObjetoCargado();
+		else
+			cancelarCargaLanzamiento();
+		return;
+	}
 	if (editorEscenas.Activo())
 	{
 		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
@@ -4815,13 +4848,16 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			sincronizarCursorFPS(window);
 			return;
 		}
-		// E: agarrar/soltar el objeto que miramos o abrir/cerrar la puerta (no si hay pausa, falta foco o se escribe en ImGui).
+		// E recoge el objeto mirado o interactua con puertas; con un objeto sujeto inicia la carga del lanzamiento.
 		if (key == GLFW_KEY_E && action == GLFW_PRESS)
 		{
 			if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput) &&
 				!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
 				!gestorOpenXR.SesionEnMarcha())
-				interactuar();
+			{
+				if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+				else interactuar();
+			}
 			return;
 		}
 		// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
@@ -7624,6 +7660,7 @@ char phonePath[] = "./assets/models/Phone.obj";
 		glfwPollEvents();
 		editorEscenas.Actualizar(window, static_cast<float>(delta));
 		sincronizarCursorFPS(window);
+		actualizarCargaLanzamiento(window, static_cast<float>(delta));
 
 		const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
 			glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;

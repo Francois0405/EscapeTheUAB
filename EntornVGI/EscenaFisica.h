@@ -86,6 +86,7 @@ namespace fisica
 		// Coloca la "mano" para este fotograma y suelta el objeto si se ha quedado atascado lejos.
 		void ActualizarAgarre(const glm::vec3& origen, const glm::vec3& direccion);
 		void SoltarAgarre();
+		bool LanzarAgarre(const glm::vec3& velocidad);
 		bool HayAgarre() const;
 		// Índice (en la lista de la escena) del objeto que se sujeta, o -1.
 		int ObjetoAgarrado() const;
