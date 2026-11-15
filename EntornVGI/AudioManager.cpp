@@ -1,4 +1,6 @@
 #define MINIAUDIO_IMPLEMENTATION
+#include <vector>
+#include <cstdlib>
 #include "miniaudio.h"
 
 #include "AudioManager.h"
@@ -23,6 +25,11 @@ bool AudioManager::init() {
     }
 
     m_initialized = true;
+
+    loadSound("paso_0", "assets/audio/paso_1.wav", false, false);
+    loadSound("paso_1", "assets/audio/paso_2.wav", false, false);
+    loadSound("paso_2", "assets/audio/paso_3.wav", false, false);
+    
     return true;
 }
 
@@ -94,4 +101,55 @@ void AudioManager::updateListener(float posX, float posY, float posZ, float dirX
 void AudioManager::setMasterVolume(float volume) {
     if (!m_initialized) return;
     ma_engine_set_volume(m_engine, volume);
+}
+
+void AudioManager::playFootstep(fps::EstadoPaso estado) {
+    if (!m_initialized || estado == fps::EstadoPaso::Reposo) return;
+
+    std::vector<std::string> disponibles;
+    for (const auto& id : {"paso_0", "paso_1", "paso_2"}) {
+        if (m_sounds.find(id) != m_sounds.end()) {
+            disponibles.push_back(id);
+        }
+    }
+    
+    if (disponibles.empty()) return;
+
+    // Elegir uno distinto al del paso anterior
+    static int ultimoIndice = -1;
+    int indice = std::rand() % static_cast<int>(disponibles.size());
+    if (disponibles.size() > 1 && indice == ultimoIndice) {
+        indice = (indice + 1) % static_cast<int>(disponibles.size());
+    }
+    ultimoIndice = indice;
+
+    // Ajustar volumen y pitch según si camina, corre o va agachado
+    float volumen = 0.55f;
+    float pitch   = 1.0f;
+
+    switch (estado) {
+        case fps::EstadoPaso::Sprint:
+            volumen = 0.90f;
+            pitch   = 1.15f;
+            break;
+        case fps::EstadoPaso::Agachado:
+            volumen = 0.25f;
+            pitch   = 0.85f;
+            break;
+        case fps::EstadoPaso::Caminando:
+        default:
+            volumen = 0.55f;
+            pitch   = 1.0f;
+            break;
+    }
+
+    // Variación orgánica sutil (+/- 5% en pitch)
+    float variacion = 0.95f + static_cast<float>(std::rand()) / (static_cast<float>(RAND_MAX / 0.10f));
+    pitch *= variacion;
+
+    ma_sound* snd = m_sounds[disponibles[indice]];
+    ma_sound_set_volume(snd, volumen * m_masterVolume * m_sfxVolume);
+    ma_sound_set_pitch(snd, pitch);
+    ma_sound_seek_to_pcm_frame(snd, 0);
+    ma_sound_start(snd);
 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include "MovimientoFPS.h"
 
 struct ma_engine;
 struct ma_sound;
@@ -23,8 +24,15 @@ public:
     
     void setMasterVolume(float volume);
 
+    void playFootstep(fps::EstadoPaso estado);
+
 private:
     ma_engine* m_engine = nullptr;
     bool m_initialized = false;
+
+    float m_masterVolume = 1.0f;
+    float m_sfxVolume = 1.0f;
+    float m_ambientVolume = 1.0f;
+    
     std::unordered_map<std::string, ma_sound*> m_sounds;
 };
