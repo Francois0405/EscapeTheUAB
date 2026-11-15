@@ -29,7 +29,7 @@ bool AudioManager::init() {
     loadSound("paso_0", "assets/audio/paso_1.wav", false, false);
     loadSound("paso_1", "assets/audio/paso_2.wav", false, false);
     loadSound("paso_2", "assets/audio/paso_3.wav", false, false);
-    
+
     return true;
 }
 
@@ -100,7 +100,8 @@ void AudioManager::updateListener(float posX, float posY, float posZ, float dirX
 
 void AudioManager::setMasterVolume(float volume) {
     if (!m_initialized) return;
-    ma_engine_set_volume(m_engine, volume);
+    m_masterVolume = std::clamp(volume, 0.0f, 1.0f);
+    ma_engine_set_volume(m_engine, m_masterVolume);
 }
 
 void AudioManager::playFootstep(fps::EstadoPaso estado) {
