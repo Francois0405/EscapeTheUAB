@@ -35,6 +35,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include "AudioManager.h"
 
 // CODI NOSTRE
 
@@ -128,6 +129,8 @@ namespace
 	fps::MovimientoJugador movimientoJugador;
 	fps::BalanceoCamara balanceoCamara;
 	fps::BarraEstamina barraEstamina;
+	fps::ControladorPasos controladorPasos;
+	AudioManager audioManager;
 	bool mostrarPorcentajeEstamina = true;
 	glm::vec3 piesFotogramaAnterior(0.0f);
 	bool hayPiesFotogramaAnterior = false;
@@ -495,8 +498,26 @@ namespace
 		if (distancia > 1.0f) distancia = 0.0f;   // teletransporte o cambio de habitacion: no es un paso
 
 		const float fraccion = mundoFisico.FraccionAgachado();
-		balanceoCamara.Actualizar(delta, distancia, mundoFisico.JugadorEnSuelo(), entradaFPSActiva() && mundoFisico.HayJugador(),
+		const bool enSuelo = mundoFisico.JugadorEnSuelo();
+		const bool activo = entradaFPSActiva() && mundoFisico.HayJugador();
+
+		balanceoCamara.Actualizar(delta, distancia, enSuelo, activo,
 			movimientoJugador.Velocidad(), movimientoJugador.parametros, fraccion);
+
+		// --- AUDIO DE PASOS ---
+		fps::EstadoPaso estadoPaso = fps::EstadoPaso::Reposo;
+		if (activo && distancia > 0.0001f)
+		{
+			if (fraccion > 0.5f)                    estadoPaso = fps::EstadoPaso::Agachado;
+			else if (movimientoJugador.Sprintando()) estadoPaso = fps::EstadoPaso::Sprint;
+			else                                    estadoPaso = fps::EstadoPaso::Caminando;
+		}
+
+		if (controladorPasos.Actualizar(delta, distancia, enSuelo, activo, estadoPaso))
+		{
+			audioManager.playFootstep(estadoPaso);
+		}
+		// ----------------------
 
 		// El movil usa la misma fase; su amplitud crece al correr y baja al agacharse.
 		pesoCaminata = balanceoCamara.Peso() * balanceoCamara.FactorDeAmplitud();
@@ -1468,7 +1489,7 @@ void dibuixa_Escena() {
 	// DEMO FASE 1: la puerta usa el cubo test.obj ya cargado por la escena.
 	for (const auto& modelo : modelosHabitacion)
 	{
-		if (!modelo.first.ends_with("test.obj")) continue;
+		if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
 		dibuixa_EscenaGL(
 			shader_programID, eixos, eixos_Id, grid, hgrid,
 			OBJOBJ, col_obj, sw_material,
@@ -1485,7 +1506,7 @@ void dibuixa_Escena() {
 	{
 		for (const auto& modelo : modelosHabitacion)
 		{
-			if (!modelo.first.ends_with("test.obj")) continue;
+			if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
 			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
 			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)

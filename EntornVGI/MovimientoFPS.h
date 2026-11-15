@@ -209,6 +209,75 @@ namespace fps
 	};
 
 	// -------------------------------------------------------------------------
+	// Pasos por distancia horizontal real recorrida
+	// -------------------------------------------------------------------------
+	enum class EstadoPaso
+	{
+		Reposo,
+		Caminando,
+		Sprint,
+		Agachado
+	};
+
+	struct ParametrosPasos
+	{
+		// Mitad de la zancada de BalanceoCamara (un ciclo 2*PI son 2 pasos: izq + der)
+		float distanciaPasoCaminar  = 0.85f; // m por paso
+		float distanciaPasoSprint   = 1.25f; // m por paso
+		float distanciaPasoAgachado = 0.65f; // m por paso
+		float velocidadMinima       = 0.15f; // m/s reales mínimos (evita pasos contra paredes)
+	};
+
+	class ControladorPasos
+	{
+	public:
+		ParametrosPasos parametros;
+
+		// Devuelve true en el fotograma exacto en que toca reproducir un paso.
+		// 'distanciaHorizontal' es la misma distancia real de la cápsula que usa BalanceoCamara.
+		bool Actualizar(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo, EstadoPaso estado)
+		{
+			const float delta = LimitarDelta(deltaSinLimitar);
+
+			// Sin pasos en menús/pausa, en el aire o en reposo
+			if (!activo || !enSuelo || estado == EstadoPaso::Reposo || delta <= 0.0f)
+			{
+				if (!enSuelo) distanciaAcumulada = 0.0f; // Al caer/saltar se reinicia el ciclo
+				return false;
+			}
+
+			// Filtro contra paredes (si velocidadReal <= velocidadMinima, la cápsula está chocando)
+			const float velocidadReal = distanciaHorizontal / delta;
+			if (velocidadReal <= parametros.velocidadMinima || distanciaHorizontal > 5.0f)
+			{
+				return false;
+			}
+
+			distanciaAcumulada += distanciaHorizontal;
+
+			float umbral = parametros.distanciaPasoCaminar;
+			if (estado == EstadoPaso::Sprint)        umbral = parametros.distanciaPasoSprint;
+			else if (estado == EstadoPaso::Agachado) umbral = parametros.distanciaPasoAgachado;
+
+			if (distanciaAcumulada >= umbral)
+			{
+				distanciaAcumulada -= umbral;
+				return true;
+			}
+
+			return false;
+		}
+
+		void Reiniciar()
+		{
+			distanciaAcumulada = 0.0f;
+		}
+
+	private:
+		float distanciaAcumulada = 0.0f;
+	};
+
+	// -------------------------------------------------------------------------
 	// Barra de estamina: opacidad y valor mostrado, suavizados
 	// -------------------------------------------------------------------------
 	class BarraEstamina
