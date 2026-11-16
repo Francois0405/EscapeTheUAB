@@ -19,10 +19,23 @@
 #include "escena.h"
 #include "main.h"
 #include "SceneLoader.h"
+#include "AnimacionPuerta.h"
+#include "ModeloGLB.h"
+#include "ObjetosAnimadosGLB.h"
+#include "DibujoGLB.h"
+#include "MundoFisico.h"
+#include "EscenaFisica.h"
+#include "DibujoColisionadores.h"
+#include "VistaEstereo.h"
+#include "OpenXRManager.h"
+#include "MovimientoFPS.h"
+#include "Editor/EditorEscenas.h"
+#include "Editor/SerializadorEscenas.h"
 #include <iostream>
 #include <algorithm>
 #include <cmath>
-
+#include <cstdint>
+#include "AudioManager.h"
 
 // CODI NOSTRE
 
@@ -30,13 +43,15 @@
 #include <memory>
 #include <unordered_map>
 #include <glm/gtc/matrix_transform.hpp>
-#include "OpenXRManager.h"
 
 // ---------------------------
 
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
+editor::EditorEscenas editorEscenas;
+editor::SerializadorEscenas serializadorEscena;
+std::vector<SceneObjetoAnimado> datosAnimadosEscena;
 COBJModel* phoneOBJ = nullptr;
 
 // Locate copied resources beside the executable or in the source tree.
@@ -73,7 +88,19 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 
 namespace
 {
-	bool modoVR = false;
+	// F2: vista estereoscópica DE PRUEBA en pantalla (dos mitades). No es VR real: no hay OpenXR ni visor.
+	bool modoEstereoPrueba = false;
+	// OpenXR (VR real): SOLO se inicia cuando el usuario lo pide (F3 o el botón del panel de física).
+	// No tiene nada que ver con F2. Si no hay runtime o visor, el juego sigue en pantalla.
+	vr::GestorOpenXR gestorOpenXR;
+	GLFWwindow* ventanaPrincipal = nullptr;   // la necesita OpenXR para enlazar su sesión con el contexto OpenGL
+	int versionGLMayor = 0, versionGLMenor = 0;
+
+	void alternarOpenXR()
+	{
+		if (gestorOpenXR.TieneRecursos()) gestorOpenXR.Desactivar();
+		else gestorOpenXR.Activar(ventanaPrincipal, versionGLMayor, versionGLMenor);
+	}
 	bool fpsPausado = false;
 	bool fpsCapturaSolicitada = true;
 	bool fpsCursorCapturado = false;
@@ -98,6 +125,178 @@ namespace
 	float tiempoFPS = 0.0f;
 	float deltaFPS = 0.0f;
 
+	// --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
+	fps::MovimientoJugador movimientoJugador;
+	fps::BalanceoCamara balanceoCamara;
+	fps::BarraEstamina barraEstamina;
+	fps::ControladorPasos controladorPasos;
+	AudioManager audioManager;
+	bool mostrarPorcentajeEstamina = true;
+	glm::vec3 piesFotogramaAnterior(0.0f);
+	bool hayPiesFotogramaAnterior = false;
+
+	// --- DEMO FASE 1: puerta que se abre girando sobre su bisagra ---
+	// Keyframes: en 0 s la puerta está cerrada (0 grados), en 2 s abierta (90 grados).
+	// Para cambiar la duración o el ángulo basta con editar esta lista.
+	std::vector<animacion::KeyframeAngulo> keyframesPuertaDemo = { {0.0f, 0.0f}, {2.0f, 90.0f} };
+	animacion::Reproductor reproductorPuertaDemo;
+	float anguloPuertaDemo = 0.0f;                              // ángulo actual (se recalcula cada fotograma)
+	const glm::vec3 mitadTamanoPuertaDemo(0.05f, 0.5f, 1.0f);   // puerta de 1 m de ancho, 10 cm de grosor y 2 m de alto
+	const glm::vec3 bisagraPuertaDemo(6.0f, -0.5f, -1.7f);      // punto del mundo (a ras de suelo)
+
+	// Se llama una vez por fotograma: avanza el reloj y calcula el ángulo con los keyframes.
+	void actualizarPuertaDemo(float deltaSegundos)
+	{
+		reproductorPuertaDemo.Actualizar(deltaSegundos);
+		anguloPuertaDemo = animacion::AnguloEnTiempo(keyframesPuertaDemo, reproductorPuertaDemo.tiempo);
+	}
+
+	// Arranca la animación desde el principio (la puerta vuelve a estar cerrada).
+	void iniciarPuertaDemo()
+	{
+		reproductorPuertaDemo.Iniciar(keyframesPuertaDemo.back().tiempo);
+	}
+
+	// --- OBJETOS ANIMADOS GLB: las animaciones vienen de Blender (assets/animations/*.glb) ---
+	// No hay keyframes ni puertas escritas aquí: la lista "animated" del JSON de la habitación
+	// declara cada instancia (puerta, cajón...) y cargarYAplicarEscena() las crea.
+	// Varias instancias pueden usar el mismo .glb y se abren de forma independiente.
+	glb::EscenaAnimada objetosAnimados;
+	// --- FÍSICA (Bullet, Fase 1): cubo que cae sobre un suelo estático. Ver MundoFisico.h ---
+	// UN solo mundo físico para toda la partida. La habitación activa y la demo ponen cuerpos
+	// en él y cada una quita solo los suyos. No depende de GLFW ni de la cámara (válido para VR).
+	fisica::MundoFisico mundoFisico;
+	std::unique_ptr<fisica::EscenaFisica> escenaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
+	fisica::DemoCuboCaida demoFisica(mundoFisico);
+	bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
+	bool objetosAnimadosListos = false;   // true cuando los modelos ya están en la GPU
+	GLuint texturaManoInteraccion = 0;
+	bool cargaLanzamientoActiva = false;
+	float tiempoCargaLanzamiento = 0.0f;
+	constexpr float TiempoMaximoCargaLanzamiento = 1.25f;
+
+	void cargarTexturaManoInteraccion()
+	{
+		std::string ruta = "res/ui/hand.png";
+		if (!std::filesystem::exists(ruta) && std::filesystem::exists("../res/ui/hand.png"))
+			ruta = "../res/ui/hand.png";
+
+		int ancho = 0, alto = 0, canales = 0;
+		unsigned char* pixels = SOIL_load_image(ruta.c_str(), &ancho, &alto, &canales, SOIL_LOAD_RGBA);
+		if (pixels == nullptr)
+		{
+			std::fprintf(stderr, "No se pudo cargar %s: %s\n", ruta.c_str(), SOIL_last_result());
+			return;
+		}
+
+		for (int i = 0; i < ancho * alto; ++i)
+		{
+			const unsigned char opacidad = static_cast<unsigned char>(
+				(static_cast<unsigned int>(pixels[i * 4]) * pixels[i * 4 + 3] + 127u) / 255u);
+			pixels[i * 4] = pixels[i * 4 + 1] = pixels[i * 4 + 2] = 255;
+			pixels[i * 4 + 3] = opacidad;
+		}
+
+		glGenTextures(1, &texturaManoInteraccion);
+		if (texturaManoInteraccion != 0)
+		{
+			glBindTexture(GL_TEXTURE_2D, texturaManoInteraccion);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ancho, alto, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
+		else
+			std::fprintf(stderr, "No se pudo crear la textura del HUD de interaccion.\n");
+		SOIL_free_image_data(pixels);
+	}
+
+	// ÚNICO sitio que conoce la cámara FPS: convierte "lo que ve el jugador" en una posición y una
+	// dirección del mundo. Todo el sistema de interacción (puertas y agarre) solo recibe esos dos
+	// vectores; con VR se llamaría igual, pero con los de la mano o el mando.
+	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
+	{
+		origen = glm::vec3(opvN.x, opvN.y, opvN.z);                              // posición de la vista
+		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
+	}
+
+	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
+
+	struct ObjetivoInteraccion
+	{
+		AccionInteraccion accion = AccionInteraccion::Ninguna;
+		int indiceDinamico = -1;
+		glb::ObjetoAnimado* objetoAnimado = nullptr;
+	};
+
+	ObjetivoInteraccion buscarObjetivoInteraccion()
+	{
+		if (escenaFisica->HayAgarre()) return {};
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
+		const fisica::IdCuerpo cuerpoMirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, alcance);
+		if (cuerpoMirado == fisica::CuerpoInvalido) return {};
+
+		const int indiceDinamico = escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoMirado);
+		if (indiceDinamico >= 0)
+			return { AccionInteraccion::Recoger, indiceDinamico };
+
+		const int indiceAnimado = escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoMirado);
+		if (indiceAnimado < 0 || indiceAnimado >= static_cast<int>(objetosAnimados.objetos.size()))
+			return {};
+
+		glb::ObjetoAnimado* puerta = glb::BuscarObjetoInteractuable(objetosAnimados, origen, direccion);
+		if (puerta == nullptr || puerta != &objetosAnimados.objetos[indiceAnimado])
+			return {};
+
+		const AccionInteraccion accion =
+			(puerta->estado == glb::EstadoPuerta::Cerrada || puerta->estado == glb::EstadoPuerta::Cerrando)
+			? AccionInteraccion::Abrir : AccionInteraccion::Cerrar;
+		return { accion, -1, puerta };
+	}
+
+	void iniciarCargaLanzamiento()
+	{
+		if (!escenaFisica->HayAgarre()) return;
+		cargaLanzamientoActiva = true;
+		tiempoCargaLanzamiento = 0.0f;
+	}
+
+	void interactuar()
+	{
+		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+		if (objetivo.accion == AccionInteraccion::Recoger)
+		{
+			glm::vec3 origen, direccion;
+			origenYDireccionDeLaMirada(origen, direccion);
+			escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
+		}
+		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
+			objetivo.objetoAnimado != nullptr)
+			glb::AlternarPuerta(*objetivo.objetoAnimado);
+	}
+
+	// Cada fotograma de juego: la "mano" sigue a la mirada. Solo si se puede jugar (sin pausa, sin
+	// paneles F1 y con foco); si no, el objeto se queda donde estaba.
+	void actualizarAgarreDelJugador(bool puedeJugar)
+	{
+		if (!puedeJugar) return;
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		escenaFisica->ActualizarAgarre(origen, direccion);
+	}
+
+	void liberarObjetosAnimados()
+	{
+		if (objetosAnimadosListos) glb::LiberarEscenaAnimadaDeGPU(objetosAnimados);
+		glb::VaciarEscenaAnimada(objetosAnimados);
+		objetosAnimadosListos = false;
+	}
+
 	bool modoJuegoFPS()
 	{
 		return camera == CAM_NAVEGA && projeccio == PERSPECT;
@@ -114,55 +313,8 @@ namespace
 
 	void sincronizarCursorFPS(GLFWwindow* window)
 	{
-		const bool capturar = modoJuegoFPS() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
+		const bool capturar = modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
 		fijarCapturaCursor(window, capturar);
-	}
-
-	std::string objetoEnManoId = "";
-
-	void intentarInteractuar() 
-	{
-		// Posición y dirección de la vista/mano (en PC usamos la cámara opvN -> n)
-		glm::vec3 origen(opvN.x, opvN.y, opvN.z);
-		glm::vec3 dir = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
-
-		// Punto virtual de la "mano" a 1.2 metros delante del jugador
-		glm::vec3 posMano = origen + dir * 1.2f;
-
-		// Si ya tenemos un objeto en la mano, lo soltamos
-		if (!objetoEnManoId.empty()) {
-			objetoEnManoId = "";
-			return;
-		}
-
-		// Buscar el objeto interactuable ("objects") más cercano al punto de mira/mano
-		float minDist = 1.0f; // Radio máximo de agarre
-		for (auto& obj : objetosEscena) {
-			if (obj.categoria != "objects") continue; // Ignorar paredes/arquitectura
-
-			float dist = glm::distance(posMano, obj.posicion);
-			if (dist < minDist) {
-				minDist = dist;
-				objetoEnManoId = obj.id;
-				std::cout << "Interaccion con: " << obj.id << "\n";
-			}
-		}
-	}
-
-	void actualizarObjetoEnMano()
-	{
-		if (objetoEnManoId.empty()) return;
-
-		glm::vec3 origen(opvN.x, opvN.y, opvN.z);
-		glm::vec3 dir = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
-		glm::vec3 posMano = origen + dir * 1.2f; // A 1.2m delante de tu vista
-
-		for (auto& obj : objetosEscena) {
-			if (obj.id == objetoEnManoId) {
-				obj.posicion = posMano;
-				break;
-			}
-		}
 	}
 }
 
@@ -204,7 +356,39 @@ namespace
 		n[2] = opvN.z + longitud * sin(inclinacion);
 	}
 
-	void moverJugadorFPS(GLFWwindow* window, double delta)
+	// --- JUGADOR FÍSICO (Fase 3) ---------------------------------------------------------
+	// Reparto de trabajo (el mismo que se usará con VR):
+	//   * El teclado (o el mando, en VR) solo dice "quiero ir en esta dirección a 3 m/s".
+	//   * Bullet (la cápsula del jugador) decide hasta dónde se puede llegar: choca, desliza, cae.
+	//   * La cámara se COLOCA donde quedó la cápsula (ojos = pies + 1,7 m). La cámara nunca
+	//     mueve a la cápsula, salvo al salir del modo FPS (ver sincronizarJugadorYCamara).
+	// La orientación (ratón) NO pasa por Bullet: sigue siendo cosa de la cámara.
+	// (las velocidades -caminar, agachado, sprint- viven en fps::ParametrosMovimiento, editables en F1)
+
+	bool hayTeclaDeMovimiento(GLFWwindow* window)
+	{
+		return glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
+			glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
+	}
+
+	glm::vec3 posicionPiesDesdeCamara()
+	{
+		return glm::vec3(opvN.x, opvN.y, opvN.z - mundoFisico.AlturaOjosJugador());
+	}
+
+	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
+	// el suelo ya exista y el jugador no caiga al vacío.
+	void crearJugadorFisico()
+	{
+		if (mundoFisico.HayJugador()) return;
+		glm::vec3 pies = posicionPiesDesdeCamara();
+		pies.z += 0.02f;   // 2 cm de margen: nace sin tocar el suelo y se apoya solo
+		mundoFisico.CrearJugador(pies);
+		std::cout << "Jugador fisico creado con los pies en (" << pies.x << ", " << pies.y << ", " << pies.z << ")." << std::endl;
+	}
+
+	// Convierte las teclas WASD en una velocidad horizontal DEL MUNDO (sin tocar la posición).
+	void moverJugadorFPS(GLFWwindow* window, double velocidadJugador)
 	{
 		const double dx = n[0] - opvN.x;
 		const double dy = n[1] - opvN.y;
@@ -213,7 +397,6 @@ namespace
 
 		const double delanteX = dx / longitud;
 		const double delanteY = dy / longitud;
-		const double velocidad = 3.0 * delta;
 		double moverX = 0.0;
 		double moverY = 0.0;
 
@@ -224,12 +407,28 @@ namespace
 
 		const double distancia = sqrt(moverX * moverX + moverY * moverY);
 		if (distancia == 0.0) return;
-		moverX = moverX / distancia * velocidad;
-		moverY = moverY / distancia * velocidad;
-		opvN.x += moverX;
-		opvN.y += moverY;
-		n[0] += moverX;
-		n[1] += moverY;
+		// Normalizado: en diagonal no se va más rápido.
+		mundoFisico.FijarVelocidadJugador(glm::vec3(moverX / distancia * velocidadJugador,
+			moverY / distancia * velocidadJugador, 0.0));
+	}
+
+	// Después de simular: la cámara va a donde está la cápsula (conservando hacia dónde mira).
+	// Si NO estamos en modo FPS (cámaras de depuración), ocurre lo contrario: la cápsula sigue a la
+	// cámara, para que al volver al modo FPS esté donde toca y no haya un salto.
+	void sincronizarJugadorYCamara()
+	{
+		if (!mundoFisico.HayJugador()) return;
+		if (!modoJuegoFPS())
+		{
+			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+			mundoFisico.TeletransportarJugador(posicionPiesDesdeCamara());
+			return;
+		}
+		const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
+		const double ojosX = pies.x, ojosY = pies.y, ojosZ = pies.z + mundoFisico.AlturaOjosJugador();
+		const double mueveX = ojosX - opvN.x, mueveY = ojosY - opvN.y, mueveZ = ojosZ - opvN.z;
+		opvN.x += mueveX;  opvN.y += mueveY;  opvN.z += mueveZ;
+		n[0] += mueveX;    n[1] += mueveY;    n[2] += mueveZ;   // el punto mirado se desplaza igual: la dirección no cambia
 	}
 
 	void actualizarMovimientoMovil(GLFWwindow* window, float deltaTime)
@@ -237,13 +436,6 @@ namespace
 		deltaTime = std::clamp(deltaTime, 0.0f, 0.05f);
 		tiempoFPS += deltaTime;
 		deltaFPS = deltaTime;
-
-		const bool caminando = !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS() &&
-			(glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
-			 glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS);
-		const float factor = 1.0f - std::exp(-8.0f * deltaTime);
-		pesoCaminata += ((caminando ? 1.0f : 0.0f) - pesoCaminata) * factor;
-		if (caminando) faseCaminata += deltaTime * 9.0f;
 
 		const float limiteMouse = 0.12f;
 		mouseSwayX = std::clamp(mouseSwayX + static_cast<float>(mouseDeltaX) * intensidadMouse,
@@ -256,24 +448,120 @@ namespace
 		mouseSwayY += (0.0f - mouseSwayY) * retornoMouse;
 	}
 
+	// Estado del juego FPS que permite la entrada (no hay pausa, ni foco perdido, ni paneles de depuracion).
+	bool entradaFPSActiva()
+	{
+		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
+	}
+
+	void cancelarCargaLanzamiento()
+	{
+		cargaLanzamientoActiva = false;
+		tiempoCargaLanzamiento = 0.0f;
+	}
+
+	void lanzarObjetoCargado()
+	{
+		if (!cargaLanzamientoActiva) return;
+		const float carga = std::clamp(tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f);
+		cancelarCargaLanzamiento();
+		if (!escenaFisica->HayAgarre()) return;
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		const float rapidez = 3.0f + 12.0f * carga;
+		escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez);
+	}
+
+	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
+	{
+		if (!cargaLanzamientoActiva) return;
+		if (!entradaFPSActiva() || !escenaFisica->HayAgarre())
+		{
+			cancelarCargaLanzamiento();
+			return;
+		}
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+			tiempoCargaLanzamiento = std::min(tiempoCargaLanzamiento + std::max(delta, 0.0f), TiempoMaximoCargaLanzamiento);
+	}
+
+	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
+	// asi que la camara y el movil comparten la misma fase y se quedan quietos al chocar con una pared.
+	void actualizarBalanceoVisual(float delta)
+	{
+		const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : glm::vec3(0.0f);
+		float distancia = 0.0f;
+		if (hayPiesFotogramaAnterior)
+			distancia = glm::length(glm::vec2(pies.x - piesFotogramaAnterior.x, pies.y - piesFotogramaAnterior.y));
+		piesFotogramaAnterior = pies;
+		hayPiesFotogramaAnterior = mundoFisico.HayJugador();
+		if (distancia > 1.0f) distancia = 0.0f;   // teletransporte o cambio de habitacion: no es un paso
+
+		const float fraccion = mundoFisico.FraccionAgachado();
+		const bool enSuelo = mundoFisico.JugadorEnSuelo();
+		const bool activo = entradaFPSActiva() && mundoFisico.HayJugador();
+
+		balanceoCamara.Actualizar(delta, distancia, enSuelo, activo,
+			movimientoJugador.Velocidad(), movimientoJugador.parametros, fraccion);
+
+		// --- AUDIO DE PASOS ---
+		fps::EstadoPaso estadoPaso = fps::EstadoPaso::Reposo;
+		if (activo && distancia > 0.0001f)
+		{
+			if (fraccion > 0.5f)                    estadoPaso = fps::EstadoPaso::Agachado;
+			else if (movimientoJugador.Sprintando()) estadoPaso = fps::EstadoPaso::Sprint;
+			else                                    estadoPaso = fps::EstadoPaso::Caminando;
+		}
+
+		if (controladorPasos.Actualizar(delta, distancia, enSuelo, activo, estadoPaso))
+		{
+			audioManager.playFootstep(estadoPaso);
+		}
+		// ----------------------
+
+		// El movil usa la misma fase; su amplitud crece al correr y baja al agacharse.
+		pesoCaminata = balanceoCamara.Peso() * balanceoCamara.FactorDeAmplitud();
+		faseCaminata = balanceoCamara.Fase();
+	}
+
+	// Desplazamiento SOLO VISUAL del ojo en pantalla (derecha y arriba de la camara). No modifica opvN/n, que usan la
+	// fisica, las puertas y el agarre. No se aplica en VR: alli manda la cabeza real.
+	glm::dvec3 desplazamientoVisualDeCamara()
+	{
+		if (!modoJuegoFPS() || !mundoFisico.HayJugador()) return glm::dvec3(0.0);
+		const fps::DesplazamientoVisual d = balanceoCamara.Desplazamiento();
+		const double dx = n[0] - opvN.x, dy = n[1] - opvN.y;
+		const double largo = std::sqrt(dx * dx + dy * dy);
+		glm::dvec3 resultado(0.0, 0.0, d.vertical);
+		if (largo > 1e-6) resultado += glm::dvec3(dy / largo, -dx / largo, 0.0) * static_cast<double>(d.lateral);
+		return resultado;
+	}
+
 	bool cargarYAplicarEscena(const std::filesystem::path& ruta)
 	{
-		std::vector<SceneObject> objetosLeidos;
+		// 1) Leer y validar el JSON (si falla, no se ha tocado nada).
+		DatosEscena datos;
 		std::string error;
-		std::string nombre;
-		if (!CargarEscenaJSON(ruta, objetosLeidos, error, nombre))
+		if (!CargarDatosEscenaJSON(ruta, datos, error))
 		{
 			std::cerr << "No se cargo la escena: " << error << '\n';
 			return false;
 		}
+		editor::SerializadorEscenas nuevoSerializador;
+		if (!nuevoSerializador.Cargar(ruta, error))
+		{
+			std::cerr << "No se pudo preparar la persistencia de la escena: " << error << '\n';
+			return false;
+		}
 
+		// 2) Cargar los modelos OBJ en estructuras TEMPORALES.
 		std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
 		std::vector<SceneObject> objetosValidos;
 		auto liberarModelosTemporales = [&nuevosModelos]()
 		{
 			for (auto& entrada : nuevosModelos) entrada.second->netejaTextures_OBJ();
 		};
-		for (auto& obj : objetosLeidos)
+		for (auto& obj : datos.objetos)
 		{
 			const auto rutaObj = std::filesystem::absolute(ruta.parent_path() / obj.modelo).lexically_normal();
 			if (!std::filesystem::exists(rutaObj) || !std::filesystem::is_regular_file(rutaObj))
@@ -302,19 +590,88 @@ namespace
 			objetosValidos.push_back(std::move(obj));
 		}
 
-		if (objetosValidos.empty()) return false;
-		// Sustituir solo despues de validar la escena y cargar todos sus modelos.
+		// 3) Objetos animados GLB de la lista "animated", también temporales.
+		glb::EscenaAnimada nuevosAnimados;
+		if (!fisica::CargarObjetosAnimadosDeEscena(datos.animados, std::filesystem::absolute(ruta.parent_path()),
+			nuevosAnimados, error))
+		{
+			std::cerr << "No se cargo la escena: " << error << '\n';
+			liberarModelosTemporales();
+			return false;
+		}
+		for (const auto& modelo : nuevosAnimados.modelos)
+			for (const std::string& aviso : modelo.second.avisos)
+				std::cerr << modelo.first << ": " << aviso << '\n';
+
+		// 4) Cuerpos físicos NUEVOS (los de la habitación anterior siguen en el mundo hasta el final).
+		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
+		if (!nuevaFisica->Crear(objetosValidos, nuevosAnimados, datos.animados, error))
+		{
+			std::cerr << "No se cargo la escena (fisicas): " << error << '\n';
+			liberarModelosTemporales();
+			return false;
+		}
+		if (objetosValidos.empty() && datos.animados.empty()) return false;
+
+		// 5) Todo ha ido bien: AHORA se sustituye la habitación anterior.
+		escenaFisica->Vaciar();                        // retira sus colisiones del mundo
+		escenaFisica = std::move(nuevaFisica);
 		for (auto& entrada : modelosHabitacion) entrada.second->netejaTextures_OBJ();
 		modelosHabitacion = std::move(nuevosModelos);
 		objetosEscena = std::move(objetosValidos);
-		nombreEscenaActiva = std::move(nombre);
+		liberarObjetosAnimados();                      // libera de la GPU los GLB anteriores
+		objetosAnimados = std::move(nuevosAnimados);
+		glb::SubirEscenaAnimadaAGPU(objetosAnimados);  // el contexto OpenGL ya existe en este punto
+		objetosAnimadosListos = true;
+		nombreEscenaActiva = std::move(datos.nombre);
+		datosAnimadosEscena = std::move(datos.animados);
+		serializadorEscena = std::move(nuevoSerializador);
+		editorEscenas.NuevaEscena();
+		{
+			std::error_code rutaModelos;
+			const auto raiz = std::filesystem::absolute(ruta.parent_path() / ".." / "models", rutaModelos).lexically_normal();
+			if (!rutaModelos && std::filesystem::is_directory(raiz)) editorEscenas.FijarRaizModelos(raiz);
+		}
 		objecte = OBJOBJ;
 		textura = true;
 		tFlag_invert_Y = false;
 		glUseProgram(shader_programID);
 		glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
 		glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
-		std::cout << "Escena cargada: " << nombreEscenaActiva << " (" << objetosEscena.size() << " instancias).\n";
+		std::cout << "Escena cargada: " << nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
+			<< " animadas, " << escenaFisica->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
+		return true;
+	}
+
+	bool reconstruirFisicaTrasEdicion(std::string& error)
+	{
+		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
+		if (!nuevaFisica->Crear(objetosEscena, objetosAnimados, datosAnimadosEscena, error)) return false;
+		escenaFisica->Vaciar();
+		escenaFisica = std::move(nuevaFisica);
+		return true;
+	}
+
+	bool cargarModeloParaEditor(const std::filesystem::path& ruta, std::string& modeloCargado, std::string& error)
+	{
+		std::error_code ec;
+		const auto absoluta = std::filesystem::absolute(ruta, ec).lexically_normal();
+		if (ec || !std::filesystem::is_regular_file(absoluta, ec))
+		{
+			error = "El archivo OBJ seleccionado no existe.";
+			return false;
+		}
+		modeloCargado = absoluta.string();
+		if (modelosHabitacion.contains(modeloCargado)) return true;
+		auto modelo = std::make_unique<COBJModel>();
+		std::string rutaMutable = modeloCargado;
+		if (modelo->LoadModel(rutaMutable.data()) != 0)
+		{
+			modelo->netejaTextures_OBJ();
+			error = "El cargador OBJ rechazó el modelo seleccionado.";
+			return false;
+		}
+		modelosHabitacion.emplace(modeloCargado, std::move(modelo));
 		return true;
 	}
 }
@@ -327,6 +684,7 @@ namespace
 		ventanaConFoco = focused == GLFW_TRUE;
 		if (!ventanaConFoco)
 		{
+			cancelarCargaLanzamiento();
 			fijarCapturaCursor(window, false);
 		}
 		else
@@ -334,9 +692,16 @@ namespace
 			fpsTienePosicionAnterior = false;
 		}
 	}
+
+	void OnWindowCloseRequest(GLFWwindow* window)
+	{
+		if (editorEscenas.HayCambiosSinGuardar())
+		{
+			glfwSetWindowShouldClose(window, GLFW_FALSE);
+			editorEscenas.SolicitarConfirmacionCierre();
+		}
+	}
 }
-
-
 
 void InitGL()
 {
@@ -368,7 +733,7 @@ void InitGL()
 	OPV_G.R = 15.0;		OPV_G.alfa = 0.0;	OPV_G.beta = 0.0;	// Origen PV en esfèriques per a Vista_Geode
 
 // Entorn VGI: Variables de control per Menú VISTA: Pantalla Completa, Pan, dibuixar eixos i grids 
-	fullscreen = false;
+	fullscreen = false;	// La finestra s'inicia en mode finestra; F11 alterna pantalla completa
 	pan = false;
 	eixos = true;	eixos_programID = 0;  eixos_Id = 0;
 	sw_grid = false;
@@ -594,6 +959,11 @@ void InitGL()
 	fprintf(stderr, "Eixos: \n");
 	if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./shaders/eixos.vert", "./shaders/eixos.frag");
 
+// VAO dels eixos: es crea aqui perque OnPaint() nomes el creava a la branca 'default', que mai
+// s'executa (els shaders ja es carreguen en aquesta inicialitzacio). Sense VAO es dibuixava amb
+// el VAO 0 i Core Profile generava GL_INVALID_OPERATION (1282) "Array object is not active".
+	if (!eixos_Id) eixos_Id = deixos();
+
 // Entorn VGI: Càrrega Shader Skybox
 	fprintf(stderr, "SkyBox: \n");
 	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./shaders/skybox.VERT", "./shaders/skybox.FRAG");
@@ -733,119 +1103,6 @@ void InitGL()
 }
 
 
-void InitAPI()
-{
-	// Vendor, Renderer, Version, Shading Laguage Version i Extensions suportades per la placa gràfica gravades en fitxer extensions.txt
-	std::string nomf = "extensions.txt";
-	char const* nomExt = "";
-	const char* nomfitxer;
-	nomfitxer = nomf.c_str();	// Conversió tipus string --> char *
-	int num_Ext;
-
-	char* str = (char*)glGetString(GL_VENDOR);
-	FILE* f = fopen(nomfitxer, "w");
-	if (f) {
-		fprintf(f, "VENDOR: %s\n", str);
-		fprintf(stderr, "VENDOR: %s\n", str);
-		str = (char*)glGetString(GL_RENDERER);
-		fprintf(f, "RENDERER: %s\n", str);
-		fprintf(stderr, "RENDERER: %s\n", str);
-		str = (char*)glGetString(GL_VERSION);
-		fprintf(f, "VERSION: %s\n", str);
-		fprintf(stderr, "VERSION: %s\n", str);
-		str = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);
-		fprintf(f, "SHADING_LANGUAGE_VERSION: %s\n", str);
-		fprintf(stderr, "SHADING_LANGUAGE_VERSION: %s\n", str);
-		glGetIntegerv(GL_NUM_EXTENSIONS, &num_Ext);
-		fprintf(f, "EXTENSIONS: \n");
-		fprintf(stderr, "EXTENSIONS: \n");
-		for (int i = 0; i < num_Ext; i++)
-		{
-			nomExt = (char const*)glGetStringi(GL_EXTENSIONS, i);
-			fprintf(f, "%s \n", nomExt);
-			//fprintf(stderr, "%s", nomExt);	// Displaiar extensions per pantalla
-		}
-		//fprintf(stderr, "\n");				// Displaiar <cr> per pantalla després extensions
-//				str = (char*)glGetString(GL_EXTENSIONS);
-//				fprintf(f, "EXTENSIONS: %s\n", str);
-				//fprintf(stderr, "EXTENSIONS: %s\n", str);
-		fclose(f);
-	}
-
-	// Program
-#ifdef _WIN32
-	glCreateProgram = (PFNGLCREATEPROGRAMPROC)wglGetProcAddress("glCreateProgram");
-	glDeleteProgram = (PFNGLDELETEPROGRAMPROC)wglGetProcAddress("glDeleteProgram");
-	glUseProgram = (PFNGLUSEPROGRAMPROC)wglGetProcAddress("glUseProgram");
-	glAttachShader = (PFNGLATTACHSHADERPROC)wglGetProcAddress("glAttachShader");
-	glDetachShader = (PFNGLDETACHSHADERPROC)wglGetProcAddress("glDetachShader");
-	glLinkProgram = (PFNGLLINKPROGRAMPROC)wglGetProcAddress("glLinkProgram");
-	glGetProgramiv = (PFNGLGETPROGRAMIVPROC)wglGetProcAddress("glGetProgramiv");
-	glGetShaderInfoLog = (PFNGLGETSHADERINFOLOGPROC)wglGetProcAddress("glGetShaderInfoLog");
-	glGetUniformLocation = (PFNGLGETUNIFORMLOCATIONPROC)wglGetProcAddress("glGetUniformLocation");
-	glUniform1i = (PFNGLUNIFORM1IPROC)wglGetProcAddress("glUniform1i");
-	glUniform1iv = (PFNGLUNIFORM1IVPROC)wglGetProcAddress("glUniform1iv");
-	glUniform2iv = (PFNGLUNIFORM2IVPROC)wglGetProcAddress("glUniform2iv");
-	glUniform3iv = (PFNGLUNIFORM3IVPROC)wglGetProcAddress("glUniform3iv");
-	glUniform4iv = (PFNGLUNIFORM4IVPROC)wglGetProcAddress("glUniform4iv");
-	glUniform1f = (PFNGLUNIFORM1FPROC)wglGetProcAddress("glUniform1f");
-	glUniform1fv = (PFNGLUNIFORM1FVPROC)wglGetProcAddress("glUniform1fv");
-	glUniform2fv = (PFNGLUNIFORM2FVPROC)wglGetProcAddress("glUniform2fv");
-	glUniform3fv = (PFNGLUNIFORM3FVPROC)wglGetProcAddress("glUniform3fv");
-	glUniform4fv = (PFNGLUNIFORM4FVPROC)wglGetProcAddress("glUniform4fv");
-	glUniformMatrix4fv = (PFNGLUNIFORMMATRIX4FVPROC)wglGetProcAddress("glUniformMatrix4fv");
-	glGetAttribLocation = (PFNGLGETATTRIBLOCATIONPROC)wglGetProcAddress("glGetAttribLocation");
-	glVertexAttrib1f = (PFNGLVERTEXATTRIB1FPROC)wglGetProcAddress("glVertexAttrib1f");
-	glVertexAttrib1fv = (PFNGLVERTEXATTRIB1FVPROC)wglGetProcAddress("glVertexAttrib1fv");
-	glVertexAttrib2fv = (PFNGLVERTEXATTRIB2FVPROC)wglGetProcAddress("glVertexAttrib2fv");
-	glVertexAttrib3fv = (PFNGLVERTEXATTRIB3FVPROC)wglGetProcAddress("glVertexAttrib3fv");
-	glVertexAttrib4fv = (PFNGLVERTEXATTRIB4FVPROC)wglGetProcAddress("glVertexAttrib4fv");
-	glEnableVertexAttribArray = (PFNGLENABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glEnableVertexAttribArray");
-	glDisableVertexAttribArray = (PFNGLDISABLEVERTEXATTRIBARRAYPROC)wglGetProcAddress("glDisableVertexAttribArray");
-	glBindAttribLocation = (PFNGLBINDATTRIBLOCATIONPROC)wglGetProcAddress("glBindAttribLocation");
-	glGetActiveUniform = (PFNGLGETACTIVEUNIFORMPROC)wglGetProcAddress("glGetActiveUniform");
-
-	// Shader
-	glCreateShader = (PFNGLCREATESHADERPROC)wglGetProcAddress("glCreateShader");
-	glDeleteShader = (PFNGLDELETESHADERPROC)wglGetProcAddress("glDeleteShader");
-	glShaderSource = (PFNGLSHADERSOURCEPROC)wglGetProcAddress("glShaderSource");
-	glCompileShader = (PFNGLCOMPILESHADERPROC)wglGetProcAddress("glCompileShader");
-	glGetShaderiv = (PFNGLGETSHADERIVPROC)wglGetProcAddress("glGetShaderiv");
-
-	// VBO
-	glGenBuffers = (PFNGLGENBUFFERSPROC)wglGetProcAddress("glGenBuffers");
-	glBindBuffer = (PFNGLBINDBUFFERPROC)wglGetProcAddress("glBindBuffer");
-	glBufferData = (PFNGLBUFFERDATAPROC)wglGetProcAddress("glBufferData");
-	glBufferSubData = (PFNGLBUFFERSUBDATAPROC)wglGetProcAddress("glBufferSubData");
-	glDeleteBuffers = (PFNGLDELETEBUFFERSPROC)wglGetProcAddress("glDeleteBuffers");
-	glVertexAttribPointer = (PFNGLVERTEXATTRIBPOINTERPROC)wglGetProcAddress("glVertexAttribPointer");
-#else
-	// GLEW loads these functions after glewInit() on Linux and macOS.
-#endif
-}
-
-
-void GetGLVersion(int* major, int* minor)
-{
-	// for all versions
-	char* ver = (char*)glGetString(GL_VERSION); // ver = "3.2.0"
-
-	*major = ver[0] - '0';
-	if (*major >= 3)
-	{
-		// for GL 3.x
-		glGetIntegerv(GL_MAJOR_VERSION, major);		// major = 3
-		glGetIntegerv(GL_MINOR_VERSION, minor);		// minor = 2
-	}
-	else
-	{
-		*minor = ver[2] - '0';
-	}
-
-	// GLSL
-	ver = (char*)glGetString(GL_SHADING_LANGUAGE_VERSION);	// 1.50 NVIDIA via Cg compiler
-}
-
 void OnSize(GLFWwindow* window, int width, int height)
 {
 	width_old = width;
@@ -862,11 +1119,134 @@ void OnFramebufferSize(GLFWwindow* window, int width, int height)
 
 
 // OnPaint: Funció de dibuix i visualització en frame buffer del frame
+// Vista estereoscópica de PRUEBA (F2): dibuja la escena dos veces, una en cada mitad de la pantalla.
+// Reutiliza Vista_Navega del profesor para la vista CENTRAL (limpia los buffers, iluminación, culling,
+// profundidad, pan) y solo desplaza esa matriz para cada ojo. No toca la física ni la posición del jugador.
+static void dibujarEscenaEstereo(int anchoVentana, int altoVentana)
+{
+	GLdouble arriba[3] = { 0.0, 0.0, 1.0 };   // Z es "arriba" en este juego
+	const glm::dvec3 balanceo = desplazamientoVisualDeCamara();
+	CPunt3D ojoVisual = opvN;
+	ojoVisual.x += balanceo.x; ojoVisual.y += balanceo.y; ojoVisual.z += balanceo.z;
+	GLdouble objetivoVisual[3] = { n[0] + balanceo.x, n[1] + balanceo.y, n[2] + balanceo.z };
+	const glm::mat4 vistaCentral = Vista_Navega(shader_programID, ojoVisual, objetivoVisual, arriba, pan, tr_cpv, tr_cpvF, c_fons, col_obj,
+		objecte, true, pas, front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+		eixos, grid, hgrid);
+
+	for (const estereo::Ojo ojo : { estereo::Ojo::Izquierdo, estereo::Ojo::Derecho })
+	{
+		const estereo::Rectangulo mitad = estereo::MitadDePantalla(ojo, anchoVentana);
+		// Cada mitad tiene SU relación de aspecto (la mitad de ancho): Projeccio_Perspectiva fija el viewport y la proyección.
+		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, mitad.x, 0, mitad.ancho, altoVentana, OPV.R);
+		ViewMatrix = estereo::VistaDeOjo(vistaCentral, ojo);
+
+		glUseProgram(shader_programID);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
+
+		configura_Escena();
+		dibuixa_Escena();   // habitación, objetos GLB, física de depuración... exactamente lo mismo que en PC
+	}
+}
+
+// ---------------------------------------------------------------------------------------------
+// VR real (OpenXR, F3). Cada ojo se dibuja en SU swapchain con SU pose y SU campo de visión.
+// Es el mismo dibujo que en pantalla (configura_Escena + dibuixa_Escena: habitación, OBJ, GLB, puertas,
+// colisionadores...); solo cambian las matrices. La cabeza mueve la CÁMARA, nunca la cápsula del jugador:
+// el anclaje (pies o ojos del jugador + su orientación FPS) se recalcula cada fotograma.
+// ---------------------------------------------------------------------------------------------
+namespace
+{
+	constexpr float vrPlanoCercano = 0.05f;    // metros; el plano lejano de pantalla (50000) arruinaría la precisión de Z
+	constexpr float vrPlanoLejano = 500.0f;
+
+	// Copia el ojo a la ventana (espejo de escritorio) conservando su proporción. Debe hacerse ANTES de liberar la imagen.
+	void copiarOjoAVentana(const vr::OjoVR& ojo)
+	{
+		if (w <= 0 || h <= 0 || ojo.ancho <= 0 || ojo.alto <= 0) return;
+		const float escala = std::min(static_cast<float>(w) / ojo.ancho, static_cast<float>(h) / ojo.alto);
+		const int anchoDestino = static_cast<int>(ojo.ancho * escala), altoDestino = static_cast<int>(ojo.alto * escala);
+		const int x0 = (w - anchoDestino) / 2, y0 = (h - altoDestino) / 2;
+		glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+		glDisable(GL_SCISSOR_TEST);
+		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT);
+		glBindFramebuffer(GL_READ_FRAMEBUFFER, ojo.fbo);
+		glBlitFramebuffer(0, 0, ojo.ancho, ojo.alto, x0, y0, x0 + anchoDestino, y0 + altoDestino, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+	}
+}
+
+// Devuelve true si este fotograma se dibujó en el visor (y en la ventana como espejo). Si devuelve false
+// hay que dibujar la escena de escritorio con normalidad (VR sin sesión en marcha, visor sin mostrar, etc.).
+static bool dibujarEscenaVR()
+{
+	const vr::ResultadoFotograma resultado = gestorOpenXR.EmpezarFotograma();
+	if (resultado == vr::ResultadoFotograma::NoActivo) return false;
+
+	bool dibujado = false;
+	if (resultado == vr::ResultadoFotograma::Renderizar)
+	{
+		const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+		const glm::vec3 haciaDondeMira(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+		const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, haciaDondeMira,
+			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+
+		glDisable(GL_SCISSOR_TEST);
+		for (int i = 0; i < gestorOpenXR.NumeroDeOjos(); ++i)
+		{
+			vr::OjoVR ojo;
+			if (!gestorOpenXR.AdquirirOjo(i, ojo)) continue;   // el fotograma se enviará vacío; AdquirirOjo no deja nada a medias
+
+			glViewport(0, 0, ojo.ancho, ojo.alto);
+			ProjectionMatrix = vr::ProyeccionDesdeCampo(ojo.fov, vrPlanoCercano, vrPlanoLejano);
+			ViewMatrix = vr::VistaDeOjoVR(ojo.pose, anclaje);
+
+			glUseProgram(shader_programID);
+			glUniformMatrix4fv(glGetUniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+			glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+
+			Fons(c_fons);   // limpia color y profundidad del framebuffer del ojo (ya enlazado)
+			if (test_vis) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
+			if (oculta) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
+			Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
+
+			configura_Escena();
+			dibuixa_Escena();
+
+			if (i == 0) copiarOjoAVentana(ojo);   // espejo en el monitor: ojo izquierdo
+			gestorOpenXR.LiberarOjo(i);
+			dibujado = true;
+		}
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glViewport(0, 0, w, h);
+	}
+	gestorOpenXR.TerminarFotograma();
+	return dibujado;
+}
+
 void OnPaint(GLFWwindow* window)
 {
 // TODO: Agregue aquí su código de controlador de mensajes
 	if (w <= 0 || h <= 0) return;
 	GLdouble vpv[3] = { 0.0, 0.0, 1.0 };
+	if (editorEscenas.Activo())
+	{
+		glDisable(GL_SCISSOR_TEST);
+		glViewport(0, 0, w, h);
+		FonsB();
+		const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
+		const float aspecto = std::max(1.0f, displaySize.x) / std::max(1.0f, displaySize.y);
+		editorEscenas.Matrices(aspecto, ViewMatrix, ProjectionMatrix);
+		glUseProgram(shader_programID);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		glUseProgram(eixos_programID);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		configura_Escena();
+		dibuixa_Escena();
+		return;
+	}
 
 // Entorn VGI.ImGui: Menú ImGui condicionat al color de fons
 	if ((c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5))
@@ -962,58 +1342,66 @@ void OnPaint(GLFWwindow* window)
 		break;
 
 	case PERSPECT:
-		glDisable(GL_SCISSOR_TEST);
+		// Entorn VGI: PROJECCIÓ PERSPECTIVA
+				//glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST); // Set Perspective Calculations To Most Accurate
+		glDisable(GL_SCISSOR_TEST);		// Desactivació del retall de pantalla
+
+		// Entorn VGI: Activar shader Visualització Escena
 		glUseProgram(shader_programID);
 
-		if (!modoVR) 
+		// Vista estereoscópica de prueba (F2): solo con la cámara de navegación; el resto de cámaras
+		// del profesor (esférica, geode) se dibujan siempre como antes.
+		if (modoEstereoPrueba && camera == CAM_NAVEGA)
 		{
-			// --- MODO PC NORMAL (Lo que ya tenéis) ---
-			ProjectionMatrix = Projeccio_Perspectiva(shader_programID, 0, 0, w, h, OPV.R);
-			if (camera == CAM_NAVEGA) {
-				vpv[0] = 0.0; vpv[1] = 0.0; vpv[2] = 1.0; // POLARZ
-				ViewMatrix = Vista_Navega(shader_programID, opvN, n, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
-					front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides, eixos, grid, hgrid);
-			}
-			configura_Escena();
-			dibuixa_Escena();
+			dibujarEscenaEstereo(w, h);
+			break;
 		}
-		else 
-		{
-			// --- MODO VR / SIMULADOR ESTÉREO EN CASA (Pantalla Partida) ---
-			Fons(c_fons); // Limpiamos pantalla completa una sola vez
-			if (oculta) glEnable(GL_DEPTH_TEST);
 
-			// Calculamos la vista central base a partir de vuestro opvN y n
-			glm::vec3 eyePos(opvN.x, opvN.y, opvN.z);
-			glm::vec3 centerPos(n[0], n[1], n[2]);
-			glm::vec3 upVec(0.0f, 0.0f, 1.0f); // En vuestro juego POLARZ es Z arriba
-			glm::mat4 baseView = glm::lookAt(eyePos, centerPos, upVec);
+		// Entorn VGI: Definició de Viewport, Projecció i Càmara
+		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, 0, 0, w, h, OPV.R);
 
-			// Distancia interpupilar (IPD = 6.4 cm -> +-0.032m en eje X de cámara)
-			const float halfIPD = 0.032f;
-
-			for (int eye = 0; eye < 2; ++eye) 
-			{
-				int viewX = (eye == 0) ? 0 : w / 2;
-				int viewW = w / 2;
-
-				// 1. Proyección de medio monitor (o textura del ojo en OpenXR)
-				ProjectionMatrix = Projeccio_Perspectiva(shader_programID, viewX, 0, viewW, h, OPV.R);
-
-				// 2. Desplazar matriz de vista a izquierda (+halfIPD) o derecha (-halfIPD) en espacio cámara
-				float offset = (eye == 0) ? halfIPD : -halfIPD;
-				ViewMatrix = glm::translate(glm::mat4(1.0f), glm::vec3(offset, 0.0f, 0.0f)) * baseView;
-
-				// 3. Subir ViewMatrix e Iluminación al shader
-				glUseProgram(shader_programID);
-				glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
-				Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
-
-				// 4. Dibujar la habitación y el móvil para este ojo
-				configura_Escena();
-				dibuixa_Escena();
-			}
+		// Entorn VGI: Definició de la càmera.
+		if (camera == CAM_ESFERICA) {
+			n[0] = 0;		n[1] = 0;		n[2] = 0;
+			ViewMatrix = Vista_Esferica(shader_programID, OPV, Vis_Polar, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, mida, pas,
+				front_faces, oculta, test_vis, back_line,
+				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+				eixos, grid, hgrid);
 		}
+		else if (camera == CAM_NAVEGA) {
+			if (Vis_Polar == POLARZ) {
+				vpv[0] = 0.0;	vpv[1] = 0.0;	vpv[2] = 1.0;
+				}
+			else if (Vis_Polar == POLARY) {
+				vpv[0] = 0.0;	vpv[1] = 1.0;	vpv[2] = 0.0;
+				}
+			else if (Vis_Polar == POLARX) {
+				vpv[0] = 1.0;	vpv[1] = 0.0;	vpv[2] = 0.0;
+				}
+			// El balanceo se aplica solo a la imagen: mismo desplazamiento al ojo y al punto mirado (la direccion no cambia).
+			const glm::dvec3 balanceo = desplazamientoVisualDeCamara();
+			CPunt3D ojoVisual = opvN;
+			ojoVisual.x += balanceo.x; ojoVisual.y += balanceo.y; ojoVisual.z += balanceo.z;
+			GLdouble objetivoVisual[3] = { n[0] + balanceo.x, n[1] + balanceo.y, n[2] + balanceo.z };
+			ViewMatrix = Vista_Navega(shader_programID, ojoVisual, //false,
+				objetivoVisual, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
+				front_faces, oculta, test_vis, back_line,
+				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+				eixos, grid, hgrid);
+			}
+		else if (camera == CAM_GEODE) {
+			ViewMatrix = Vista_Geode(shader_programID, OPV_G, Vis_Polar, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, mida, pas,
+				front_faces, oculta, test_vis, back_line,
+				ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
+				eixos, grid, hgrid);
+			}
+
+		// Entorn VGI: Dibuix de l'Objecte o l'Escena
+		configura_Escena();     // Aplicar Transformacions Geometriques segons persiana Transformacio i configurar objectes.
+		dibuixa_Escena();		// Dibuix geometria de l'escena amb comandes GL.
+
+		// Entorn VGI: Transferència del buffer OpenGL a buffer de pantalla
+		//glfwSwapBuffers(window);
 		break;
 
 	default:
@@ -1064,33 +1452,25 @@ void dibuixa_Escena() {
 	// Dibuja cada objeto de la habitacion con su transformacion.
 	if (!objetosEscena.empty())
 	{
-		for (const SceneObject& obj : objetosEscena)
+		for (std::size_t i = 0; i < objetosEscena.size(); ++i)
 		{
+			const SceneObject& obj = objetosEscena[i];
+			if (!editorEscenas.ObjetoVisible(i)) continue;   // visibilidad TEMPORAL de la vista de edicion
 			auto it = modelosHabitacion.find(obj.modelo);
 
 			if (it == modelosHabitacion.end())
 				continue;
 
-			glm::mat4 matriz(1.0f);
-
-			matriz = glm::translate(matriz, obj.posicion);
-
-			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.z),
-				glm::vec3(0.0f, 0.0f, 1.0f));
-
-			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.y),
-				glm::vec3(0.0f, 1.0f, 0.0f));
-
-			matriz = glm::rotate(matriz, glm::radians(obj.rotacion.x),
-				glm::vec3(1.0f, 0.0f, 0.0f));
-
-			matriz = glm::scale(matriz, obj.escala);
+			// Estáticos y objetos sin físicas: matriz de la escena. Dinámicos: la que calcula Bullet.
+			const glm::mat4 matriz = editorEscenas.Activo()
+				? fisica::MatrizDeObjeto(obj)
+				: escenaFisica->MatrizVisualDe(static_cast<int>(i), obj);
 
 			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
 			dibuixa_EscenaGL(
 				shader_programID, eixos, eixos_Id, grid, hgrid,
 				OBJOBJ, col_obj, sw_material,
-				textura, texturesID, textura_map, tFlag_invert_Y,
+				false, texturesID, textura_map, tFlag_invert_Y,
 				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 				it->second.get(), matriz
 			);
@@ -1106,7 +1486,51 @@ void dibuixa_Escena() {
 			ObOBJ, GTMatrix);
 	}
 
-	if (modoJuegoFPS() && mostrarMovil && phoneOBJ != nullptr)
+	// DEMO FASE 1: la puerta usa el cubo test.obj ya cargado por la escena.
+	for (const auto& modelo : modelosHabitacion)
+	{
+		if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
+		dibuixa_EscenaGL(
+			shader_programID, eixos, eixos_Id, grid, hgrid,
+			OBJOBJ, col_obj, sw_material,
+			false, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+			modelo.second.get(),
+			animacion::MatrizPuertaConBisagra(mitadTamanoPuertaDemo, bisagraPuertaDemo, anguloPuertaDemo)
+		);
+		break;
+	}
+
+	// DEMO FÍSICA: dibuja el cubo con la pose que calcula Bullet (reutiliza test.obj, de ±1 m).
+	if (demoFisica.EstaActiva())
+	{
+		for (const auto& modelo : modelosHabitacion)
+		{
+			if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
+			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
+			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
+			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
+				* glm::mat4_cast(pose.rotacion)
+				* glm::scale(glm::mat4(1.0f), demoFisica.MitadTamanoCubo());
+			dibuixa_EscenaGL(
+				shader_programID, eixos, eixos_Id, grid, hgrid,
+				OBJOBJ, col_obj, sw_material,
+				false, texturesID, textura_map, tFlag_invert_Y,
+				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+				modelo.second.get(), matrizCubo
+			);
+			break;
+		}
+	}
+
+	// Objetos animados GLB (puertas...): mismo shader y cámara que el resto de la escena.
+	if (objetosAnimadosListos && editorEscenas.MostrarAnimados())
+	{
+		glUseProgram(shader_programID);
+		glb::DibujarObjetosAnimados(objetosAnimados, shader_programID);
+	}
+
+	if (modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr)
 	{
 		const float idle = intensidadIdle;
 		const float bob = pesoCaminata * intensidadWalking;
@@ -1132,6 +1556,30 @@ void dibuixa_Escena() {
 			phoneOBJ, matrizMovil);
 		textura = texturaAnterior;
 	}
+
+	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
+	if (editorEscenas.Activo() && editorEscenas.MostrarColisionadores())
+	{
+		std::vector<fisica::CajaColision> cajasEditor;
+		for (std::size_t indiceObjeto = 0; indiceObjeto < objetosEscena.size(); ++indiceObjeto)
+		{
+			const SceneObject& objeto = objetosEscena[indiceObjeto];
+			if (!objeto.fisica.presente || !editorEscenas.ObjetoVisible(indiceObjeto)) continue;
+			glm::mat4 giro(1.0f);
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
+			fisica::CajaColision caja;
+			caja.tipo = objeto.fisica.tipo;
+			caja.pose.posicion = objeto.posicion + glm::vec3(giro * glm::vec4(objeto.escala * objeto.fisica.desplazamiento, 0.0f));
+			caja.pose.rotacion = glm::quat_cast(glm::mat3(giro));
+			caja.mitadTamano = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
+			cajasEditor.push_back(caja);
+		}
+		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, cajasEditor);
+	}
+	else if (mostrarColisionadores && !editorEscenas.Activo())
+		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
 }
 
 
@@ -1357,12 +1805,71 @@ void Barra_Estat()
 // Entorn VGI: Dibuixa el menú principal ImGui que controla colors i permet activar altres menús:
 //		- menú standard Imgui [show_demo_window()]
 //		- menú propi de l'aplicació EntornVGI [show_EntornVGI_window()]
+// Barra de estamina: se dibuja en la lista de primer plano de ImGui (no es una ventana: no recibe raton ni toma el foco).
+// Aparece al correr o mientras no esta llena y se desvanece sola. Solo se ve en la ventana, nunca dentro del visor VR.
+static void dibujarBarraEstamina()
+{
+	if (!modoJuegoFPS() || editorEscenas.Activo() || barraEstamina.visible < 0.01f) return;
+	const ImGuiIO& io = ImGui::GetIO();
+	const float ancho = std::min(260.0f, io.DisplaySize.x * 0.4f), alto = 8.0f;
+	const float x0 = (io.DisplaySize.x - ancho) * 0.5f, y0 = io.DisplaySize.y - 48.0f;
+	const float a = barraEstamina.visible;
+	const bool agotada = movimientoJugador.Agotada();
+	const ImU32 fondo = IM_COL32(10, 10, 10, static_cast<int>(150 * a));
+	const ImU32 relleno = agotada ? IM_COL32(200, 60, 50, static_cast<int>(230 * a))
+		: IM_COL32(220, 220, 205, static_cast<int>(210 * a));
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	dl->AddRectFilled(ImVec2(x0 - 2, y0 - 2), ImVec2(x0 + ancho + 2, y0 + alto + 2), fondo, 3.0f);
+	dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ancho * std::clamp(barraEstamina.mostrada, 0.0f, 1.0f), y0 + alto), relleno, 2.0f);
+	if (mostrarPorcentajeEstamina)
+	{
+		char texto[16];
+		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(movimientoJugador.FraccionEstamina() * 100.0f + 0.5f));
+		dl->AddText(ImVec2(x0 + ancho + 8, y0 - 4), IM_COL32(230, 230, 220, static_cast<int>(200 * a)), texto);
+	}
+}
+
+static void dibujarHUDInteraccion()
+{
+	const ImGuiIO& io = ImGui::GetIO();
+	if (!entradaFPSActiva() || gestorOpenXR.SesionEnMarcha() ||
+		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
+		return;
+
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	if (cargaLanzamientoActiva)
+	{
+		const float ancho = 140.0f, alto = 8.0f;
+		const float x = (io.DisplaySize.x - ancho) * 0.5f;
+		const float y = io.DisplaySize.y * 0.5f + 36.0f;
+		dl->AddRectFilled(ImVec2(x - 2.0f, y - 2.0f), ImVec2(x + ancho + 2.0f, y + alto + 2.0f),
+			IM_COL32(0, 0, 0, 190), 3.0f);
+		dl->AddRectFilled(ImVec2(x, y), ImVec2(x + ancho * std::clamp(
+			tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f), y + alto),
+			IM_COL32(235, 220, 150, 245), 2.0f);
+	}
+
+	if (texturaManoInteraccion == 0 || io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
+		return;
+	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+	if (objetivo.accion != AccionInteraccion::Recoger) return;
+
+	const float tamanoIcono = 34.0f;
+	const float x = (io.DisplaySize.x - tamanoIcono) * 0.5f;
+	const float y = std::min(io.DisplaySize.y * 0.5f + 24.0f, io.DisplaySize.y - tamanoIcono - 12.0f);
+	const ImTextureID textura = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texturaManoInteraccion));
+	dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
+		ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
+}
+
 void draw_Menu_ImGui()
 {
 	// Start the Dear ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
+	dibujarBarraEstamina();
+	dibujarHUDInteraccion();
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
 
@@ -1395,8 +1902,6 @@ void draw_Menu_ImGui()
 		ImGui::SameLine();
 		ImGui::Checkbox("EntornVGI Window", &show_EntornVGI_window);
 		static bool preset = true;
-		if (ImGui::Checkbox("Preset", &preset) && preset)
-			aplicarPresetJuego();
 		ImGui::Separator();
 		ImGui::Spacing();
 
@@ -1475,7 +1980,127 @@ void draw_Menu_ImGui()
 		ImGui::SliderFloat("Intensidad mouse", &intensidadMouse, 0.0f, 0.003f, "%.4f");
 		ImGui::Text("deltaTime: %.4f s", deltaFPS);
 		ImGui::End();
+
+		ImGui::Begin("Movimiento FPS");
+		{
+			fps::ParametrosMovimiento& pm = movimientoJugador.parametros;
+			fps::ParametrosBalanceo& pb = balanceoCamara.parametros;
+			ImGui::Text("Estamina: %.1f / %.1f%s", movimientoJugador.Estamina(), pm.estaminaMaxima,
+				movimientoJugador.Agotada() ? "  (AGOTADA)" : (movimientoJugador.Sprintando() ? "  (corriendo)" : ""));
+			ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", movimientoJugador.Velocidad(),
+				mundoFisico.FraccionAgachado() * 100.0f, mundoFisico.JugadorEnSuelo() ? "si" : "no");
+			ImGui::Checkbox("Porcentaje junto a la barra", &mostrarPorcentajeEstamina);
+			if (ImGui::Button("Rellenar estamina")) movimientoJugador.Reiniciar();
+			ImGui::SeparatorText("Velocidades (m/s)");
+			ImGui::SliderFloat("Caminar", &pm.velocidadCaminar, 0.5f, 6.0f, "%.2f");
+			ImGui::SliderFloat("Agachado", &pm.velocidadAgachado, 0.3f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Sprint", &pm.velocidadSprint, 1.0f, 9.0f, "%.2f");
+			ImGui::SliderFloat("Suavizado de velocidad", &pm.suavizadoVelocidad, 1.0f, 30.0f, "%.1f");
+			ImGui::SeparatorText("Estamina");
+			ImGui::SliderFloat("Maxima", &pm.estaminaMaxima, 10.0f, 300.0f, "%.0f");
+			ImGui::SliderFloat("Consumo / s", &pm.consumoPorSegundo, 1.0f, 100.0f, "%.1f");
+			ImGui::SliderFloat("Recuperacion / s", &pm.recuperacionPorSegundo, 1.0f, 100.0f, "%.1f");
+			ImGui::SliderFloat("Retardo de recuperacion (s)", &pm.retardoRecuperacion, 0.0f, 5.0f, "%.2f");
+			ImGui::SliderFloat("Minimo tras agotarse", &pm.minimoTrasAgotarse, 0.0f, 100.0f, "%.0f");
+			ImGui::SeparatorText("Balanceo de camara y movil");
+			ImGui::SliderFloat("Intensidad global", &pb.multiplicador, 0.0f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Amplitud caminar (m)", &pb.amplitudCaminar, 0.0f, 0.05f, "%.4f");
+			ImGui::SliderFloat("Amplitud correr (m)", &pb.amplitudCorrer, 0.0f, 0.08f, "%.4f");
+			ImGui::SliderFloat("Amplitud agachado (m)", &pb.amplitudAgachado, 0.0f, 0.03f, "%.4f");
+			ImGui::SliderFloat("Lateral relativo", &pb.lateralRelativo, 0.0f, 1.5f, "%.2f");
+			ImGui::SliderFloat("Zancada caminar (m)", &pb.zancadaCaminar, 0.5f, 3.0f, "%.2f");
+			ImGui::SliderFloat("Zancada correr (m)", &pb.zancadaCorrer, 0.5f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Amortiguacion al parar", &pb.salida, 1.0f, 20.0f, "%.1f");
+			ImGui::Text("fase: %.2f rad | peso: %.2f", balanceoCamara.Fase(), balanceoCamara.Peso());
+		}
+		ImGui::End();
+
+		ImGui::Begin("Demo puerta");
+		if (ImGui::Button("Abrir puerta")) iniciarPuertaDemo();
+		ImGui::Text("tiempo: %.2f / %.2f s", reproductorPuertaDemo.tiempo, reproductorPuertaDemo.duracion);
+		ImGui::Text("angulo: %.1f grados", anguloPuertaDemo);
+		ImGui::End();
+
+		ImGui::Begin("Fisica (Bullet)");
+		ImGui::Checkbox("Mostrar colisionadores", &mostrarColisionadores);
+		ImGui::TextUnformatted("azul: estatico  verde: dinamico  naranja: cinematico");
+		ImGui::Text("cuerpos en el mundo: %d (habitacion: %d, dinamicos: %d)", mundoFisico.NumeroDeCuerpos(),
+			escenaFisica->NumeroDeCuerpos(), escenaFisica->NumeroDeDinamicos());
+		ImGui::Text("pasos fisicos: %lld", mundoFisico.PasosTotales());
+		ImGui::Checkbox("Vista estereoscopica de prueba (F2) - NO es VR real", &modoEstereoPrueba);
+		ImGui::Separator();
+		ImGui::Text("OpenXR (VR real, F3): %s", vr::NombreDelEstado(gestorOpenXR.Estado()));
+		if (!vr::GestorOpenXR::EstaCompilado())
+			ImGui::TextUnformatted("No incluido en esta compilacion (macOS u OpenXR no instalado).");
+		else if (ImGui::Button(gestorOpenXR.TieneRecursos() ? "Desactivar OpenXR" : "Activar OpenXR"))
+			alternarOpenXR();
+		ImGui::TextWrapped("%s", gestorOpenXR.Mensaje().c_str());
+		if (gestorOpenXR.TieneRecursos())
+		{
+			ImGui::Text("Sesion: %s%s | espacio: %s | ojos: %d", gestorOpenXR.NombreEstadoSesion(),
+				gestorOpenXR.SesionEnMarcha() ? " (en marcha)" : "",
+				gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo ? "STAGE" : (gestorOpenXR.Espacio() == vr::EspacioReferencia::Local ? "LOCAL" : "-"),
+				gestorOpenXR.NumeroDeOjos());
+		}
+		if (!gestorOpenXR.Diagnostico().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
+		{
+			ImGui::TextWrapped("%s", gestorOpenXR.Diagnostico().c_str());
+			ImGui::TreePop();
+		}
+		ImGui::Separator();
+		if (escenaFisica->HayAgarre())
+		{
+			const int agarrado = escenaFisica->ObjetoAgarrado();
+			ImGui::Text("en la mano: %s (mantener E para cargar y lanzar)", objetosEscena[agarrado].id.c_str());
+		}
+		else ImGui::TextUnformatted("mano vacia (E sobre un objeto dinamico para agarrarlo)");
+		if (mundoFisico.HayJugador())
+		{
+			const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
+			ImGui::Text("jugador (pies): (%.2f, %.2f, %.2f) m  %s", pies.x, pies.y, pies.z,
+				mundoFisico.JugadorEnSuelo() ? "en el suelo" : "en el aire");
+		}
+		ImGui::Separator();
+		ImGui::TextUnformatted("Demo: cubo que cae (independiente de la habitacion)");
+		if (!demoFisica.EstaActiva())
+		{
+			if (ImGui::Button("Activar demo cubo")) demoFisica.Iniciar();
+		}
+		else
+		{
+			if (ImGui::Button("Reiniciar demo")) demoFisica.Iniciar();
+			ImGui::SameLine();
+			if (ImGui::Button("Quitar demo")) demoFisica.Detener();
+			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
+			const glm::vec3 velocidad = demoFisica.VelocidadCubo();
+			const glm::vec3 gravedad = mundoFisico.Gravedad();
+			ImGui::Text("gravedad: (%.2f, %.2f, %.2f) m/s2", gravedad.x, gravedad.y, gravedad.z);
+			ImGui::Text("cubo pos: (%.3f, %.3f, %.3f) m", pose.posicion.x, pose.posicion.y, pose.posicion.z);
+			ImGui::Text("cubo vel: (%.3f, %.3f, %.3f) m/s", velocidad.x, velocidad.y, velocidad.z);
+			ImGui::Text("estado: %s", demoFisica.CuboEnReposo() ? "en reposo (dormido)" : "en movimiento");
+		}
+		ImGui::End();
+
+		ImGui::Begin("Objetos animados GLB");
+		ImGui::Text("Objetos animados GLB (Blender)");
+		if (objetosAnimados.objetos.empty())
+			ImGui::TextUnformatted("Ninguno cargado (ver consola)");
+		for (glb::ObjetoAnimado& objeto : objetosAnimados.objetos)
+		{
+			ImGui::PushID(objeto.id.c_str());   // cada fila necesita un ID distinto para sus botones
+			if (ImGui::Button("Abrir")) glb::IniciarAnimacion(objeto);     // depuración: reinicia la apertura
+			ImGui::SameLine();
+			if (ImGui::Button("Alternar")) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
+			ImGui::SameLine();
+			ImGui::Text("%s  %s  %.2f / %.2f s", objeto.id.c_str(), glb::NombreDelEstado(objeto.estado),
+				objeto.reproductor.tiempo, objeto.reproductor.duracion);
+			ImGui::PopID();
+		}
+		ImGui::End();
 	}
+
+	editorEscenas.DibujarInterfaz(editor::ContextoEscena{ objetosEscena, datosAnimadosEscena, objetosAnimados },
+		static_cast<int>(ImGui::GetIO().DisplaySize.x), static_cast<int>(ImGui::GetIO().DisplaySize.y));
 
 // Rendering ImGui Menus
 	ImGui::Render();
@@ -1553,6 +2178,8 @@ void ShowArxiusOptions()
 	if (ImGui::MenuItem("New")) {}
 	if (ImGui::MenuItem("Cargar habitacion JSON"))
 		cargarYAplicarEscena("assets/scenes/habitacion_beta.json");
+	if (ImGui::MenuItem("Cargar ejemplo fisica JSON"))
+		cargarYAplicarEscena("assets/scenes/ejemplo_fisica.json");
 
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;
@@ -4198,6 +4825,28 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
+	if (key == GLFW_KEY_E && action == GLFW_RELEASE && cargaLanzamientoActiva)
+	{
+		if (entradaFPSActiva() && !io.WantTextInput && !io.WantCaptureKeyboard &&
+			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha())
+			lanzarObjetoCargado();
+		else
+			cancelarCargaLanzamiento();
+		return;
+	}
+	if (editorEscenas.Activo())
+	{
+		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
+		sincronizarCursorFPS(window);
+		return;
+	}
+	if (key == GLFW_KEY_E && action == GLFW_PRESS &&
+		(mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_ALT))
+	{
+		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
+		fijarCapturaCursor(window, false);
+		return;
+	}
 	if (modoJuegoFPS())
 	{
 		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
@@ -4220,17 +4869,29 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			sincronizarCursorFPS(window);
 			return;
 		}
-		// --- NUEVO: Alternar Modo VR Estéreo con F2 ---
-		if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
-		{
-			modoVR = !modoVR;
-			std::cout << "Modo VR Estereo: " << (modoVR ? "ON" : "OFF") << "\n";
-			return;
-		}
-		// --- NUEVO: Coger / Soltar objeto con tecla E ---
+		// E recoge el objeto mirado o interactua con puertas; con un objeto sujeto inicia la carga del lanzamiento.
 		if (key == GLFW_KEY_E && action == GLFW_PRESS)
 		{
-			intentarInteractuar();
+			if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput) &&
+				!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
+				!gestorOpenXR.SesionEnMarcha())
+			{
+				if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+				else interactuar();
+			}
+			return;
+		}
+		// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
+		if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
+		{
+			alternarOpenXR();
+			return;
+		}
+		// F2: alternar la vista estereoscópica de prueba (dos ojos en pantalla partida).
+		if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
+		{
+			modoEstereoPrueba = !modoEstereoPrueba;
+			std::cout << "Vista estereoscopica de prueba: " << (modoEstereoPrueba ? "ON" : "OFF") << std::endl;
 			return;
 		}
 		if (fpsPausado || !ventanaConFoco) return;
@@ -4243,7 +4904,11 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // (2) ONLY forward mouse data to your underlying app/game.
 	if (!io.WantCaptureKeyboard) { //<Tractament mouse de l'aplicació>}
 		// EntornVGI: Si tecla pulsada és ESCAPE, tancar finestres i aplicació.
-		if (mods == 0 && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) glfwSetWindowShouldClose(window, GL_TRUE);
+		if (mods == 0 && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+		{
+			if (editorEscenas.HayCambiosSinGuardar()) editorEscenas.SolicitarConfirmacionCierre();
+			else glfwSetWindowShouldClose(window, GL_TRUE);
+		}
 		else if (mods == 0 && key == GLFW_KEY_PRINT_SCREEN && action == GLFW_PRESS) statusB = !statusB;
 		else if ((mods == 1) && (action == GLFW_PRESS)) Teclat_Shift(key, window);	// Shorcuts Shift Key
 		else if ((mods == 2) && (action == GLFW_PRESS)) Teclat_Ctrl(key);	// Shortcuts Ctrl Key
@@ -4263,8 +4928,6 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		else if (!sw_color) Teclat_ColorFons(key, action);
 		else Teclat_ColorObjecte(key, action);
 	}
-
-	
 	// Crida a OnPaint() per redibuixar l'escena
 		//OnPaint(window);
 
@@ -4275,14 +4938,6 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	int state = glfwGetKey(window, GLFW_KEY_E);
 	if (state == GLFW_PRESS) activate_airship();
 */
-}
-
-void OnKeyUp(GLFWwindow* window, int key, int scancode, int action, int mods)
-{
-}
-
-void OnTextDown(GLFWwindow* window, unsigned int codepoint)
-{
 }
 
 // Teclat_Shift: Shortcuts per Pop Ups Fitxer, Finestra, Vista, Projecció i Objecte
@@ -4854,9 +5509,9 @@ void Teclat_Shift(int key, GLFWwindow* window)
 		OnObjectePuntsControl();
 		break;
 
-	// Tecla Triedre de Frenet?
+	// Tecla F11: alternar pantalla completa
 	case GLFW_KEY_F11:
-		OnCorbesTriedreFrenet();
+		OnFull_Screen(primary, window);
 		break;
 
 	// Tecla Triedre de Darboux?
@@ -6214,6 +6869,7 @@ void OnMouseButton(GLFWwindow* window, int button, int action, int mods)
 	ImGuiIO& io = ImGui::GetIO();
 
 	// (2) ONLY forward mouse data to your underlying app/game.
+	if (editorEscenas.Activo()) return;
 	if (modoJuegoFPS()) return;
 
 	if (!io.WantCaptureMouse) { //<Tractament mouse de l'aplicació>}
@@ -6563,6 +7219,11 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 {
 // TODO: Agregue aquí su código de controlador de mensajes o llame al valor predeterminado
+	if (editorEscenas.Activo())
+	{	// la rueda es de la camara solo sobre el viewport; sobre un panel ImGui desplaza el panel
+		editorEscenas.RuedaRaton(static_cast<float>(yoffset));
+		return;
+	}
 	double modul = 0;
 	GLdouble vdir[3] = { 0, 0, 0 };
 
@@ -6571,7 +7232,7 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 	ImGuiIO& io = ImGui::GetIO();
 
 // (2) ONLY forward mouse data to your underlying app/game.
-	if (modoJuegoFPS()) return;
+	if (editorEscenas.Activo() || modoJuegoFPS()) return;
 	if (!io.WantCaptureMouse) { // <Tractament mouse de l'aplicació>}
 		// Funció de zoom quan està activada la funció pan o les T. Geomètriques
 		if ((zzoom || zzoomO) || (transX) || (transY) || (transZ))
@@ -6624,245 +7285,6 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 }
 
 
-/* ------------------------------------------------------------------------- */
-/*                           CONTROL DEL GAMEPAD / JOYSTICK                  */
-/* ------------------------------------------------------------------------- */
-
-/*
-// OnGamepadMove: Funció de tractament de Gamepad (funció que es crida quan es prem una tecla o comandament d'un joystick)
-//   PARÀMETRES:
-//    - jid: Identificador del gamepad (GLFW_JOYSTICK_1, GLFW_JOYSTICK_2, GLFW_JOYSTICK_3, etc.) connectat o desconnectat
-//    - event: et retorna si el gamepad està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
-void OnGamepadMove(int jid, int event)
-{
-	GLFWgamepadstate estat;		// Variable que obté l'estat (valors) del botons i eixos dels stocks i triggers del Gamepad.
-
-	//	if (event == GLFW_CONNECTED)	// NO FUNCIONA
-	if (glfwGetGamepadState(GLFW_JOYSTICK_1, &estat))
-	{
-		// BOTONS-----------------------------------
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_A])
-		{
-			fprintf(stderr, "%s \n", "Botó <A> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_B])
-		{
-			fprintf(stderr, "%s \n", "Botó <B> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_X])
-		{
-			fprintf(stderr, "%s \n", "Botó <X> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_Y])
-		{
-			fprintf(stderr, "%s \n", "Botó <Y> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_LEFT_BUMPER])
-		{
-			fprintf(stderr, "%s \n", "Left Bumper (LB) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_BUMPER])
-		{
-			fprintf(stderr, "%s \n", "Right Bumper (RB) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_BACK])
-		{
-			fprintf(stderr, "%s \n", "Botó <Back> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_START])
-		{
-			fprintf(stderr, "%s \n", "Botó <Start> pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_LEFT_THUMB])
-		{
-			fprintf(stderr, "%s \n", "Stick esquerra (click) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_RIGHT_THUMB])
-		{
-			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_UP])
-		{
-			fprintf(stderr, "%s \n", "Fletxa amunt pulsada");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_RIGHT])
-		{
-			fprintf(stderr, "%s \n", "Fletxa dreta pulsada");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_DOWN])
-		{
-			fprintf(stderr, "%s \n", "Fletxa avall pulsada");
-		}
-
-		if (estat.buttons[GLFW_GAMEPAD_BUTTON_DPAD_LEFT])
-		{
-			fprintf(stderr, "%s \n", "Fletxa esquerra pulsada");
-		}
-
-		// EIXOS (DIRECCIONS) DE STICKS i TRIGGERS -----------------------------------
-
-		// STICK ESQUERRE
-		fprintf(stderr, "%s %f %s %f \n", "Stick esquerre X: ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X], "Y: ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y]);
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_X] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_LEFT_Y] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-
-		// STICK DRET
-		fprintf(stderr, "%s %f %s %f \n", "Stick dret X: ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X], "Y: ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y]);
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_X] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-		if (estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_Y] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-
-		// TRIGGERS LT i RT
-		fprintf(stderr, "%s %f \n", "Trigger esquerre (LT): ", estat.axes[GLFW_GAMEPAD_AXIS_LEFT_TRIGGER]);
-		fprintf(stderr, "%s %f \n", "Trigger dret (RT): ", estat.axes[GLFW_GAMEPAD_AXIS_RIGHT_TRIGGER]);
-	}
-	else fprintf(stderr, "%s %i %s \n", "Gamepad ", jid, " desconnectat");
-}
-
-
-// OnJoystickMove: Funció de tractament de joystick (funció que es crida quan es prem una tecla o comandament d'un joystick)
-//   PARÀMETRES:
-//    - jid: Identificador del joystick (GLFW_JOYSTICK_1, GLFW_JOYSTICK_2, GLFW_JOYSTICK_3, etc.) connectat o desconnectat
-//    - event: et retorna si el joystick està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
-void OnJoystickMove(int jid, int event)
-{
-	int buttonCount;	// Variable que obté l'estat dels botons del Joystick / Gamepad. 
-	int axisCount;		// Variable que obté l'estat dels eixos dels sticks i triggers del Joystick / Gamepad.
-
-//	if (event == GLFW_CONNECTED)	// NO FUNCIONA
-	if (glfwJoystickPresent(GLFW_JOYSTICK_1))
-	{
-		// BOTONS-----------------------------------
-		// Obtenir botons del Gamepad: GLFW_PRESS si botó apretat, GLFW_RELEASE si botó s'ha deixat de pressionar.
-		const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttonCount);
-
-		if (buttons[0] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <A> pulsat");
-		}
-
-		if (buttons[1] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <B> pulsat");
-		}
-
-		if (buttons[2] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <X> pulsat");
-		}
-
-		if (buttons[3] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <Y> pulsat");
-		}
-
-		if (buttons[4] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Left Bumper (LB) pulsat");
-		}
-
-		if (buttons[5] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Right Bumper (RB) pulsat");
-		}
-
-		if (buttons[6] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <Back> pulsat");
-		}
-
-		if (buttons[7] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Botó <Start> pulsat");
-		}
-
-		if (buttons[8] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Stick esquerra (click) pulsat");
-		}
-
-		if (buttons[9] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
-		}
-
-		if (buttons[10] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa amunt pulsada");
-		}
-
-		if (buttons[11] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa dreta pulsada");
-		}
-
-		if (buttons[12] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa avall pulsada");
-		}
-
-		if (buttons[13] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Fletxa esquerra pulsada");
-		}
-
-		if (buttons[14] == GLFW_PRESS)
-		{
-			fprintf(stderr, "%s \n", "Stick dret (click) pulsat");
-		}
-
-		// EIXOS (DIRECCIONS) DE STICKS i TRIGGERS -----------------------------------
-		// Obtenir direccions pulsades d'algun stick o trigger si s'han pulsat.
-		const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axisCount);
-
-		// STICK ESQUERRE
-		if (axisCount > 0)
-		{	fprintf(stderr, "%s %f %s %f \n", "Stick esquerre X: ", axes[0], "Y: ", axes[1]);
-			if (axes[0] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-			if (axes[0] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-			if (axes[1] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-			if (axes[1] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-		}
-
-		// STICK DRET
-		if (axisCount > 2)
-		{	fprintf(stderr, "%s %f %s %f \n", "Stick dret X: ", axes[2], "Y: ", axes[3]);
-			if (axes[2] < -0.5) fprintf(stderr, "%s \n", "Cap a l'esquerra");
-			if (axes[2] > 0.5) fprintf(stderr, "%s \n", "Cap a la dreta");
-			if (axes[3] < -0.5) fprintf(stderr, "%s \n", "Cap amunt");
-			if (axes[3] > 0.5) fprintf(stderr, "%s \n", "Cap avall");
-		}
-
-		// TRIGGERS LT i RT
-		if (axisCount > 4)
-		{
-			fprintf(stderr, "%s %f \n", "Trigger esquerre (LT): ", axes[4]);
-			fprintf(stderr, "%s %f \n", "Trigger dret (RT): ", axes[5]);
-		}
-	}
-	else fprintf(stderr, "%s %i %s \n", "Joystick ", jid, " desconnectat");
-}
-*/
-
-
-/* ------------------------------------------------------------------------- */
-/*					     TIMER (ANIMACIÓ)									 */
 /* ------------------------------------------------------------------------- */
 void OnTimer()
 {
@@ -7015,30 +7437,6 @@ void error_callback(int code, const char* description)
 }
 
 
-GLenum glCheckError_(const char* file, int line)
-{	GLenum errorCode;
-	while ((errorCode = glGetError()) != GL_NO_ERROR)
-	{
-		std::string error;
-		switch (errorCode)
-		{
-		case GL_INVALID_ENUM:                  error = "INVALID_ENUM"; break;
-		case GL_INVALID_VALUE:                 error = "INVALID_VALUE"; break;
-		case GL_INVALID_OPERATION:             error = "INVALID_OPERATION"; break;
-		case GL_STACK_OVERFLOW:                error = "STACK_OVERFLOW"; break;
-		case GL_STACK_UNDERFLOW:               error = "STACK_UNDERFLOW"; break;
-		case GL_OUT_OF_MEMORY:                 error = "OUT_OF_MEMORY"; break;
-		case GL_INVALID_FRAMEBUFFER_OPERATION: error = "INVALID_FRAMEBUFFER_OPERATION"; break;
-		}
-		fprintf(stderr, "ERROR %s | File: %s | Line ( %3i ) \n", error.c_str(), file, line);
-		//fprintf(stderr, "ERROR %s | ", error.c_str());
-		//fprintf(stderr, "File: %s | ", file);
-		//fprintf(stderr, "Line ( %3i ) \n", line);
-	}
-	return errorCode;
-}
-#define glCheckError() glCheckError_(__FILE__, __LINE__)
-
 void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 	const GLchar* message, const void* userParam)
 {
@@ -7102,19 +7500,21 @@ int main(int argc, char** argv)
 		return -1;
 	}
 
-// Retrieving main monitor
 	primary = glfwGetPrimaryMonitor();
+	if (primary == nullptr)
+	{
+		fprintf(stderr, "Failed to get the primary monitor for fullscreen mode\n");
+		glfwTerminate();
+		return -1;
+	}
 
-	// To get current video mode of a monitor
 	mode = glfwGetVideoMode(primary);
-
-// Retrieving monitors
-//    int countM;
-//   GLFWmonitor** monitors = glfwGetMonitors(&countM);
-
-// Retrieving video modes of the monitor
-	int countVM;
-	const GLFWvidmode* modes = glfwGetVideoModes(primary, &countVM);
+	if (mode == nullptr)
+	{
+		fprintf(stderr, "Failed to get the primary monitor video mode\n");
+		glfwTerminate();
+		return -1;
+	}
 
 #ifdef __APPLE__
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
@@ -7131,13 +7531,35 @@ int main(int argc, char** argv)
 	glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GLFW_TRUE);
 #endif
 
-// Create a windowed mode window and its OpenGL context */
-	window = glfwCreateWindow(1280, 720, "EscapeTheUAB", NULL, NULL);
+// Create the game in a regular window (80% of the monitor); F11 toggles fullscreen.
+	const int startW = (int)(mode->width * 0.8);
+	const int startH = (int)(mode->height * 0.8);
+	fullscreen = false;
+#ifndef __APPLE__
+	// OpenXR/OpenGL suele exigir 4.3+ en Windows. Un contexto core 3.3 puede quedarse en 3.3 en algunos
+	// controladores, asi que se pide primero 4.6 (core) y, si no existe, se vuelve al 3.3 de siempre.
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+	window = glfwCreateWindow(startW, startH, "EscapeTheUAB", NULL, NULL);
+	if (!window)
+	{
+		fprintf(stderr, "OpenGL 4.6 no disponible; se usa OpenGL 3.3 (sin VR si el runtime pide mas).\n");
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+		glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+		window = glfwCreateWindow(startW, startH, "EscapeTheUAB", NULL, NULL);
+	}
+#else
+	window = glfwCreateWindow(startW, startH, "EscapeTheUAB", NULL, NULL);
+#endif
 	if (!window)
 	{	fprintf(stderr, "Failed to open GLFW window. If you have an Intel GPU, they are not 4.6 compatible. Try the 2.1 version of the tutorials.\n");
 		getchar();
 		glfwTerminate();
 		return -1;
+	}
+	{	int mx = 0, my = 0;
+		glfwGetMonitorPos(primary, &mx, &my);
+		glfwSetWindowPos(window, mx + (mode->width - startW) / 2, my + (mode->height - startH) / 2);
 	}
 
 // Make the window's context current
@@ -7161,29 +7583,12 @@ int main(int argc, char** argv)
 	if (!nfdAvailable)
 		std::fprintf(stderr, "Failed to initialize Native File Dialog: %s\n", NFD_GetError());
 
-	const unsigned char* version = (unsigned char*)glGetString(GL_VERSION);
-
-	int major, minor;
-	GetGLVersion(&major, &minor);
-
-	if (InicializarOpenXRInstance() && ObtenerSistemaOpenXR()) {
-    CrearSesionOpenXR(window);
-	}
-
-// ------------- Entorn VGI: Configure OpenGL context
-// 	Quitado para que funcione en MACOS
-//	glfwWindowHint(GLFW_SAMPLES, 4);
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, major);
-	//glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, minor); // GL 4.6
-
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE); // Si funcions deprecades són eliminades (no ARB_COMPATIBILITY)
-	//glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_FALSE);  // Si funcions deprecades NO són eliminades (Si ARB_COMPATIBILITY)
-
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);	// Creació contexte CORE
-	//glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_COMPAT_PROFILE);	// Creació contexte ARB_COMPATIBILITY
-	//glfwWindowHint(GLFW_OPENGL_DEBUG_CONTEXT, GL_TRUE); // comment this line in a release build! 
-
-
+	GLint major = 0, minor = 0;
+	glGetIntegerv(GL_MAJOR_VERSION, &major);
+	glGetIntegerv(GL_MINOR_VERSION, &minor);
+	ventanaPrincipal = window;
+	versionGLMayor = major;
+	versionGLMenor = minor;
 // ------------ - Entorn VGI : Enable OpenGL debug context if context allows for DEBUG CONTEXT (GL4.6)
 	if (GLEW_VERSION_4_6)
 	{	GLint flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -7198,13 +7603,11 @@ int main(int argc, char** argv)
 // Ensure we can capture the escape key being pressed below
 	glfwSetInputMode(window, GLFW_STICKY_KEYS, GL_TRUE);
 
-// Initialize API
-	//InitAPI();
-
 // Initialize Application control varibles
 	InitGL();
+cargarTexturaManoInteraccion();
 
-	char phonePath[] = "./assets/models/Phone.obj";
+char phonePath[] = "./assets/models/Phone.obj";
 	phoneOBJ = new COBJModel();
 	if (phoneOBJ->LoadModel(phonePath) != 0)
 	{
@@ -7218,11 +7621,12 @@ int main(int argc, char** argv)
 	glfwSetWindowSizeCallback(window, OnSize);										// - Windows Size in screen Coordinates
 	glfwSetFramebufferSizeCallback(window, OnFramebufferSize);							// - Medidas del framebuffer en píxeles
 	glfwSetWindowFocusCallback(window, OnWindowFocus);
+	glfwSetWindowCloseCallback(window, OnWindowCloseRequest);
+	editorEscenas.FijarCargadorModelos(cargarModeloParaEditor);
 	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun)OnMouseButton);			// - Directly redirect GLFW mouse button events
 	glfwSetCursorPosCallback(window, (GLFWcursorposfun)OnMouseMove);				// - Directly redirect GLFW mouse position events
 	glfwSetScrollCallback(window, (GLFWscrollfun)OnMouseWheel);						// - Directly redirect GLFW mouse wheel events
 	glfwSetKeyCallback(window, (GLFWkeyfun)OnKeyDown);								// - Directly redirect GLFW key events
-	//glfwSetCharCallback(window, OnTextDown);										// - Directly redirect GLFW char events
 	glfwSetErrorCallback(error_callback);											// Error callback
 	glfwSetWindowRefreshCallback(window, (GLFWwindowrefreshfun)OnPaint);			// - Callback to refresh the screen
 
@@ -7252,7 +7656,8 @@ int main(int argc, char** argv)
 
 	// Arrancar directamente con la habitación y la configuración de juego.
 	aplicarPresetJuego();
-	cargarYAplicarEscena("assets/scenes/habitacion_beta.json");
+	cargarYAplicarEscena("assets/scenes/aula_informatica_calibrada.json");
+	crearJugadorFisico();   // con la habitación ya cargada: el suelo existe
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
 	OnFramebufferSize(window, w, h);
@@ -7272,32 +7677,103 @@ int main(int argc, char** argv)
 		time -= delta;
 		if ((time <= 0.0) && (satelit || anima)) OnTimer();
 
-/*
-		// Entorn VGI: GAMEPAD. Variable que retorna si el joystick està connectat (GLFW_CONNECTED) o desconnectat (GLFW_DISCONECTED)
-		int event = 0;	
-
-		// Entorn VGI: GAMEPAD. Comprovació si tenim un Joystick / Gamepad connectat per anar a la funció de callback.
-		//	if (glfwJoystickPresent(GLFW_JOYSTICK_1)) OnJoystickMove(GLFW_JOYSTICK_1,event);		// - Directly redirect GLFW joystick events
-		if (glfwJoystickIsGamepad(GLFW_JOYSTICK_1)) OnGamepadMove(GLFW_JOYSTICK_1, event);	// - Directly redirect GLFW gamepad events (equivalent)
-			else fprintf(stderr, "%s \n", "No hi ha Gamepad");
-*/
-
 		// Poll for and process events
 		glfwPollEvents();
+		editorEscenas.Actualizar(window, static_cast<float>(delta));
 		sincronizarCursorFPS(window);
+		actualizarCargaLanzamiento(window, static_cast<float>(delta));
+
+		const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+			glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+		// Postura: en pausa, sin foco o con paneles de depuracion abiertos se CONGELA (delta 0): ni se agacha ni se levanta.
+		// Fuera del modo FPS (camaras de depuracion) se sigue levantando como antes.
+		const float deltaPostura = (editorEscenas.Activo() || (modoJuegoFPS() && !entradaFPSActiva())) ? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
+		mundoFisico.ActualizarJugadorAgachado(modoJuegoFPS() && ctrlPulsado, deltaPostura);
 
 		// Actualitzar moviment continu de navegació (WASD) per frame.
-		if (!fpsPausado && !mostrarPanelesDebug && ventanaConFoco && modoJuegoFPS())
-			moverJugadorFPS(window, delta);
-			actualizarObjetoEnMano();
+		// Cada fotograma se parte de "quieto"; las teclas pedidas (si se puede jugar) fijan la velocidad.
+		mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+		{
+			fps::EntradaMovimiento entrada;
+			entrada.activo = !editorEscenas.Activo() && entradaFPSActiva() && mundoFisico.HayJugador();
+			entrada.quiereMoverse = entrada.activo && hayTeclaDeMovimiento(window);
+			entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+				glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+			entrada.enSuelo = mundoFisico.JugadorEnSuelo();
+			entrada.fraccionAgachado = mundoFisico.FraccionAgachado();
+			const float velocidad = movimientoJugador.Actualizar(static_cast<float>(delta), entrada);
+			if (entrada.activo)
+				moverJugadorFPS(window, velocidad);
+			barraEstamina.Actualizar(static_cast<float>(delta), movimientoJugador.FraccionEstamina(), movimientoJugador.Sprintando());
+		}
 		actualizarMovimientoMovil(window, static_cast<float>(delta));
+		// La animación se considera PAUSADA cuando el juego está en pausa (ESC) o la ventana
+		// ha perdido el foco. Abrir los paneles de depuración (F1) NO la pausa, porque el
+		// botón "Abrir puerta" está justamente en esos paneles.
+		const bool animacionPausada = editorEscenas.Activo() || fpsPausado || !ventanaConFoco;
+		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
+		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
+		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado
+		// Físicas: 1) las hojas animadas mueven sus cuerpos cinemáticos, 2) Bullet avanza en pasos
+		// fijos de 1/60 s (con el juego en pausa el mundo se congela).
+		escenaFisica->SincronizarCinematicos(objetosAnimados);
+		actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS() &&
+			!gestorOpenXR.SesionEnMarcha());
+		mundoFisico.FijarPausa(animacionPausada);
+		mundoFisico.Actualizar(static_cast<float>(delta));
+		sincronizarJugadorYCamara();
+		actualizarBalanceoVisual(static_cast<float>(delta));
 
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
 		draw_Menu_ImGui();
+		if (editorEscenas.ConsumeGuardarRequest())
+		{
+			std::string errorGuardado;
+			if (serializadorEscena.Guardar(objetosEscena, datosAnimadosEscena, errorGuardado))
+			{
+				editorEscenas.MarcarGuardado();
+				editorEscenas.InformarEstado("Saved: " + serializadorEscena.Ruta().filename().string());
+				std::cout << "Escena guardada en " << serializadorEscena.Ruta() << '\n';
+				if (editorEscenas.ConsumeCerrarTrasGuardar()) glfwSetWindowShouldClose(window, GLFW_TRUE);
+			}
+			else
+			{
+				editorEscenas.InformarEstado("Save failed: " + errorGuardado, true);
+				std::cerr << "No se guardó la escena: " << errorGuardado << '\n';
+			}
+		}
+		if (editorEscenas.ConsumeCerrarConfirmado()) glfwSetWindowShouldClose(window, GLFW_TRUE);
+		if (editorEscenas.ConsumeEntradaPlay())
+		{
+			std::string errorEditor;
+			if (!reconstruirFisicaTrasEdicion(errorEditor))
+			{
+				std::cerr << "No se pudo reconstruir Bullet al salir del editor: " << errorEditor << '\n';
+				editorEscenas.Activar(true);
+			}
+			else
+				mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+			// Sin saltos: se descartan el ultimo cursor, los deltas del raton y la referencia del balanceo.
+			fpsTienePosicionAnterior = false;
+			mouseDeltaX = mouseDeltaY = 0.0;
+			hayPiesFotogramaAnterior = false;
+			sincronizarCursorFPS(window);
+		}
 
-		// Crida a OnPaint() per redibuixar l'escena
-		OnPaint(window);
+		// Con VR en marcha, la escena se dibuja en el visor (y se refleja en la ventana). Sin VR, o si el visor
+		// no está mostrando imagen, se dibuja la vista de escritorio de siempre.
+		{
+			static bool vrEnMarchaAntes = false;
+			const bool vrEnMarcha = gestorOpenXR.SesionEnMarcha();
+			if (vrEnMarcha != vrEnMarchaAntes)
+			{	// xrWaitFrame ya marca el ritmo del visor: la sincronía vertical del monitor lo frenaría
+				glfwSwapInterval(vrEnMarcha ? 0 : 1);
+				vrEnMarchaAntes = vrEnMarcha;
+			}
+			const bool vrDibujado = !editorEscenas.Activo() && vrEnMarcha && dibujarEscenaVR();
+			if (!vrDibujado) OnPaint(window);
+		}
 
 		// Entorn VGI.ImGui: Capta dades del menú InGui
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
@@ -7314,9 +7790,15 @@ int main(int argc, char** argv)
 
 
 // Entorn VGI.ImGui: Cleanup ImGui
+	if (texturaManoInteraccion != 0)
+	{
+		glDeleteTextures(1, &texturaManoInteraccion);
+		texturaManoInteraccion = 0;
+	}
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+	gestorOpenXR.Desactivar();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
 	NFD_QuitCompat();
 
 	for (auto& entrada : modelosHabitacion)
@@ -7324,6 +7806,10 @@ int main(int argc, char** argv)
 
 	modelosHabitacion.clear();
 	objetosEscena.clear();
+	liberarObjetosAnimados();
+	mundoFisico.EliminarJugador();
+	escenaFisica.reset();                       // quita las colisiones de la habitacion antes de cerrar
+	fisica::LiberarDibujoColisionadores();
 
 	if (phoneOBJ != nullptr)
 	{

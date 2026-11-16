@@ -1,0 +1,1358 @@
+.
+├── build
+│   ├── linux-debug
+│   │   ├── bin
+│   │   │   ├── assets
+│   │   │   │   ├── animations
+│   │   │   │   │   └── Puerta.glb
+│   │   │   │   ├── licenses
+│   │   │   │   │   └── 3dexter_horror_player_item_pack.txt
+│   │   │   │   ├── models
+│   │   │   │   │   ├── Armari.blend
+│   │   │   │   │   ├── Armari.mtl
+│   │   │   │   │   ├── Armari.obj
+│   │   │   │   │   ├── arms_01.png
+│   │   │   │   │   ├── arms_rig2.mtl
+│   │   │   │   │   ├── arms_rig2.obj
+│   │   │   │   │   ├── chair.obj
+│   │   │   │   │   ├── Guns.mtl
+│   │   │   │   │   ├── Guns.obj
+│   │   │   │   │   ├── items
+│   │   │   │   │   │   └── 3dexter
+│   │   │   │   │   │       ├── flashlight.mtl
+│   │   │   │   │   │       ├── flashlight.obj
+│   │   │   │   │   │       ├── flashlight.png
+│   │   │   │   │   │       ├── key.mtl
+│   │   │   │   │   │       ├── key.obj
+│   │   │   │   │   │       └── key.png
+│   │   │   │   │   ├── Lampara.blend
+│   │   │   │   │   ├── Lampara.mtl
+│   │   │   │   │   ├── Lampara.obj
+│   │   │   │   │   ├── Phone_BaseColor.png
+│   │   │   │   │   ├── Phone.mtl
+│   │   │   │   │   ├── Phone.obj
+│   │   │   │   │   ├── Phone_Roughness.png
+│   │   │   │   │   ├── psx-first-person-arms-free-game-assets(1)
+│   │   │   │   │   │   ├── arms_01.png
+│   │   │   │   │   │   ├── arms_gloves_01.png
+│   │   │   │   │   │   ├── arms_rig.blend
+│   │   │   │   │   │   ├── arms_rig.fbx
+│   │   │   │   │   │   ├── arms_rig.glb
+│   │   │   │   │   │   ├── arms_uv.png
+│   │   │   │   │   │   └── Old Versions
+│   │   │   │   │   │       └── PSX_First_Person_Arms_Free (2024)
+│   │   │   │   │   │           ├── arms.png
+│   │   │   │   │   │           ├── PSX_First_Person_Arms.blend
+│   │   │   │   │   │           ├── PSX_First_Person_Arms.fbx
+│   │   │   │   │   │           └── PSX_First_Person_Arms.glb
+│   │   │   │   │   ├── TaulaRara.blend
+│   │   │   │   │   ├── TaulaRara.mtl
+│   │   │   │   │   ├── TaulaRara.obj
+│   │   │   │   │   ├── test.mtl
+│   │   │   │   │   ├── test.obj
+│   │   │   │   │   ├── Untitled.mtl
+│   │   │   │   │   └── Untitled.obj
+│   │   │   │   └── scenes
+│   │   │   │       ├── ejemplo_fisica.json
+│   │   │   │       ├── habitacion_beta.json
+│   │   │   │       └── habitacion_beta.txt
+│   │   │   ├── EntornVGI
+│   │   │   ├── shaders
+│   │   │   │   ├── eixos.frag
+│   │   │   │   ├── eixos.vert
+│   │   │   │   ├── flat_shdrML.frag
+│   │   │   │   ├── flat_shdrML.vert
+│   │   │   │   ├── gouraud_shdrML.frag
+│   │   │   │   ├── gouraud_shdrML.vert
+│   │   │   │   ├── phong_shdrML.frag
+│   │   │   │   ├── phong_shdrML.vert
+│   │   │   │   ├── skybox.FRAG
+│   │   │   │   └── skybox.VERT
+│   │   │   └── textures
+│   │   │       └── skybox
+│   │   │           ├── back.jpg
+│   │   │           ├── bottom.jpg
+│   │   │           ├── front.jpg
+│   │   │           ├── left.jpg
+│   │   │           ├── right.jpg
+│   │   │           └── top.jpg
+│   │   ├── build.ninja
+│   │   ├── CMakeCache.txt
+│   │   ├── CMakeFiles
+│   │   │   ├── 4.2.3
+│   │   │   │   ├── CMakeCCompiler.cmake
+│   │   │   │   ├── CMakeCXXCompiler.cmake
+│   │   │   │   ├── CMakeDetermineCompilerABI_C.bin
+│   │   │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │   │   │   ├── CMakeSystem.cmake
+│   │   │   │   ├── CompilerIdC
+│   │   │   │   │   ├── a.out
+│   │   │   │   │   ├── CMakeCCompilerId.c
+│   │   │   │   │   └── tmp
+│   │   │   │   └── CompilerIdCXX
+│   │   │   │       ├── a.out
+│   │   │   │       ├── CMakeCXXCompilerId.cpp
+│   │   │   │       └── tmp
+│   │   │   ├── cmake.check_cache
+│   │   │   ├── CMakeConfigureLog.yaml
+│   │   │   ├── cmake.verify_globs
+│   │   │   ├── CTestScript.cmake
+│   │   │   ├── InstallScripts.json
+│   │   │   ├── pkgRedirects
+│   │   │   ├── rules.ninja
+│   │   │   ├── TargetDirectories.txt
+│   │   │   └── VerifyGlobs.cmake
+│   │   ├── cmake_install.cmake
+│   │   ├── compile_commands.json
+│   │   ├── CTestTestfile.cmake
+│   │   ├── DartConfiguration.tcl
+│   │   ├── EntornVGI
+│   │   │   ├── CMakeFiles
+│   │   │   │   └── EntornVGI.dir
+│   │   │   │       ├── __
+│   │   │   │       │   └── include
+│   │   │   │       │       └── ImGui
+│   │   │   │       │           ├── imgui.cpp.o
+│   │   │   │       │           ├── imgui_demo.cpp.o
+│   │   │   │       │           ├── imgui_draw.cpp.o
+│   │   │   │       │           ├── imgui_impl_glfw.cpp.o
+│   │   │   │       │           ├── imgui_impl_opengl3.cpp.o
+│   │   │   │       │           ├── imgui_tables.cpp.o
+│   │   │   │       │           └── imgui_widgets.cpp.o
+│   │   │   │       ├── DibujoColisionadores.cpp.o
+│   │   │   │       ├── DibujoGLB.cpp.o
+│   │   │   │       ├── escena.cpp.o
+│   │   │   │       ├── EscenaFisica.cpp.o
+│   │   │   │       ├── glut_geometry.cpp.o
+│   │   │   │       ├── main.cpp.o
+│   │   │   │       ├── material.cpp.o
+│   │   │   │       ├── objLoader.cpp.o
+│   │   │   │       ├── quatern.cpp.o
+│   │   │   │       ├── SceneLoader.cpp.o
+│   │   │   │       ├── shader.cpp.o
+│   │   │   │       └── visualitzacio.cpp.o
+│   │   │   ├── cmake_install.cmake
+│   │   │   └── CTestTestfile.cmake
+│   │   ├── Testing
+│   │   │   ├── 20261105-1825
+│   │   │   │   └── Test.xml
+│   │   │   ├── TAG
+│   │   │   └── Temporary
+│   │   │       └── LastTest_20261105-1825.log
+│   │   ├── tests
+│   │   │   ├── CMakeFiles
+│   │   │   │   ├── GlbTests.dir
+│   │   │   │   │   ├── __
+│   │   │   │   │   │   └── EntornVGI
+│   │   │   │   │   │       ├── ModeloGLB.cpp.o
+│   │   │   │   │   │       └── ObjetosAnimadosGLB.cpp.o
+│   │   │   │   │   └── GlbTests.cpp.o
+│   │   │   │   ├── ObjLoaderTests.dir
+│   │   │   │   │   ├── __
+│   │   │   │   │   │   └── EntornVGI
+│   │   │   │   │   │       ├── glut_geometry.cpp.o
+│   │   │   │   │   │       ├── material.cpp.o
+│   │   │   │   │   │       └── objLoader.cpp.o
+│   │   │   │   │   └── ObjLoaderTests.cpp.o
+│   │   │   │   ├── PhysicsTests.dir
+│   │   │   │   │   ├── __
+│   │   │   │   │   │   └── EntornVGI
+│   │   │   │   │   │       ├── EscenaFisica.cpp.o
+│   │   │   │   │   │       ├── ModeloGLB.cpp.o
+│   │   │   │   │   │       ├── ObjetosAnimadosGLB.cpp.o
+│   │   │   │   │   │       └── SceneLoader.cpp.o
+│   │   │   │   │   └── PhysicsTests.cpp.o
+│   │   │   │   └── SceneLoaderTests.dir
+│   │   │   │       ├── __
+│   │   │   │       │   └── EntornVGI
+│   │   │   │       │       └── SceneLoader.cpp.o
+│   │   │   │       └── SceneLoaderTests.cpp.o
+│   │   │   ├── cmake_install.cmake
+│   │   │   └── CTestTestfile.cmake
+│   │   └── third_party
+│   │       ├── nativefiledialog
+│   │       │   ├── CMakeFiles
+│   │       │   │   └── nfd.dir
+│   │       │   │       └── src
+│   │       │   │           ├── nfd_common.c.o
+│   │       │   │           └── nfd_gtk.c.o
+│   │       │   ├── cmake_install.cmake
+│   │       │   ├── CTestTestfile.cmake
+│   │       │   └── libnfd.a
+│   │       └── SOIL2
+│   │           ├── CMakeFiles
+│   │           │   └── soil2.dir
+│   │           │       └── src
+│   │           │           ├── image_array.c.o
+│   │           │           ├── image_DXT.c.o
+│   │           │           ├── image_helper.c.o
+│   │           │           ├── SOIL2.c.o
+│   │           │           └── wfETC.c.o
+│   │           ├── cmake_install.cmake
+│   │           ├── CTestTestfile.cmake
+│   │           └── libsoil2.a
+│   └── linux-release
+│       ├── bin
+│       │   ├── assets
+│       │   │   ├── models
+│       │   │   │   ├── Armari.blend
+│       │   │   │   ├── Armari.mtl
+│       │   │   │   ├── Armari.obj
+│       │   │   │   ├── arms_01.png
+│       │   │   │   ├── arms_rig2.mtl
+│       │   │   │   ├── arms_rig2.obj
+│       │   │   │   ├── Guns.mtl
+│       │   │   │   ├── Guns.obj
+│       │   │   │   ├── Lampara.blend
+│       │   │   │   ├── Lampara.mtl
+│       │   │   │   ├── Lampara.obj
+│       │   │   │   ├── psx-first-person-arms-free-game-assets(1)
+│       │   │   │   │   ├── arms_01.png
+│       │   │   │   │   ├── arms_gloves_01.png
+│       │   │   │   │   ├── arms_rig.blend
+│       │   │   │   │   ├── arms_rig.fbx
+│       │   │   │   │   ├── arms_rig.glb
+│       │   │   │   │   ├── arms_uv.png
+│       │   │   │   │   └── Old Versions
+│       │   │   │   │       └── PSX_First_Person_Arms_Free (2024)
+│       │   │   │   │           ├── arms.png
+│       │   │   │   │           ├── PSX_First_Person_Arms.blend
+│       │   │   │   │           ├── PSX_First_Person_Arms.fbx
+│       │   │   │   │           └── PSX_First_Person_Arms.glb
+│       │   │   │   ├── TaulaRara.blend
+│       │   │   │   ├── TaulaRara.mtl
+│       │   │   │   ├── TaulaRara.obj
+│       │   │   │   ├── test.mtl
+│       │   │   │   ├── test.obj
+│       │   │   │   ├── Untitled.mtl
+│       │   │   │   └── Untitled.obj
+│       │   │   └── scenes
+│       │   │       └── habitacion_beta.txt
+│       │   ├── EntornVGI
+│       │   ├── shaders
+│       │   │   ├── eixos.frag
+│       │   │   ├── eixos.vert
+│       │   │   ├── flat_shdrML.frag
+│       │   │   ├── flat_shdrML.vert
+│       │   │   ├── gouraud_shdrML.frag
+│       │   │   ├── gouraud_shdrML.vert
+│       │   │   ├── phong_shdrML.frag
+│       │   │   ├── phong_shdrML.vert
+│       │   │   ├── skybox.FRAG
+│       │   │   └── skybox.VERT
+│       │   └── textures
+│       │       └── skybox
+│       │           ├── back.jpg
+│       │           ├── bottom.jpg
+│       │           ├── front.jpg
+│       │           ├── left.jpg
+│       │           ├── right.jpg
+│       │           └── top.jpg
+│       ├── build.ninja
+│       ├── CMakeCache.txt
+│       ├── CMakeFiles
+│       │   ├── 4.2.3
+│       │   │   ├── CMakeCCompiler.cmake
+│       │   │   ├── CMakeCXXCompiler.cmake
+│       │   │   ├── CMakeDetermineCompilerABI_C.bin
+│       │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│       │   │   ├── CMakeSystem.cmake
+│       │   │   ├── CompilerIdC
+│       │   │   │   ├── a.out
+│       │   │   │   ├── CMakeCCompilerId.c
+│       │   │   │   └── tmp
+│       │   │   └── CompilerIdCXX
+│       │   │       ├── a.out
+│       │   │       ├── CMakeCXXCompilerId.cpp
+│       │   │       └── tmp
+│       │   ├── cmake.check_cache
+│       │   ├── CMakeConfigureLog.yaml
+│       │   ├── CTestScript.cmake
+│       │   ├── InstallScripts.json
+│       │   ├── pkgRedirects
+│       │   ├── rules.ninja
+│       │   └── TargetDirectories.txt
+│       ├── cmake_install.cmake
+│       ├── CTestTestfile.cmake
+│       ├── DartConfiguration.tcl
+│       ├── EntornVGI
+│       │   ├── CMakeFiles
+│       │   │   └── EntornVGI.dir
+│       │   │       ├── __
+│       │   │       │   └── include
+│       │   │       │       └── ImGui
+│       │   │       │           ├── imgui.cpp.o
+│       │   │       │           ├── imgui_demo.cpp.o
+│       │   │       │           ├── imgui_draw.cpp.o
+│       │   │       │           ├── imgui_impl_glfw.cpp.o
+│       │   │       │           ├── imgui_impl_opengl3.cpp.o
+│       │   │       │           ├── imgui_tables.cpp.o
+│       │   │       │           └── imgui_widgets.cpp.o
+│       │   │       ├── escena.cpp.o
+│       │   │       ├── glut_geometry.cpp.o
+│       │   │       ├── main.cpp.o
+│       │   │       ├── material.cpp.o
+│       │   │       ├── objLoader.cpp.o
+│       │   │       ├── quatern.cpp.o
+│       │   │       ├── SceneLoader.cpp.o
+│       │   │       ├── shader.cpp.o
+│       │   │       └── visualitzacio.cpp.o
+│       │   ├── cmake_install.cmake
+│       │   └── CTestTestfile.cmake
+│       ├── Testing
+│       │   └── Temporary
+│       └── third_party
+│           ├── nativefiledialog
+│           │   ├── CMakeFiles
+│           │   │   └── nfd.dir
+│           │   │       └── src
+│           │   │           ├── nfd_common.c.o
+│           │   │           └── nfd_gtk.c.o
+│           │   ├── cmake_install.cmake
+│           │   ├── CTestTestfile.cmake
+│           │   └── libnfd.a
+│           └── SOIL2
+│               ├── CMakeFiles
+│               │   └── soil2.dir
+│               │       └── src
+│               │           ├── image_array.c.o
+│               │           ├── image_DXT.c.o
+│               │           ├── image_helper.c.o
+│               │           ├── SOIL2.c.o
+│               │           └── wfETC.c.o
+│               ├── cmake_install.cmake
+│               ├── CTestTestfile.cmake
+│               └── libsoil2.a
+├── CMakeLists.txt
+├── CMakePresets.json
+├── docs
+│   ├── ANIMACIONES_GLB.md
+│   ├── CAMBIOS_FPS_JSON.md
+│   ├── FISICAS_BULLET.md
+│   └── LINTERNA_Y_BRAZO_INTERACCION.md
+├── EntornVGI
+│   ├── AnimacionGLB.h
+│   ├── AnimacionPuerta.h
+│   ├── assets
+│   │   ├── animations
+│   │   │   └── Puerta.glb
+│   │   ├── licenses
+│   │   │   └── 3dexter_horror_player_item_pack.txt
+│   │   ├── models
+│   │   │   ├── Armari.blend
+│   │   │   ├── Armari.mtl
+│   │   │   ├── Armari.obj
+│   │   │   ├── chair.obj
+│   │   │   ├── Guns.mtl
+│   │   │   ├── Guns.obj
+│   │   │   ├── items
+│   │   │   │   └── 3dexter
+│   │   │   │       ├── flashlight.mtl
+│   │   │   │       ├── flashlight.obj
+│   │   │   │       ├── flashlight.png
+│   │   │   │       ├── key.mtl
+│   │   │   │       ├── key.obj
+│   │   │   │       └── key.png
+│   │   │   ├── Lampara.blend
+│   │   │   ├── Lampara.mtl
+│   │   │   ├── Lampara.obj
+│   │   │   ├── Phone_BaseColor.png
+│   │   │   ├── Phone.mtl
+│   │   │   ├── Phone.obj
+│   │   │   ├── Phone_Roughness.png
+│   │   │   ├── TaulaRara.blend
+│   │   │   ├── TaulaRara.mtl
+│   │   │   ├── TaulaRara.obj
+│   │   │   ├── test.mtl
+│   │   │   ├── test.obj
+│   │   │   ├── Untitled.mtl
+│   │   │   └── Untitled.obj
+│   │   └── scenes
+│   │       ├── ejemplo_fisica.json
+│   │       ├── habitacion_beta.json
+│   │       └── habitacion_beta.txt
+│   ├── build-linux
+│   │   ├── bin
+│   │   │   ├── assets
+│   │   │   │   ├── models
+│   │   │   │   │   ├── Armari.blend
+│   │   │   │   │   ├── Armari.mtl
+│   │   │   │   │   ├── Armari.obj
+│   │   │   │   │   ├── arms_01.png
+│   │   │   │   │   ├── arms_rig2.mtl
+│   │   │   │   │   ├── arms_rig2.obj
+│   │   │   │   │   ├── Guns.mtl
+│   │   │   │   │   ├── Guns.obj
+│   │   │   │   │   ├── Lampara.blend
+│   │   │   │   │   ├── Lampara.mtl
+│   │   │   │   │   ├── Lampara.obj
+│   │   │   │   │   ├── psx-first-person-arms-free-game-assets(1)
+│   │   │   │   │   │   ├── arms_01.png
+│   │   │   │   │   │   ├── arms_gloves_01.png
+│   │   │   │   │   │   ├── arms_rig.blend
+│   │   │   │   │   │   ├── arms_rig.fbx
+│   │   │   │   │   │   ├── arms_rig.glb
+│   │   │   │   │   │   ├── arms_uv.png
+│   │   │   │   │   │   └── Old Versions
+│   │   │   │   │   │       └── PSX_First_Person_Arms_Free (2024)
+│   │   │   │   │   │           ├── arms.png
+│   │   │   │   │   │           ├── PSX_First_Person_Arms.blend
+│   │   │   │   │   │           ├── PSX_First_Person_Arms.fbx
+│   │   │   │   │   │           └── PSX_First_Person_Arms.glb
+│   │   │   │   │   ├── TaulaRara.blend
+│   │   │   │   │   ├── TaulaRara.mtl
+│   │   │   │   │   ├── TaulaRara.obj
+│   │   │   │   │   ├── test.mtl
+│   │   │   │   │   ├── test.obj
+│   │   │   │   │   ├── Untitled.mtl
+│   │   │   │   │   └── Untitled.obj
+│   │   │   │   └── scenes
+│   │   │   │       └── habitacion_beta.txt
+│   │   │   ├── shaders
+│   │   │   │   ├── eixos.frag
+│   │   │   │   ├── eixos.vert
+│   │   │   │   ├── flat_shdrML.frag
+│   │   │   │   ├── flat_shdrML.vert
+│   │   │   │   ├── gouraud_shdrML.frag
+│   │   │   │   ├── gouraud_shdrML.vert
+│   │   │   │   ├── phong_shdrML.frag
+│   │   │   │   ├── phong_shdrML.vert
+│   │   │   │   ├── skybox.FRAG
+│   │   │   │   └── skybox.VERT
+│   │   │   └── textures
+│   │   │       └── skybox
+│   │   │           ├── back.jpg
+│   │   │           ├── bottom.jpg
+│   │   │           ├── front.jpg
+│   │   │           ├── left.jpg
+│   │   │           ├── right.jpg
+│   │   │           └── top.jpg
+│   │   ├── build.ninja
+│   │   ├── CMakeCache.txt
+│   │   ├── CMakeFiles
+│   │   │   ├── 4.2.3
+│   │   │   │   ├── CMakeCCompiler.cmake
+│   │   │   │   ├── CMakeCXXCompiler.cmake
+│   │   │   │   ├── CMakeDetermineCompilerABI_C.bin
+│   │   │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │   │   │   ├── CMakeSystem.cmake
+│   │   │   │   ├── CompilerIdC
+│   │   │   │   │   ├── a.out
+│   │   │   │   │   ├── CMakeCCompilerId.c
+│   │   │   │   │   └── tmp
+│   │   │   │   └── CompilerIdCXX
+│   │   │   │       ├── a.out
+│   │   │   │       ├── CMakeCXXCompilerId.cpp
+│   │   │   │       └── tmp
+│   │   │   ├── cmake.check_cache
+│   │   │   ├── CMakeConfigureLog.yaml
+│   │   │   ├── EntornVGI.dir
+│   │   │   │   ├── escena.cpp.o
+│   │   │   │   ├── glut_geometry.cpp.o
+│   │   │   │   ├── home
+│   │   │   │   │   └── fran
+│   │   │   │   │       └── UAB
+│   │   │   │   │           └── VGI
+│   │   │   │   │               └── ABP
+│   │   │   │   │                   └── include
+│   │   │   │   │                       └── ImGui
+│   │   │   │   │                           ├── imgui.cpp.o
+│   │   │   │   │                           ├── imgui_demo.cpp.o
+│   │   │   │   │                           ├── imgui_draw.cpp.o
+│   │   │   │   │                           ├── imgui_impl_glfw.cpp.o
+│   │   │   │   │                           ├── imgui_impl_opengl3.cpp.o
+│   │   │   │   │                           ├── imgui_tables.cpp.o
+│   │   │   │   │                           └── imgui_widgets.cpp.o
+│   │   │   │   ├── main.cpp.o
+│   │   │   │   ├── material.cpp.o
+│   │   │   │   ├── objLoader.cpp.o
+│   │   │   │   ├── quatern.cpp.o
+│   │   │   │   ├── SceneLoader.cpp.o
+│   │   │   │   ├── shader.cpp.o
+│   │   │   │   └── visualitzacio.cpp.o
+│   │   │   ├── InstallScripts.json
+│   │   │   ├── pkgRedirects
+│   │   │   ├── rules.ninja
+│   │   │   └── TargetDirectories.txt
+│   │   ├── cmake_install.cmake
+│   │   └── third_party
+│   │       ├── nativefiledialog
+│   │       │   ├── CMakeFiles
+│   │       │   │   └── nfd.dir
+│   │       │   │       └── src
+│   │       │   │           ├── nfd_common.c.o
+│   │       │   │           └── nfd_gtk.c.o
+│   │       │   ├── cmake_install.cmake
+│   │       │   └── libnfd.a
+│   │       └── SOIL2
+│   │           ├── CMakeFiles
+│   │           │   └── soil2.dir
+│   │           │       └── src
+│   │           │           ├── image_array.c.o
+│   │           │           ├── image_DXT.c.o
+│   │           │           ├── image_helper.c.o
+│   │           │           ├── SOIL2.c.o
+│   │           │           └── wfETC.c.o
+│   │           ├── cmake_install.cmake
+│   │           └── libsoil2.a
+│   ├── build-linux-release
+│   │   ├── bin
+│   │   │   ├── assets
+│   │   │   │   ├── models
+│   │   │   │   │   ├── Armari.blend
+│   │   │   │   │   ├── Armari.mtl
+│   │   │   │   │   ├── Armari.obj
+│   │   │   │   │   ├── arms_01.png
+│   │   │   │   │   ├── arms_rig2.mtl
+│   │   │   │   │   ├── arms_rig2.obj
+│   │   │   │   │   ├── Guns.mtl
+│   │   │   │   │   ├── Guns.obj
+│   │   │   │   │   ├── Lampara.blend
+│   │   │   │   │   ├── Lampara.mtl
+│   │   │   │   │   ├── Lampara.obj
+│   │   │   │   │   ├── psx-first-person-arms-free-game-assets(1)
+│   │   │   │   │   │   ├── arms_01.png
+│   │   │   │   │   │   ├── arms_gloves_01.png
+│   │   │   │   │   │   ├── arms_rig.blend
+│   │   │   │   │   │   ├── arms_rig.fbx
+│   │   │   │   │   │   ├── arms_rig.glb
+│   │   │   │   │   │   ├── arms_uv.png
+│   │   │   │   │   │   └── Old Versions
+│   │   │   │   │   │       └── PSX_First_Person_Arms_Free (2024)
+│   │   │   │   │   │           ├── arms.png
+│   │   │   │   │   │           ├── PSX_First_Person_Arms.blend
+│   │   │   │   │   │           ├── PSX_First_Person_Arms.fbx
+│   │   │   │   │   │           └── PSX_First_Person_Arms.glb
+│   │   │   │   │   ├── TaulaRara.blend
+│   │   │   │   │   ├── TaulaRara.mtl
+│   │   │   │   │   ├── TaulaRara.obj
+│   │   │   │   │   ├── test.mtl
+│   │   │   │   │   ├── test.obj
+│   │   │   │   │   ├── Untitled.mtl
+│   │   │   │   │   └── Untitled.obj
+│   │   │   │   └── scenes
+│   │   │   │       └── habitacion_beta.txt
+│   │   │   ├── shaders
+│   │   │   │   ├── eixos.frag
+│   │   │   │   ├── eixos.vert
+│   │   │   │   ├── flat_shdrML.frag
+│   │   │   │   ├── flat_shdrML.vert
+│   │   │   │   ├── gouraud_shdrML.frag
+│   │   │   │   ├── gouraud_shdrML.vert
+│   │   │   │   ├── phong_shdrML.frag
+│   │   │   │   ├── phong_shdrML.vert
+│   │   │   │   ├── skybox.FRAG
+│   │   │   │   └── skybox.VERT
+│   │   │   └── textures
+│   │   │       └── skybox
+│   │   │           ├── back.jpg
+│   │   │           ├── bottom.jpg
+│   │   │           ├── front.jpg
+│   │   │           ├── left.jpg
+│   │   │           ├── right.jpg
+│   │   │           └── top.jpg
+│   │   ├── build.ninja
+│   │   ├── CMakeCache.txt
+│   │   ├── CMakeFiles
+│   │   │   ├── 4.2.3
+│   │   │   │   ├── CMakeCCompiler.cmake
+│   │   │   │   ├── CMakeCXXCompiler.cmake
+│   │   │   │   ├── CMakeDetermineCompilerABI_C.bin
+│   │   │   │   ├── CMakeDetermineCompilerABI_CXX.bin
+│   │   │   │   ├── CMakeSystem.cmake
+│   │   │   │   ├── CompilerIdC
+│   │   │   │   │   ├── a.out
+│   │   │   │   │   ├── CMakeCCompilerId.c
+│   │   │   │   │   └── tmp
+│   │   │   │   └── CompilerIdCXX
+│   │   │   │       ├── a.out
+│   │   │   │       ├── CMakeCXXCompilerId.cpp
+│   │   │   │       └── tmp
+│   │   │   ├── cmake.check_cache
+│   │   │   ├── CMakeConfigureLog.yaml
+│   │   │   ├── EntornVGI.dir
+│   │   │   │   ├── escena.cpp.o
+│   │   │   │   ├── glut_geometry.cpp.o
+│   │   │   │   ├── home
+│   │   │   │   │   └── fran
+│   │   │   │   │       └── UAB
+│   │   │   │   │           └── VGI
+│   │   │   │   │               └── ABP
+│   │   │   │   │                   └── include
+│   │   │   │   │                       └── ImGui
+│   │   │   │   │                           ├── imgui.cpp.o
+│   │   │   │   │                           ├── imgui_demo.cpp.o
+│   │   │   │   │                           ├── imgui_draw.cpp.o
+│   │   │   │   │                           ├── imgui_impl_glfw.cpp.o
+│   │   │   │   │                           ├── imgui_impl_opengl3.cpp.o
+│   │   │   │   │                           ├── imgui_tables.cpp.o
+│   │   │   │   │                           └── imgui_widgets.cpp.o
+│   │   │   │   ├── main.cpp.o
+│   │   │   │   ├── material.cpp.o
+│   │   │   │   ├── objLoader.cpp.o
+│   │   │   │   ├── quatern.cpp.o
+│   │   │   │   ├── SceneLoader.cpp.o
+│   │   │   │   ├── shader.cpp.o
+│   │   │   │   └── visualitzacio.cpp.o
+│   │   │   ├── InstallScripts.json
+│   │   │   ├── pkgRedirects
+│   │   │   ├── rules.ninja
+│   │   │   └── TargetDirectories.txt
+│   │   ├── cmake_install.cmake
+│   │   └── third_party
+│   │       ├── nativefiledialog
+│   │       │   ├── CMakeFiles
+│   │       │   │   └── nfd.dir
+│   │       │   │       └── src
+│   │       │   │           ├── nfd_common.c.o
+│   │       │   │           └── nfd_gtk.c.o
+│   │       │   ├── cmake_install.cmake
+│   │       │   └── libnfd.a
+│   │       └── SOIL2
+│   │           ├── CMakeFiles
+│   │           │   └── soil2.dir
+│   │           │       └── src
+│   │           │           ├── image_array.c.o
+│   │           │           ├── image_DXT.c.o
+│   │           │           ├── image_helper.c.o
+│   │           │           ├── SOIL2.c.o
+│   │           │           └── wfETC.c.o
+│   │           ├── cmake_install.cmake
+│   │           └── libsoil2.a
+│   ├── CMakeLists.txt
+│   ├── constants.h
+│   ├── DibujoColisionadores.cpp
+│   ├── DibujoColisionadores.h
+│   ├── DibujoGLB.cpp
+│   ├── DibujoGLB.h
+│   ├── EntornVGI.vcxproj
+│   ├── EntornVGI.vcxproj.filters
+│   ├── escena.cpp
+│   ├── EscenaFisica.cpp
+│   ├── EscenaFisica.h
+│   ├── escena.h
+│   ├── file_dialog_compat.h
+│   ├── framework.h
+│   ├── GLSL_Error.VERT
+│   ├── glut_geometry.cpp
+│   ├── glut_geometry.h
+│   ├── imgui.ini
+│   ├── imgui.ini.before-scale-reset
+│   ├── main.cpp
+│   ├── main.cpp~RF31ab74.TMP
+│   ├── main.h
+│   ├── material.cpp
+│   ├── material.h
+│   ├── ModelLoader.cpp
+│   ├── ModeloGLB.cpp
+│   ├── ModeloGLB.h
+│   ├── MundoFisico.cpp
+│   ├── MundoFisico.h
+│   ├── ObjetosAnimadosGLB.cpp
+│   ├── ObjetosAnimadosGLB.h
+│   ├── objLoader.cpp
+│   ├── objLoader.h
+│   ├── platform_compat.h
+│   ├── quatern.cpp
+│   ├── quatern.h
+│   ├── SceneLoader.cpp
+│   ├── SceneLoader.h
+│   ├── shader.cpp
+│   ├── shader.h
+│   ├── shaders
+│   │   ├── eixos.frag
+│   │   ├── eixos.vert
+│   │   ├── flat_shdrML.frag
+│   │   ├── flat_shdrML.vert
+│   │   ├── gouraud_shdrML.frag
+│   │   ├── gouraud_shdrML.vert
+│   │   ├── phong_shdrML.frag
+│   │   ├── phong_shdrML.vert
+│   │   ├── skybox.FRAG
+│   │   └── skybox.VERT
+│   ├── textures
+│   │   └── skybox
+│   │       ├── back.jpg
+│   │       ├── bottom.jpg
+│   │       ├── front.jpg
+│   │       ├── left.jpg
+│   │       ├── right.jpg
+│   │       └── top.jpg
+│   ├── third_party
+│   │   └── nlohmann
+│   │       └── json.hpp
+│   ├── VistaEstereo.h
+│   ├── visualitzacio.cpp
+│   └── visualitzacio.h
+├── EntornVGI.slnx
+├── include
+│   ├── gl
+│   │   ├── eglew.h
+│   │   ├── glew.h
+│   │   ├── glext.h
+│   │   ├── glxew.h
+│   │   ├── SOIL2.h
+│   │   ├── SOIL.h
+│   │   └── wglew.h
+│   ├── GLFW
+│   │   ├── glfw3.h
+│   │   └── glfw3native.h
+│   ├── glfw Version.txt
+│   ├── glm
+│   │   ├── CMakeLists.txt
+│   │   ├── common.hpp
+│   │   ├── detail
+│   │   │   ├── compute_common.hpp
+│   │   │   ├── compute_vector_relational.hpp
+│   │   │   ├── _features.hpp
+│   │   │   ├── _fixes.hpp
+│   │   │   ├── func_common.inl
+│   │   │   ├── func_common_simd.inl
+│   │   │   ├── func_exponential.inl
+│   │   │   ├── func_exponential_simd.inl
+│   │   │   ├── func_geometric.inl
+│   │   │   ├── func_geometric_simd.inl
+│   │   │   ├── func_integer.inl
+│   │   │   ├── func_integer_simd.inl
+│   │   │   ├── func_matrix.inl
+│   │   │   ├── func_matrix_simd.inl
+│   │   │   ├── func_packing.inl
+│   │   │   ├── func_packing_simd.inl
+│   │   │   ├── func_trigonometric.inl
+│   │   │   ├── func_trigonometric_simd.inl
+│   │   │   ├── func_vector_relational.inl
+│   │   │   ├── func_vector_relational_simd.inl
+│   │   │   ├── glm.cpp
+│   │   │   ├── _noise.hpp
+│   │   │   ├── qualifier.hpp
+│   │   │   ├── setup.hpp
+│   │   │   ├── _swizzle_func.hpp
+│   │   │   ├── _swizzle.hpp
+│   │   │   ├── type_float.hpp
+│   │   │   ├── type_half.hpp
+│   │   │   ├── type_half.inl
+│   │   │   ├── type_mat2x2.hpp
+│   │   │   ├── type_mat2x2.inl
+│   │   │   ├── type_mat2x3.hpp
+│   │   │   ├── type_mat2x3.inl
+│   │   │   ├── type_mat2x4.hpp
+│   │   │   ├── type_mat2x4.inl
+│   │   │   ├── type_mat3x2.hpp
+│   │   │   ├── type_mat3x2.inl
+│   │   │   ├── type_mat3x3.hpp
+│   │   │   ├── type_mat3x3.inl
+│   │   │   ├── type_mat3x4.hpp
+│   │   │   ├── type_mat3x4.inl
+│   │   │   ├── type_mat4x2.hpp
+│   │   │   ├── type_mat4x2.inl
+│   │   │   ├── type_mat4x3.hpp
+│   │   │   ├── type_mat4x3.inl
+│   │   │   ├── type_mat4x4.hpp
+│   │   │   ├── type_mat4x4.inl
+│   │   │   ├── type_mat4x4_simd.inl
+│   │   │   ├── type_quat.hpp
+│   │   │   ├── type_quat.inl
+│   │   │   ├── type_quat_simd.inl
+│   │   │   ├── type_vec1.hpp
+│   │   │   ├── type_vec1.inl
+│   │   │   ├── type_vec2.hpp
+│   │   │   ├── type_vec2.inl
+│   │   │   ├── type_vec3.hpp
+│   │   │   ├── type_vec3.inl
+│   │   │   ├── type_vec4.hpp
+│   │   │   ├── type_vec4.inl
+│   │   │   ├── type_vec4_simd.inl
+│   │   │   └── _vectorize.hpp
+│   │   ├── exponential.hpp
+│   │   ├── ext
+│   │   │   ├── matrix_clip_space.hpp
+│   │   │   ├── matrix_clip_space.inl
+│   │   │   ├── matrix_common.hpp
+│   │   │   ├── matrix_common.inl
+│   │   │   ├── matrix_double2x2.hpp
+│   │   │   ├── matrix_double2x2_precision.hpp
+│   │   │   ├── matrix_double2x3.hpp
+│   │   │   ├── matrix_double2x3_precision.hpp
+│   │   │   ├── matrix_double2x4.hpp
+│   │   │   ├── matrix_double2x4_precision.hpp
+│   │   │   ├── matrix_double3x2.hpp
+│   │   │   ├── matrix_double3x2_precision.hpp
+│   │   │   ├── matrix_double3x3.hpp
+│   │   │   ├── matrix_double3x3_precision.hpp
+│   │   │   ├── matrix_double3x4.hpp
+│   │   │   ├── matrix_double3x4_precision.hpp
+│   │   │   ├── matrix_double4x2.hpp
+│   │   │   ├── matrix_double4x2_precision.hpp
+│   │   │   ├── matrix_double4x3.hpp
+│   │   │   ├── matrix_double4x3_precision.hpp
+│   │   │   ├── matrix_double4x4.hpp
+│   │   │   ├── matrix_double4x4_precision.hpp
+│   │   │   ├── matrix_float2x2.hpp
+│   │   │   ├── matrix_float2x2_precision.hpp
+│   │   │   ├── matrix_float2x3.hpp
+│   │   │   ├── matrix_float2x3_precision.hpp
+│   │   │   ├── matrix_float2x4.hpp
+│   │   │   ├── matrix_float2x4_precision.hpp
+│   │   │   ├── matrix_float3x2.hpp
+│   │   │   ├── matrix_float3x2_precision.hpp
+│   │   │   ├── matrix_float3x3.hpp
+│   │   │   ├── matrix_float3x3_precision.hpp
+│   │   │   ├── matrix_float3x4.hpp
+│   │   │   ├── matrix_float3x4_precision.hpp
+│   │   │   ├── matrix_float4x2.hpp
+│   │   │   ├── matrix_float4x2_precision.hpp
+│   │   │   ├── matrix_float4x3.hpp
+│   │   │   ├── matrix_float4x3_precision.hpp
+│   │   │   ├── matrix_float4x4.hpp
+│   │   │   ├── matrix_float4x4_precision.hpp
+│   │   │   ├── matrix_projection.hpp
+│   │   │   ├── matrix_projection.inl
+│   │   │   ├── matrix_relational.hpp
+│   │   │   ├── matrix_relational.inl
+│   │   │   ├── matrix_transform.hpp
+│   │   │   ├── matrix_transform.inl
+│   │   │   ├── quaternion_common.hpp
+│   │   │   ├── quaternion_common.inl
+│   │   │   ├── quaternion_common_simd.inl
+│   │   │   ├── quaternion_double.hpp
+│   │   │   ├── quaternion_double_precision.hpp
+│   │   │   ├── quaternion_exponential.hpp
+│   │   │   ├── quaternion_exponential.inl
+│   │   │   ├── quaternion_float.hpp
+│   │   │   ├── quaternion_float_precision.hpp
+│   │   │   ├── quaternion_geometric.hpp
+│   │   │   ├── quaternion_geometric.inl
+│   │   │   ├── quaternion_relational.hpp
+│   │   │   ├── quaternion_relational.inl
+│   │   │   ├── quaternion_transform.hpp
+│   │   │   ├── quaternion_transform.inl
+│   │   │   ├── quaternion_trigonometric.hpp
+│   │   │   ├── quaternion_trigonometric.inl
+│   │   │   ├── scalar_common.hpp
+│   │   │   ├── scalar_common.inl
+│   │   │   ├── scalar_constants.hpp
+│   │   │   ├── scalar_constants.inl
+│   │   │   ├── scalar_integer.hpp
+│   │   │   ├── scalar_integer.inl
+│   │   │   ├── scalar_int_sized.hpp
+│   │   │   ├── scalar_relational.hpp
+│   │   │   ├── scalar_relational.inl
+│   │   │   ├── scalar_uint_sized.hpp
+│   │   │   ├── scalar_ulp.hpp
+│   │   │   ├── scalar_ulp.inl
+│   │   │   ├── vector_bool1.hpp
+│   │   │   ├── vector_bool1_precision.hpp
+│   │   │   ├── vector_bool2.hpp
+│   │   │   ├── vector_bool2_precision.hpp
+│   │   │   ├── vector_bool3.hpp
+│   │   │   ├── vector_bool3_precision.hpp
+│   │   │   ├── vector_bool4.hpp
+│   │   │   ├── vector_bool4_precision.hpp
+│   │   │   ├── vector_common.hpp
+│   │   │   ├── vector_common.inl
+│   │   │   ├── vector_double1.hpp
+│   │   │   ├── vector_double1_precision.hpp
+│   │   │   ├── vector_double2.hpp
+│   │   │   ├── vector_double2_precision.hpp
+│   │   │   ├── vector_double3.hpp
+│   │   │   ├── vector_double3_precision.hpp
+│   │   │   ├── vector_double4.hpp
+│   │   │   ├── vector_double4_precision.hpp
+│   │   │   ├── vector_float1.hpp
+│   │   │   ├── vector_float1_precision.hpp
+│   │   │   ├── vector_float2.hpp
+│   │   │   ├── vector_float2_precision.hpp
+│   │   │   ├── vector_float3.hpp
+│   │   │   ├── vector_float3_precision.hpp
+│   │   │   ├── vector_float4.hpp
+│   │   │   ├── vector_float4_precision.hpp
+│   │   │   ├── vector_int1.hpp
+│   │   │   ├── vector_int1_precision.hpp
+│   │   │   ├── vector_int2.hpp
+│   │   │   ├── vector_int2_precision.hpp
+│   │   │   ├── vector_int3.hpp
+│   │   │   ├── vector_int3_precision.hpp
+│   │   │   ├── vector_int4.hpp
+│   │   │   ├── vector_int4_precision.hpp
+│   │   │   ├── vector_integer.hpp
+│   │   │   ├── vector_integer.inl
+│   │   │   ├── vector_relational.hpp
+│   │   │   ├── vector_relational.inl
+│   │   │   ├── vector_uint1.hpp
+│   │   │   ├── vector_uint1_precision.hpp
+│   │   │   ├── vector_uint2.hpp
+│   │   │   ├── vector_uint2_precision.hpp
+│   │   │   ├── vector_uint3.hpp
+│   │   │   ├── vector_uint3_precision.hpp
+│   │   │   ├── vector_uint4.hpp
+│   │   │   ├── vector_uint4_precision.hpp
+│   │   │   ├── vector_ulp.hpp
+│   │   │   └── vector_ulp.inl
+│   │   ├── ext.hpp
+│   │   ├── fwd.hpp
+│   │   ├── geometric.hpp
+│   │   ├── glm.hpp
+│   │   ├── gtc
+│   │   │   ├── bitfield.hpp
+│   │   │   ├── bitfield.inl
+│   │   │   ├── color_space.hpp
+│   │   │   ├── color_space.inl
+│   │   │   ├── constants.hpp
+│   │   │   ├── constants.inl
+│   │   │   ├── epsilon.hpp
+│   │   │   ├── epsilon.inl
+│   │   │   ├── integer.hpp
+│   │   │   ├── integer.inl
+│   │   │   ├── matrix_access.hpp
+│   │   │   ├── matrix_access.inl
+│   │   │   ├── matrix_integer.hpp
+│   │   │   ├── matrix_inverse.hpp
+│   │   │   ├── matrix_inverse.inl
+│   │   │   ├── matrix_transform.hpp
+│   │   │   ├── matrix_transform.inl
+│   │   │   ├── noise.hpp
+│   │   │   ├── noise.inl
+│   │   │   ├── packing.hpp
+│   │   │   ├── packing.inl
+│   │   │   ├── quaternion.hpp
+│   │   │   ├── quaternion.inl
+│   │   │   ├── quaternion_simd.inl
+│   │   │   ├── random.hpp
+│   │   │   ├── random.inl
+│   │   │   ├── reciprocal.hpp
+│   │   │   ├── reciprocal.inl
+│   │   │   ├── round.hpp
+│   │   │   ├── round.inl
+│   │   │   ├── type_aligned.hpp
+│   │   │   ├── type_precision.hpp
+│   │   │   ├── type_precision.inl
+│   │   │   ├── type_ptr.hpp
+│   │   │   ├── type_ptr.inl
+│   │   │   ├── ulp.hpp
+│   │   │   ├── ulp.inl
+│   │   │   └── vec1.hpp
+│   │   ├── gtx
+│   │   │   ├── associated_min_max.hpp
+│   │   │   ├── associated_min_max.inl
+│   │   │   ├── bit.hpp
+│   │   │   ├── bit.inl
+│   │   │   ├── closest_point.hpp
+│   │   │   ├── closest_point.inl
+│   │   │   ├── color_encoding.hpp
+│   │   │   ├── color_encoding.inl
+│   │   │   ├── color_space.hpp
+│   │   │   ├── color_space.inl
+│   │   │   ├── color_space_YCoCg.hpp
+│   │   │   ├── color_space_YCoCg.inl
+│   │   │   ├── common.hpp
+│   │   │   ├── common.inl
+│   │   │   ├── compatibility.hpp
+│   │   │   ├── compatibility.inl
+│   │   │   ├── component_wise.hpp
+│   │   │   ├── component_wise.inl
+│   │   │   ├── dual_quaternion.hpp
+│   │   │   ├── dual_quaternion.inl
+│   │   │   ├── easing.hpp
+│   │   │   ├── easing.inl
+│   │   │   ├── euler_angles.hpp
+│   │   │   ├── euler_angles.inl
+│   │   │   ├── extended_min_max.hpp
+│   │   │   ├── extended_min_max.inl
+│   │   │   ├── extend.hpp
+│   │   │   ├── extend.inl
+│   │   │   ├── exterior_product.hpp
+│   │   │   ├── exterior_product.inl
+│   │   │   ├── fast_exponential.hpp
+│   │   │   ├── fast_exponential.inl
+│   │   │   ├── fast_square_root.hpp
+│   │   │   ├── fast_square_root.inl
+│   │   │   ├── fast_trigonometry.hpp
+│   │   │   ├── fast_trigonometry.inl
+│   │   │   ├── float_notmalize.inl
+│   │   │   ├── functions.hpp
+│   │   │   ├── functions.inl
+│   │   │   ├── gradient_paint.hpp
+│   │   │   ├── gradient_paint.inl
+│   │   │   ├── handed_coordinate_space.hpp
+│   │   │   ├── handed_coordinate_space.inl
+│   │   │   ├── hash.hpp
+│   │   │   ├── hash.inl
+│   │   │   ├── integer.hpp
+│   │   │   ├── integer.inl
+│   │   │   ├── intersect.hpp
+│   │   │   ├── intersect.inl
+│   │   │   ├── io.hpp
+│   │   │   ├── io.inl
+│   │   │   ├── log_base.hpp
+│   │   │   ├── log_base.inl
+│   │   │   ├── matrix_cross_product.hpp
+│   │   │   ├── matrix_cross_product.inl
+│   │   │   ├── matrix_decompose.hpp
+│   │   │   ├── matrix_decompose.inl
+│   │   │   ├── matrix_factorisation.hpp
+│   │   │   ├── matrix_factorisation.inl
+│   │   │   ├── matrix_interpolation.hpp
+│   │   │   ├── matrix_interpolation.inl
+│   │   │   ├── matrix_major_storage.hpp
+│   │   │   ├── matrix_major_storage.inl
+│   │   │   ├── matrix_operation.hpp
+│   │   │   ├── matrix_operation.inl
+│   │   │   ├── matrix_query.hpp
+│   │   │   ├── matrix_query.inl
+│   │   │   ├── matrix_transform_2d.hpp
+│   │   │   ├── matrix_transform_2d.inl
+│   │   │   ├── mixed_product.hpp
+│   │   │   ├── mixed_product.inl
+│   │   │   ├── normal.hpp
+│   │   │   ├── normal.inl
+│   │   │   ├── normalize_dot.hpp
+│   │   │   ├── normalize_dot.inl
+│   │   │   ├── norm.hpp
+│   │   │   ├── norm.inl
+│   │   │   ├── number_precision.hpp
+│   │   │   ├── number_precision.inl
+│   │   │   ├── optimum_pow.hpp
+│   │   │   ├── optimum_pow.inl
+│   │   │   ├── orthonormalize.hpp
+│   │   │   ├── orthonormalize.inl
+│   │   │   ├── perpendicular.hpp
+│   │   │   ├── perpendicular.inl
+│   │   │   ├── polar_coordinates.hpp
+│   │   │   ├── polar_coordinates.inl
+│   │   │   ├── projection.hpp
+│   │   │   ├── projection.inl
+│   │   │   ├── quaternion.hpp
+│   │   │   ├── quaternion.inl
+│   │   │   ├── range.hpp
+│   │   │   ├── raw_data.hpp
+│   │   │   ├── raw_data.inl
+│   │   │   ├── rotate_normalized_axis.hpp
+│   │   │   ├── rotate_normalized_axis.inl
+│   │   │   ├── rotate_vector.hpp
+│   │   │   ├── rotate_vector.inl
+│   │   │   ├── scalar_multiplication.hpp
+│   │   │   ├── scalar_relational.hpp
+│   │   │   ├── scalar_relational.inl
+│   │   │   ├── spline.hpp
+│   │   │   ├── spline.inl
+│   │   │   ├── std_based_type.hpp
+│   │   │   ├── std_based_type.inl
+│   │   │   ├── string_cast.hpp
+│   │   │   ├── string_cast.inl
+│   │   │   ├── texture.hpp
+│   │   │   ├── texture.inl
+│   │   │   ├── transform2.hpp
+│   │   │   ├── transform2.inl
+│   │   │   ├── transform.hpp
+│   │   │   ├── transform.inl
+│   │   │   ├── type_aligned.hpp
+│   │   │   ├── type_aligned.inl
+│   │   │   ├── type_trait.hpp
+│   │   │   ├── type_trait.inl
+│   │   │   ├── vec_swizzle.hpp
+│   │   │   ├── vector_angle.hpp
+│   │   │   ├── vector_angle.inl
+│   │   │   ├── vector_query.hpp
+│   │   │   ├── vector_query.inl
+│   │   │   ├── wrap.hpp
+│   │   │   └── wrap.inl
+│   │   ├── integer.hpp
+│   │   ├── mat2x2.hpp
+│   │   ├── mat2x3.hpp
+│   │   ├── mat2x4.hpp
+│   │   ├── mat3x2.hpp
+│   │   ├── mat3x3.hpp
+│   │   ├── mat3x4.hpp
+│   │   ├── mat4x2.hpp
+│   │   ├── mat4x3.hpp
+│   │   ├── mat4x4.hpp
+│   │   ├── matrix.hpp
+│   │   ├── packing.hpp
+│   │   ├── simd
+│   │   │   ├── common.h
+│   │   │   ├── exponential.h
+│   │   │   ├── geometric.h
+│   │   │   ├── integer.h
+│   │   │   ├── matrix.h
+│   │   │   ├── neon.h
+│   │   │   ├── packing.h
+│   │   │   ├── platform.h
+│   │   │   ├── trigonometric.h
+│   │   │   └── vector_relational.h
+│   │   ├── trigonometric.hpp
+│   │   ├── vec2.hpp
+│   │   ├── vec3.hpp
+│   │   ├── vec4.hpp
+│   │   └── vector_relational.hpp
+│   ├── ImGui
+│   │   ├── imconfig.h
+│   │   ├── imgui.cpp
+│   │   ├── imgui_demo.cpp
+│   │   ├── imgui_draw.cpp
+│   │   ├── imgui.h
+│   │   ├── imgui_impl_glfw.cpp
+│   │   ├── imgui_impl_glfw.h
+│   │   ├── imgui_impl_opengl3.cpp
+│   │   ├── imgui_impl_opengl3.h
+│   │   ├── imgui_impl_opengl3_loader.h
+│   │   ├── imgui_internal.h
+│   │   ├── imgui_tables.cpp
+│   │   ├── imgui_widgets.cpp
+│   │   ├── imstb_rectpack.h
+│   │   ├── imstb_textedit.h
+│   │   ├── imstb_truetype.h
+│   │   └── nfd.h
+│   └── ImGui Version.txt
+├── lib
+│   ├── Win32
+│   │   ├── glew32.lib
+│   │   ├── glew32s.lib
+│   │   ├── glfw3dll.lib
+│   │   ├── glfw3.lib
+│   │   ├── glfw3_mt.lib
+│   │   ├── nfd_d.idb
+│   │   ├── nfd_d.lib
+│   │   ├── nfd_d.pdb
+│   │   ├── nfd.lib
+│   │   ├── nfd.pdb
+│   │   ├── OPENGL32.LIB
+│   │   ├── soil2.lib
+│   │   ├── soil2.pdb
+│   │   └── SOIL.lib
+│   └── x64
+│       ├── glew32.dll
+│       ├── glew32.lib
+│       ├── glew32s.lib
+│       ├── glfw3.dll
+│       ├── glfw3dll.lib
+│       ├── glfw3.lib
+│       ├── glfw3_mt.lib
+│       ├── nfd_d.lib
+│       ├── nfd_d.pdb
+│       ├── nfd.lib
+│       ├── nfd.pdb
+│       ├── soil2.lib
+│       └── SOIL.lib
+├── README.md
+├── res
+│   ├── arms_rig.mtl
+│   ├── arms_rig.obj
+│   ├── peça10.mtl
+│   ├── peça10.obj
+│   ├── peça11.mtl
+│   ├── peça11.obj
+│   ├── peça12.mtl
+│   ├── peça12.obj
+│   ├── peça13.mtl
+│   ├── peça13.obj
+│   ├── peça14.mtl
+│   ├── peça14.obj
+│   ├── peça15.mtl
+│   ├── peça15.obj
+│   ├── peça16.mtl
+│   ├── peça16.obj
+│   ├── peça1.mtl
+│   ├── peça1.obj
+│   ├── peça2.mtl
+│   ├── peça2.obj
+│   ├── peça3.mtl
+│   ├── peça3.obj
+│   ├── peça4.mtl
+│   ├── peça4.obj
+│   ├── peça5.mtl
+│   ├── peça5.obj
+│   ├── peça6.mtl
+│   ├── peça6.obj
+│   ├── peça7.mtl
+│   ├── peça7.obj
+│   ├── peça8.mtl
+│   ├── peça8.obj
+│   ├── peça9.mtl
+│   ├── peça9.obj
+│   ├── pizarra.mtl
+│   ├── tauler.mtl
+│   ├── tauler.obj
+│   ├── Untitled.mtl
+│   └── Untitled.obj
+├── run-linux.sh
+├── run-macos.sh
+├── run-windows.cmd
+├── run-windows.ps1
+├── tests
+│   ├── CMakeLists.txt
+│   ├── GlbTests.cpp
+│   ├── LauncherTestStub.cpp
+│   ├── ObjLoaderTests.cpp
+│   ├── PhysicsTests.cpp
+│   ├── SceneLoaderTests.cpp
+│   └── WindowsLauncherFailureTest.ps1
+├── third_party
+│   ├── cgltf
+│   │   ├── cgltf.h
+│   │   └── LICENSE
+│   ├── nativefiledialog
+│   │   ├── CMakeLists.txt
+│   │   ├── LICENSE
+│   │   └── src
+│   │       ├── common.h
+│   │       ├── include
+│   │       │   └── nfd.h
+│   │       ├── nfd_common.c
+│   │       ├── nfd_common.h
+│   │       ├── nfd_gtk.c
+│   │       ├── nfd_zenity.c
+│   │       └── simple_exec.h
+│   ├── README.md
+│   └── SOIL2
+│       ├── CMakeLists.txt
+│       └── src
+│           ├── image_array.c
+│           ├── image_array.h
+│           ├── image_array_helper.h
+│           ├── image_DXT.c
+│           ├── image_DXT.h
+│           ├── image_helper.c
+│           ├── image_helper.h
+│           ├── pkm_helper.h
+│           ├── pvr_helper.h
+│           ├── SOIL2.c
+│           ├── SOIL2.h
+│           ├── stbi_DDS_c.h
+│           ├── stbi_DDS.h
+│           ├── stbi_ext_c.h
+│           ├── stbi_ext.h
+│           ├── stb_image.h
+│           ├── stb_image_write.h
+│           ├── stbi_pkm_c.h
+│           ├── stbi_pkm.h
+│           ├── stbi_pvr_c.h
+│           ├── stbi_pvr.h
+│           ├── stbi_qoi_c.h
+│           ├── stbi_qoi.h
+│           ├── stbi_qoi_write.h
+│           ├── wfETC.c
+│           └── wfETC.h
+├── tools
+│   ├── exportar_glb.py
+│   └── medir_obj.py
+├── tree.txt
+├── vcpkg.json
+└── x64
+    ├── Debug
+    │   ├── assimp-vc145-mtd.dll
+    │   ├── Corbes
+    │   │   ├── Corba6-Hidro.crv
+    │   │   └── Corba9 Hidro.crv
+    │   ├── EntornVGI.exe
+    │   ├── EntornVGI.exp
+    │   ├── EntornVGI.lib
+    │   ├── EntornVGI.pdb
+    │   ├── glew32.dll
+    │   ├── glfw3.dll
+    │   ├── imgui.ini
+    │   ├── kubazip.dll
+    │   ├── minizipd.dll
+    │   ├── poly2tri.dll
+    │   ├── pugixml.dll
+    │   ├── shaders
+    │   │   ├── eixos.frag
+    │   │   ├── eixos.vert
+    │   │   ├── errorSHDR.frag
+    │   │   ├── errorSHDR.vert
+    │   │   ├── flat_shdrML.frag
+    │   │   ├── flat_shdrML.vert
+    │   │   ├── gouraud_shdrML.frag
+    │   │   ├── gouraud_shdrML.vert
+    │   │   ├── phong_shdrML.frag
+    │   │   ├── phong_shdrML.vert
+    │   │   ├── skybox.FRAG
+    │   │   └── skybox.VERT
+    │   ├── textures
+    │   │   └── skybox
+    │   │       ├── back.jpg
+    │   │       ├── bottom.jpg
+    │   │       ├── front.jpg
+    │   │       ├── left.jpg
+    │   │       ├── right.jpg
+    │   │       └── top.jpg
+    │   └── zd.dll
+    └── Release
+        ├── Corbes
+        │   ├── Corba9 Hidro.crv
+        │   ├── Corba9-Hidro - LT.crv
+        │   ├── Corba9-Patch 1 Hidro.crv
+        │   ├── Corba9-Patch 2 Hidro.crv
+        │   ├── Corba9-Patch 3 Hidro.crv
+        │   ├── Corba9-Patch 4 Hidro.crv
+        │   └── Corba9-Patch 5 Hidro.crv
+        ├── EntornVGI.exe
+        ├── EntornVGI.exp
+        ├── EntornVGI.lib
+        ├── EntornVGI.pdb
+        ├── glew32.dll
+        ├── glfw3.dll
+        ├── imgui.ini
+        ├── OBJFiles
+        │   ├── Skull
+        │   │   ├── 12140_Skull_v3_L2.mtl
+        │   │   ├── 12140_Skull_v3_L2.obj
+        │   │   └── Skull.jpg
+        │   └── UH60
+        │       ├── 1.FBX
+        │       ├── 1.JPG
+        │       ├── 2.JPG
+        │       ├── fuselage.jpg
+        │       ├── land.jpg
+        │       ├── pal.jpg
+        │       ├── panel.jpg
+        │       ├── Plt.jpg
+        │       ├── uh60_2009.max
+        │       ├── uh60.3ds
+        │       ├── uh60.lwo
+        │       ├── uh60.lxo
+        │       ├── uh60.max
+        │       ├── uh60.mb
+        │       ├── uh60.mtl
+        │       └── uh60.obj
+        ├── shaders
+        │   ├── eixos.frag
+        │   ├── eixos.vert
+        │   ├── flat_shdrML.frag
+        │   ├── flat_shdrML.vert
+        │   ├── gouraud_shdrML.frag
+        │   ├── gouraud_shdrML.vert
+        │   ├── Llum_Patró.lght.frag
+        │   ├── phong_shdrML.frag
+        │   ├── phong_shdrML.vert
+        │   ├── skybox.FRAG
+        │   └── skybox.VERT
+        └── textures
+            ├── brick.jpg
+            ├── colmena.jpg
+            ├── FARS.BMP
+            ├── grava.jpg
+            ├── METALL.BMP
+            ├── parquet.jpg
+            ├── PLAT.BMP
+            ├── porta.jpg
+            ├── REIXETA.BMP
+            ├── roca.JPG
+            ├── sac.JPG
+            ├── skybox
+            │   ├── back.jpg
+            │   ├── bottom.jpg
+            │   ├── front.jpg
+            │   ├── left.jpg
+            │   ├── right.jpg
+            │   └── top.jpg
+            ├── sorra.jpg
+            ├── totxana.jpg
+            ├── TXAPA.BMP
+            ├── Vent.bmp
+            ├── vimet.jpg
+            ├── wood.jpg
+            ├── world-physical-map.bmp
+            ├── world-physical-map.tga
+            └── world-political-map-with-countries.jpg
+
+212 directories, 1144 files

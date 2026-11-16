@@ -17,31 +17,21 @@ if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'CMakePresets.json'))) {
     throw "El lanzador debe estar en la raiz del repositorio, junto a CMakePresets.json ($repoRoot)."
 }
 
-# Priorizar la instalacion real si se conoce; detectar otras mediante vswhere.
+# Buscar Visual Studio con herramientas de C++ (en este orden, el primero valido gana):
+#   1) la sesion de Developer Prompt ya abierta ($env:VSINSTALLDIR)
+#   2) una instalacion en D:\Visual Studio, si existe en este equipo
+#   3) la instalacion mas reciente segun vswhere (sirve para cualquier ruta, tambien no predeterminadas)
 $vsCandidates = @()
 if ($env:VSINSTALLDIR) { $vsCandidates += $env:VSINSTALLDIR }
-
-# Comprobar la ruta manual solo si la carpeta realmente existe
-if (Test-Path -LiteralPath 'D:\Visual Studio' -ErrorAction SilentlyContinue) {
-    $vsCandidates += 'D:\Visual Studio'
-}
+if (Test-Path -LiteralPath 'D:\Visual Studio') { $vsCandidates += 'D:\Visual Studio' }
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (Test-Path -LiteralPath $vswhere) {
     $found = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
     if ($LASTEXITCODE -eq 0 -and $found) { $vsCandidates += @($found)[0].Trim() }
 }
-$vsRoot = $null
-foreach ($candidate in $vsCandidates) {
-    if (-not $candidate) { continue }
-    if (-not (Test-Path -LiteralPath $candidate -ErrorAction SilentlyContinue)) { continue }
-    $shell = Join-Path $candidate 'Common7\Tools\Launch-VsDevShell.ps1'
-    if (Test-Path -LiteralPath $shell) { $vsRoot = $candidate; break }
-}
-if (Test-Path -LiteralPath $vswhere) {
-    $found = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-    if ($LASTEXITCODE -eq 0 -and $found) { $vsCandidates += @($found)[0].Trim() }
-}
+
+# Una sola pasada: nos quedamos con el primer candidato que tenga el script del Developer Shell.
 $vsRoot = $null
 foreach ($candidate in $vsCandidates) {
     if (-not $candidate) { continue }

@@ -261,8 +261,6 @@
 // Inicialització variables de control
 	void InitGL();	
 	
-	void InitAPI();
-	void GetGLVersion(int* major, int* minor);
 
 // Entorn VGI: Control de l'EVENT ONSIZE
 	void OnSize(GLFWwindow* window, int width, int height);
@@ -382,8 +380,6 @@
 
 // Entorn VGI: Control de l'EVENT TECLAT
 	void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods);
-	void OnKeyUp(GLFWwindow* window, int key, int scancode, int action, int mods);
-	void OnTextDown(GLFWwindow* window, unsigned int codepoint);
 
 // Entorn VGI: Funcions de tractament de teclat en diferents modus
 	void Teclat_Shift(int key, GLFWwindow* window);
@@ -403,9 +399,6 @@
 	void OnMouseMove(GLFWwindow* window, double xpos, double ypos);
 	void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset);
 
-// Entorn VGI: GAMEPAD. Control de l'EVENT JOYSTICK / GAMEPAD
-	void OnGamepadMove(int jid, int event);
-	void OnJoystickMove(int jid, int event);
 
 // Entorn VGI: Control de l'EVENT TIMER
 	void OnTimer();
@@ -416,6 +409,5 @@
 	void OnFull_Screen(GLFWmonitor* monitor, GLFWwindow* window);
 // ---------------- Entorn VGI: Tractament d'errors
 	void error_callback(int code, const char* description);
-	GLenum glCheckError_(const char* file, int line);
 	void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length,
 		const GLchar* message, const void* userParam);

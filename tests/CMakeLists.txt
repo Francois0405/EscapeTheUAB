@@ -20,6 +20,91 @@ target_compile_features(SceneLoaderTests PRIVATE cxx_std_20)
 
 add_test(NAME SceneLoaderTests COMMAND SceneLoaderTests)
 
+add_executable(EditorPersistenceTests
+	EditorPersistenceTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
+)
+target_include_directories(EditorPersistenceTests PRIVATE
+	${PROJECT_SOURCE_DIR}/EntornVGI
+)
+target_compile_features(EditorPersistenceTests PRIVATE cxx_std_20)
+if(TARGET glm::glm)
+	target_link_libraries(EditorPersistenceTests PRIVATE glm::glm)
+else()
+	target_link_libraries(EditorPersistenceTests PRIVATE glm)
+endif()
+add_test(NAME EditorPersistenceTests COMMAND EditorPersistenceTests)
+
+add_executable(EditorTests
+	EditorTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/LimitesModelo.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SelectorObjetos.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/VisibilidadEditor.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
+)
+target_include_directories(EditorTests PRIVATE
+	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/third_party/cgltf
+)
+target_compile_definitions(EditorTests PRIVATE GLM_ENABLE_EXPERIMENTAL)
+target_compile_features(EditorTests PRIVATE cxx_std_20)
+if(TARGET glm::glm)
+	target_link_libraries(EditorTests PRIVATE glm::glm)
+else()
+	target_link_libraries(EditorTests PRIVATE glm)
+endif()
+add_test(NAME EditorTests COMMAND EditorTests)
+
+add_executable(GlbTests
+	GlbTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
+)
+target_include_directories(GlbTests PRIVATE
+	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/third_party/cgltf
+)
+target_compile_definitions(GlbTests PRIVATE
+	GLM_ENABLE_EXPERIMENTAL
+	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+)
+if(TARGET glm::glm)
+	target_link_libraries(GlbTests PRIVATE glm::glm)
+else()
+	target_link_libraries(GlbTests PRIVATE glm)
+endif()
+target_compile_features(GlbTests PRIVATE cxx_std_20)
+
+add_test(NAME GlbTests COMMAND GlbTests)
+
+add_executable(PhysicsTests
+	PhysicsTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/MundoFisico.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/EscenaFisica.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
+)
+target_include_directories(PhysicsTests PRIVATE
+	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/third_party/cgltf
+)
+target_compile_definitions(PhysicsTests PRIVATE
+	GLM_ENABLE_EXPERIMENTAL
+	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+)
+if(TARGET glm::glm)
+	target_link_libraries(PhysicsTests PRIVATE glm::glm EntornVGI_bullet)
+else()
+	target_link_libraries(PhysicsTests PRIVATE glm EntornVGI_bullet)
+endif()
+target_compile_features(PhysicsTests PRIVATE cxx_std_20)
+
+add_test(NAME PhysicsTests COMMAND PhysicsTests)
+
 find_package(OpenGL REQUIRED)
 find_package(glfw3 3.3 REQUIRED)
 find_package(GLEW REQUIRED)
@@ -80,3 +165,44 @@ if(WIN32)
 			-StubPath "$<TARGET_FILE:LauncherTestStub>"
 	)
 endif()
+
+# OpenXR: pruebas SIN visor ni runtime (seleccion de modo, ausencia de runtime, activacion explicita,
+# limpieza tras un fallo). Las que necesitan un casco real NO estan aqui: ver docs/OPENXR.md.
+add_executable(OpenXRTests
+	OpenXRTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/OpenXRManager.cpp
+)
+target_include_directories(OpenXRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+# OpenXRManager.cpp usa GLEW/OpenGL para los framebuffers de los swapchains (solo se llaman con sesion real).
+target_link_libraries(OpenXRTests PRIVATE EntornVGI_openxr OpenGL::GL ${TEST_GLEW_TARGET})
+if(WIN32)
+	add_custom_command(TARGET OpenXRTests POST_BUILD
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different
+			$<TARGET_RUNTIME_DLLS:OpenXRTests>
+			"$<TARGET_FILE_DIR:OpenXRTests>"
+		COMMAND_EXPAND_LISTS
+	)
+endif()
+target_compile_features(OpenXRTests PRIVATE cxx_std_20)
+add_test(NAME OpenXRTests COMMAND OpenXRTests)
+
+# Matematica de la vista VR (OpenXR -> motor con Z arriba, proyeccion asimetrica): sin visor ni ventana.
+add_executable(VistaVRTests
+	VistaVRTests.cpp
+)
+target_include_directories(VistaVRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+if(TARGET glm::glm)
+	target_link_libraries(VistaVRTests PRIVATE glm::glm)
+else()
+	target_link_libraries(VistaVRTests PRIVATE glm)
+endif()
+target_compile_features(VistaVRTests PRIVATE cxx_std_20)
+add_test(NAME VistaVRTests COMMAND VistaVRTests)
+
+# Velocidad, sprint, estamina y balanceo de camara (sin ventana ni fisica).
+add_executable(MovimientoFPSTests
+	MovimientoFPSTests.cpp
+)
+target_include_directories(MovimientoFPSTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_compile_features(MovimientoFPSTests PRIVATE cxx_std_20)
+add_test(NAME MovimientoFPSTests COMMAND MovimientoFPSTests)

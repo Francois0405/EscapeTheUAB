@@ -42,16 +42,29 @@ endif()
 add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_party/SOIL2")
 
 set(ENTORNVGI_SOURCES
+	AudioManager.cpp
+	DibujoColisionadores.cpp
+	DibujoGLB.cpp
+	Editor/EditorEscenas.cpp
+	Editor/LimitesModelo.cpp
+	Editor/SelectorObjetos.cpp
+	Editor/SerializadorEscenas.cpp
+	Editor/VisibilidadEditor.cpp
+	EscenaFisica.cpp
 	escena.cpp
 	glut_geometry.cpp
+	third_party/ImGuizmo.cpp
 	main.cpp
 	material.cpp
+	ModeloGLB.cpp
+	MundoFisico.cpp
+	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
+	OpenXRManager.cpp
 	quatern.cpp
 	SceneLoader.cpp
 	shader.cpp
 	visualitzacio.cpp
-	OpenXRManager.cpp
 )
 
 set(IMGUI_SOURCES
@@ -69,8 +82,10 @@ add_executable(EntornVGI ${ENTORNVGI_SOURCES} ${IMGUI_SOURCES})
 target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${IMGUI_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/third_party
 	${REPO_ROOT}/third_party/SOIL2/src
-	${REPO_ROOT}/third_party/OpenXR-SDK/include
+	${REPO_ROOT}/third_party/cgltf
+	${REPO_ROOT}/third_party/miniaudio
 )
 
 target_compile_definitions(EntornVGI PRIVATE
@@ -139,9 +154,19 @@ target_link_libraries(EntornVGI PRIVATE
 	${ENTORNVGI_GLEW_TARGET}
 	${ENTORNVGI_GLM_TARGET}
 	soil2
+	EntornVGI_bullet
+	EntornVGI_openxr
 	Threads::Threads
 	${CMAKE_DL_LIBS}
 )
+
+if(APPLE)
+	target_link_libraries(EntornVGI PRIVATE
+		"-framework CoreAudio"
+		"-framework AudioToolbox"
+		"-framework CoreFoundation"
+	)
+endif()
 
 if(WIN32)
 	add_custom_command(TARGET EntornVGI POST_BUILD
@@ -169,13 +194,14 @@ set_target_properties(EntornVGI PROPERTIES
 # copy_if_different avoids rewriting unchanged large assets.
 set(ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS)
 foreach(resource assets shaders textures)
+	set(resource_source "${CMAKE_CURRENT_SOURCE_DIR}/${resource}")
 	file(GLOB_RECURSE resource_files CONFIGURE_DEPENDS
 		LIST_DIRECTORIES false
-		"${CMAKE_CURRENT_SOURCE_DIR}/${resource}/*"
+		"${resource_source}/*"
 	)
 	foreach(source_file IN LISTS resource_files)
 		file(RELATIVE_PATH resource_relative_path
-			"${CMAKE_CURRENT_SOURCE_DIR}/${resource}"
+			"${resource_source}"
 			"${source_file}"
 		)
 		set(destination_file "${CMAKE_BINARY_DIR}/bin/${resource}/${resource_relative_path}")
@@ -190,6 +216,16 @@ foreach(resource assets shaders textures)
 		list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${destination_file}")
 	endforeach()
 endforeach()
+set(hand_texture_source "${REPO_ROOT}/res/ui/hand.png")
+set(hand_texture_output "${CMAKE_BINARY_DIR}/bin/res/ui/hand.png")
+add_custom_command(OUTPUT "${hand_texture_output}"
+	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/res/ui"
+	COMMAND ${CMAKE_COMMAND} -E copy_if_different "${hand_texture_source}" "${hand_texture_output}"
+	DEPENDS "${hand_texture_source}"
+	VERBATIM
+	COMMENT "Syncing res/ui/hand.png"
+)
+list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${hand_texture_output}")
 add_custom_target(EntornVGI_runtime_resources ALL
 	DEPENDS ${ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS}
 )
