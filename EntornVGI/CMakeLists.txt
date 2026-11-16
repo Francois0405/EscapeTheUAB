@@ -1,3 +1,4 @@
+
 set(REPO_ROOT "${PROJECT_SOURCE_DIR}")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -169,6 +170,7 @@ if(APPLE)
 endif()
 
 if(WIN32)
+	target_compile_definitions(EntornVGI PRIVATE NOMINMAX)
 	add_custom_command(TARGET EntornVGI POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			$<TARGET_RUNTIME_DLLS:EntornVGI>
