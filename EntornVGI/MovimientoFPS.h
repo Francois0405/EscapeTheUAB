@@ -24,7 +24,7 @@ namespace fps
 	// exp(-tasa*t) de la distancia, se ejecute en un paso o en muchos.
 	inline float Acercar(float actual, float objetivo, float tasaPorSegundo, float delta)
 	{
-		return actual + (objetivo - actual) * (1.0f - std::exp(-tasaPorSegundo * std::max(delta, 0.0f)));
+		return actual + (objetivo - actual) * (1.0f - std::exp(-tasaPorSegundo * (std::max)(delta, 0.0f)));
 	}
 
 	// 0 -> 1 con arranque y llegada suaves (derivada 0 en los extremos).
@@ -94,7 +94,7 @@ namespace fps
 			{
 				tiempoSinSprint += delta;
 				if (tiempoSinSprint >= p.retardoRecuperacion)
-					estamina = std::min(p.estaminaMaxima, estamina + p.recuperacionPorSegundo * delta);
+					estamina = (std::min)(p.estaminaMaxima, estamina + p.recuperacionPorSegundo * delta);
 				if (agotada && estamina >= p.minimoTrasAgotarse) agotada = false;
 			}
 
@@ -170,11 +170,11 @@ namespace fps
 			const bool andando = enSuelo && velocidadReal > p.velocidadMinima;
 
 			// Cuánto de "correr" hay: 0 al caminar, 1 al correr (continuo, sigue a la velocidad suavizada).
-			const float rango = std::max(mov.velocidadSprint - mov.velocidadCaminar, 1e-3f);
+			const float rango = (std::max)(mov.velocidadSprint - mov.velocidadCaminar, 1e-3f);
 			const float correr = std::clamp((velocidadObjetivo - mov.velocidadCaminar) / rango, 0.0f, 1.0f);
 			const float agachado = std::clamp(fraccionAgachado, 0.0f, 1.0f);
 			const float zancada = p.zancadaCaminar + (p.zancadaCorrer - p.zancadaCaminar) * correr;
-			if (andando) fase += 6.28318530718f * distanciaHorizontal / std::max(zancada, 0.1f);
+			if (andando) fase += 6.28318530718f * distanciaHorizontal / (std::max)(zancada, 0.1f);
 			if (fase > 6.28318530718f * 1000.0f) fase = std::fmod(fase, 6.28318530718f);   // sin perder precisión
 
 			peso = Acercar(peso, andando ? 1.0f : 0.0f, andando ? p.entrada : p.salida, delta);
