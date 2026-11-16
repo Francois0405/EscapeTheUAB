@@ -1,14 +1,14 @@
-//******** PRACTICA VISUALITZACIÓ GRÀFICA INTERACTIVA (EE-UAB)
-//******** Entorn bàsic VS2026 amb interfície MFC/GLFW i Status Bar
+//******** PRACTICA VISUALITZACIï¿½ GRï¿½FICA INTERACTIVA (EE-UAB)
+//******** Entorn bï¿½sic VS2026 amb interfï¿½cie MFC/GLFW i Status Bar
 //******** Enric Marti (Setembre 2026)
-// phong_shdrML.vert: Vertex Program en GLSL en versió OpenGL 3.3 o 4.60 per a implementar:
-//     a) Iluminació de Gouraud
+// phong_shdrML.vert: Vertex Program en GLSL en versiï¿½ OpenGL 3.3 o 4.60 per a implementar:
+//     a) Iluminaciï¿½ de Gouraud
 //     b) Fonts de llum puntuals o direccionals
 //     c) Fonts de llum restringides
-//     d) Atenuació de fonts de llum
-//     e) Modus d'assignació de textura MODULATE o DECAL
-//     f) Calcul component a de transparència segons color sigui provinent de material o de VAO
-//     g) Algorisme incremental iluminació Phong encapsulat en phongModel()
+//     d) Atenuaciï¿½ de fonts de llum
+//     e) Modus d'assignaciï¿½ de textura MODULATE o DECAL
+//     f) Calcul component a de transparï¿½ncia segons color sigui provinent de material o de VAO
+//     g) Algorisme incremental iluminaciï¿½ Phong encapsulat en phongModel()
 
 //#version 330 core
 #version 330 core
@@ -18,19 +18,19 @@
 // ---- L18- Estructures Font de LLum i Material (coeficients reflectivitat).
 struct Light
 {	bool sw_light;		// Booleana que indica si llum encesa (TRUE) o apagada (FALSE).
-	vec4 position;		// Posició de la font de llum, en Coord. Món o Càmera (Punt de Vista).
+	vec4 position;		// Posiciï¿½ de la font de llum, en Coord. Mï¿½n o Cï¿½mera (Punt de Vista).
 	vec4 ambient;		// Intensitat (r,g,b,a) de llum ambient de la font.
 	vec4 diffuse;		// Intensitat (r,g,b,a) de llum difusa de la font.
 	vec4 specular;		// Intensitat (r,g,b,a) de la llum especular de la font
-	vec3 attenuation;	// Atenuació de la font per distància: .x (quadràtica), .y (lineal), .z (constant).
+	vec3 attenuation;	// Atenuaciï¿½ de la font per distï¿½ncia: .x (quadrï¿½tica), .y (lineal), .z (constant).
 	bool restricted;	// Booleana si font de llum restringida (TRUE) o no (FALSE).
-	vec3 spotDirection;	// Vector de direcció de la font restringida (Coord. Món).
+	vec3 spotDirection;	// Vector de direcciï¿½ de la font restringida (Coord. Mï¿½n).
 	float spotCosCutoff;	// Angle d'obertura de la font restringids (en graus). 
-	float spotExponent;	// Exponent per al càlcul intenstitat font restringida segons model Warn.
+	float spotExponent;	// Exponent per al cï¿½lcul intenstitat font restringida segons model Warn.
 };
 
 struct Material
-{	vec4 emission;		// Coeficient d'emissió (r,g,b,a) del material.
+{	vec4 emission;		// Coeficient d'emissiï¿½ (r,g,b,a) del material.
 	vec4 ambient;		// Coeficient de reflectivitat ambient (r,g,b,a) del material.
         vec4 diffuse;		// Coeficient de reflectivitat difusa (r,g,b,a) del material.
 	vec4 specular;		// Coeficient de reflectivitat especular (r,g,b,a) del material.
@@ -44,17 +44,17 @@ layout (location = 2) in vec3 in_Normal; 	// Coordenades (x,y,z) Vector Normal
 layout (location = 3) in vec2 in_TexCoord; 	// Coordenades (s,t) Coordenada textura
 
 // --- L46- Variables uniform
-uniform mat4 normalMatrix;	// “the transpose of the inverse of the gl_ModelViewMatrix.” 
+uniform mat4 normalMatrix;	// ï¿½the transpose of the inverse of the gl_ModelViewMatrix.ï¿½ 
 uniform mat4 projectionMatrix;	// Projection Matrix
 uniform mat4 viewMatrix; 	// View Matrix
 uniform mat4 modelMatrix;	// Model Matrix
 
 uniform sampler2D texture0;	// Imatge textura
-uniform bool textur;		// Booleana d’activació (TRUE) de textures o no (FALSE).
-uniform bool flag_invert_y;	// Booleana que activa la inversió coordenada textura t (o Y) a 1.0-cty segons llibreria SOIL (TRUE) o no (FALSE).
-uniform bool fixedLight;	// Booleana que defineix la font de llum fixe en Coordenades Món (TRUE) o no (FALSE).
-uniform bool sw_material;	// Booleana que indica si el color del vèrtex ve del Material emission, ambient, diffuse, specular (TRUE) o del vector de color del vèrtex in_Color (FALSE)
-uniform bvec4 sw_intensity;	// Filtre per a cada tipus de reflexió: Emissiva (sw_intensity[0]), Ambient (sw_intensity[1]), Difusa (sw_intensity[2]) o Especular (sw_intensity[2]).
+uniform bool textur;		// Booleana dï¿½activaciï¿½ (TRUE) de textures o no (FALSE).
+uniform bool flag_invert_y;	// Booleana que activa la inversiï¿½ coordenada textura t (o Y) a 1.0-cty segons llibreria SOIL (TRUE) o no (FALSE).
+uniform bool fixedLight;	// Booleana que defineix la font de llum fixe en Coordenades Mï¿½n (TRUE) o no (FALSE).
+uniform bool sw_material;	// Booleana que indica si el color del vï¿½rtex ve del Material emission, ambient, diffuse, specular (TRUE) o del vector de color del vï¿½rtex in_Color (FALSE)
+uniform bvec4 sw_intensity;	// Filtre per a cada tipus de reflexiï¿½: Emissiva (sw_intensity[0]), Ambient (sw_intensity[1]), Difusa (sw_intensity[2]) o Especular (sw_intensity[2]).
 uniform vec4 LightModelAmbient;	// Intensitat de llum ambient (r,g,b,a).
 uniform Light LightSource[MaxLights];	// Vector de fonts de llum.
 uniform Material material;	// Vector de coeficients reflectivitat de materials.
@@ -81,6 +81,17 @@ void main()	// --- L68-
 // --- L81- Pas color del vertex al Fragent Shader
     vertexColor = in_Color;
 
-// --- L84- Transformacio de Visualitzacio amb Matriu Projeccio (PMatrix), Matriu Càmera (VMatrix) i Matriu TG (MMatrix)
+// --- L84- Transformacio de Visualitzacio amb Matriu Projeccio (PMatrix), Matriu Cmera (VMatrix) i Matriu TG (MMatrix)
     gl_Position = vec4(projectionMatrix * viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
+
+    // --- INICIO EFECTO PS1 VERTEX SNAPPING ---
+    float snapRes = 160.0; // Cuanto mÃ¡s bajo sea el nÃºmero, mÃ¡s temblarÃ¡n los vÃ©rtices
+    
+    vec4 pos = gl_Position;
+    pos.xyz = pos.xyz / pos.w;
+    pos.xy = floor(pos.xy * snapRes) / snapRes;
+    pos.xyz *= pos.w;
+    
+    gl_Position = pos;
+    // --- FIN EFECTO PS1 ---
 }

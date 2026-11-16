@@ -12,7 +12,6 @@
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_opengl3.h"
 #include "file_dialog_compat.h"
-
 #include "framework.h"
 #include "shader.h"
 #include "visualitzacio.h"
@@ -34,8 +33,6 @@
 #include <iostream>
 #include <algorithm>
 #include <cmath>
-#include <cstdint>
-#include "AudioManager.h"
 
 // CODI NOSTRE
 
@@ -129,8 +126,6 @@ namespace
 	fps::MovimientoJugador movimientoJugador;
 	fps::BalanceoCamara balanceoCamara;
 	fps::BarraEstamina barraEstamina;
-	fps::ControladorPasos controladorPasos;
-	AudioManager audioManager;
 	bool mostrarPorcentajeEstamina = true;
 	glm::vec3 piesFotogramaAnterior(0.0f);
 	bool hayPiesFotogramaAnterior = false;
@@ -170,48 +165,6 @@ namespace
 	fisica::DemoCuboCaida demoFisica(mundoFisico);
 	bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
 	bool objetosAnimadosListos = false;   // true cuando los modelos ya están en la GPU
-	GLuint texturaManoInteraccion = 0;
-	bool cargaLanzamientoActiva = false;
-	float tiempoCargaLanzamiento = 0.0f;
-	constexpr float TiempoMaximoCargaLanzamiento = 1.25f;
-
-	void cargarTexturaManoInteraccion()
-	{
-		std::string ruta = "res/ui/hand.png";
-		if (!std::filesystem::exists(ruta) && std::filesystem::exists("../res/ui/hand.png"))
-			ruta = "../res/ui/hand.png";
-
-		int ancho = 0, alto = 0, canales = 0;
-		unsigned char* pixels = SOIL_load_image(ruta.c_str(), &ancho, &alto, &canales, SOIL_LOAD_RGBA);
-		if (pixels == nullptr)
-		{
-			std::fprintf(stderr, "No se pudo cargar %s: %s\n", ruta.c_str(), SOIL_last_result());
-			return;
-		}
-
-		for (int i = 0; i < ancho * alto; ++i)
-		{
-			const unsigned char opacidad = static_cast<unsigned char>(
-				(static_cast<unsigned int>(pixels[i * 4]) * pixels[i * 4 + 3] + 127u) / 255u);
-			pixels[i * 4] = pixels[i * 4 + 1] = pixels[i * 4 + 2] = 255;
-			pixels[i * 4 + 3] = opacidad;
-		}
-
-		glGenTextures(1, &texturaManoInteraccion);
-		if (texturaManoInteraccion != 0)
-		{
-			glBindTexture(GL_TEXTURE_2D, texturaManoInteraccion);
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ancho, alto, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-			glBindTexture(GL_TEXTURE_2D, 0);
-		}
-		else
-			std::fprintf(stderr, "No se pudo crear la textura del HUD de interaccion.\n");
-		SOIL_free_image_data(pixels);
-	}
 
 	// ÚNICO sitio que conoce la cámara FPS: convierte "lo que ve el jugador" en una posición y una
 	// dirección del mundo. Todo el sistema de interacción (puertas y agarre) solo recibe esos dos
@@ -222,62 +175,18 @@ namespace
 		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
 	}
 
-	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
-
-	struct ObjetivoInteraccion
-	{
-		AccionInteraccion accion = AccionInteraccion::Ninguna;
-		int indiceDinamico = -1;
-		glb::ObjetoAnimado* objetoAnimado = nullptr;
-	};
-
-	ObjetivoInteraccion buscarObjetivoInteraccion()
-	{
-		if (escenaFisica->HayAgarre()) return {};
-
-		glm::vec3 origen, direccion;
-		origenYDireccionDeLaMirada(origen, direccion);
-		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
-		const fisica::IdCuerpo cuerpoMirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, alcance);
-		if (cuerpoMirado == fisica::CuerpoInvalido) return {};
-
-		const int indiceDinamico = escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoMirado);
-		if (indiceDinamico >= 0)
-			return { AccionInteraccion::Recoger, indiceDinamico };
-
-		const int indiceAnimado = escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoMirado);
-		if (indiceAnimado < 0 || indiceAnimado >= static_cast<int>(objetosAnimados.objetos.size()))
-			return {};
-
-		glb::ObjetoAnimado* puerta = glb::BuscarObjetoInteractuable(objetosAnimados, origen, direccion);
-		if (puerta == nullptr || puerta != &objetosAnimados.objetos[indiceAnimado])
-			return {};
-
-		const AccionInteraccion accion =
-			(puerta->estado == glb::EstadoPuerta::Cerrada || puerta->estado == glb::EstadoPuerta::Cerrando)
-			? AccionInteraccion::Abrir : AccionInteraccion::Cerrar;
-		return { accion, -1, puerta };
-	}
-
-	void iniciarCargaLanzamiento()
-	{
-		if (!escenaFisica->HayAgarre()) return;
-		cargaLanzamientoActiva = true;
-		tiempoCargaLanzamiento = 0.0f;
-	}
-
+	// Acción "interactuar" (tecla E). Prioridad:
+	//   1) Si ya se lleva un objeto en la mano, se suelta (con las manos ocupadas no se abren puertas).
+	//   2) Si se mira un objeto agarrable (dinámico) al alcance, se agarra.
+	//   3) Si no, se intenta con la puerta que se tiene delante.
+	// Quien la llame debe comprobar antes la pausa, el foco y el teclado de ImGui (PuedeInteractuar).
 	void interactuar()
 	{
-		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
-		if (objetivo.accion == AccionInteraccion::Recoger)
-		{
-			glm::vec3 origen, direccion;
-			origenYDireccionDeLaMirada(origen, direccion);
-			escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
-		}
-		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
-			objetivo.objetoAnimado != nullptr)
-			glb::AlternarPuerta(*objetivo.objetoAnimado);
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		if (escenaFisica->HayAgarre()) { escenaFisica->SoltarAgarre(); return; }
+		if (escenaFisica->IntentarAgarrar(origen, direccion) >= 0) return;
+		glb::InteractuarConObjeto(objetosAnimados, origen, direccion);
 	}
 
 	// Cada fotograma de juego: la "mano" sigue a la mirada. Solo si se puede jugar (sin pausa, sin
@@ -454,37 +363,6 @@ namespace
 		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
 	}
 
-	void cancelarCargaLanzamiento()
-	{
-		cargaLanzamientoActiva = false;
-		tiempoCargaLanzamiento = 0.0f;
-	}
-
-	void lanzarObjetoCargado()
-	{
-		if (!cargaLanzamientoActiva) return;
-		const float carga = std::clamp(tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f);
-		cancelarCargaLanzamiento();
-		if (!escenaFisica->HayAgarre()) return;
-
-		glm::vec3 origen, direccion;
-		origenYDireccionDeLaMirada(origen, direccion);
-		const float rapidez = 3.0f + 12.0f * carga;
-		escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez);
-	}
-
-	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
-	{
-		if (!cargaLanzamientoActiva) return;
-		if (!entradaFPSActiva() || !escenaFisica->HayAgarre())
-		{
-			cancelarCargaLanzamiento();
-			return;
-		}
-		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
-			tiempoCargaLanzamiento = std::min(tiempoCargaLanzamiento + std::max(delta, 0.0f), TiempoMaximoCargaLanzamiento);
-	}
-
 	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
 	// asi que la camara y el movil comparten la misma fase y se quedan quietos al chocar con una pared.
 	void actualizarBalanceoVisual(float delta)
@@ -498,26 +376,8 @@ namespace
 		if (distancia > 1.0f) distancia = 0.0f;   // teletransporte o cambio de habitacion: no es un paso
 
 		const float fraccion = mundoFisico.FraccionAgachado();
-		const bool enSuelo = mundoFisico.JugadorEnSuelo();
-		const bool activo = entradaFPSActiva() && mundoFisico.HayJugador();
-
-		balanceoCamara.Actualizar(delta, distancia, enSuelo, activo,
+		balanceoCamara.Actualizar(delta, distancia, mundoFisico.JugadorEnSuelo(), entradaFPSActiva() && mundoFisico.HayJugador(),
 			movimientoJugador.Velocidad(), movimientoJugador.parametros, fraccion);
-
-		// --- AUDIO DE PASOS ---
-		fps::EstadoPaso estadoPaso = fps::EstadoPaso::Reposo;
-		if (activo && distancia > 0.0001f)
-		{
-			if (fraccion > 0.5f)                    estadoPaso = fps::EstadoPaso::Agachado;
-			else if (movimientoJugador.Sprintando()) estadoPaso = fps::EstadoPaso::Sprint;
-			else                                    estadoPaso = fps::EstadoPaso::Caminando;
-		}
-
-		if (controladorPasos.Actualizar(delta, distancia, enSuelo, activo, estadoPaso))
-		{
-			audioManager.playFootstep(estadoPaso);
-		}
-		// ----------------------
 
 		// El movil usa la misma fase; su amplitud crece al correr y baja al agacharse.
 		pesoCaminata = balanceoCamara.Peso() * balanceoCamara.FactorDeAmplitud();
@@ -684,7 +544,6 @@ namespace
 		ventanaConFoco = focused == GLFW_TRUE;
 		if (!ventanaConFoco)
 		{
-			cancelarCargaLanzamiento();
 			fijarCapturaCursor(window, false);
 		}
 		else
@@ -1172,7 +1031,7 @@ namespace
 		glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
 		glClear(GL_COLOR_BUFFER_BIT);
 		glBindFramebuffer(GL_READ_FRAMEBUFFER, ojo.fbo);
-		glBlitFramebuffer(0, 0, ojo.ancho, ojo.alto, x0, y0, x0 + anchoDestino, y0 + altoDestino, GL_COLOR_BUFFER_BIT, GL_LINEAR);
+		glBlitFramebuffer(0, 0, ojo.ancho, ojo.alto, x0, y0, x0 + anchoDestino, y0 + altoDestino, GL_COLOR_BUFFER_BIT, GL_NEAREST);
 	}
 }
 
@@ -1489,7 +1348,7 @@ void dibuixa_Escena() {
 	// DEMO FASE 1: la puerta usa el cubo test.obj ya cargado por la escena.
 	for (const auto& modelo : modelosHabitacion)
 	{
-		if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
+		if (!modelo.first.ends_with("test.obj")) continue;
 		dibuixa_EscenaGL(
 			shader_programID, eixos, eixos_Id, grid, hgrid,
 			OBJOBJ, col_obj, sw_material,
@@ -1506,7 +1365,7 @@ void dibuixa_Escena() {
 	{
 		for (const auto& modelo : modelosHabitacion)
 		{
-			if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
+			if (!modelo.first.ends_with("test.obj")) continue;
 			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
 			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
@@ -1829,39 +1688,6 @@ static void dibujarBarraEstamina()
 	}
 }
 
-static void dibujarHUDInteraccion()
-{
-	const ImGuiIO& io = ImGui::GetIO();
-	if (!entradaFPSActiva() || gestorOpenXR.SesionEnMarcha() ||
-		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
-		return;
-
-	ImDrawList* dl = ImGui::GetForegroundDrawList();
-	if (cargaLanzamientoActiva)
-	{
-		const float ancho = 140.0f, alto = 8.0f;
-		const float x = (io.DisplaySize.x - ancho) * 0.5f;
-		const float y = io.DisplaySize.y * 0.5f + 36.0f;
-		dl->AddRectFilled(ImVec2(x - 2.0f, y - 2.0f), ImVec2(x + ancho + 2.0f, y + alto + 2.0f),
-			IM_COL32(0, 0, 0, 190), 3.0f);
-		dl->AddRectFilled(ImVec2(x, y), ImVec2(x + ancho * std::clamp(
-			tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f), y + alto),
-			IM_COL32(235, 220, 150, 245), 2.0f);
-	}
-
-	if (texturaManoInteraccion == 0 || io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
-		return;
-	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
-	if (objetivo.accion != AccionInteraccion::Recoger) return;
-
-	const float tamanoIcono = 34.0f;
-	const float x = (io.DisplaySize.x - tamanoIcono) * 0.5f;
-	const float y = std::min(io.DisplaySize.y * 0.5f + 24.0f, io.DisplaySize.y - tamanoIcono - 12.0f);
-	const ImTextureID textura = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texturaManoInteraccion));
-	dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
-		ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
-}
-
 void draw_Menu_ImGui()
 {
 	// Start the Dear ImGui frame
@@ -1869,7 +1695,6 @@ void draw_Menu_ImGui()
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
 	dibujarBarraEstamina();
-	dibujarHUDInteraccion();
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
 
@@ -2051,7 +1876,7 @@ void draw_Menu_ImGui()
 		if (escenaFisica->HayAgarre())
 		{
 			const int agarrado = escenaFisica->ObjetoAgarrado();
-			ImGui::Text("en la mano: %s (mantener E para cargar y lanzar)", objetosEscena[agarrado].id.c_str());
+			ImGui::Text("en la mano: %s (E para soltar)", objetosEscena[agarrado].id.c_str());
 		}
 		else ImGui::TextUnformatted("mano vacia (E sobre un objeto dinamico para agarrarlo)");
 		if (mundoFisico.HayJugador())
@@ -4825,15 +4650,6 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
-	if (key == GLFW_KEY_E && action == GLFW_RELEASE && cargaLanzamientoActiva)
-	{
-		if (entradaFPSActiva() && !io.WantTextInput && !io.WantCaptureKeyboard &&
-			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha())
-			lanzarObjetoCargado();
-		else
-			cancelarCargaLanzamiento();
-		return;
-	}
 	if (editorEscenas.Activo())
 	{
 		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
@@ -4869,16 +4685,11 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			sincronizarCursorFPS(window);
 			return;
 		}
-		// E recoge el objeto mirado o interactua con puertas; con un objeto sujeto inicia la carga del lanzamiento.
-		if (key == GLFW_KEY_E && action == GLFW_PRESS)
+		// E: agarrar/soltar el objeto que miramos o abrir/cerrar la puerta (no si hay pausa, falta foco o se escribe en ImGui).
+		if (key == GLFW_KEY_E && action == GLFW_PRESS &&
+			glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput))
 		{
-			if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput) &&
-				!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
-				!gestorOpenXR.SesionEnMarcha())
-			{
-				if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
-				else interactuar();
-			}
+			interactuar();
 			return;
 		}
 		// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
@@ -7479,14 +7290,11 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severi
 	fprintf(stderr, "\n");
 }
 
-
 // main(): Funció principal del programa. Inicialitza la finestra, els callbacks i el bucle principal d'operació
 int main(int argc, char** argv)
 {
 	SetWorkingDirectoryToAssetRoot(argc > 0 ? argv[0] : nullptr);
-//	std::cout << "Hello World!\n";
 
-//    GLFWwindow* window;
 // Entorn VGI. Timer: Variables
 	float time = elapsedTime;
 	float now;
@@ -7605,9 +7413,8 @@ int main(int argc, char** argv)
 
 // Initialize Application control varibles
 	InitGL();
-cargarTexturaManoInteraccion();
 
-char phonePath[] = "./assets/models/Phone.obj";
+	char phonePath[] = "./assets/models/Phone.obj";
 	phoneOBJ = new COBJModel();
 	if (phoneOBJ->LoadModel(phonePath) != 0)
 	{
@@ -7617,7 +7424,6 @@ char phonePath[] = "./assets/models/Phone.obj";
 	}
 
 // ------------- Entorn VGI: Callbacks
-// Set GLFW event callbacks. I removed glfwSetWindowSizeCallback for conciseness
 	glfwSetWindowSizeCallback(window, OnSize);										// - Windows Size in screen Coordinates
 	glfwSetFramebufferSizeCallback(window, OnFramebufferSize);							// - Medidas del framebuffer en píxeles
 	glfwSetWindowFocusCallback(window, OnWindowFocus);
@@ -7637,11 +7443,8 @@ char phonePath[] = "./assets/models/Phone.obj";
 	IMGUI_CHECKVERSION();
 	ImGui::CreateContext();
 	ImGuiIO& io = ImGui::GetIO(); (void)io;
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
-	//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
 // Entorn VGI.ImGui: Setup Dear ImGui style
-	//ImGui::StyleColorsDark();
 	ImGui::StyleColorsLight();
 
 	io.FontGlobalScale = 1.0f;
@@ -7661,13 +7464,45 @@ char phonePath[] = "./assets/models/Phone.obj";
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
 	OnFramebufferSize(window, w, h);
-	// Entorn VGI.ImGui: End Setup Dear ImGui context
 
+// =========================================================================
+// CONFIGURACIÓ GRÁFICS PS1
+// =========================================================================
+	const int PS1_WIDTH = 320;
+	const int PS1_HEIGHT = 240;
+
+	unsigned int ps1FBO, ps1ColorTex, ps1RBO;
+	glGenFramebuffers(1, &ps1FBO);
+	glBindFramebuffer(GL_FRAMEBUFFER, ps1FBO);
+
+	// Crear textura de color
+	glGenTextures(1, &ps1ColorTex);
+	glBindTexture(GL_TEXTURE_2D, ps1ColorTex);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, PS1_WIDTH, PS1_HEIGHT, 0, GL_RGB, GL_UNSIGNED_BYTE, NULL);
+	// CLAVE PARA PS1: GL_NEAREST evita el suavizado de los píxeles
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, ps1ColorTex, 0);
+
+	// Crear Renderbuffer para profundidad (Depth)
+	glGenRenderbuffers(1, &ps1RBO);
+	glBindRenderbuffer(GL_RENDERBUFFER, ps1RBO);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, PS1_WIDTH, PS1_HEIGHT);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, ps1RBO);
+
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+		std::cerr << "Error en el FBO de PS1\n";
+	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Volver al framebuffer por defecto
+// =========================================================================
+// CONFIGURACIÓ GRÁFICS PS1
+// =========================================================================
+
+// =========================================================================
+// BUCLE PRINCIPAL Y RENDER PS1
+// =========================================================================
 // Loop until the user closes the window
 	while (!glfwWindowShouldClose(window))
-	{	// Poll for and process events */
-		//        glfwPollEvents();
-
+	{
 		// Entorn VGI. Timer: common part, do this only once
 		now = glfwGetTime();
 		delta = now - previous;
@@ -7681,7 +7516,6 @@ char phonePath[] = "./assets/models/Phone.obj";
 		glfwPollEvents();
 		editorEscenas.Actualizar(window, static_cast<float>(delta));
 		sincronizarCursorFPS(window);
-		actualizarCargaLanzamiento(window, static_cast<float>(delta));
 
 		const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
 			glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
@@ -7717,13 +7551,11 @@ char phonePath[] = "./assets/models/Phone.obj";
 		// Físicas: 1) las hojas animadas mueven sus cuerpos cinemáticos, 2) Bullet avanza en pasos
 		// fijos de 1/60 s (con el juego en pausa el mundo se congela).
 		escenaFisica->SincronizarCinematicos(objetosAnimados);
-		actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS() &&
-			!gestorOpenXR.SesionEnMarcha());
+		actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
 		mundoFisico.FijarPausa(animacionPausada);
 		mundoFisico.Actualizar(static_cast<float>(delta));
 		sincronizarJugadorYCamara();
 		actualizarBalanceoVisual(static_cast<float>(delta));
-
 
 		// Entorn VGI.ImGui: Dibuixa menú ImGui
 		draw_Menu_ImGui();
@@ -7762,7 +7594,7 @@ char phonePath[] = "./assets/models/Phone.obj";
 		}
 
 		// Con VR en marcha, la escena se dibuja en el visor (y se refleja en la ventana). Sin VR, o si el visor
-		// no está mostrando imagen, se dibuja la vista de escritorio de siempre.
+		// no está mostrando imagen, se dibuja la vista de escritorio con normalidad.
 		{
 			static bool vrEnMarchaAntes = false;
 			const bool vrEnMarcha = gestorOpenXR.SesionEnMarcha();
@@ -7771,30 +7603,62 @@ char phonePath[] = "./assets/models/Phone.obj";
 				glfwSwapInterval(vrEnMarcha ? 0 : 1);
 				vrEnMarchaAntes = vrEnMarcha;
 			}
+
 			const bool vrDibujado = !editorEscenas.Activo() && vrEnMarcha && dibujarEscenaVR();
-			if (!vrDibujado) OnPaint(window);
+			if (!vrDibujado)
+			{
+				// Guardamos el tamaño real de la ventana antes de cambiar w y h para el FBO PS1
+				int winW = 0, winH = 0;
+				glfwGetFramebufferSize(window, &winW, &winH);
+
+				// 1. Dibujar escena en el Framebuffer de baja resolución (320x240)
+				glBindFramebuffer(GL_FRAMEBUFFER, ps1FBO);
+				w = PS1_WIDTH;
+				h = PS1_HEIGHT;
+				glViewport(0, 0, PS1_WIDTH, PS1_HEIGHT);
+				OnPaint(window);
+
+				// 2. Copiar (Blit) la imagen baja resolución a la pantalla principal con filtro pixelado
+				glBindFramebuffer(GL_READ_FRAMEBUFFER, ps1FBO);
+				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // 0 es la pantalla principal
+
+				glBlitFramebuffer(
+					0, 0, PS1_WIDTH, PS1_HEIGHT, // Origen (tu FBO de 320x240)
+					0, 0, winW, winH,            // Destino (toda la ventana actual)
+					GL_COLOR_BUFFER_BIT,         // Copiar solo el color
+					GL_NEAREST                   // Escalar sin suavizado (píxeles cuadrados)
+				);
+
+				// 3. Restaurar el framebuffer por defecto, variables globales y viewport para que ImGui se dibuje nítido encima
+				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+				w = winW;
+				h = winH;
+				glViewport(0, 0, w, h);
+			}
+
+			// Renderizado final de ImGui e intercambio de buffers
+			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			glfwSwapBuffers(window);
 		}
-
-		// Entorn VGI.ImGui: Capta dades del menú InGui
-		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
-
-		// Entorn VGI: Activa la finestra actual
-		glfwMakeContextCurrent(window);
-
-		// Entorn VGI: Transferència del buffer OpenGL a buffer de pantalla
-		glfwSwapBuffers(window);
 	}
+// =========================================================================
+// BLUCE PRINCIPAL Y RENDER PS1
+// =========================================================================
 
 	// Una salida por el boton de Windows tambien devuelve el cursor al sistema.
 	fijarCapturaCursor(window, false);
 
+// =========================================================================
+// RESET RECURSOS PS1
+// =========================================================================
+	glDeleteFramebuffers(1, &ps1FBO);
+	glDeleteTextures(1, &ps1ColorTex);
+	glDeleteRenderbuffers(1, &ps1RBO);
+// =========================================================================
+// RESET RECURSOS PS1
+// =========================================================================
 
 // Entorn VGI.ImGui: Cleanup ImGui
-	if (texturaManoInteraccion != 0)
-	{
-		glDeleteTextures(1, &texturaManoInteraccion);
-		texturaManoInteraccion = 0;
-	}
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
@@ -7848,15 +7712,4 @@ char phonePath[] = "./assets/models/Phone.obj";
 	glfwTerminate();
 
 	return 0;
-
 }
-
-// Ejecutar programa: Ctrl + F5 o menú Depurar > Iniciar sin depurarglfwDestroyWindow
-// Depurar programa: F5 o menú Depurar > Iniciar depuración
-
-// Sugerencias para primeros pasos: 1. Use la ventana del Explorador de soluciones para agregar y administrar archivos
-//   2. Use la ventana de Team Explorer para conectar con el control de código fuente
-//   3. Use la ventana de salida para ver la salida de compilación y otros mensajes
-//   4. Use la ventana Lista de errores para ver los errores
-//   5. Vaya a Proyecto > Agregar nuevo elemento para crear nuevos archivos de código, o a Proyecto > Agregar elemento existente para agregar archivos de código existentes al proyecto
-//   6. En el futuro, para volver a abrir este proyecto, vaya a Archivo > Abrir > Proyecto y seleccione el archivo .sln
