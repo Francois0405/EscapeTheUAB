@@ -725,8 +725,8 @@ void InitGL()
 	oPolars = -1;
 
 // Entorn VGI: Variables de control de l'opció CÀMERA->NAVEGA?
-	n[0] = 0.0;		n[1] = 0.0;		n[2] = 0.0;
-	opvN.x = 10.0;	opvN.y = 0.0;		opvN.z = 0.0;
+	n[0] = 14.1;	n[1] = 0.0;		n[2] = -1.3;
+	opvN.x = 14.1;	opvN.y = -21.0;	opvN.z = -1.3;
 	angleZ = 0.0;
 	
 // Entorn VGI: Variables de control de l'opció CÀMERA->GEODE?
@@ -3496,8 +3496,8 @@ void OnCameraNavega()
 
 		// Incialitzar variables Navega segons configuració eixos en Polars
 		if (Vis_Polar == POLARZ) {
-			opvN.x = 10.0;	opvN.y = 0.0;	opvN.z = 0.0; // opvN = (10,0,0)
-			n[0] = 0.0;		n[1] = 0.0;		n[2] = 0.0;
+			opvN.x = 14.1;	opvN.y = -21.0;	opvN.z = -1.3;
+			n[0] = 14.1;	n[1] = 0.0;		n[2] = -1.3;
 			angleZ = 0.0;
 			}
 		else if (Vis_Polar == POLARY) {
@@ -3518,8 +3518,8 @@ void OnCameraOrigenNavega()
 {
 // TODO: Agregue aquí su código de controlador de comandos
 	if (camera == CAM_NAVEGA) 
-		{	n[0] = 0.0;		n[1] = 0.0;		n[2] = 0.0;
-			opvN.x = 10.0;	opvN.y = 0.0;		opvN.z = 0.0;
+		{	n[0] = 14.1;	n[1] = 0.0;		n[2] = -1.3;
+			opvN.x = 14.1;	opvN.y = -21.0;	opvN.z = -1.3;
 			angleZ = 0.0;
 		}
 }
