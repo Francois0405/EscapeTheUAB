@@ -92,6 +92,8 @@ namespace vr
 		bool gatilloActual = false;
 		bool gatilloRecienPulsado = false;
 		bool gatilloRecienSoltado = false;
+		bool gatilloIzqAnterior = false;
+		bool gatilloIzqRecienPulsado = false;
 
 		XrAction accionApuntar = XR_NULL_HANDLE;
 		XrSpace espacioApuntar[2] = { XR_NULL_HANDLE, XR_NULL_HANDLE };
@@ -520,6 +522,7 @@ namespace vr
 	bool GestorOpenXR::GatilloRecienPulsado() const { return impl->gatilloRecienPulsado; }
 	bool GestorOpenXR::GatilloRecienSoltado() const { return impl->gatilloRecienSoltado; }
 	bool GestorOpenXR::GatilloPulsado() const { return impl->gatilloActual; }
+	bool GestorOpenXR::GatilloIzquierdoRecienPulsado() const { return impl->gatilloIzqRecienPulsado; }
 
 	void GestorOpenXR::Desactivar()
 	{
@@ -546,6 +549,8 @@ namespace vr
 			xrDestroySession(impl->sesion);
 		}
 		if (impl->instancia != XR_NULL_HANDLE) xrDestroyInstance(impl->instancia);
+		impl->gatilloIzqAnterior = false;
+		impl->gatilloIzqRecienPulsado = false;
 		impl->espacioApuntar[0] = XR_NULL_HANDLE;
 		impl->espacioApuntar[1] = XR_NULL_HANDLE;
 		impl->accionApuntar = XR_NULL_HANDLE;
@@ -630,6 +635,7 @@ namespace vr
 
 	void GestorOpenXR::ProcesarEventos()
 	{
+		impl->gatilloIzqRecienPulsado = false;
 		impl->gatilloRecienPulsado = false;
 		impl->gatilloRecienSoltado = false;
 		if (impl->instancia == XR_NULL_HANDLE) return;
@@ -691,6 +697,20 @@ namespace vr
 
 			if (XR_SUCCEEDED(xrSyncActions(impl->sesion, &syncInfo)))
 			{
+				XrActionStateGetInfo getInfoIzq = { XR_TYPE_ACTION_STATE_GET_INFO };
+				getInfoIzq.action = impl->accionAgarrar;
+				getInfoIzq.subactionPath = impl->rutaManos[0]; // Mano izquierda (0)
+
+				XrActionStateBoolean estadoBoolIzq = { XR_TYPE_ACTION_STATE_BOOLEAN };
+				bool pulsadoIzquierda = false;
+				if (XR_SUCCEEDED(xrGetActionStateBoolean(impl->sesion, &getInfoIzq, &estadoBoolIzq)))
+				{
+					if (estadoBoolIzq.isActive && estadoBoolIzq.currentState == XR_TRUE)
+						pulsadoIzquierda = true;
+				}
+				impl->gatilloIzqRecienPulsado = (pulsadoIzquierda && !impl->gatilloIzqAnterior);
+				impl->gatilloIzqAnterior = pulsadoIzquierda;
+
 				XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
 				getInfo.action = impl->accionAgarrar;
 				getInfo.subactionPath = impl->rutaManos[1]; // SOLO mano derecha (1)
@@ -713,6 +733,7 @@ namespace vr
 		{
 			impl->gatilloActual = false;
 			impl->gatilloAnterior = false;
+			impl->gatilloIzqAnterior = false;
 		}
 	}
 
@@ -897,6 +918,7 @@ namespace vr
 	bool GestorOpenXR::GatilloRecienSoltado() const { return false; }
 	bool GestorOpenXR::GatilloPulsado() const { return false; }
 	bool GestorOpenXR::PoseApuntadoMando(int, PoseXR&) const { return false; }
+	bool GestorOpenXR::GatilloIzquierdoRecienPulsado() const { return false; }
 
 	EstadoOpenXR GestorOpenXR::Activar(GLFWwindow*, int, int)
 	{

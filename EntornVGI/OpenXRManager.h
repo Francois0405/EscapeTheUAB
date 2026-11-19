@@ -123,6 +123,7 @@ namespace vr
  		bool GatilloRecienPulsado() const;
 		bool GatilloRecienSoltado() const;
     	bool GatilloPulsado() const;
+		bool GatilloIzquierdoRecienPulsado() const;
 
 		bool PoseApuntadoMando(int mano, PoseXR& poseOut) const;
 	private:
