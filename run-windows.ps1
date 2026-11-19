@@ -20,15 +20,22 @@ if (-not (Test-Path -LiteralPath (Join-Path $repoRoot 'CMakePresets.json'))) {
 # Buscar Visual Studio con herramientas de C++ (en este orden, el primero valido gana):
 #   1) la sesion de Developer Prompt ya abierta ($env:VSINSTALLDIR)
 #   2) una instalacion en D:\Visual Studio, si existe en este equipo
-#   3) la instalacion mas reciente segun vswhere (sirve para cualquier ruta, tambien no predeterminadas)
+#   3) las instalaciones segun vswhere (la mas reciente primero; todas como respaldo)
 $vsCandidates = @()
 if ($env:VSINSTALLDIR) { $vsCandidates += $env:VSINSTALLDIR }
 if (Test-Path -LiteralPath 'D:\Visual Studio') { $vsCandidates += 'D:\Visual Studio' }
 
 $vswhere = Join-Path ${env:ProgramFiles(x86)} 'Microsoft Visual Studio\Installer\vswhere.exe'
 if (Test-Path -LiteralPath $vswhere) {
-    $found = & $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath
-    if ($LASTEXITCODE -eq 0 -and $found) { $vsCandidates += @($found)[0].Trim() }
+    $latest = @(& $vswhere -latest -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)
+    if ($LASTEXITCODE -ne 0) { $latest = @() }
+    $all = @(& $vswhere -all -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath)
+    if ($LASTEXITCODE -ne 0 -and -not $latest) { throw 'No se pudo consultar vswhere para localizar Visual Studio.' }
+    $found = @($latest) + @($all)
+    foreach ($candidate in $found) {
+        $candidate = $candidate.Trim()
+        if ($candidate -and $vsCandidates -notcontains $candidate) { $vsCandidates += $candidate }
+    }
 }
 
 # Una sola pasada: nos quedamos con el primer candidato que tenga el script del Developer Shell.

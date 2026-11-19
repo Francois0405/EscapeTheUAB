@@ -166,6 +166,48 @@ namespace
 	fisica::DemoCuboCaida demoFisica(mundoFisico);
 	bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
 	bool objetosAnimadosListos = false;   // true cuando los modelos ya están en la GPU
+	GLuint texturaManoInteraccion = 0;
+	bool cargaLanzamientoActiva = false;
+	float tiempoCargaLanzamiento = 0.0f;
+	constexpr float TiempoMaximoCargaLanzamiento = 1.25f;
+
+	void cargarTexturaManoInteraccion()
+	{
+		std::string ruta = "res/ui/hand.png";
+		if (!std::filesystem::exists(ruta) && std::filesystem::exists("../res/ui/hand.png"))
+			ruta = "../res/ui/hand.png";
+
+		int ancho = 0, alto = 0, canales = 0;
+		unsigned char* pixels = SOIL_load_image(ruta.c_str(), &ancho, &alto, &canales, SOIL_LOAD_RGBA);
+		if (pixels == nullptr)
+		{
+			std::fprintf(stderr, "No se pudo cargar %s: %s\n", ruta.c_str(), SOIL_last_result());
+			return;
+		}
+
+		for (int i = 0; i < ancho * alto; ++i)
+		{
+			const unsigned char opacidad = static_cast<unsigned char>(
+				(static_cast<unsigned int>(pixels[i * 4]) * pixels[i * 4 + 3] + 127u) / 255u);
+			pixels[i * 4] = pixels[i * 4 + 1] = pixels[i * 4 + 2] = 255;
+			pixels[i * 4 + 3] = opacidad;
+		}
+
+		glGenTextures(1, &texturaManoInteraccion);
+		if (texturaManoInteraccion != 0)
+		{
+			glBindTexture(GL_TEXTURE_2D, texturaManoInteraccion);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ancho, alto, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+			glBindTexture(GL_TEXTURE_2D, 0);
+		}
+		else
+			std::fprintf(stderr, "No se pudo crear la textura del HUD de interaccion.\n");
+		SOIL_free_image_data(pixels);
+	}
 
 	// ÚNICO sitio que conoce la cámara FPS: convierte "lo que ve el jugador" en una posición y una
 	// dirección del mundo. Todo el sistema de interacción (puertas y agarre) solo recibe esos dos
@@ -176,18 +218,66 @@ namespace
 		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
 	}
 
+	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
+
+	struct ObjetivoInteraccion
+	{
+		AccionInteraccion accion = AccionInteraccion::Ninguna;
+		int indiceDinamico = -1;
+		glb::ObjetoAnimado* objetoAnimado = nullptr;
+	};
+
+	ObjetivoInteraccion buscarObjetivoInteraccion()
+	{
+		if (escenaFisica->HayAgarre()) return {};
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
+		const fisica::IdCuerpo cuerpoMirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, alcance);
+		if (cuerpoMirado == fisica::CuerpoInvalido) return {};
+
+		const int indiceDinamico = escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoMirado);
+		if (indiceDinamico >= 0)
+			return { AccionInteraccion::Recoger, indiceDinamico };
+
+		const int indiceAnimado = escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoMirado);
+		if (indiceAnimado < 0 || indiceAnimado >= static_cast<int>(objetosAnimados.objetos.size()))
+			return {};
+
+		glb::ObjetoAnimado* puerta = glb::BuscarObjetoInteractuable(objetosAnimados, origen, direccion);
+		if (puerta == nullptr || puerta != &objetosAnimados.objetos[indiceAnimado])
+			return {};
+
+		const AccionInteraccion accion =
+			(puerta->estado == glb::EstadoPuerta::Cerrada || puerta->estado == glb::EstadoPuerta::Cerrando)
+			? AccionInteraccion::Abrir : AccionInteraccion::Cerrar;
+		return { accion, -1, puerta };
+	}
+
+	void iniciarCargaLanzamiento()
+	{
+		if (!escenaFisica->HayAgarre()) return;
+		cargaLanzamientoActiva = true;
+		tiempoCargaLanzamiento = 0.0f;
+	}
+
 	// Acción "interactuar" (tecla E). Prioridad:
-	//   1) Si ya se lleva un objeto en la mano, se suelta (con las manos ocupadas no se abren puertas).
-	//   2) Si se mira un objeto agarrable (dinámico) al alcance, se agarra.
-	//   3) Si no, se intenta con la puerta que se tiene delante.
+	//   1) Si se mira un objeto agarrable (dinámico) al alcance, se agarra.
+	//   2) Si no, se intenta con la puerta que se tiene delante.
 	// Quien la llame debe comprobar antes la pausa, el foco y el teclado de ImGui (PuedeInteractuar).
 	void interactuar()
 	{
-		glm::vec3 origen, direccion;
-		origenYDireccionDeLaMirada(origen, direccion);
-		if (escenaFisica->HayAgarre()) { escenaFisica->SoltarAgarre(); return; }
-		if (escenaFisica->IntentarAgarrar(origen, direccion) >= 0) return;
-		glb::InteractuarConObjeto(objetosAnimados, origen, direccion);
+		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+		if (objetivo.accion == AccionInteraccion::Recoger)
+		{
+			glm::vec3 origen, direccion;
+			origenYDireccionDeLaMirada(origen, direccion);
+			escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
+		}
+		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
+			objetivo.objetoAnimado != nullptr)
+			glb::AlternarPuerta(*objetivo.objetoAnimado);
 	}
 
 	// Cada fotograma de juego: la "mano" sigue a la mirada. Solo si se puede jugar (sin pausa, sin
@@ -292,7 +382,10 @@ namespace
 	{
 		if (mundoFisico.HayJugador()) return;
 		glm::vec3 pies = posicionPiesDesdeCamara();
-		pies.z += 0.02f;   // 2 cm de margen: nace sin tocar el suelo y se apoya solo
+		pies.x = 0;
+		pies.y = 0;
+
+		pies.z = 0.1f;   // 2 cm de margen: nace sin tocar el suelo y se apoya solo
 		mundoFisico.CrearJugador(pies);
 		std::cout << "Jugador fisico creado con los pies en (" << pies.x << ", " << pies.y << ", " << pies.z << ")." << std::endl;
 	}
@@ -362,6 +455,37 @@ namespace
 	bool entradaFPSActiva()
 	{
 		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
+	}
+
+	void cancelarCargaLanzamiento()
+	{
+		cargaLanzamientoActiva = false;
+		tiempoCargaLanzamiento = 0.0f;
+	}
+
+	void lanzarObjetoCargado()
+	{
+		if (!cargaLanzamientoActiva) return;
+		const float carga = std::clamp(tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f);
+		cancelarCargaLanzamiento();
+		if (!escenaFisica->HayAgarre()) return;
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		const float rapidez = 3.0f + 12.0f * carga;
+		escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez);
+	}
+
+	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
+	{
+		if (!cargaLanzamientoActiva) return;
+		if (!entradaFPSActiva() || !escenaFisica->HayAgarre())
+		{
+			cancelarCargaLanzamiento();
+			return;
+		}
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+			tiempoCargaLanzamiento = std::min(tiempoCargaLanzamiento + std::max(delta, 0.0f), TiempoMaximoCargaLanzamiento);
 	}
 
 	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
@@ -545,6 +669,7 @@ namespace
 		ventanaConFoco = focused == GLFW_TRUE;
 		if (!ventanaConFoco)
 		{
+			cancelarCargaLanzamiento();
 			fijarCapturaCursor(window, false);
 		}
 		else
@@ -1689,6 +1814,38 @@ static void dibujarBarraEstamina()
 	}
 }
 
+static void dibujarHUDInteraccion()
+{
+	const ImGuiIO& io = ImGui::GetIO();
+	if (!entradaFPSActiva() || gestorOpenXR.SesionEnMarcha() ||
+		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
+		return;
+
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	if (cargaLanzamientoActiva)
+	{
+		const float ancho = 140.0f, alto = 8.0f;
+		const float x = (io.DisplaySize.x - ancho) * 0.5f;
+		const float y = io.DisplaySize.y * 0.5f + 36.0f;
+		dl->AddRectFilled(ImVec2(x - 2.0f, y - 2.0f), ImVec2(x + ancho + 2.0f, y + alto + 2.0f),
+			IM_COL32(0, 0, 0, 190), 3.0f);
+		dl->AddRectFilled(ImVec2(x, y), ImVec2(x + ancho * std::clamp(
+			tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f), y + alto),
+			IM_COL32(235, 220, 150, 245), 2.0f);
+	}
+
+	if (texturaManoInteraccion == 0 || io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
+		return;
+	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+	if (objetivo.accion != AccionInteraccion::Recoger) return;
+
+	const float tamanoIcono = 34.0f;
+	const float x = (io.DisplaySize.x - tamanoIcono) * 0.5f;
+	const float y = std::min(io.DisplaySize.y * 0.5f + 24.0f, io.DisplaySize.y - tamanoIcono - 12.0f);
+	const ImTextureID textura = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texturaManoInteraccion));
+	dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
+		ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
+}
 
 GLuint texturaFondoMenu = 0;
 
@@ -1711,6 +1868,7 @@ void draw_Menu_ImGui()
 	if (estadoActual == ESTADO_JUGANDO)
 	{
 		dibujarBarraEstamina();
+		dibujarHUDInteraccion();
 	}
 
 	// =========================================================================
@@ -4786,6 +4944,15 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 // EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 // (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
+	if (key == GLFW_KEY_E && action == GLFW_RELEASE && cargaLanzamientoActiva)
+	{
+		if (entradaFPSActiva() && !io.WantTextInput && !io.WantCaptureKeyboard &&
+			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha())
+			lanzarObjetoCargado();
+		else
+			cancelarCargaLanzamiento();
+		return;
+	}
 	if (editorEscenas.Activo())
 	{
 		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
@@ -4821,11 +4988,16 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			sincronizarCursorFPS(window);
 			return;
 		}
-		// E: agarrar/soltar el objeto que miramos o abrir/cerrar la puerta (no si hay pausa, falta foco o se escribe en ImGui).
-		if (key == GLFW_KEY_E && action == GLFW_PRESS &&
-			glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput))
+		// Mantener E carga el lanzamiento; soltarla lanza el objeto sujeto.
+		if (key == GLFW_KEY_E && action == GLFW_PRESS)
 		{
-			interactuar();
+			if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput) &&
+				!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
+				!gestorOpenXR.SesionEnMarcha())
+			{
+				if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+				else interactuar();
+			}
 			return;
 		}
 		// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
@@ -7549,6 +7721,7 @@ int main(int argc, char** argv)
 
 // Initialize Application control varibles
 	InitGL();
+	cargarTexturaManoInteraccion();
 
 	char phonePath[] = "./assets/models/Phone.obj";
 	phoneOBJ = new COBJModel();
@@ -7694,6 +7867,7 @@ int main(int argc, char** argv)
 
 		editorEscenas.Actualizar(window, static_cast<float>(delta));
 		sincronizarCursorFPS(window);
+		actualizarCargaLanzamiento(window, static_cast<float>(delta));
 
 		// 3. Congelar física, movimiento y animaciones si NO estamos jugando
 		if (estadoActual == ESTADO_JUGANDO)
@@ -7724,7 +7898,8 @@ int main(int argc, char** argv)
 			glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
 			gestorOpenXR.ProcesarEventos();
 			escenaFisica->SincronizarCinematicos(objetosAnimados);
-			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
+			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS() &&
+				!gestorOpenXR.SesionEnMarcha());
 			mundoFisico.FijarPausa(animacionPausada);
 			mundoFisico.Actualizar(static_cast<float>(delta));
 			sincronizarJugadorYCamara();
@@ -7820,6 +7995,11 @@ int main(int argc, char** argv)
 
 	// Una salida por el boton de Windows tambien devuelve el cursor al sistema.
 	fijarCapturaCursor(window, false);
+	if (texturaManoInteraccion != 0)
+	{
+		glDeleteTextures(1, &texturaManoInteraccion);
+		texturaManoInteraccion = 0;
+	}
 
 // =========================================================================
 // RESET RECURSOS PS1
