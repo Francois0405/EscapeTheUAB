@@ -536,7 +536,8 @@ namespace
 	// Estado del juego FPS que permite la entrada (no hay pausa, ni foco perdido, ni paneles de depuracion).
 	bool entradaFPSActiva()
 	{
-		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
+		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug &&
+			(ventanaConFoco || gestorOpenXR.SesionEnMarcha());
 	}
 
 	void cancelarCargaLanzamiento()
@@ -7892,7 +7893,8 @@ char phonePath[] = "./assets/models/Phone.obj";
 		// La animación se considera PAUSADA cuando el juego está en pausa (ESC) o la ventana
 		// ha perdido el foco. Abrir los paneles de depuración (F1) NO la pausa, porque el
 		// botón "Abrir puerta" está justamente en esos paneles.
-		const bool animacionPausada = editorEscenas.Activo() || fpsPausado || !ventanaConFoco;
+		const bool animacionPausada = editorEscenas.Activo() || fpsPausado ||
+			(!ventanaConFoco && !gestorOpenXR.SesionEnMarcha());
 		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
 		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
 		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado
