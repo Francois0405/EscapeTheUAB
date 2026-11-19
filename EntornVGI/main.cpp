@@ -209,16 +209,10 @@ namespace
 		SOIL_free_image_data(pixels);
 	}
 
-	// ÚNICO sitio que conoce la cámara FPS: convierte "lo que ve el jugador" en una posición y una
-	// dirección del mundo. Todo el sistema de interacción (puertas y agarre) solo recibe esos dos
-	// vectores; con VR se llamaría igual, pero con los de la mano o el mando.
-	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
-	{
-		origen = glm::vec3(opvN.x, opvN.y, opvN.z);                              // posición de la vista
-		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
-	}
-
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
+
+	bool modoJuegoFPS();
+	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion);
 
 	struct ObjetivoInteraccion
 	{
@@ -376,6 +370,97 @@ namespace
 		return glm::vec3(opvN.x, opvN.y, opvN.z - mundoFisico.AlturaOjosJugador());
 	}
 
+	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
+	{
+		if (gestorOpenXR.SesionEnMarcha())
+		{
+			vr::PoseXR poseMando;
+			if (gestorOpenXR.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
+			{
+				const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+				const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+				const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
+					gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+
+				const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMando, anclaje);
+				const glm::mat4 mundoMando = glm::inverse(vistaMando);
+
+				origen = glm::vec3(mundoMando[3]);
+				direccion = glm::normalize(-glm::vec3(mundoMando[2]));
+				return;
+			}
+		}
+
+		// Modo escritorio (PC): cámara FPS
+		origen = glm::vec3(opvN.x, opvN.y, opvN.z);
+		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);
+	}
+
+	bool matrizMandoIzquierdoMundo(glm::mat4& matrizMundo)
+	{
+		if (!gestorOpenXR.SesionEnMarcha()) return false;
+
+		vr::PoseXR poseMandoIzq;
+		if (!gestorOpenXR.PoseApuntadoMando(0, poseMandoIzq)) return false;
+
+		const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+		const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+		const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
+			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+
+		const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMandoIzq, anclaje);
+		matrizMundo = glm::inverse(vistaMando);
+		return true;
+	}
+
+	bool linternaMovilActiva = true;
+
+	void actualizarLinternaMovil()
+	{
+		// Usamos la luz #3 como linterna del móvil
+		const int idxLuz = 3;
+
+		if (!linternaMovilActiva || !mostrarMovil || !modoJuegoFPS() || editorEscenas.Activo())
+		{
+			llumGL[idxLuz].encesa = false;
+			return;
+		}
+
+		glm::vec3 posLuz(0.0f);
+		glm::vec3 dirLuz(0.0f);
+		glm::mat4 mundoMandoIzq(1.0f);
+
+		if (matrizMandoIzquierdoMundo(mundoMandoIzq))
+		{
+			// En VR: posición y dirección (-Z local) del mando izquierdo
+			posLuz = glm::vec3(mundoMandoIzq[3]);
+			dirLuz = glm::normalize(-glm::vec3(mundoMandoIzq[2]));
+		}
+		else
+		{
+			// En PC: sale desde la cámara hacia donde miras
+			posLuz = glm::vec3(opvN.x, opvN.y, opvN.z);
+			dirLuz = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
+		}
+
+		llumGL[idxLuz].encesa = true;
+		llumGL[idxLuz].posicio = { posLuz.x, posLuz.y, posLuz.z, 1.0 }; // w=1.0 -> luz posicional
+		llumGL[idxLuz].difusa = { 1.0f, 0.96f, 0.88f, 1.0f };           // blanco cálido tipo flash LED
+		llumGL[idxLuz].especular = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		// Atenuación suave con la distancia (f_att = 1 / (a*d^2 + b*d + c))
+		llumGL[idxLuz].atenuacio.a = 0.02;
+		llumGL[idxLuz].atenuacio.b = 0.08;
+		llumGL[idxLuz].atenuacio.c = 1.0;
+
+		// Cono de luz (spotlight)
+		llumGL[idxLuz].restringida = true;
+		llumGL[idxLuz].spotdirection = { dirLuz.x, dirLuz.y, dirLuz.z, 0.0 };
+		llumGL[idxLuz].spotcoscutoff = std::cos(glm::radians(28.0f)); // Apertura de 28 grados
+		llumGL[idxLuz].spotexponent = 12.0f;                          // Suavizado de bordes del cono
+	}
+
+
 	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
 	// el suelo ya exista y el jugador no caiga al vacío.
 	void crearJugadorFisico()
@@ -450,7 +535,8 @@ namespace
 	// Estado del juego FPS que permite la entrada (no hay pausa, ni foco perdido, ni paneles de depuracion).
 	bool entradaFPSActiva()
 	{
-		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco;
+		return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug &&
+			(ventanaConFoco || gestorOpenXR.SesionEnMarcha());
 	}
 
 	void cancelarCargaLanzamiento()
@@ -480,7 +566,7 @@ namespace
 			cancelarCargaLanzamiento();
 			return;
 		}
-		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS || gestorOpenXR.GatilloPulsado())
 			tiempoCargaLanzamiento = std::min(tiempoCargaLanzamiento + std::max(delta, 0.0f), TiempoMaximoCargaLanzamiento);
 	}
 
@@ -1416,6 +1502,75 @@ void configura_Escena() {
 	GTMatrix = instancia(transf, TG, TGF);
 }
 
+namespace
+{
+	GLuint rayoVao = 0, rayoVbo = 0;
+
+	void dibujarRayoMandoVR()
+	{
+		if (!gestorOpenXR.SesionEnMarcha() || eixos_programID == 0) return;
+
+		vr::PoseXR poseMando;
+		if (!gestorOpenXR.PoseApuntadoMando(1, poseMando)) return; // Solo mando derecho (1)
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		direccion = glm::normalize(direccion);
+
+		// Longitud del láser (mismo alcance que el agarre/interacción)
+		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
+		const glm::vec3 destino = origen + direccion * alcance;
+
+		// Color RGBA: verde si estás agarrando o apuntando a algo interactuable; cian por defecto
+		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+		const bool resaltado = escenaFisica->HayAgarre() || objetivo.accion != AccionInteraccion::Ninguna;
+		const float r = resaltado ? 0.1f : 0.0f;
+		const float g = resaltado ? 1.0f : 0.85f;
+		const float b = resaltado ? 0.2f : 1.0f;
+		const float a = 1.0f;
+
+		// 7 floats por vértice: pos (vec3) + color (vec4)
+		const float vertices[] = {
+			origen.x,  origen.y,  origen.z,  r, g, b, a,
+			destino.x, destino.y, destino.z, r, g, b, a
+		};
+
+		if (rayoVao == 0)
+		{
+			glGenVertexArrays(1, &rayoVao);
+			glGenBuffers(1, &rayoVbo);
+			glBindVertexArray(rayoVao);
+			glBindBuffer(GL_ARRAY_BUFFER, rayoVbo);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+			// location = 0 -> vec3 posición
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)0);
+
+			// location = 1 -> vec4 color
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(3 * sizeof(float)));
+		}
+		else
+		{
+			glBindVertexArray(rayoVao);
+			glBindBuffer(GL_ARRAY_BUFFER, rayoVbo);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+		}
+
+		glUseProgram(eixos_programID);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+
+		glLineWidth(2.5f);
+		glDrawArrays(GL_LINES, 0, 2);
+		glLineWidth(1.0f);
+
+		glBindVertexArray(0);
+		glUseProgram(shader_programID);
+	}
+}
+
 // dibuixa_Escena: Funcio que crida al dibuix dels diferents elements de l'escana
 void dibuixa_Escena() {
 
@@ -1513,22 +1668,39 @@ void dibuixa_Escena() {
 
 	if (modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr)
 	{
-		const float idle = intensidadIdle;
-		const float bob = pesoCaminata * intensidadWalking;
-		glm::mat4 matrizLocal(1.0f);
-		matrizLocal = glm::translate(matrizLocal, movilPosicion + glm::vec3(
-			std::sin(faseCaminata) * bob * 0.45f,
-			std::sin(tiempoFPS * 1.4f) * idle + std::abs(std::sin(faseCaminata)) * bob,
-			0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.x) +
-			std::sin(tiempoFPS * 1.4f) * idle + mouseSwayY, glm::vec3(1.0f, 0.0f, 0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.y) -
-			std::sin(faseCaminata) * bob * 0.8f - mouseSwayX, glm::vec3(0.0f, 1.0f, 0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.z) +
-			std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0.0f, 0.0f, 1.0f));
-		matrizLocal = glm::scale(matrizLocal, glm::vec3(movilEscala));
-		const glm::mat4 matrizMovil = glm::inverse(ViewMatrix) * matrizLocal;
+		glm::mat4 matrizMovil(1.0f);
+		glm::mat4 mundoMandoIzq(1.0f);
 
+		if (matrizMandoIzquierdoMundo(mundoMandoIzq))
+		{
+			// En VR: anclado al mando izquierdo
+			glm::mat4 ajusteLocal(1.0f);
+			ajusteLocal = glm::rotate(ajusteLocal, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
+			ajusteLocal = glm::scale(ajusteLocal, glm::vec3(movilEscala));
+
+			matrizMovil = mundoMandoIzq * ajusteLocal;
+		}
+		else
+		{
+			// En PC: pegado a la cámara con balanceo
+			const float idle = intensidadIdle;
+			const float bob = pesoCaminata * intensidadWalking;
+			glm::mat4 matrizLocal(1.0f);
+			matrizLocal = glm::translate(matrizLocal, movilPosicion + glm::vec3(
+				std::sin(faseCaminata) * bob * 0.45f,
+				std::sin(tiempoFPS * 1.4f) * idle + std::abs(std::sin(faseCaminata)) * bob,
+				0.0f));
+			matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.x) +
+				std::sin(tiempoFPS * 1.4f) * idle + mouseSwayY, glm::vec3(1.0f, 0.0f, 0.0f));
+			matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.y) -
+				std::sin(faseCaminata) * bob * 0.8f - mouseSwayX, glm::vec3(0.0f, 1.0f, 0.0f));
+			matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.z) +
+				std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0.0f, 0.0f, 1.0f));
+			matrizLocal = glm::scale(matrizLocal, glm::vec3(movilEscala));
+			matrizMovil = glm::inverse(ViewMatrix) * matrizLocal; // Sin "const glm::mat4" delante
+		}
+
+		// Dibujar el móvil en ambos modos (VR y PC)
 		const bool texturaAnterior = textura;
 		textura = true;
 		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
@@ -1561,6 +1733,9 @@ void dibuixa_Escena() {
 	}
 	else if (mostrarColisionadores && !editorEscenas.Activo())
 		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
+
+	// Dibujar el rayo láser del mando derecho en VR.
+	dibujarRayoMandoVR();
 }
 
 
@@ -1813,7 +1988,7 @@ static void dibujarBarraEstamina()
 static void dibujarHUDInteraccion()
 {
 	const ImGuiIO& io = ImGui::GetIO();
-	if (!entradaFPSActiva() || gestorOpenXR.SesionEnMarcha() ||
+	if (!entradaFPSActiva() ||
 		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
 		return;
 
@@ -5013,6 +5188,14 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D) return;
 		if (key == GLFW_KEY_PRINT_SCREEN && mods == 0 && action == GLFW_PRESS)
 			statusB = !statusB;
+
+		if (key == GLFW_KEY_F && action == GLFW_PRESS)
+		{
+			linternaMovilActiva = !linternaMovilActiva;
+			std::cout << "Linterna: " << (linternaMovilActiva ? "ON" : "OFF") << std::endl;
+			return;
+		}
+
 		return;
 	}
 
@@ -7846,9 +8029,7 @@ int main(int argc, char** argv)
 		if (pPulsadaAhora && !pPulsadaAntes)
 		{
 			if (estadoActual == ESTADO_JUGANDO)
-			{
 				estadoActual = ESTADO_PAUSA;
-			}
 			else if (estadoActual == ESTADO_PAUSA)
 			{
 				estadoActual = ESTADO_JUGANDO;
@@ -7858,21 +8039,23 @@ int main(int argc, char** argv)
 		}
 		pPulsadaAntes = pPulsadaAhora;
 
-		// 2. Sincronizar la pausa interna del motor (libera/captura el ratón automáticamente)
+		// 2. Sincronizar la pausa interna del motor
 		fpsPausado = (estadoActual != ESTADO_JUGANDO);
 
 		editorEscenas.Actualizar(window, static_cast<float>(delta));
 		sincronizarCursorFPS(window);
 		actualizarCargaLanzamiento(window, static_cast<float>(delta));
 
-		// 3. Congelar física, movimiento y animaciones si NO estamos jugando
+		// 3. Movimiento, física y VR (solo cuando estamos jugando)
 		if (estadoActual == ESTADO_JUGANDO)
 		{
 			const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
 				glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-			const float deltaPostura = (editorEscenas.Activo() || (modoJuegoFPS() && !entradaFPSActiva())) ? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
+			const float deltaPostura = (editorEscenas.Activo() || (modoJuegoFPS() && !entradaFPSActiva()))
+				? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
 			mundoFisico.ActualizarJugadorAgachado(modoJuegoFPS() && ctrlPulsado, deltaPostura);
 
+			// Movimiento WASD
 			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
 			{
 				fps::EntradaMovimiento entrada;
@@ -7887,15 +8070,31 @@ int main(int argc, char** argv)
 					moverJugadorFPS(window, velocidad);
 				barraEstamina.Actualizar(static_cast<float>(delta), movimientoJugador.FraccionEstamina(), movimientoJugador.Sprintando());
 			}
+
 			actualizarMovimientoMovil(window, static_cast<float>(delta));
 
-			const bool animacionPausada = editorEscenas.Activo() || fpsPausado || !ventanaConFoco;
+			const bool animacionPausada = editorEscenas.Activo() || fpsPausado ||
+				(!ventanaConFoco && !gestorOpenXR.SesionEnMarcha());
 			actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
 			glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
 			gestorOpenXR.ProcesarEventos();
+
+			if (gestorOpenXR.SesionEnMarcha() && entradaFPSActiva())
+			{
+				if (gestorOpenXR.GatilloRecienPulsado())
+				{
+					if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+					else interactuar();
+				}
+				if (gestorOpenXR.GatilloRecienSoltado() && cargaLanzamientoActiva)
+					lanzarObjetoCargado();
+
+				if (gestorOpenXR.GatilloIzquierdoRecienPulsado())
+					linternaMovilActiva = !linternaMovilActiva;
+			}
+
 			escenaFisica->SincronizarCinematicos(objetosAnimados);
-			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS() &&
-				!gestorOpenXR.SesionEnMarcha());
+			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
 			mundoFisico.FijarPausa(animacionPausada);
 			mundoFisico.Actualizar(static_cast<float>(delta));
 			sincronizarJugadorYCamara();
@@ -7938,6 +8137,8 @@ int main(int argc, char** argv)
 			hayPiesFotogramaAnterior = false;
 			sincronizarCursorFPS(window);
 		}
+
+		actualizarLinternaMovil();
 
 		// Con VR en marcha, la escena se dibuja en el visor (y se refleja en la ventana). Sin VR, o si el visor
 		// no está mostrando imagen, se dibuja la vista de escritorio con normalidad.
@@ -7988,7 +8189,7 @@ int main(int argc, char** argv)
 		}
 	}
 // =========================================================================
-// BLUCE PRINCIPAL Y RENDER PS1
+// BUCLE PRINCIPAL Y RENDER PS1
 // =========================================================================
 
 	// Una salida por el boton de Windows tambien devuelve el cursor al sistema.
@@ -8042,6 +8243,8 @@ int main(int argc, char** argv)
 	if (Get_VAOId(CUBE_SKYBOX) != 0) deleteVAOList(CUBE_SKYBOX);
 	netejaVAOList();
 	if (eixos_Id != 0) glDeleteVertexArrays(1, &eixos_Id);
+	if (rayoVao != 0) glDeleteVertexArrays(1, &rayoVao);
+	if (rayoVbo != 0) glDeleteBuffers(1, &rayoVbo);
 	for (int textureIndex = 0; textureIndex < NUM_MAX_TEXTURES; ++textureIndex)
 	{
 		if (texturesID[textureIndex] != 0)

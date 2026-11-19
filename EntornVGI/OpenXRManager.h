@@ -120,7 +120,12 @@ namespace vr
 		EstadoOpenXR Estado() const { return estado; }
 		const std::string& Mensaje() const { return mensaje; }
 		bool TieneRecursos() const;   // ¿queda alguna instancia o sesión de OpenXR viva?
+ 		bool GatilloRecienPulsado() const;
+		bool GatilloRecienSoltado() const;
+    	bool GatilloPulsado() const;
+		bool GatilloIzquierdoRecienPulsado() const;
 
+		bool PoseApuntadoMando(int mano, PoseXR& poseOut) const;
 	private:
 		struct Impl;   // oculta los tipos de OpenXR: el resto del juego no incluye sus cabeceras
 		std::unique_ptr<Impl> impl;
