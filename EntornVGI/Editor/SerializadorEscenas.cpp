@@ -53,6 +53,56 @@ namespace editor
 #endif
 			return true;
 		}
+
+		std::filesystem::path RutaFuenteCorrespondiente(const std::filesystem::path& rutaEscena)
+		{
+#if defined(ENTORNVGI_RUNTIME_ASSETS_DIR) && defined(ENTORNVGI_SOURCE_ASSETS_DIR)
+			const std::filesystem::path runtimeAssets(ENTORNVGI_RUNTIME_ASSETS_DIR);
+			const std::filesystem::path sourceAssets(ENTORNVGI_SOURCE_ASSETS_DIR);
+			const auto relativa = rutaEscena.lexically_relative(runtimeAssets.lexically_normal());
+			if (relativa.empty() || relativa.is_absolute()) return {};
+			for (const auto& componente : relativa)
+				if (componente == "..") return {};
+			return (sourceAssets / relativa).lexically_normal();
+#else
+			(void)rutaEscena;
+			return {};
+#endif
+		}
+
+		bool GuardarCopiaAtomica(const std::filesystem::path& destino, const std::string& contenido,
+			std::string& error)
+		{
+			const auto secuencia = contadorTemporal.fetch_add(1, std::memory_order_relaxed);
+			const auto instante = std::chrono::steady_clock::now().time_since_epoch().count();
+			std::filesystem::path temporal = destino;
+			temporal += ".tmp-" + std::to_string(instante) + "-" + std::to_string(secuencia);
+			{
+				std::ofstream archivo(temporal, std::ios::binary | std::ios::trunc);
+				if (!archivo)
+				{
+					error = "No se pudo crear el archivo temporal de la copia fuente.";
+					return false;
+				}
+				archivo.write(contenido.data(), static_cast<std::streamsize>(contenido.size()));
+				archivo.flush();
+				if (!archivo)
+				{
+					archivo.close();
+					std::error_code ec;
+					std::filesystem::remove(temporal, ec);
+					error = "Falló la escritura temporal de la copia fuente.";
+					return false;
+				}
+			}
+			if (!ReemplazarArchivo(temporal, destino, error))
+			{
+				std::error_code ec;
+				std::filesystem::remove(temporal, ec);
+				return false;
+			}
+			return true;
+		}
 	}
 
 	bool SerializadorEscenas::Cargar(const std::filesystem::path& rutaEntrada, std::string& error)
@@ -79,6 +129,7 @@ namespace editor
 			return false;
 		}
 		ruta = std::move(rutaAbsoluta);
+		rutaFuente = RutaFuenteCorrespondiente(ruta);
 		documentoOriginal = std::move(contenido);
 		cargado = true;
 		error.clear();
@@ -197,6 +248,7 @@ namespace editor
 
 		const auto secuencia = contadorTemporal.fetch_add(1, std::memory_order_relaxed);
 		const auto instante = std::chrono::steady_clock::now().time_since_epoch().count();
+		const std::string serializado = documento.dump(2) + "\n";
 		std::filesystem::path temporal = ruta;
 		temporal += ".tmp-" + std::to_string(instante) + "-" + std::to_string(secuencia);
 		{
@@ -206,7 +258,6 @@ namespace editor
 				error = "No se pudo crear el archivo temporal junto al JSON.";
 				return false;
 			}
-			const std::string serializado = documento.dump(2) + "\n";
 			archivo.write(serializado.data(), static_cast<std::streamsize>(serializado.size()));
 			archivo.flush();
 			if (!archivo)
@@ -248,7 +299,12 @@ namespace editor
 			std::filesystem::remove(temporal, ec);
 			return false;
 		}
-		documentoOriginal = documento.dump(2) + "\n";
+		documentoOriginal = serializado;
+		if (!rutaFuente.empty() && !GuardarCopiaAtomica(rutaFuente, serializado, error))
+		{
+			error = "La copia de ejecucion se guardo, pero no se pudo actualizar el archivo fuente: " + error;
+			return false;
+		}
 		error.clear();
 		return true;
 	}

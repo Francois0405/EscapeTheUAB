@@ -17,10 +17,12 @@ namespace editor
 		bool Guardar(const std::vector<SceneObject>& objetos, const std::vector<SceneObjetoAnimado>& animados, std::string& error);
 		bool Guardar(const std::vector<SceneObject>& objetos, std::string& error);
 		const std::filesystem::path& Ruta() const { return ruta; }
+		const std::filesystem::path& RutaFuente() const { return rutaFuente; }
 		bool Cargado() const { return cargado; }
 
 	private:
 		std::filesystem::path ruta;
+		std::filesystem::path rutaFuente;
 		std::string documentoOriginal;
 		bool cargado = false;
 	};

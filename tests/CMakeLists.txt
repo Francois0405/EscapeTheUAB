@@ -28,6 +28,12 @@ add_executable(EditorPersistenceTests
 target_include_directories(EditorPersistenceTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
 )
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/EditorPersistenceRuntimeAssets" EDITOR_PERSISTENCE_RUNTIME_ASSETS)
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/EditorPersistenceSourceAssets" EDITOR_PERSISTENCE_SOURCE_ASSETS)
+target_compile_definitions(EditorPersistenceTests PRIVATE
+	ENTORNVGI_RUNTIME_ASSETS_DIR="${EDITOR_PERSISTENCE_RUNTIME_ASSETS}"
+	ENTORNVGI_SOURCE_ASSETS_DIR="${EDITOR_PERSISTENCE_SOURCE_ASSETS}"
+)
 target_compile_features(EditorPersistenceTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
 	target_link_libraries(EditorPersistenceTests PRIVATE glm::glm)

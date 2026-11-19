@@ -106,6 +106,24 @@ int main()
 	comprobar(guardado["objects"].size() == 1 && guardado["objects"][0]["id"] == "table",
 		"elimina solo la instancia retirada");
 
+	const fs::path runtimeScene = fs::path(ENTORNVGI_RUNTIME_ASSETS_DIR) / "persistence-test" / "room.json";
+	const fs::path sourceScene = fs::path(ENTORNVGI_SOURCE_ASSETS_DIR) / "persistence-test" / "room.json";
+	escribir(runtimeScene, original);
+	escribir(sourceScene, original);
+	editor::SerializadorEscenas serializadorConCopiaFuente;
+	comprobar(serializadorConCopiaFuente.Cargar(runtimeScene, error), "carga una escena desde assets de ejecución");
+	comprobar(serializadorConCopiaFuente.RutaFuente() == sourceScene.lexically_normal(),
+		"resuelve la escena fuente correspondiente");
+	comprobar(serializadorConCopiaFuente.Guardar({ datos.objetos[0], mesa }, error),
+		"guarda en runtime y en la escena fuente");
+	comprobar(leer(runtimeScene) == leer(sourceScene), "mantiene iguales las copias de runtime y fuente");
+	std::error_code copiaEc;
+	fs::remove_all(runtimeScene.parent_path(), copiaEc);
+	if (copiaEc) { std::cerr << "No se pudo limpiar la escena runtime de prueba: " << copiaEc.message() << '\n'; ++fallos; }
+	copiaEc.clear();
+	fs::remove_all(sourceScene.parent_path(), copiaEc);
+	if (copiaEc) { std::cerr << "No se pudo limpiar la escena fuente de prueba: " << copiaEc.message() << '\n'; ++fallos; }
+
 	const std::string antesDelFallo = leer(escena);
 	SceneObject invalida = mesa;
 	invalida.escala.x = 0.0f;

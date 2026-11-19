@@ -1,191 +1,121 @@
 {
-  "version": 1,
-  "name": "aula_informatica_calibrada",
+  "animated": [],
   "architecture": [
     {
       "id": "suelo",
       "model": "../models/escape_pack/arquitectura/suelo.obj",
-      "position": [
-        5,
-        0,
-        -1.85
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        7,
-        4,
-        0.15
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        0.0,
+        0.0,
+        -3.200000047683716
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        18.0,
+        23.0,
+        0.15000000596046448
+      ]
     },
     {
       "id": "techo",
       "model": "../models/escape_pack/arquitectura/techo.obj",
-      "position": [
-        5,
-        0,
-        1.35
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        7,
-        4,
-        0.15
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "pared_oeste",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
+        ],
+        "type": "static"
+      },
       "position": [
-        -2,
-        0,
-        -0.25
+        0.0,
+        0.0,
+        0.0
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.15,
-        4,
-        1.45
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
-    },
-    {
-      "id": "pared_este",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "position": [
-        12,
-        0,
-        -0.25
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.15,
-        4,
-        1.45
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
+        18.0,
+        23.0,
+        0.15000000596046448
+      ]
     },
     {
       "id": "pared_norte",
       "model": "../models/escape_pack/arquitectura/pared.obj",
-      "position": [
-        5,
-        4,
-        -0.25
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        7,
-        0.15,
-        1.45
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        -4.0,
+        10.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        14.0,
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     },
     {
       "id": "pared_sur",
       "model": "../models/escape_pack/arquitectura/pared.obj",
-      "position": [
-        5,
-        -4,
-        -0.25
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        7,
-        0.15,
-        1.45
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        0.0,
+        -23.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        18.0,
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     }
   ],
+  "name": "aula_informatica_calibrada",
   "objects": [
     {
       "id": "pizarra_estanteria",
       "model": "../models/escape_pack/kenney/bookcaseClosed.obj",
-      "position": [
-        -0.95,
-        3.18,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.4,
           0.25,
@@ -195,29 +125,29 @@
           0.0,
           0.0,
           0.85
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        -0.9499999284744263,
+        3.180000066757202,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "archivador",
       "model": "../models/escape_pack/kenney/bookcaseOpen.obj",
-      "position": [
-        0.45,
-        3.18,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.4,
           0.25,
@@ -227,29 +157,29 @@
           0.0,
           0.0,
           0.88
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        0.44999998807907104,
+        3.180000066757202,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "mesa_profesor",
       "model": "../models/escape_pack/kenney/desk.obj",
-      "position": [
-        7,
-        2.7,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.7345,
           0.3923,
@@ -259,29 +189,29 @@
           0.0,
           0.0,
           0.3844
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        7.0,
+        2.700000047683716,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "silla_profesor",
       "model": "../models/escape_pack/kenney/chairDesk.obj",
-      "position": [
-        7,
-        1.65,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.335,
           0.3143,
@@ -291,48 +221,48 @@
           0.0,
           0.0,
           0.6076
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        7.0,
+        3.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "portatil_profesor",
       "model": "../models/escape_pack/kenney/laptop.obj",
       "position": [
-        7,
-        2.7,
-        -0.92
+        7.0,
+        2.683767795562744,
+        -2.2200000286102295
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "id": "mesa_alumno_1",
       "model": "../models/escape_pack/kenney/desk.obj",
-      "position": [
-        -0.7,
-        -2.65,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.7345,
           0.3923,
@@ -342,29 +272,29 @@
           0.0,
           0.0,
           0.3844
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        -1.0,
+        -3.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "silla_alumno_1",
       "model": "../models/escape_pack/kenney/chair.obj",
-      "position": [
-        -0.7,
-        -1.52,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.2,
           0.2,
@@ -374,67 +304,48 @@
           0.0,
           0.0,
           0.47
-        ]
-      }
-    },
-    {
-      "id": "monitor_alumno_1",
-      "model": "../models/escape_pack/kenney/computerScreen.obj",
+        ],
+        "type": "static"
+      },
       "position": [
-        -0.7,
-        -2.84,
-        -0.92
+        -1.25,
+        -2.5999999046325684,
+        -3.0
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        180.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "id": "teclado_alumno_1",
       "model": "../models/escape_pack/kenney/computerKeyboard.obj",
       "position": [
-        -0.7,
-        -2.42,
-        -0.92
+        -1.0,
+        -2.9000000953674316,
+        -2.2300000190734863
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "id": "mesa_alumno_2",
       "model": "../models/escape_pack/kenney/desk.obj",
-      "position": [
-        1.65,
-        -2.65,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.7345,
           0.3923,
@@ -444,29 +355,29 @@
           0.0,
           0.0,
           0.3844
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        1.0,
+        -3.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "silla_alumno_2",
       "model": "../models/escape_pack/kenney/chair.obj",
-      "position": [
-        1.65,
-        -1.52,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.2,
           0.2,
@@ -476,48 +387,48 @@
           0.0,
           0.0,
           0.47
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        0.75,
+        -2.5999999046325684,
+        -3.000478982925415
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "monitor_alumno_2",
       "model": "../models/escape_pack/kenney/computerScreen.obj",
       "position": [
-        1.65,
-        -2.84,
-        -0.92
+        3.0,
+        -3.200000047683716,
+        -2.2300000190734863
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "id": "mesa_alumno_3",
       "model": "../models/escape_pack/kenney/desk.obj",
-      "position": [
-        4.0,
-        -2.65,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.7345,
           0.3923,
@@ -527,29 +438,29 @@
           0.0,
           0.0,
           0.3844
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        5.0,
+        -3.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "silla_alumno_3",
       "model": "../models/escape_pack/kenney/chair.obj",
-      "position": [
-        4.0,
-        -1.52,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.2,
           0.2,
@@ -559,150 +470,640 @@
           0.0,
           0.0,
           0.47
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        4.016055583953857,
+        -1.5199999809265137,
+        -194.69017028808594
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "monitor_alumno_3",
       "model": "../models/escape_pack/kenney/computerScreen.obj",
       "position": [
-        4.0,
-        -2.84,
-        -0.92
+        5.0,
+        -3.200000047683716,
+        -2.2300000190734863
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
-    },
-    {
-      "id": "sillon_olvidado",
-      "model": "../models/escape_pack/kenney/chairCushion.obj",
-      "position": [
-        9.05,
-        3.05,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          0.2,
-          0.2,
-          0.46
-        ],
-        "offset": [
-          0.0,
-          0.0,
-          0.46
-        ]
-      }
     },
     {
       "id": "cajas_abandonadas",
       "model": "../models/escape_pack/kenney/cardboardBoxClosed.obj",
-      "position": [
-        10.0,
-        -3,
-        -1.7
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "physics": {
-        "type": "dynamic",
         "halfSize": [
           0.2125,
           0.2125,
           0.281
         ],
+        "mass": 1.5,
         "offset": [
           0.0,
           0.0,
           0.281
         ],
-        "mass": 1.5
-      }
+        "type": "dynamic"
+      },
+      "position": [
+        1.3142189979553223,
+        3.1651360988616943,
+        -200.4600830078125
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "luz_techo_clase",
       "model": "../models/escape_pack/kenney/lampSquareCeiling.obj",
       "position": [
-        5,
-        0,
-        0.74
+        5.0,
+        0.016232192516326904,
+        -0.5585495233535767
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "id": "teclado_alumno_2",
       "model": "../models/escape_pack/kenney/computerKeyboard.obj",
       "position": [
-        1.65,
-        -2.42,
-        -0.92
+        1.0,
+        -2.9000000953674316,
+        -2.2300000190734863
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
     },
     {
       "id": "teclado_alumno_3",
       "model": "../models/escape_pack/kenney/computerKeyboard.obj",
       "position": [
-        4.0,
-        -2.42,
-        -0.92
+        5.0,
+        -2.9000000953674316,
+        -2.2300000190734863
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "mesa_alumno_3_copy",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.734499990940094,
+          0.392300009727478,
+          0.38440001010894775
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.38440001010894775
+        ],
+        "type": "static"
+      },
+      "position": [
+        3.0,
+        -3.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "teclado_alumno_3_copy",
+      "model": "../models/escape_pack/kenney/computerKeyboard.obj",
+      "position": [
+        3.0,
+        -2.9000000953674316,
+        -2.2300000190734863
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "monitor_alumno_2_copy",
+      "model": "../models/escape_pack/kenney/computerScreen.obj",
+      "position": [
+        1.0,
+        -3.200000047683716,
+        -2.2300000190734863
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "monitor_alumno_2_copy_copy",
+      "model": "../models/escape_pack/kenney/computerScreen.obj",
+      "position": [
+        -1.0,
+        -3.200000047683716,
+        -2.2300000190734863
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "silla_alumno_1_copy",
+      "model": "../models/escape_pack/kenney/chair.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.4699999988079071
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.4699999988079071
+        ],
+        "type": "static"
+      },
+      "position": [
+        4.75,
+        -2.5999999046325684,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "silla_alumno_1_copy_copy",
+      "model": "../models/escape_pack/kenney/chair.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.4699999988079071
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.4699999988079071
+        ],
+        "type": "static"
+      },
+      "position": [
+        2.75,
+        -2.5999999046325684,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "pared_este_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        18.0,
+        -2.384185791015625e-07,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15000000596046448,
+        23.0,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "pared_sur_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        0.0,
+        23.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        18.0,
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "pared_este_copy_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -18.0,
+        -2.384185791015625e-07,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15000000596046448,
+        23.0,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "pared_norte_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -4.0,
+        -10.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        14.0,
+        0.15000000596046448,
+        1.4499999284744263
+      ]
+    },
+    {
+      "id": "pared_este_copy_1",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        10.0,
+        -12.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15000000596046448,
+        11.0,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "pared_este_copy_1_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        10.0,
+        12.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15000000596046448,
+        11.0,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "pared_este_copy_1_copy_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        10.0,
+        -1.862645149230957e-09,
+        -0.30000001192092896
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15000000596046448,
+        1.0,
+        0.30000001192092896
+      ]
+    },
+    {
+      "id": "pared_norte_copy_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -15.0,
+        4.5,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        3.147869348526001,
+        0.15000000596046448,
+        1.4499998092651367
+      ]
+    },
+    {
+      "id": "pared_este_copy_1_copy_copy_1",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -12.0,
+        8.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15000000596046448,
+        2.120598077774048,
+        1.4499999284744263
+      ]
+    },
+    {
+      "id": "pared_este_copy_1_copy_copy_copy",
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -12.0,
+        5.33983039855957,
+        -0.30000001192092896
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.15000000596046448,
+        1.0,
+        0.30000001192092896
+      ]
+    },
+    {
+      "id": "obj_Hiriti",
+      "model": "../models/Hiriti.obj",
+      "physics": {
+        "halfSize": [
+          0.9999995231628418,
+          1.0,
+          0.9999995231628418
+        ],
+        "mass": 5.0,
+        "offset": [
+          4.76837158203125e-07,
+          0.0,
+          -4.76837158203125e-07
+        ],
+        "type": "dynamic"
+      },
+      "position": [
+        3.519097328186035,
+        1.5294628143310547,
+        -2.191999912261963
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.24999916553497314,
+        0.25,
+        0.25
       ]
     }
   ],
-  "animated": []
+  "version": 1
 }

@@ -7735,6 +7735,8 @@ char phonePath[] = "./assets/models/Phone.obj";
 				editorEscenas.MarcarGuardado();
 				editorEscenas.InformarEstado("Saved: " + serializadorEscena.Ruta().filename().string());
 				std::cout << "Escena guardada en " << serializadorEscena.Ruta() << '\n';
+				if (!serializadorEscena.RutaFuente().empty())
+					std::cout << "Copia fuente actualizada en " << serializadorEscena.RutaFuente() << '\n';
 				if (editorEscenas.ConsumeCerrarTrasGuardar()) glfwSetWindowShouldClose(window, GLFW_TRUE);
 			}
 			else

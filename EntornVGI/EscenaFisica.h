@@ -113,7 +113,7 @@ namespace fisica
 			glm::vec3 mitadTamano{ 0.5f };
 			glm::vec3 desplazamiento{ 0.0f };
 		};
-
+		
 		void ColocarCaja(const Colision& caja, const glb::ObjetoAnimado& objeto, glm::vec3& centro,
 			glm::quat& rotacion, glm::vec3& mitad) const;
 
