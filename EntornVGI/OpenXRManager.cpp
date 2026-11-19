@@ -47,7 +47,7 @@ namespace vr
 		return (vrSolicitado && estado == EstadoOpenXR::SesionCreada) ? ModoDeJuego::VR : ModoDeJuego::Pantalla;
 	}
 
-#ifdef ENTORNVGI_HAS_OPENXR
+	#ifdef ENTORNVGI_HAS_OPENXR
 
 	namespace
 	{
@@ -83,6 +83,20 @@ namespace vr
 		bool fotogramaAbierto = false;                  // xrBeginFrame hecho, falta xrEndFrame
 		bool vistasValidas = false;                     // xrLocateViews dio poses utilizables este fotograma
 		XrTime tiempoPrediccion = 0;
+
+		XrActionSet actionSet = XR_NULL_HANDLE;
+		XrAction accionAgarrar = XR_NULL_HANDLE;
+		XrPath rutaManos[2] = { XR_NULL_PATH, XR_NULL_PATH }; // 0: izq, 1: der
+
+		bool gatilloAnterior = false;
+		bool gatilloActual = false;
+		bool gatilloRecienPulsado = false;
+		bool gatilloRecienSoltado = false;
+
+		XrAction accionApuntar = XR_NULL_HANDLE;
+		XrSpace espacioApuntar[2] = { XR_NULL_HANDLE, XR_NULL_HANDLE };
+		PoseXR poseMando[2];
+		bool poseMandoValida[2] = { false, false };
 	};
 
 	namespace
@@ -375,6 +389,105 @@ namespace vr
 			}
 			return true;
 		}
+
+		// Etapa D: crear el ActionSet, la acción "agarrar" y vincularla al gatillo frontal de los mandos.
+		// Etapa D: crear el ActionSet, las acciones "agarrar" y "apuntar_mando" y vincularlas.
+		bool CrearAcciones(XrInstance instancia, XrSession sesion, XrActionSet& actionSet,
+			XrAction& accionAgarrar, XrAction& accionApuntar, XrPath rutaManos[2],
+			XrSpace espacioApuntar[2], std::string& mensaje, std::string& d)
+		{
+			XrActionSetCreateInfo setInfo = { XR_TYPE_ACTION_SET_CREATE_INFO };
+			std::strncpy(setInfo.actionSetName, "acciones_juego", XR_MAX_ACTION_SET_NAME_SIZE - 1);
+			std::strncpy(setInfo.localizedActionSetName, "Acciones del Juego", XR_MAX_LOCALIZED_ACTION_SET_NAME_SIZE - 1);
+			setInfo.priority = 0;
+			XrResult r = xrCreateActionSet(instancia, &setInfo, &actionSet);
+			if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear el ActionSet de OpenXR", r); return false; }
+
+			xrStringToPath(instancia, "/user/hand/left", &rutaManos[0]);
+			xrStringToPath(instancia, "/user/hand/right", &rutaManos[1]);
+
+			// 1. Acción booleana de agarrar
+			XrActionCreateInfo actionInfo = { XR_TYPE_ACTION_CREATE_INFO };
+			actionInfo.actionType = XR_ACTION_TYPE_BOOLEAN_INPUT;
+			std::strncpy(actionInfo.actionName, "agarrar", XR_MAX_ACTION_NAME_SIZE - 1);
+			std::strncpy(actionInfo.localizedActionName, "Agarrar", XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
+			actionInfo.countSubactionPaths = 2;
+			actionInfo.subactionPaths = rutaManos;
+			r = xrCreateAction(actionSet, &actionInfo, &accionAgarrar);
+			if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear la accion agarrar", r); return false; }
+
+			// 2. Acción de pose para apuntar con los mandos
+			XrActionCreateInfo poseInfo = { XR_TYPE_ACTION_CREATE_INFO };
+			poseInfo.actionType = XR_ACTION_TYPE_POSE_INPUT;
+			std::strncpy(poseInfo.actionName, "apuntar_mando", XR_MAX_ACTION_NAME_SIZE - 1);
+			std::strncpy(poseInfo.localizedActionName, "Apuntar Mando", XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
+			poseInfo.countSubactionPaths = 2;
+			poseInfo.subactionPaths = rutaManos;
+			r = xrCreateAction(actionSet, &poseInfo, &accionApuntar);
+			if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear la accion apuntar_mando", r); return false; }
+
+			// Rutas físicas
+			XrPath triggerIzq = XR_NULL_PATH, triggerDer = XR_NULL_PATH;
+			XrPath selectIzq = XR_NULL_PATH, selectDer = XR_NULL_PATH;
+			XrPath aimIzq = XR_NULL_PATH, aimDer = XR_NULL_PATH;
+			xrStringToPath(instancia, "/user/hand/left/input/trigger/value", &triggerIzq);
+			xrStringToPath(instancia, "/user/hand/right/input/trigger/value", &triggerDer);
+			xrStringToPath(instancia, "/user/hand/left/input/select/click", &selectIzq);
+			xrStringToPath(instancia, "/user/hand/right/input/select/click", &selectDer);
+			xrStringToPath(instancia, "/user/hand/left/input/aim/pose", &aimIzq);
+			xrStringToPath(instancia, "/user/hand/right/input/aim/pose", &aimDer);
+
+			// 3. Perfil Oculus Touch (Meta Quest / Rift)
+			XrPath perfilOculus = XR_NULL_PATH;
+			xrStringToPath(instancia, "/interaction_profiles/oculus/touch_controller", &perfilOculus);
+			XrActionSuggestedBinding bindingsOculus[] = {
+				{ accionAgarrar, triggerIzq },
+				{ accionAgarrar, triggerDer },
+				{ accionApuntar, aimIzq },
+				{ accionApuntar, aimDer }
+			};
+			XrInteractionProfileSuggestedBinding sugOculus = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+			sugOculus.interactionProfile = perfilOculus;
+			sugOculus.suggestedBindings = bindingsOculus;
+			sugOculus.countSuggestedBindings = 4;
+			xrSuggestInteractionProfileBindings(instancia, &sugOculus);
+
+			// 4. Perfil genérico Khronos Simple Controller (respaldo)
+			XrPath perfilSimple = XR_NULL_PATH;
+			xrStringToPath(instancia, "/interaction_profiles/khr/simple_controller", &perfilSimple);
+			XrActionSuggestedBinding bindingsSimple[] = {
+				{ accionAgarrar, selectIzq },
+				{ accionAgarrar, selectDer },
+				{ accionApuntar, aimIzq },
+				{ accionApuntar, aimDer }
+			};
+			XrInteractionProfileSuggestedBinding sugSimple = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
+			sugSimple.interactionProfile = perfilSimple;
+			sugSimple.suggestedBindings = bindingsSimple;
+			sugSimple.countSuggestedBindings = 4;
+			xrSuggestInteractionProfileBindings(instancia, &sugSimple);
+
+			// 5. Adjuntar el ActionSet a la sesión (SIEMPRE DESPUÉS de crear todas las acciones y bindings)
+			XrSessionActionSetsAttachInfo attachInfo = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
+			attachInfo.countActionSets = 1;
+			attachInfo.actionSets = &actionSet;
+			r = xrAttachSessionActionSets(sesion, &attachInfo);
+			if (XR_FAILED(r)) { mensaje = Texto("No se pudieron adjuntar las acciones a la sesion", r); return false; }
+
+			// 6. Crear espacios de acción para rastrear la pose de ambos mandos
+			for (int i = 0; i < 2; ++i)
+			{
+				XrActionSpaceCreateInfo spaceInfo = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
+				spaceInfo.action = accionApuntar;
+				spaceInfo.subactionPath = rutaManos[i];
+				spaceInfo.poseInActionSpace.orientation.w = 1.0f;
+				r = xrCreateActionSpace(sesion, &spaceInfo, &espacioApuntar[i]);
+				if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear XrActionSpace del mando", r); return false; }
+			}
+
+			d += "Acciones de mandos listas (gatillo frontal y apuntado vinculados).\n";
+			return true;
+		}
 #endif
 
 		void DestruirCadenas(std::vector<CadenaOjo>& ojos)
@@ -404,6 +517,9 @@ namespace vr
 	const char* GestorOpenXR::NombreEstadoSesion() const { return impl->sesion != XR_NULL_HANDLE ? NombreSesion(impl->estadoSesion) : "sin sesion"; }
 	EspacioReferencia GestorOpenXR::Espacio() const { return impl->tipoEspacio; }
 	int GestorOpenXR::NumeroDeOjos() const { return static_cast<int>(impl->ojos.size()); }
+	bool GestorOpenXR::GatilloRecienPulsado() const { return impl->gatilloRecienPulsado; }
+	bool GestorOpenXR::GatilloRecienSoltado() const { return impl->gatilloRecienSoltado; }
+	bool GestorOpenXR::GatilloPulsado() const { return impl->gatilloActual; }
 
 	void GestorOpenXR::Desactivar()
 	{
@@ -418,6 +534,11 @@ namespace vr
 		impl->fotogramaAbierto = false;
 		DestruirCadenas(impl->ojos);
 		impl->vistas.clear();
+		if (impl->espacioApuntar[0] != XR_NULL_HANDLE) xrDestroySpace(impl->espacioApuntar[0]);
+		if (impl->espacioApuntar[1] != XR_NULL_HANDLE) xrDestroySpace(impl->espacioApuntar[1]);
+		if (impl->accionApuntar != XR_NULL_HANDLE) xrDestroyAction(impl->accionApuntar);
+		if (impl->accionAgarrar != XR_NULL_HANDLE) xrDestroyAction(impl->accionAgarrar);
+		if (impl->actionSet != XR_NULL_HANDLE) xrDestroyActionSet(impl->actionSet);
 		if (impl->espacio != XR_NULL_HANDLE) xrDestroySpace(impl->espacio);
 		if (impl->sesion != XR_NULL_HANDLE)
 		{
@@ -425,6 +546,19 @@ namespace vr
 			xrDestroySession(impl->sesion);
 		}
 		if (impl->instancia != XR_NULL_HANDLE) xrDestroyInstance(impl->instancia);
+		impl->espacioApuntar[0] = XR_NULL_HANDLE;
+		impl->espacioApuntar[1] = XR_NULL_HANDLE;
+		impl->accionApuntar = XR_NULL_HANDLE;
+		impl->poseMandoValida[0] = false;
+		impl->poseMandoValida[1] = false;
+		impl->gatilloRecienSoltado = false;
+		impl->accionAgarrar = XR_NULL_HANDLE;
+		impl->actionSet = XR_NULL_HANDLE;
+		impl->rutaManos[0] = XR_NULL_PATH;
+		impl->rutaManos[1] = XR_NULL_PATH;
+		impl->gatilloAnterior = false;
+		impl->gatilloActual = false;
+		impl->gatilloRecienPulsado = false;
 		impl->espacio = XR_NULL_HANDLE;
 		impl->sesion = XR_NULL_HANDLE;
 		impl->instancia = XR_NULL_HANDLE;
@@ -463,6 +597,10 @@ namespace vr
 			if (resultado == EstadoOpenXR::SesionCreada &&
 				!CrearCadenas(impl->instancia, impl->sistema, impl->sesion, formato, impl->ojos, impl->vistas, impl->mezcla, aviso, informe))
 				resultado = EstadoOpenXR::Error;
+			if (resultado == EstadoOpenXR::SesionCreada &&
+				!CrearAcciones(impl->instancia, impl->sesion, impl->actionSet, impl->accionAgarrar,
+					impl->accionApuntar, impl->rutaManos, impl->espacioApuntar, aviso, informe))
+				resultado = EstadoOpenXR::Error;
 			if (resultado == EstadoOpenXR::SesionCreada)
 				aviso = "Sesion OpenXR lista. Esperando a que el runtime la ponga en READY (ponte el casco).";
 #else
@@ -492,7 +630,10 @@ namespace vr
 
 	void GestorOpenXR::ProcesarEventos()
 	{
+		impl->gatilloRecienPulsado = false;
+		impl->gatilloRecienSoltado = false;
 		if (impl->instancia == XR_NULL_HANDLE) return;
+
 		XrEventDataBuffer evento = { XR_TYPE_EVENT_DATA_BUFFER };
 		while (xrPollEvent(impl->instancia, &evento) == XR_SUCCESS)
 		{
@@ -540,6 +681,39 @@ namespace vr
 			}
 			evento = { XR_TYPE_EVENT_DATA_BUFFER };
 		}
+
+		if (Enfocada() && impl->actionSet != XR_NULL_HANDLE)
+		{
+			XrActiveActionSet conjuntoActivo = { impl->actionSet, XR_NULL_PATH };
+			XrActionsSyncInfo syncInfo = { XR_TYPE_ACTIONS_SYNC_INFO };
+			syncInfo.countActiveActionSets = 1;
+			syncInfo.activeActionSets = &conjuntoActivo;
+
+			if (XR_SUCCEEDED(xrSyncActions(impl->sesion, &syncInfo)))
+			{
+				XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
+				getInfo.action = impl->accionAgarrar;
+				getInfo.subactionPath = impl->rutaManos[1]; // SOLO mano derecha (1)
+
+				XrActionStateBoolean estadoBool = { XR_TYPE_ACTION_STATE_BOOLEAN };
+				bool pulsadoDerecha = false;
+				if (XR_SUCCEEDED(xrGetActionStateBoolean(impl->sesion, &getInfo, &estadoBool)))
+				{
+					if (estadoBool.isActive && estadoBool.currentState == XR_TRUE)
+						pulsadoDerecha = true;
+				}
+
+				impl->gatilloActual = pulsadoDerecha;
+				impl->gatilloRecienPulsado = (impl->gatilloActual && !impl->gatilloAnterior);
+				impl->gatilloRecienSoltado = (!impl->gatilloActual && impl->gatilloAnterior);
+				impl->gatilloAnterior = impl->gatilloActual;
+			}
+		}
+		else
+		{
+			impl->gatilloActual = false;
+			impl->gatilloAnterior = false;
+		}
 	}
 
 	ResultadoFotograma GestorOpenXR::EmpezarFotograma()
@@ -567,6 +741,23 @@ namespace vr
 		XrViewState estadoVistas = { XR_TYPE_VIEW_STATE };
 		uint32_t cuantas = 0;
 		r = xrLocateViews(impl->sesion, &localizar, &estadoVistas, static_cast<uint32_t>(impl->vistas.size()), &cuantas, impl->vistas.data());
+		for (int i = 0; i < 2; ++i)
+		{
+			impl->poseMandoValida[i] = false;
+			if (impl->espacioApuntar[i] == XR_NULL_HANDLE) continue;
+
+			XrSpaceLocation loc = { XR_TYPE_SPACE_LOCATION };
+			if (XR_SUCCEEDED(xrLocateSpace(impl->espacioApuntar[i], impl->espacio, estadoFotograma.predictedDisplayTime, &loc)))
+			{
+				const XrSpaceLocationFlags flagsReq = XR_SPACE_LOCATION_POSITION_VALID_BIT | XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
+				if ((loc.locationFlags & flagsReq) == flagsReq)
+				{
+					impl->poseMando[i].posicion = glm::vec3(loc.pose.position.x, loc.pose.position.y, loc.pose.position.z);
+					impl->poseMando[i].orientacion = glm::quat(loc.pose.orientation.w, loc.pose.orientation.x, loc.pose.orientation.y, loc.pose.orientation.z);
+					impl->poseMandoValida[i] = true;
+				}
+			}
+		}
 		const XrViewStateFlags necesarias = XR_VIEW_STATE_POSITION_VALID_BIT | XR_VIEW_STATE_ORIENTATION_VALID_BIT;
 		if (XR_FAILED(r) || (estadoVistas.viewStateFlags & necesarias) != necesarias || cuantas != impl->vistas.size())
 			return ResultadoFotograma::SinRender;   // sin seguimiento valido este fotograma: se envia vacio
@@ -676,6 +867,13 @@ namespace vr
 		if (XR_FAILED(r)) mensaje = Texto("xrEndFrame fallo", r);
 	}
 
+	bool GestorOpenXR::PoseApuntadoMando(int mano, PoseXR& poseOut) const
+	{
+		if (mano < 0 || mano > 1 || !impl->poseMandoValida[mano]) return false;
+		poseOut = impl->poseMando[mano];
+		return true;
+	}
+
 #else   // ---- Sin OpenXR en esta compilación: la clase existe, pero no hace nada ----
 
 	struct GestorOpenXR::Impl {};
@@ -695,6 +893,10 @@ namespace vr
 	bool GestorOpenXR::AdquirirOjo(int, OjoVR&) { return false; }
 	void GestorOpenXR::LiberarOjo(int) {}
 	void GestorOpenXR::TerminarFotograma() {}
+	bool GestorOpenXR::GatilloRecienPulsado() const { return false; }
+	bool GestorOpenXR::GatilloRecienSoltado() const { return false; }
+	bool GestorOpenXR::GatilloPulsado() const { return false; }
+	bool GestorOpenXR::PoseApuntadoMando(int, PoseXR&) const { return false; }
 
 	EstadoOpenXR GestorOpenXR::Activar(GLFWwindow*, int, int)
 	{

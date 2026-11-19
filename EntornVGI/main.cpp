@@ -218,8 +218,28 @@ namespace
 	// vectores; con VR se llamaría igual, pero con los de la mano o el mando.
 	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
 	{
-		origen = glm::vec3(opvN.x, opvN.y, opvN.z);                              // posición de la vista
-		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
+		if (gestorOpenXR.SesionEnMarcha())
+		{
+			vr::PoseXR poseMando;
+			if (gestorOpenXR.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
+			{
+				const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+				const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+				const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
+					gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+
+				const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMando, anclaje);
+				const glm::mat4 mundoMando = glm::inverse(vistaMando);
+
+				origen = glm::vec3(mundoMando[3]);
+				direccion = glm::normalize(-glm::vec3(mundoMando[2]));
+				return;
+			}
+		}
+
+		// Modo escritorio (PC): cámara FPS
+		origen = glm::vec3(opvN.x, opvN.y, opvN.z);
+		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);
 	}
 
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
@@ -481,7 +501,7 @@ namespace
 			cancelarCargaLanzamiento();
 			return;
 		}
-		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS || gestorOpenXR.GatilloPulsado())
 			tiempoCargaLanzamiento = std::min(tiempoCargaLanzamiento + std::max(delta, 0.0f), TiempoMaximoCargaLanzamiento);
 	}
 
@@ -1435,6 +1455,75 @@ void configura_Escena() {
 	GTMatrix = instancia(transf, TG, TGF);
 }
 
+namespace
+{
+	GLuint rayoVao = 0, rayoVbo = 0;
+
+	void dibujarRayoMandoVR()
+	{
+		if (!gestorOpenXR.SesionEnMarcha() || eixos_programID == 0) return;
+
+		vr::PoseXR poseMando;
+		if (!gestorOpenXR.PoseApuntadoMando(1, poseMando)) return; // Solo mando derecho (1)
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+		direccion = glm::normalize(direccion);
+
+		// Longitud del láser (mismo alcance que el agarre/interacción)
+		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);[cite: 1]
+		const glm::vec3 destino = origen + direccion * alcance;
+
+		// Color RGBA: verde si estás agarrando o apuntando a algo interactuable; cian por defecto
+		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();[cite: 1]
+		const bool resaltado = escenaFisica->HayAgarre() || objetivo.accion != AccionInteraccion::Ninguna;[cite: 1]
+		const float r = resaltado ? 0.1f : 0.0f;
+		const float g = resaltado ? 1.0f : 0.85f;
+		const float b = resaltado ? 0.2f : 1.0f;
+		const float a = 1.0f;
+
+		// 7 floats por vértice: pos (vec3) + color (vec4)
+		const float vertices[] = {
+			origen.x,  origen.y,  origen.z,  r, g, b, a,
+			destino.x, destino.y, destino.z, r, g, b, a
+		};
+
+		if (rayoVao == 0)
+		{
+			glGenVertexArrays(1, &rayoVao);
+			glGenBuffers(1, &rayoVbo);
+			glBindVertexArray(rayoVao);
+			glBindBuffer(GL_ARRAY_BUFFER, rayoVbo);
+			glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
+
+			// location = 0 -> vec3 posición
+			glEnableVertexAttribArray(0);
+			glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)0);
+
+			// location = 1 -> vec4 color
+			glEnableVertexAttribArray(1);
+			glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void*)(3 * sizeof(float)));
+		}
+		else
+		{
+			glBindVertexArray(rayoVao);
+			glBindBuffer(GL_ARRAY_BUFFER, rayoVbo);
+			glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
+		}
+
+		glUseProgram(eixos_programID);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+
+		glLineWidth(2.5f);
+		glDrawArrays(GL_LINES, 0, 2);
+		glLineWidth(1.0f);
+
+		glBindVertexArray(0);
+		glUseProgram(shader_programID);
+	}
+}
+
 // dibuixa_Escena: Funcio que crida al dibuix dels diferents elements de l'escana
 void dibuixa_Escena() {
 
@@ -1489,7 +1578,7 @@ void dibuixa_Escena() {
 	// DEMO FASE 1: la puerta usa el cubo test.obj ya cargado por la escena.
 	for (const auto& modelo : modelosHabitacion)
 	{
-		if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
+		if (!modelo.first.ends_with("test.obj")) continue;
 		dibuixa_EscenaGL(
 			shader_programID, eixos, eixos_Id, grid, hgrid,
 			OBJOBJ, col_obj, sw_material,
@@ -1506,7 +1595,7 @@ void dibuixa_Escena() {
 	{
 		for (const auto& modelo : modelosHabitacion)
 		{
-			if (modelo.first.size() < 8 || modelo.first.compare(modelo.first.size() - 8, 8, "test.obj") != 0) continue;
+			if (!modelo.first.ends_with("test.obj")) continue;
 			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
 			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
@@ -1580,6 +1669,9 @@ void dibuixa_Escena() {
 	}
 	else if (mostrarColisionadores && !editorEscenas.Activo())
 		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
+
+	// Dibujar el rayo láser del mando derecho en VR.
+	dibujarRayoMandoVR();
 }
 
 
@@ -1832,7 +1924,7 @@ static void dibujarBarraEstamina()
 static void dibujarHUDInteraccion()
 {
 	const ImGuiIO& io = ImGui::GetIO();
-	if (!entradaFPSActiva() || gestorOpenXR.SesionEnMarcha() ||
+	if (!entradaFPSActiva() ||
 		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
 		return;
 
@@ -7714,11 +7806,22 @@ char phonePath[] = "./assets/models/Phone.obj";
 		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
 		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
 		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado
+		if (gestorOpenXR.SesionEnMarcha() && entradaFPSActiva())
+		{
+			if (gestorOpenXR.GatilloRecienPulsado())
+			{
+				if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+				else interactuar();
+			}
+			if (gestorOpenXR.GatilloRecienSoltado() && cargaLanzamientoActiva)
+			{
+				lanzarObjetoCargado();
+			}
+		}
 		// Físicas: 1) las hojas animadas mueven sus cuerpos cinemáticos, 2) Bullet avanza en pasos
 		// fijos de 1/60 s (con el juego en pausa el mundo se congela).
 		escenaFisica->SincronizarCinematicos(objetosAnimados);
-		actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS() &&
-			!gestorOpenXR.SesionEnMarcha());
+		actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
 		mundoFisico.FijarPausa(animacionPausada);
 		mundoFisico.Actualizar(static_cast<float>(delta));
 		sincronizarJugadorYCamara();
@@ -7822,6 +7925,8 @@ char phonePath[] = "./assets/models/Phone.obj";
 	if (Get_VAOId(CUBE_SKYBOX) != 0) deleteVAOList(CUBE_SKYBOX);
 	netejaVAOList();
 	if (eixos_Id != 0) glDeleteVertexArrays(1, &eixos_Id);
+	if (rayoVao != 0) glDeleteVertexArrays(1, &rayoVao);
+	if (rayoVbo != 0) glDeleteBuffers(1, &rayoVbo);
 	for (int textureIndex = 0; textureIndex < NUM_MAX_TEXTURES; ++textureIndex)
 	{
 		if (texturesID[textureIndex] != 0)
