@@ -36,6 +36,7 @@
 
 // CODI NOSTRE
 
+#include <SOIL2.h>
 #include <filesystem>
 #include <memory>
 #include <unordered_map>
@@ -1688,13 +1689,148 @@ static void dibujarBarraEstamina()
 	}
 }
 
+
+GLuint texturaFondoMenu = 0;
+
+enum EstadoJuego {
+	ESTADO_MENU_PRINCIPAL,
+	ESTADO_JUGANDO,
+	ESTADO_PAUSA
+};
+
+EstadoJuego estadoActual = ESTADO_MENU_PRINCIPAL;
+
 void draw_Menu_ImGui()
 {
 	// Start the Dear ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
 	ImGui::NewFrame();
-	dibujarBarraEstamina();
+
+	// 1. La barra de estamina solo se dibuja mientras juegas
+	if (estadoActual == ESTADO_JUGANDO)
+	{
+		dibujarBarraEstamina();
+	}
+
+	// =========================================================================
+	// MENÚ PRINCIPAL
+	// =========================================================================
+	if (estadoActual == ESTADO_MENU_PRINCIPAL)
+	{
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+
+		// 1. Ocupar el 100% de la ventana desde la esquina superior izquierda
+		ImGui::SetNextWindowPos(viewport->Pos, ImGuiCond_Always);
+		ImGui::SetNextWindowSize(viewport->Size, ImGuiCond_Always);
+
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
+		                         ImGuiWindowFlags_NoResize |
+		                         ImGuiWindowFlags_NoMove |
+		                         ImGuiWindowFlags_NoCollapse |
+		                         ImGuiWindowFlags_NoScrollbar |
+		                         ImGuiWindowFlags_NoScrollWithMouse;
+
+		// 2. Quitar márgenes interiores (WindowPadding) y bordes para que no quede un marco alrededor de la foto
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg,      ImVec4(0.05f, 0.05f, 0.08f, 1.00f));
+		ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.12f, 0.14f, 0.20f, 0.85f));
+		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.30f, 0.42f, 0.95f));
+
+		ImGui::Begin("MenuPrincipal", nullptr, flags);
+
+		// 3. Dibujar tu foto ocupando toda la pantalla
+		if (texturaFondoMenu != 0)
+		{
+			ImGui::Image((ImTextureID)(intptr_t)texturaFondoMenu, viewport->Size);
+		}
+
+		// 4. Posicionar título y botones ENCIMA de la foto
+		float anchoBoton = 220.0f;
+		float altoBoton  = 45.0f;
+		float centroX    = viewport->Size.x * 0.5f;
+		float inicioY    = viewport->Size.y * 0.50f; // 0.50f = mitad vertical de la pantalla
+
+		const char* titulo = "ESCAPE THE UAB";
+		ImGui::SetCursorPos(ImVec2(centroX - ImGui::CalcTextSize(titulo).x * 0.5f, inicioY - 60.0f));
+		ImGui::Text("%s", titulo);
+
+		ImGui::SetCursorPos(ImVec2(centroX - anchoBoton * 0.5f, inicioY));
+		if (ImGui::Button("JUGAR", ImVec2(anchoBoton, altoBoton)))
+		{
+			estadoActual = ESTADO_JUGANDO;
+			fpsTienePosicionAnterior = false;
+			mouseDeltaX = mouseDeltaY = 0.0;
+		}
+
+		ImGui::SetCursorPos(ImVec2(centroX - anchoBoton * 0.5f, inicioY + altoBoton + 15.0f));
+		if (ImGui::Button("SALIR", ImVec2(anchoBoton, altoBoton)))
+		{
+			glfwSetWindowShouldClose(window, true);
+		}
+
+		ImGui::End();
+		ImGui::PopStyleColor(3);
+		ImGui::PopStyleVar(4);
+	}
+	// =========================================================================
+	// MENÚ DE PAUSA
+	// =========================================================================
+	else if (estadoActual == ESTADO_PAUSA)
+	{
+		ImVec2 centro = ImGui::GetMainViewport()->GetCenter();
+		float ancho = 300.0f;
+		float alto  = 230.0f;
+
+		ImGui::SetNextWindowPos(centro, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSize(ImVec2(ancho, alto));
+
+		ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar |
+		                         ImGuiWindowFlags_NoResize |
+		                         ImGuiWindowFlags_NoMove |
+		                         ImGuiWindowFlags_NoCollapse;
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.05f, 0.05f, 0.08f, 0.88f));
+		ImGui::PushStyleColor(ImGuiCol_Button,   ImVec4(0.20f, 0.24f, 0.32f, 1.00f));
+
+		ImGui::Begin("MenuPausa", nullptr, flags);
+
+		const char* titulo = "PAUSA";
+		ImGui::SetCursorPosX((ancho - ImGui::CalcTextSize(titulo).x) * 0.5f);
+		ImGui::Text("%s", titulo);
+
+		ImGui::Dummy(ImVec2(0.0f, 25.0f));
+
+		float anchoBoton = 200.0f;
+		float altoBoton  = 40.0f;
+
+		ImGui::SetCursorPosX((ancho - anchoBoton) * 0.5f);
+		// ---> AQUÍ VA EL AJUSTE DEL BOTÓN REANUDAR <---
+		if (ImGui::Button("REANUDAR", ImVec2(anchoBoton, altoBoton)))
+		{
+			estadoActual = ESTADO_JUGANDO;
+			fpsTienePosicionAnterior = false;
+			mouseDeltaX = mouseDeltaY = 0.0;
+		}
+
+		ImGui::Dummy(ImVec2(0.0f, 12.0f));
+
+		ImGui::SetCursorPosX((ancho - anchoBoton) * 0.5f);
+		if (ImGui::Button("MENU PRINCIPAL", ImVec2(anchoBoton, altoBoton)))
+		{
+			estadoActual = ESTADO_MENU_PRINCIPAL;
+		}
+
+		ImGui::End();
+		ImGui::PopStyleColor(2);
+		ImGui::PopStyleVar(2);
+	}
+
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
 
@@ -7501,6 +7637,25 @@ int main(int argc, char** argv)
 // BUCLE PRINCIPAL Y RENDER PS1
 // =========================================================================
 // Loop until the user closes the window
+
+	texturaFondoMenu = SOIL_load_OGL_texture(
+    	"textures/fonde-menu.png",
+    	SOIL_LOAD_AUTO,
+    	SOIL_CREATE_NEW_ID,
+    	0
+	);
+
+	if (texturaFondoMenu == 0)
+	{
+    	std::cerr << "Error cargando fondo_menu.png: " << SOIL_last_result() << "\n";
+	}
+	else
+	{
+    	// Opcional: GL_NEAREST mantiene los píxeles nítidos (estilo PS1) al estirarse
+    	glBindTexture(GL_TEXTURE_2D, texturaFondoMenu);
+   		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+ 	   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	}
 	while (!glfwWindowShouldClose(window))
 	{
 		// Entorn VGI. Timer: common part, do this only once
@@ -7514,50 +7669,68 @@ int main(int argc, char** argv)
 
 		// Poll for and process events
 		glfwPollEvents();
+
+		// 1. Detector de pulsación única (flanco de subida) para la tecla P
+		static bool pPulsadaAntes = false;
+		bool pPulsadaAhora = (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS);
+
+		if (pPulsadaAhora && !pPulsadaAntes)
+		{
+			if (estadoActual == ESTADO_JUGANDO)
+			{
+				estadoActual = ESTADO_PAUSA;
+			}
+			else if (estadoActual == ESTADO_PAUSA)
+			{
+				estadoActual = ESTADO_JUGANDO;
+				fpsTienePosicionAnterior = false;
+				mouseDeltaX = mouseDeltaY = 0.0;
+			}
+		}
+		pPulsadaAntes = pPulsadaAhora;
+
+		// 2. Sincronizar la pausa interna del motor (libera/captura el ratón automáticamente)
+		fpsPausado = (estadoActual != ESTADO_JUGANDO);
+
 		editorEscenas.Actualizar(window, static_cast<float>(delta));
 		sincronizarCursorFPS(window);
 
-		const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
-			glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-		// Postura: en pausa, sin foco o con paneles de depuracion abiertos se CONGELA (delta 0): ni se agacha ni se levanta.
-		// Fuera del modo FPS (camaras de depuracion) se sigue levantando como antes.
-		const float deltaPostura = (editorEscenas.Activo() || (modoJuegoFPS() && !entradaFPSActiva())) ? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
-		mundoFisico.ActualizarJugadorAgachado(modoJuegoFPS() && ctrlPulsado, deltaPostura);
-
-		// Actualitzar moviment continu de navegació (WASD) per frame.
-		// Cada fotograma se parte de "quieto"; las teclas pedidas (si se puede jugar) fijan la velocidad.
-		mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+		// 3. Congelar física, movimiento y animaciones si NO estamos jugando
+		if (estadoActual == ESTADO_JUGANDO)
 		{
-			fps::EntradaMovimiento entrada;
-			entrada.activo = !editorEscenas.Activo() && entradaFPSActiva() && mundoFisico.HayJugador();
-			entrada.quiereMoverse = entrada.activo && hayTeclaDeMovimiento(window);
-			entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
-				glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-			entrada.enSuelo = mundoFisico.JugadorEnSuelo();
-			entrada.fraccionAgachado = mundoFisico.FraccionAgachado();
-			const float velocidad = movimientoJugador.Actualizar(static_cast<float>(delta), entrada);
-			if (entrada.activo)
-				moverJugadorFPS(window, velocidad);
-			barraEstamina.Actualizar(static_cast<float>(delta), movimientoJugador.FraccionEstamina(), movimientoJugador.Sprintando());
-		}
-		actualizarMovimientoMovil(window, static_cast<float>(delta));
-		// La animación se considera PAUSADA cuando el juego está en pausa (ESC) o la ventana
-		// ha perdido el foco. Abrir los paneles de depuración (F1) NO la pausa, porque el
-		// botón "Abrir puerta" está justamente en esos paneles.
-		const bool animacionPausada = editorEscenas.Activo() || fpsPausado || !ventanaConFoco;
-		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
-		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
-		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado
-		// Físicas: 1) las hojas animadas mueven sus cuerpos cinemáticos, 2) Bullet avanza en pasos
-		// fijos de 1/60 s (con el juego en pausa el mundo se congela).
-		escenaFisica->SincronizarCinematicos(objetosAnimados);
-		actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
-		mundoFisico.FijarPausa(animacionPausada);
-		mundoFisico.Actualizar(static_cast<float>(delta));
-		sincronizarJugadorYCamara();
-		actualizarBalanceoVisual(static_cast<float>(delta));
+			const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
+				glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
+			const float deltaPostura = (editorEscenas.Activo() || (modoJuegoFPS() && !entradaFPSActiva())) ? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
+			mundoFisico.ActualizarJugadorAgachado(modoJuegoFPS() && ctrlPulsado, deltaPostura);
 
-		// Entorn VGI.ImGui: Dibuixa menú ImGui
+			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+			{
+				fps::EntradaMovimiento entrada;
+				entrada.activo = !editorEscenas.Activo() && entradaFPSActiva() && mundoFisico.HayJugador();
+				entrada.quiereMoverse = entrada.activo && hayTeclaDeMovimiento(window);
+				entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+					glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
+				entrada.enSuelo = mundoFisico.JugadorEnSuelo();
+				entrada.fraccionAgachado = mundoFisico.FraccionAgachado();
+				const float velocidad = movimientoJugador.Actualizar(static_cast<float>(delta), entrada);
+				if (entrada.activo)
+					moverJugadorFPS(window, velocidad);
+				barraEstamina.Actualizar(static_cast<float>(delta), movimientoJugador.FraccionEstamina(), movimientoJugador.Sprintando());
+			}
+			actualizarMovimientoMovil(window, static_cast<float>(delta));
+
+			const bool animacionPausada = editorEscenas.Activo() || fpsPausado || !ventanaConFoco;
+			actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
+			glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
+			gestorOpenXR.ProcesarEventos();
+			escenaFisica->SincronizarCinematicos(objetosAnimados);
+			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
+			mundoFisico.FijarPausa(animacionPausada);
+			mundoFisico.Actualizar(static_cast<float>(delta));
+			sincronizarJugadorYCamara();
+			actualizarBalanceoVisual(static_cast<float>(delta));
+		}
+
 		draw_Menu_ImGui();
 		if (editorEscenas.ConsumeGuardarRequest())
 		{
@@ -7652,6 +7825,11 @@ int main(int argc, char** argv)
 // RESET RECURSOS PS1
 // =========================================================================
 	glDeleteFramebuffers(1, &ps1FBO);
+	if (texturaFondoMenu != 0)
+{
+    glDeleteTextures(1, &texturaFondoMenu);
+    texturaFondoMenu = 0;
+}
 	glDeleteTextures(1, &ps1ColorTex);
 	glDeleteRenderbuffers(1, &ps1RBO);
 // =========================================================================
