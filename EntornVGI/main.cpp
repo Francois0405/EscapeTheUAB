@@ -213,100 +213,10 @@ namespace
 		SOIL_free_image_data(pixels);
 	}
 
-	// ÚNICO sitio que conoce la cámara FPS: convierte "lo que ve el jugador" en una posición y una
-	// dirección del mundo. Todo el sistema de interacción (puertas y agarre) solo recibe esos dos
-	// vectores; con VR se llamaría igual, pero con los de la mano o el mando.
-	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
-	{
-		if (gestorOpenXR.SesionEnMarcha())
-		{
-			vr::PoseXR poseMando;
-			if (gestorOpenXR.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
-			{
-				const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
-				const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-				const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-					gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
-
-				const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMando, anclaje);
-				const glm::mat4 mundoMando = glm::inverse(vistaMando);
-
-				origen = glm::vec3(mundoMando[3]);
-				direccion = glm::normalize(-glm::vec3(mundoMando[2]));
-				return;
-			}
-		}
-
-		// Modo escritorio (PC): cámara FPS
-		origen = glm::vec3(opvN.x, opvN.y, opvN.z);
-		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);
-	}
-
-	bool matrizMandoIzquierdoMundo(glm::mat4& matrizMundo)
-	{
-		if (!gestorOpenXR.SesionEnMarcha()) return false;
-
-		vr::PoseXR poseMandoIzq;
-		if (!gestorOpenXR.PoseApuntadoMando(0, poseMandoIzq)) return false;
-
-		const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
-		const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-		const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
-
-		const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMandoIzq, anclaje);
-		matrizMundo = glm::inverse(vistaMando);
-		return true;
-	}
-
-	bool linternaMovilActiva = true;
-
-	void actualizarLinternaMovil()
-	{
-		// Usamos la luz #3 como linterna del móvil
-		const int idxLuz = 3;
-
-		if (!linternaMovilActiva || !mostrarMovil || !modoJuegoFPS() || editorEscenas.Activo())
-		{
-			llumGL[idxLuz].encesa = false;
-			return;
-		}
-
-		glm::vec3 posLuz(0.0f);
-		glm::vec3 dirLuz(0.0f);
-		glm::mat4 mundoMandoIzq(1.0f);
-
-		if (matrizMandoIzquierdoMundo(mundoMandoIzq))
-		{
-			// En VR: posición y dirección (-Z local) del mando izquierdo
-			posLuz = glm::vec3(mundoMandoIzq[3]);
-			dirLuz = glm::normalize(-glm::vec3(mundoMandoIzq[2]));
-		}
-		else
-		{
-			// En PC: sale desde la cámara hacia donde miras
-			posLuz = glm::vec3(opvN.x, opvN.y, opvN.z);
-			dirLuz = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
-		}
-
-		llumGL[idxLuz].encesa = true;
-		llumGL[idxLuz].posicio = { posLuz.x, posLuz.y, posLuz.z, 1.0 }; // w=1.0 -> luz posicional
-		llumGL[idxLuz].difusa = { 1.0f, 0.96f, 0.88f, 1.0f };           // blanco cálido tipo flash LED
-		llumGL[idxLuz].especular = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		// Atenuación suave con la distancia (f_att = 1 / (a*d^2 + b*d + c))
-		llumGL[idxLuz].atenuacio.a = 0.02;
-		llumGL[idxLuz].atenuacio.b = 0.08;
-		llumGL[idxLuz].atenuacio.c = 1.0;
-
-		// Cono de luz (spotlight)
-		llumGL[idxLuz].restringida = true;
-		llumGL[idxLuz].spotdirection = { dirLuz.x, dirLuz.y, dirLuz.z, 0.0 };
-		llumGL[idxLuz].spotcoscutoff = std::cos(glm::radians(28.0f)); // Apertura de 28 grados
-		llumGL[idxLuz].spotexponent = 12.0f;                          // Suavizado de bordes del cono
-	}
-
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
+
+	bool modoJuegoFPS();
+	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion);
 
 	struct ObjetivoInteraccion
 	{
@@ -459,6 +369,97 @@ namespace
 	{
 		return glm::vec3(opvN.x, opvN.y, opvN.z - mundoFisico.AlturaOjosJugador());
 	}
+
+	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
+	{
+		if (gestorOpenXR.SesionEnMarcha())
+		{
+			vr::PoseXR poseMando;
+			if (gestorOpenXR.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
+			{
+				const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+				const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+				const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
+					gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+
+				const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMando, anclaje);
+				const glm::mat4 mundoMando = glm::inverse(vistaMando);
+
+				origen = glm::vec3(mundoMando[3]);
+				direccion = glm::normalize(-glm::vec3(mundoMando[2]));
+				return;
+			}
+		}
+
+		// Modo escritorio (PC): cámara FPS
+		origen = glm::vec3(opvN.x, opvN.y, opvN.z);
+		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);
+	}
+
+	bool matrizMandoIzquierdoMundo(glm::mat4& matrizMundo)
+	{
+		if (!gestorOpenXR.SesionEnMarcha()) return false;
+
+		vr::PoseXR poseMandoIzq;
+		if (!gestorOpenXR.PoseApuntadoMando(0, poseMandoIzq)) return false;
+
+		const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+		const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+		const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
+			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+
+		const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMandoIzq, anclaje);
+		matrizMundo = glm::inverse(vistaMando);
+		return true;
+	}
+
+	bool linternaMovilActiva = true;
+
+	void actualizarLinternaMovil()
+	{
+		// Usamos la luz #3 como linterna del móvil
+		const int idxLuz = 3;
+
+		if (!linternaMovilActiva || !mostrarMovil || !modoJuegoFPS() || editorEscenas.Activo())
+		{
+			llumGL[idxLuz].encesa = false;
+			return;
+		}
+
+		glm::vec3 posLuz(0.0f);
+		glm::vec3 dirLuz(0.0f);
+		glm::mat4 mundoMandoIzq(1.0f);
+
+		if (matrizMandoIzquierdoMundo(mundoMandoIzq))
+		{
+			// En VR: posición y dirección (-Z local) del mando izquierdo
+			posLuz = glm::vec3(mundoMandoIzq[3]);
+			dirLuz = glm::normalize(-glm::vec3(mundoMandoIzq[2]));
+		}
+		else
+		{
+			// En PC: sale desde la cámara hacia donde miras
+			posLuz = glm::vec3(opvN.x, opvN.y, opvN.z);
+			dirLuz = glm::normalize(glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z));
+		}
+
+		llumGL[idxLuz].encesa = true;
+		llumGL[idxLuz].posicio = { posLuz.x, posLuz.y, posLuz.z, 1.0 }; // w=1.0 -> luz posicional
+		llumGL[idxLuz].difusa = { 1.0f, 0.96f, 0.88f, 1.0f };           // blanco cálido tipo flash LED
+		llumGL[idxLuz].especular = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		// Atenuación suave con la distancia (f_att = 1 / (a*d^2 + b*d + c))
+		llumGL[idxLuz].atenuacio.a = 0.02;
+		llumGL[idxLuz].atenuacio.b = 0.08;
+		llumGL[idxLuz].atenuacio.c = 1.0;
+
+		// Cono de luz (spotlight)
+		llumGL[idxLuz].restringida = true;
+		llumGL[idxLuz].spotdirection = { dirLuz.x, dirLuz.y, dirLuz.z, 0.0 };
+		llumGL[idxLuz].spotcoscutoff = std::cos(glm::radians(28.0f)); // Apertura de 28 grados
+		llumGL[idxLuz].spotexponent = 12.0f;                          // Suavizado de bordes del cono
+	}
+
 
 	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
 	// el suelo ya exista y el jugador no caiga al vacío.
@@ -1535,12 +1536,12 @@ namespace
 		direccion = glm::normalize(direccion);
 
 		// Longitud del láser (mismo alcance que el agarre/interacción)
-		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);[cite: 1]
+		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
 		const glm::vec3 destino = origen + direccion * alcance;
 
 		// Color RGBA: verde si estás agarrando o apuntando a algo interactuable; cian por defecto
-		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();[cite: 1]
-		const bool resaltado = escenaFisica->HayAgarre() || objetivo.accion != AccionInteraccion::Ninguna;[cite: 1]
+		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+		const bool resaltado = escenaFisica->HayAgarre() || objetivo.accion != AccionInteraccion::Ninguna;
 		const float r = resaltado ? 0.1f : 0.0f;
 		const float g = resaltado ? 1.0f : 0.85f;
 		const float b = resaltado ? 0.2f : 1.0f;
@@ -1690,7 +1691,7 @@ void dibuixa_Escena() {
 
 		if (matrizMandoIzquierdoMundo(mundoMandoIzq))
 		{
-			// Ajusta estas rotaciones/desplazamientos locales si el modelo Phone.obj sale girado en tu mano:
+			// En VR: anclado al mando izquierdo
 			glm::mat4 ajusteLocal(1.0f);
 			ajusteLocal = glm::rotate(ajusteLocal, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 			ajusteLocal = glm::scale(ajusteLocal, glm::vec3(movilEscala));
@@ -1699,6 +1700,7 @@ void dibuixa_Escena() {
 		}
 		else
 		{
+			// En PC: pegado a la cámara con balanceo
 			const float idle = intensidadIdle;
 			const float bob = pesoCaminata * intensidadWalking;
 			glm::mat4 matrizLocal(1.0f);
@@ -1713,16 +1715,17 @@ void dibuixa_Escena() {
 			matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.z) +
 				std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0.0f, 0.0f, 1.0f));
 			matrizLocal = glm::scale(matrizLocal, glm::vec3(movilEscala));
-			const glm::mat4 matrizMovil = glm::inverse(ViewMatrix) * matrizLocal;
-
-			const bool texturaAnterior = textura;
-			textura = true;
-			dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
-				textura, texturesID, textura_map, tFlag_invert_Y,
-				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-				phoneOBJ, matrizMovil);
-			textura = texturaAnterior;
+			matrizMovil = glm::inverse(ViewMatrix) * matrizLocal; // Sin "const glm::mat4" delante
 		}
+
+		// Dibujar el móvil en ambos modos (VR y PC)
+		const bool texturaAnterior = textura;
+		textura = true;
+		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
+			textura, texturesID, textura_map, tFlag_invert_Y,
+			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+			phoneOBJ, matrizMovil);
+		textura = texturaAnterior;
 	}
 
 	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
@@ -5073,9 +5076,10 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		if (key == GLFW_KEY_F && action == GLFW_PRESS)
 		{
 			linternaMovilActiva = !linternaMovilActiva;
+			std::cout << "Linterna: " << (linternaMovilActiva ? "ON" : "OFF") << std::endl;
 			return;
 		}
-		
+
 		return;
 	}
 
@@ -7891,7 +7895,7 @@ char phonePath[] = "./assets/models/Phone.obj";
 		const bool animacionPausada = editorEscenas.Activo() || fpsPausado || !ventanaConFoco;
 		actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
 		glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
-		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado[cite: 1]
+		gestorOpenXR.ProcesarEventos();   // no hace nada si OpenXR no está activado
 
 		if (gestorOpenXR.SesionEnMarcha() && entradaFPSActiva())
 		{
