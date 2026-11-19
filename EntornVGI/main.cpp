@@ -381,11 +381,7 @@ namespace
 	void crearJugadorFisico()
 	{
 		if (mundoFisico.HayJugador()) return;
-		glm::vec3 pies = posicionPiesDesdeCamara();
-		pies.x = 0;
-		pies.y = 0;
-
-		pies.z = 0.1f;   // 2 cm de margen: nace sin tocar el suelo y se apoya solo
+		const glm::vec3 pies = posicionPiesDesdeCamara();
 		mundoFisico.CrearJugador(pies);
 		std::cout << "Jugador fisico creado con los pies en (" << pies.x << ", " << pies.y << ", " << pies.z << ")." << std::endl;
 	}
@@ -710,8 +706,8 @@ void InitGL()
 	oPolars = -1;
 
 // Entorn VGI: Variables de control de l'opció CÀMERA->NAVEGA?
-	n[0] = 14.1;	n[1] = 0.0;		n[2] = -1.3;
-	opvN.x = 14.1;	opvN.y = -21.0;	opvN.z = -1.3;
+	n[0] = 14;	n[1] = 0.0;		n[2] = -1.7;
+	opvN.x = 14;	opvN.y = -21.0;	opvN.z = -1.7;
 	angleZ = 0.0;
 	
 // Entorn VGI: Variables de control de l'opció CÀMERA->GEODE?
@@ -3615,8 +3611,8 @@ void OnCameraNavega()
 
 		// Incialitzar variables Navega segons configuració eixos en Polars
 		if (Vis_Polar == POLARZ) {
-			opvN.x = 14.1;	opvN.y = -21.0;	opvN.z = -1.3;
-			n[0] = 14.1;	n[1] = 0.0;		n[2] = -1.3;
+			opvN.x = 14;	opvN.y = -21.0;	opvN.z = -1.7;
+			n[0] = 14;	n[1] = 0.0;		n[2] = -1.7;
 			angleZ = 0.0;
 			}
 		else if (Vis_Polar == POLARY) {
@@ -3637,8 +3633,8 @@ void OnCameraOrigenNavega()
 {
 // TODO: Agregue aquí su código de controlador de comandos
 	if (camera == CAM_NAVEGA) 
-		{	n[0] = 14.1;	n[1] = 0.0;		n[2] = -1.3;
-			opvN.x = 14.1;	opvN.y = -21.0;	opvN.z = -1.3;
+		{	n[0] = 14;	n[1] = 0.0;		n[2] = -1.7;
+			opvN.x = 14;	opvN.y = -21.0;	opvN.z = -1.7;
 			angleZ = 0.0;
 		}
 }
