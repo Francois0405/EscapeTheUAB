@@ -3,6 +3,7 @@
 #include "third_party/nlohmann/json.hpp"
 
 #include <chrono>
+#include <cmath>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -47,6 +48,7 @@ int main()
 	const auto unico = std::chrono::steady_clock::now().time_since_epoch().count();
 	const fs::path temp = fs::temp_directory_path() / ("EscapeTheUAB-EditorPersistenceTests-" + std::to_string(unico));
 	fs::create_directories(temp / "models");
+	escribir(temp / "models" / "floor.png", "fixture texture");
 	const fs::path escena = temp / "scenes" / "room.json";
 	escribir(temp / "models" / "table.obj", "# test model\n");
 	escribir(temp / "models" / "door.glb", "# test animated model\n");
@@ -58,6 +60,7 @@ int main()
   ],
   "objects": [
     {"id":"table","model":"../models/table.obj","position":[1,2,3],"rotation":[0,0,0],"scale":[1,1,1],
+     "light":{"enabled":true,"offset":[0,0.2,0],"color":[0.8,0.9,1.0],"intensity":2.5},
      "physics":{"type":"static","halfSize":[0.5,0.4,0.3],"offset":[0.1,0.2,0.3]}}
   ],
   "animated": [
@@ -76,6 +79,10 @@ int main()
 	mesa.posicion = glm::vec3(7.25f, -3.5f, 1.75f);
 	mesa.rotacion = glm::vec3(15.0f, -20.0f, 90.0f);
 	mesa.escala = glm::vec3(1.25f, 0.75f, 2.0f);
+	mesa.material.presente = true;
+	mesa.material.textura = "../models/floor.png";
+	mesa.material.tileSize = glm::vec2(1.0f, 1.25f);
+	mesa.material.roughness = 0.92f;
 	datos.objetos[1] = mesa;
 	comprobar(serializador.Guardar(datos.objetos, error), "guarda transformaciones válidas");
 	comprobar(fs::exists(escena.string() + ".bak"), "crea una copia de seguridad antes de reemplazar");
@@ -88,12 +95,22 @@ int main()
 	comprobar(guardada["scale"] == nlohmann::json::array({ 1.25, 0.75, 2.0 }), "persiste escala");
 	comprobar(guardada["physics"]["halfSize"] == nlohmann::json::array({ 0.5, 0.4, 0.3 }), "preserva halfSize físico");
 	comprobar(guardada["physics"]["offset"] == nlohmann::json::array({ 0.1, 0.2, 0.3 }), "preserva offset físico");
+	comprobar(guardada["light"]["enabled"] == true && guardada["light"]["offset"] == nlohmann::json::array({ 0.0, 0.2, 0.0 }) &&
+		guardada["light"]["color"] == nlohmann::json::array({ 0.8, 0.9, 1.0 }) && guardada["light"]["intensity"] == 2.5,
+		"preserva la luz asociada a la instancia al guardar desde EDIT");
+	comprobar(guardada["material"]["texture"] == "../models/floor.png" &&
+		guardada["material"]["tileSize"] == nlohmann::json::array({ 1.0, 1.25 }) &&
+		std::abs(guardada["material"]["roughness"].get<double>() - 0.92) < 1e-5,
+		"guarda textura relativa y parametros del material de instancia");
 	comprobar(guardado["animated"][0]["colliders"][0]["type"] == "kinematic", "preserva colisionador animado");
 	comprobar(guardado["architecture"][0]["position"] == nlohmann::json::array({ 0, 0, 0 }), "preserva instancias no editadas");
 	DatosEscena recargada;
 	comprobar(CargarDatosEscenaJSON(escena, recargada, error), "recarga JSON editado");
 	comprobar(recargada.objetos[1].posicion == mesa.posicion && recargada.objetos[1].rotacion == mesa.rotacion &&
 		recargada.objetos[1].escala == mesa.escala, "la recarga conserva transformaciones exactas");
+	comprobar(recargada.objetos[1].material.presente && recargada.objetos[1].material.textura == mesa.material.textura &&
+		recargada.objetos[1].material.tileSize == mesa.material.tileSize && recargada.objetos[1].material.roughness == mesa.material.roughness,
+		"la recarga restaura el material configurable");
 	SceneObject duplicada = mesa;
 	duplicada.id = "table_copy";
 	comprobar(serializador.Guardar({ datos.objetos[0], mesa, duplicada }, error), "serializa una instancia duplicada con ID nuevo");
@@ -115,6 +132,8 @@ int main()
 
 	escribir(runtimeScene.parent_path().parent_path() / "models" / "door.glb",
 			"# test animated model\n");
+	escribir(runtimeScene.parent_path().parent_path() / "models" / "floor.png", "fixture texture");
+	escribir(sourceScene.parent_path().parent_path() / "models" / "floor.png", "fixture texture");
 	
 	escribir(runtimeScene, original);
 	escribir(sourceScene, original);

@@ -159,6 +159,19 @@ namespace editor
 				error = "La escena contiene un ID duplicado o una transformacion no finita/invalida.";
 				return false;
 			}
+			if (objeto.material.presente)
+			{
+				const auto& m = objeto.material;
+				const std::filesystem::path textura(m.textura);
+				if (!std::isfinite(m.tileSize.x) || !std::isfinite(m.tileSize.y) ||
+					m.tileSize.x < 0.1f || m.tileSize.x > 20.0f || m.tileSize.y < 0.1f || m.tileSize.y > 20.0f ||
+					!std::isfinite(m.roughness) || m.roughness < 0.0f || m.roughness > 1.0f || textura.is_absolute() ||
+					(!m.textura.empty() && !std::filesystem::is_regular_file(ruta.parent_path() / textura)))
+				{
+					error = "La instancia '" + objeto.id + "' tiene una textura o parametros de material invalidos.";
+					return false;
+				}
+			}
 		}
 
 		json documento;
@@ -178,6 +191,14 @@ namespace editor
 					(*entrada)["position"] = VectorJSON(objeto.posicion);
 					(*entrada)["rotation"] = VectorJSON(objeto.rotacion);
 					(*entrada)["scale"] = VectorJSON(objeto.escala);
+					if (objeto.material.presente)
+					{
+						json material = { {"tileSize", {objeto.material.tileSize.x, objeto.material.tileSize.y}},
+							{"roughness", objeto.material.roughness} };
+						if (!objeto.material.textura.empty()) material["texture"] = objeto.material.textura;
+						(*entrada)["material"] = std::move(material);
+					}
+					else entrada->erase("material");
 					escritos.insert(id);
 					++entrada;
 				}
@@ -227,6 +248,13 @@ namespace editor
 					{"position", VectorJSON(objeto.posicion)}, {"rotation", VectorJSON(objeto.rotacion)},
 					{"scale", VectorJSON(objeto.escala)}
 				};
+				if (objeto.material.presente)
+				{
+					json material = { {"tileSize", {objeto.material.tileSize.x, objeto.material.tileSize.y}},
+						{"roughness", objeto.material.roughness} };
+					if (!objeto.material.textura.empty()) material["texture"] = objeto.material.textura;
+					nueva["material"] = std::move(material);
+				}
 				if (objeto.fisica.presente)
 				{
 					json fisica = {

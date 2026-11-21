@@ -32,7 +32,9 @@ namespace editor
 	inline bool Iguales(const SceneObject& a, const SceneObject& b)
 	{
 		return a.id == b.id && a.categoria == b.categoria && a.modelo == b.modelo && a.posicion == b.posicion &&
-			a.rotacion == b.rotacion && a.escala == b.escala && Iguales(a.fisica, b.fisica);
+			a.rotacion == b.rotacion && a.escala == b.escala && Iguales(a.fisica, b.fisica) &&
+			a.material.presente == b.material.presente && a.material.textura == b.material.textura &&
+			a.material.tileSize == b.material.tileSize && a.material.roughness == b.material.roughness;
 	}
 
 	inline bool Iguales(const SceneObjetoAnimado& a, const SceneObjetoAnimado& b)

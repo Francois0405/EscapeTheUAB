@@ -48,6 +48,7 @@ int main()
     const fs::path temp = fs::temp_directory_path() / ("EscapeTheUAB-SceneLoaderTests-" + std::to_string(unique));
     fs::create_directories(temp / "models");
     escribir(temp / "models" / "cube.obj", "# OBJ fixture\n");
+    escribir(temp / "models" / "floor.png", "fixture texture");
 
     std::vector<SceneObject> objetos;
     std::string error;
@@ -82,6 +83,42 @@ int main()
     escribir(temp / "relative-model.json", escena("[" + object + "]"));
     comprobar(cargar(temp / "relative-model.json", objetos, error, nombre), "ruta relativa de modelo valida");
     comprobar(objetos.size() == 1 && objetos[0].modelo == "models/cube.obj", "se conserva la ruta relativa");
+
+    std::string conLuz = object;
+    conLuz.insert(conLuz.size() - 1,
+        ",\"light\":{\"enabled\":true,\"offset\":[0,0.2,0],\"color\":[0.8,0.9,1],\"intensity\":2.5}");
+    escribir(temp / "scene-light.json", escena("[" + conLuz + "]"));
+    DatosEscena datosConLuz;
+    comprobar(CargarDatosEscenaJSON(temp / "scene-light.json", datosConLuz, error),
+        "la luz opcional de un objeto debe cargar");
+    comprobar(datosConLuz.objetos.size() == 1 && datosConLuz.objetos[0].luz.presente &&
+        datosConLuz.objetos[0].luz.encendida && datosConLuz.objetos[0].luz.desplazamiento.y == 0.2f &&
+        datosConLuz.objetos[0].luz.color.z == 1.0f && datosConLuz.objetos[0].luz.intensidad == 2.5f,
+        "se conservan los parametros de luz de escena");
+    std::string conMaterial = object;
+    conMaterial.insert(conMaterial.size() - 1,
+        ",\"material\":{\"texture\":\"models/floor.png\",\"tileSize\":[1.0,1.0],\"roughness\":0.92}");
+    escribir(temp / "scene-material.json", escena("[" + conMaterial + "]"));
+    DatosEscena datosMaterial;
+    comprobar(CargarDatosEscenaJSON(temp / "scene-material.json", datosMaterial, error),
+        "el material de instancia admite textura relativa, tamaño fisico y roughness");
+    comprobar(datosMaterial.objetos.size() == 1 && datosMaterial.objetos[0].material.presente &&
+        datosMaterial.objetos[0].material.textura == "models/floor.png" &&
+        datosMaterial.objetos[0].material.tileSize == glm::vec2(1.0f) &&
+        datosMaterial.objetos[0].material.roughness == 0.92f,
+        "el material conserva sus parametros por instancia");
+    std::string materialFueraDeRango = conMaterial;
+    const auto tileSize = materialFueraDeRango.find("[1.0,1.0]");
+    materialFueraDeRango.replace(tileSize, std::string("[1.0,1.0]").size(), "[0.01,1.0]");
+    escribir(temp / "scene-material-invalid.json", escena("[" + materialFueraDeRango + "]"));
+    comprobar(!CargarDatosEscenaJSON(temp / "scene-material-invalid.json", datosMaterial, error),
+        "se rechaza tiling que provocaria un patron excesivamente fino");
+    std::string luzInvalida = conLuz;
+    const auto colorLuz = luzInvalida.find("[0.8,0.9,1]");
+    luzInvalida.replace(colorLuz, std::string("[0.8,0.9,1]").size(), "[0.8,0.9,1.2]");
+    escribir(temp / "scene-light-invalid.json", escena("[" + luzInvalida + "]"));
+    comprobar(!CargarDatosEscenaJSON(temp / "scene-light-invalid.json", datosConLuz, error),
+        "color de luz fuera de rango debe rechazarse");
 
     const auto objetosPrevios = objetos;
     const auto nombrePrevio = nombre;

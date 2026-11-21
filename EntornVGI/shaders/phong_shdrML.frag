@@ -14,6 +14,7 @@
 #version 330 core
 
 #define MaxLights 8
+uniform bool uMaterialEmission;
 
 // ---- L14- Estructures Font de LLum i Material (coeficients reflectivitat).
 struct Light
@@ -25,7 +26,8 @@ struct Light
 	vec3 attenuation;	// Atenuaci� de la font per dist�ncia: .x (quadr�tica), .y (lineal), .z (constant).
 	bool restricted;	// Booleana si font de llum restringida (TRUE) o no (FALSE).
 	vec3 spotDirection;	// Vector de direcci� de la font restringida (Coord. M�n).
-	float spotCosCutoff;	// Angle d'obertura de la font restringids (en graus). 
+	float spotCosCutoff;
+	float spotInnerCosCutoff;
 	float spotExponent;	// Exponent per al c�lcul intenstitat font restringida segons model Warn.
 };
 
@@ -133,9 +135,12 @@ vec3 phongModel(inout int numMat, inout float aValue)
 			);
 		    spotDot = dot(-L,spotDirectionPV);
 		    if (spotDot > LightSource[i].spotCosCutoff)
-		      { spotDot = pow(spotDot, LightSource[i].spotExponent); // Model de Warn
+		      {
+			spotDot = smoothstep(LightSource[i].spotCosCutoff,
+				LightSource[i].spotInnerCosCutoff, spotDot);
+			spotDot = pow(max(spotDot, 0.0), max(LightSource[i].spotExponent, 0.001));
 			fatt = spotDot * fatt;
-                      }
+	                      }
 		      else fatt=0.0;
                   }
 
@@ -166,7 +171,8 @@ vec3 phongModel(inout int numMat, inout float aValue)
 		ILlums += Idiffuse + Ispecular;
 		}
    }
-   return Iemissive + Iambient + ILlums;
+   vec3 emisionMTL = (uMaterialEmission && !sw_intensity[0]) ? material.emission.rgb : vec3(0.0);
+   return Iemissive + emisionMTL + Iambient + ILlums;
 }
 
 void main ()

@@ -154,6 +154,71 @@ namespace
         return true;
     }
 
+    bool leerLuz(const json& entrada, SceneLuz& luz, const std::string& contexto, std::string& error)
+    {
+        if (!entrada.contains("light")) return true;
+        const json& datos = entrada["light"];
+        const std::string ctx = contexto + ".light";
+        if (!datos.is_object())
+        {
+            error = ctx + " debe ser un objeto JSON.";
+            return false;
+        }
+        if (!soloClavesConocidas(datos, { "enabled", "offset", "color", "intensity" }, ctx, error)) return false;
+        if (datos.contains("enabled"))
+        {
+            if (!datos["enabled"].is_boolean()) { error = ctx + ".enabled debe ser booleano."; return false; }
+            luz.encendida = datos["enabled"].get<bool>();
+        }
+        if (datos.contains("offset") && !leerVector3(datos["offset"], luz.desplazamiento, ctx + ".offset", error)) return false;
+        if (datos.contains("color") && !leerVector3(datos["color"], luz.color, ctx + ".color", error)) return false;
+        for (int eje = 0; eje < 3; ++eje)
+            if (luz.color[eje] < 0.0f || luz.color[eje] > 1.0f)
+            { error = ctx + ".color debe estar entre 0 y 1."; return false; }
+        if (datos.contains("intensity") && !leerNumero(datos["intensity"], luz.intensidad, ctx + ".intensity", error)) return false;
+        if (!(luz.intensidad > 0.0f) || luz.intensidad > 16.0f)
+        { error = ctx + ".intensity debe estar entre 0 y 16."; return false; }
+        luz.presente = true;
+        return true;
+    }
+
+    bool leerMaterial(const json& entrada, SceneMaterial& material, const std::filesystem::path& carpeta,
+        const std::string& contexto, std::string& error)
+    {
+        if (!entrada.contains("material")) return true;
+        const json& datos = entrada["material"];
+        const std::string ctx = contexto + ".material";
+        if (!datos.is_object()) { error = ctx + " debe ser un objeto JSON."; return false; }
+        if (!soloClavesConocidas(datos, { "texture", "tileSize", "roughness" }, ctx, error)) return false;
+        if (datos.contains("texture"))
+        {
+            if (!datos["texture"].is_string() || datos["texture"].get<std::string>().empty())
+            { error = ctx + ".texture debe ser una ruta no vacia."; return false; }
+            material.textura = datos["texture"].get<std::string>();
+            const std::filesystem::path rutaTextura(material.textura);
+            if (rutaTextura.is_absolute()) { error = ctx + ".texture debe ser relativa a la escena."; return false; }
+            const auto imagen = (carpeta / rutaTextura).lexically_normal();
+            if (!std::filesystem::is_regular_file(imagen))
+            { error = ctx + " apunta a una textura inexistente: " + imagen.string(); return false; }
+        }
+        if (datos.contains("tileSize"))
+        {
+            if (!datos["tileSize"].is_array() || datos["tileSize"].size() != 2 ||
+                !datos["tileSize"][0].is_number() || !datos["tileSize"][1].is_number())
+            { error = ctx + ".tileSize debe ser [metrosX, metrosY]."; return false; }
+            material.tileSize = glm::vec2(datos["tileSize"][0].get<float>(), datos["tileSize"][1].get<float>());
+            if (!std::isfinite(material.tileSize.x) || !std::isfinite(material.tileSize.y) ||
+                material.tileSize.x < 0.1f || material.tileSize.y < 0.1f ||
+                material.tileSize.x > 20.0f || material.tileSize.y > 20.0f)
+            { error = ctx + ".tileSize debe estar entre 0.1 y 20 metros."; return false; }
+        }
+        if (datos.contains("roughness") && !leerNumero(datos["roughness"], material.roughness, ctx + ".roughness", error)) return false;
+        if (material.roughness < 0.0f || material.roughness > 1.0f)
+        { error = ctx + ".roughness debe estar entre 0 y 1."; return false; }
+        material.presente = true;
+        return true;
+    }
+
     // Un elemento de la lista opcional "animated".
     bool leerObjetoAnimado(const json& entrada, const std::string& contexto, const std::filesystem::path& carpetaJson,
         SceneObjetoAnimado& objeto, std::string& error)
@@ -344,7 +409,8 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
                     !leerVector3(entrada["scale"], objeto.escala, contexto + ".scale", error))
                     return false;
 
-                if (!leerFisica(entrada, objeto.fisica, contexto, error)) return false;
+                if (!leerFisica(entrada, objeto.fisica, contexto, error) || !leerLuz(entrada, objeto.luz, contexto, error) ||
+                    !leerMaterial(entrada, objeto.material, ruta.parent_path(), contexto, error)) return false;
 
                 for (int eje = 0; eje < 3; ++eje)
                 {

@@ -21,6 +21,27 @@ struct SceneFisica
     float masa = 0.0f;                                      // "mass" en kg (solo dinámicos)
 };
 
+// Fuente de luz ligada a la transformacion de una instancia OBJ.
+// El motor limita estas fuentes a los slots disponibles del shader Phong.
+struct SceneLuz
+{
+    bool presente = false;
+    bool encendida = true;
+    glm::vec3 desplazamiento = glm::vec3(0.0f);
+    glm::vec3 color = glm::vec3(0.82f, 0.94f, 1.0f);
+    float intensidad = 1.0f;
+};
+
+// Sobrescritura de material por instancia. tileSize expresa metros por repeticion
+// de textura en los ejes del plano; roughness se traduce a shininess Phong.
+struct SceneMaterial
+{
+    bool presente = false;
+    std::string textura; // relativa al JSON de escena
+    glm::vec2 tileSize = glm::vec2(1.0f);
+    float roughness = 0.85f;
+};
+
 struct SceneObject
 {
     std::string id;
@@ -32,6 +53,8 @@ struct SceneObject
     glm::vec3 escala;
 
     SceneFisica fisica;   // opcional: sin "physics" en el JSON queda con presente = false
+    SceneLuz luz;         // opcional: fuente Phong atada al objeto, sin colision extra
+    SceneMaterial material; // opcional: material configurable por instancia
 };
 
 // Caja de colisión de UN nodo de un modelo animado (la hoja de la puerta, su marco...).

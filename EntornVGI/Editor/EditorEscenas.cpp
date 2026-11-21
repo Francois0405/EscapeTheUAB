@@ -793,6 +793,33 @@ namespace editor
 					MarcarModificada();
 				}
 				ImGui::Separator();
+				ImGui::TextUnformatted("Instance material");
+				bool usaMaterial = objeto.material.presente;
+				if (ImGui::Checkbox("Override material", &usaMaterial))
+				{
+					AbrirTransaccionSiHaceFalta();
+					objeto.material.presente = usaMaterial;
+					MarcarModificada();
+				}
+				if (objeto.material.presente)
+				{
+					char texturaMaterial[512]{};
+					std::snprintf(texturaMaterial, sizeof(texturaMaterial), "%s", objeto.material.textura.c_str());
+					if (ImGui::InputText("Texture (relative to scene)", texturaMaterial, sizeof(texturaMaterial)))
+					{
+						objeto.material.textura = texturaMaterial;
+						AbrirTransaccionSiHaceFalta(); MarcarModificada();
+					}
+					if (ImGui::InputFloat2("Tile size (m)", &objeto.material.tileSize.x, "%.2f"))
+					{
+						objeto.material.tileSize.x = std::clamp(objeto.material.tileSize.x, 0.1f, 20.0f);
+						objeto.material.tileSize.y = std::clamp(objeto.material.tileSize.y, 0.1f, 20.0f);
+						AbrirTransaccionSiHaceFalta(); MarcarModificada();
+					}
+					if (ImGui::SliderFloat("Roughness", &objeto.material.roughness, 0.0f, 1.0f, "%.2f"))
+					{ AbrirTransaccionSiHaceFalta(); MarcarModificada(); }
+				}
+				ImGui::Separator();
 				ImGui::TextUnformatted("Physics");
 				int tipo = !objeto.fisica.presente ? 0 : (objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico ? 2 : 1);
 				const int tipoAnterior = tipo;

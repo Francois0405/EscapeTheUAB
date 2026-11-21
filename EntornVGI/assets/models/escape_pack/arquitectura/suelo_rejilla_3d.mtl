@@ -1,0 +1,15 @@
+# Iluminacion difusa tenue, sin textura de rejilla ultradensa.
+newmtl rejilla_metal
+Ka 0.34 0.37 0.39
+Kd 0.64 0.68 0.70
+Ks 0.025 0.025 0.025
+Ns 4.0
+illum 2
+
+# Base inferior oscura. Las perforaciones son visuales.
+newmtl huecos_oscuros
+Ka 0.040 0.045 0.050
+Kd 0.065 0.070 0.075
+Ks 0.0 0.0 0.0
+Ns 1.0
+illum 1

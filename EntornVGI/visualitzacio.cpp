@@ -21,6 +21,9 @@
 #include "visualitzacio.h"
 #include "escena.h"
 
+#include <algorithm>
+#include <string>
+
 // Iluminaci�: Configurar iluminaci� de l'escena
 void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool ll_amb, LLUM* lumin, char obj, bool frnt_fcs,
 	bool bc_lin, int step)
@@ -38,6 +41,16 @@ void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool
 
 // Passar llum fixe a Coordenades M�n o llum lligada a c�mera
 	glUniform1i(glGetUniformLocation(sh_programID, "fixedLight"), ifix);
+	// Compatibilidad con los focos antiguos: si no se define borde interior,
+	// se deriva uno suave a partir del borde exterior antes de subirlo al shader.
+	for (int i = 0; i < NUM_MAX_LLUMS; ++i)
+	{
+		const GLfloat exterior = std::clamp(lumin[i].spotcoscutoff, -0.999f, 0.999f);
+		const GLfloat interior = lumin[i].spotInnerCosCutoff > exterior
+			? std::min(lumin[i].spotInnerCosCutoff, 0.9999f)
+			: std::cos(std::acos(exterior) * 0.72f);
+		glUniform1f(glGetUniformLocation(sh_programID, ("LightSource[" + std::to_string(i) + "].spotInnerCosCutoff").c_str()), interior);
+	}
 
 // ---------------- LLUM #0 - (+Z)
 // Posici� de la font de llum:
@@ -77,7 +90,7 @@ void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool
 
 // Intensitats difusa i especular de la font de llum:
 	//	glLightfv(GL_LIGHT1, GL_DIFFUSE, lumin[1].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[1].diffuse"), lumin[0].difusa.r, lumin[1].difusa.g, lumin[1].difusa.b, lumin[1].difusa.a);
+	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[1].diffuse"), lumin[1].difusa.r, lumin[1].difusa.g, lumin[1].difusa.b, lumin[1].difusa.a);
 	//	glLightfv(GL_LIGHT1, GL_SPECULAR, lumin[1].especular);	// Codi OpenGL 1.1
 	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[1].specular"), lumin[1].especular.r, lumin[1].especular.g, lumin[1].especular.b, lumin[1].especular.a);
 
@@ -95,7 +108,7 @@ void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool
 	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[1].restricted"), lumin[1].restringida);
 	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[1].spotDirection"), lumin[1].spotdirection.x, lumin[1].spotdirection.y, lumin[1].spotdirection.z);
 	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[1].spotCosCutoff"), lumin[1].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[1].SpotExponent"), lumin[1].spotexponent);
+	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[1].spotExponent"), lumin[1].spotexponent);
 
 // Activaci� - Desactivaci� font de llum:
 	//	glEnable(GL_LIGHT1);	//	glDisable(GL_LIGHT1);	// Codi OpenGL 1.1

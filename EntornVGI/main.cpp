@@ -51,6 +51,7 @@ editor::EditorEscenas editorEscenas;
 editor::SerializadorEscenas serializadorEscena;
 std::vector<SceneObjetoAnimado> datosAnimadosEscena;
 COBJModel* phoneOBJ = nullptr;
+std::unordered_map<std::string, GLuint> texturasMaterialEscena;
 
 // Locate copied resources beside the executable or in the source tree.
 static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
@@ -86,6 +87,41 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 
 namespace
 {
+	GLuint texturaDeMaterial(const SceneMaterial& material)
+	{
+		if (!material.presente || material.textura.empty() || !serializadorEscena.Cargado()) return 0;
+		std::error_code ec;
+		const auto absoluta = std::filesystem::absolute(serializadorEscena.Ruta().parent_path() / material.textura, ec).lexically_normal();
+		if (ec) return 0;
+		const std::string clave = absoluta.string();
+		if (const auto it = texturasMaterialEscena.find(clave); it != texturasMaterialEscena.end()) return it->second;
+		const GLint id = loadIMA_SOIL(clave.c_str());
+		if (id <= 0) return 0;
+		texturasMaterialEscena.emplace(clave, static_cast<GLuint>(id));
+		return static_cast<GLuint>(id);
+	}
+
+	void liberarTexturasMaterialEscena()
+	{
+		for (const auto& textura : texturasMaterialEscena)
+			if (textura.second != 0) glDeleteTextures(1, &textura.second);
+		texturasMaterialEscena.clear();
+	}
+
+	void aplicarIntensidadMaterial(GLuint programa, bool ambienteActivo = true)
+	{
+		if (programa == 0) return;
+		const GLint localizacion = glGetUniformLocation(programa, "sw_intensity");
+		if (localizacion < 0) return;
+		GLint programaAnterior = 0;
+		glGetIntegerv(GL_CURRENT_PROGRAM, &programaAnterior);
+		if (static_cast<GLuint>(programaAnterior) != programa) glUseProgram(programa);
+		glUniform4i(localizacion, sw_material[0] ? GL_TRUE : GL_FALSE,
+			(sw_material[1] && ambienteActivo) ? GL_TRUE : GL_FALSE, sw_material[2] ? GL_TRUE : GL_FALSE,
+			sw_material[3] ? GL_TRUE : GL_FALSE);
+		if (static_cast<GLuint>(programaAnterior) != programa) glUseProgram(static_cast<GLuint>(programaAnterior));
+	}
+
 	// F2: vista estereoscópica DE PRUEBA en pantalla (dos mitades). No es VR real: no hay OpenXR ni visor.
 	bool modoEstereoPrueba = false;
 	// OpenXR (VR real): SOLO se inicia cuando el usuario lo pide (F3 o el botón del panel de física).
@@ -221,6 +257,55 @@ namespace
 	bool modoJuegoFPS(); // Declaración anticipada
 
 	bool linternaMovilActiva = true;
+	bool lamparasLaboratorioActivas = true;
+
+	// Slots 4-7 pertenecen a luces declaradas en JSON. El 3 sigue reservado
+	// para la linterna móvil, cuya posición se actualiza desde la cámara FPS.
+	void actualizarLucesDeEscena()
+	{
+		constexpr int primerSlot = 4;
+		const bool hayLucesDeEscena = std::any_of(objetosEscena.begin(), objetosEscena.end(),
+			[](const SceneObject& objeto) { return objeto.luz.presente; });
+		if (!hayLucesDeEscena) return;
+		for (int slot = primerSlot; slot < NUM_MAX_LLUMS; ++slot)
+			llumGL[slot].encesa = false;
+
+		if (!lamparasLaboratorioActivas) return;
+
+		int slot = primerSlot;
+		std::size_t lucesSinSlot = 0;
+		for (const SceneObject& objeto : objetosEscena)
+		{
+			if (!objeto.luz.presente || !objeto.luz.encendida) continue;
+			if (slot >= NUM_MAX_LLUMS) { ++lucesSinSlot; continue; }
+
+			auto& luz = llumGL[slot++];
+			const glm::mat4 modelo = fisica::MatrizDeObjeto(objeto);
+			const glm::vec3 posicion(modelo * glm::vec4(objeto.luz.desplazamiento, 1.0f));
+			luz.posicio = { posicion.x, posicion.y, posicion.z, 1.0 };
+			luz.difusa = { objeto.luz.color.r * objeto.luz.intensidad,
+				objeto.luz.color.g * objeto.luz.intensidad,
+				objeto.luz.color.b * objeto.luz.intensidad, 1.0f };
+			luz.especular = { 0.14f, 0.16f, 0.16f, 1.0f };
+			luz.atenuacio.a = 0.018;
+			luz.atenuacio.b = 0.08;
+			luz.atenuacio.c = 1.0;
+			luz.restringida = true;
+			luz.spotdirection = { 0.0, 0.0, -1.0, 0.0 };
+			luz.spotcoscutoff = std::cos(glm::radians(68.0f));
+			luz.spotInnerCosCutoff = std::cos(glm::radians(48.0f));
+			luz.spotexponent = 1.0f;
+			luz.encesa = true;
+		}
+		static std::size_t ultimoAviso = 0;
+		if (lucesSinSlot != ultimoAviso)
+		{
+			ultimoAviso = lucesSinSlot;
+			if (lucesSinSlot != 0)
+				std::cerr << "Iluminacion Phong limitada a " << (NUM_MAX_LLUMS - primerSlot)
+					<< " lamparas de escena; quedan " << lucesSinSlot << " sin slot.\n";
+		}
+	}
 
 	void actualizarLinternaMovil()
 	{
@@ -259,8 +344,9 @@ namespace
 		luz.spotdirection = {
 			direccion.x, direccion.y, direccion.z, 0.0
 		};
-		luz.spotcoscutoff = std::cos(glm::radians(28.0f));
-		luz.spotexponent = 12.0f;
+		luz.spotcoscutoff = std::cos(glm::radians(36.0f));
+		luz.spotInnerCosCutoff = std::cos(glm::radians(22.0f));
+		luz.spotexponent = 1.0f;
 	}
 
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
@@ -661,6 +747,7 @@ namespace
 		// 5) Todo ha ido bien: AHORA se sustituye la habitación anterior.
 		escenaFisica->Vaciar();                        // retira sus colisiones del mundo
 		escenaFisica = std::move(nuevaFisica);
+		liberarTexturasMaterialEscena();
 		for (auto& entrada : modelosHabitacion) entrada.second->netejaTextures_OBJ();
 		modelosHabitacion = std::move(nuevosModelos);
 		objetosEscena = std::move(objetosValidos);
@@ -835,7 +922,7 @@ void InitGL()
 			llumGL[i].atenuacio.a = 0.0;	llumGL[i].atenuacio.b = 0.0;	llumGL[i].atenuacio.c = 1.0;
 			llumGL[i].restringida = false;
 			llumGL[i].spotdirection.x = 0.0;	llumGL[i].spotdirection.y = 0.0;	llumGL[i].spotdirection.z = 0.0; llumGL[i].spotdirection.w = 0.0;
-			llumGL[i].spotcoscutoff = 0.0;		llumGL[i].spotexponent = 0.0;
+			llumGL[i].spotcoscutoff = 0.0;		llumGL[i].spotInnerCosCutoff = 0.0;		llumGL[i].spotexponent = 0.0;
 		}
 
 // ---------------- LLUM #0 - (+Z) no restringida, amb atenuació constant (a,b,c) = (0,0,1)
@@ -1542,18 +1629,15 @@ void dibuixa_Escena() {
 				? fisica::MatrizDeObjeto(obj)
 				: escenaFisica->MatrizVisualDe(static_cast<int>(i), obj);
 
-			            // Repetir la textura solo en los cubos de arquitectura base;
-            // no altera las UV originales de muebles ni props importados.
-            const bool arquitecturaBase =
-				obj.modelo.find("escape_pack/arquitectura/suelo.obj") != std::string::npos ||
-				obj.modelo.find("escape_pack/arquitectura/suelo_laboratorio.obj") != std::string::npos ||
-				obj.modelo.find("escape_pack/arquitectura/suelo_rejilla.obj") != std::string::npos ||
-				obj.modelo.find("escape_pack/arquitectura/pared.obj") != std::string::npos ||
-				obj.modelo.find("escape_pack/arquitectura/techo.obj") != std::string::npos;
-            glUseProgram(shader_programID);
-            glUniform1i(glGetUniformLocation(shader_programID, "uArchitectureTiling"),
-                        arquitecturaBase ? GL_TRUE : GL_FALSE);
-            glUniform1f(glGetUniformLocation(shader_programID, "uTileSizeMeters"), 2.5f);
+			const GLuint texturaOverride = texturaDeMaterial(obj.material);
+			const float rugosidad = std::clamp(obj.material.roughness, 0.0f, 1.0f);
+			const float brilloPhong = 4.0f + std::pow(1.0f - rugosidad, 4.0f) * 124.0f;
+			it->second->SetInstanceMaterialOverride(texturaOverride, obj.material.presente ? brilloPhong : -1.0f);
+			glUseProgram(shader_programID);
+			glUniform1i(glGetUniformLocation(shader_programID, "uWorldTiling"),
+				obj.material.presente ? GL_TRUE : GL_FALSE);
+			glUniform2f(glGetUniformLocation(shader_programID, "uWorldTileSize"),
+				obj.material.tileSize.x, obj.material.tileSize.y);
 
 			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
 			dibuixa_EscenaGL(
@@ -1563,8 +1647,8 @@ void dibuixa_Escena() {
 				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 				it->second.get(), matriz
 			);
-            // No transferir el tiling al siguiente render (movil, props, etc.).
-            glUniform1i(glGetUniformLocation(shader_programID, "uArchitectureTiling"), GL_FALSE);
+			it->second->SetInstanceMaterialOverride(0, -1.0f);
+			glUniform1i(glGetUniformLocation(shader_programID, "uWorldTiling"), GL_FALSE);
 
 		}
 
@@ -3242,12 +3326,7 @@ void ShowEntornVGIWindow(bool* p_open)
 		}
 
 		// Pas de propietats de materials al shader
-		if (!shader_programID)
-		{	glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[0]"), sw_material[0]);
-			glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[1]"), sw_material[1]);
-			glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[2]"), sw_material[2]);
-			glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[3]"), sw_material[3]);
-		}
+		aplicarIntensidadMaterial(shader_programID, llum_ambient);
 
 		//IMGUI_DEMO_MARKER("Widgets/Selectables/Single Selection TEXTURES");
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
@@ -3267,7 +3346,7 @@ void ShowEntornVGIWindow(bool* p_open)
 
 		ImGui::Spacing();
 		ImGui::Checkbox("Flag_Invert_Y? (<Ctrl>+K)", &tFlag_invert_Y);
-		if ((tFlag_invert_Y) && (!shader_programID)) glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+		if (tFlag_invert_Y && shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 	}
 
 // DESPLEGABLE LLUMS
@@ -3295,6 +3374,13 @@ void ShowEntornVGIWindow(bool* p_open)
 			ImGui::TableNextColumn();
 			ImGui::Checkbox("Llum #7?(<Ctrl>+7)", &llumGL[7].encesa);
 			ImGui::EndTable();
+		}
+		ImGui::Checkbox("Lamparas de escena", &lamparasLaboratorioActivas);
+		if (ImGui::IsItemHovered())
+		{
+			ImGui::BeginTooltip();
+			ImGui::TextUnformatted("Activa o apaga las luces declaradas en el JSON. La linterna F permanece independiente.");
+			ImGui::EndTooltip();
 		}
 
 		// Activar llum ambient i llums (GL_LIGHT0-GL_LIGTH7)
@@ -4565,7 +4651,7 @@ void OnMaterialEmissio()
 	sw_material[0] = !sw_material[0];
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[0]"), sw_material[0]);
+	aplicarIntensidadMaterial(shader_programID, llum_ambient);
 }
 
 
@@ -4576,7 +4662,7 @@ void OnMaterialAmbient()
 	sw_material[1] = !sw_material[1];
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[1]"), sw_material[1]);
+	aplicarIntensidadMaterial(shader_programID, llum_ambient);
 }
 
 
@@ -4587,7 +4673,7 @@ void OnMaterialDifusa()
 	sw_material[2] = !sw_material[2];
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[2]"), sw_material[2]);
+	aplicarIntensidadMaterial(shader_programID, llum_ambient);
 }
 
 
@@ -4598,7 +4684,7 @@ void OnMaterialEspecular()
 	sw_material[3] = !sw_material[3];
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[3]"), sw_material[3]);
+	aplicarIntensidadMaterial(shader_programID, llum_ambient);
 }
 
 
@@ -4672,7 +4758,7 @@ void OnLlumsLlumAmbient()
 	sw_il = true;
 
 // Pas màscara llums al shader
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_intensity[1]"), (llum_ambient && sw_material[1])); // Pas màscara llums al shader
+	aplicarIntensidadMaterial(shader_programID, llum_ambient); // actualiza el vector bvec4 completo
 }
 
 // LLUMS: Activació /Desactivació llum 0 (GL_LIGHT0)
@@ -5275,8 +5361,8 @@ void Teclat_Shift(int key, GLFWwindow* window)
 			int error = ObOBJ->LoadModel(nomFitxer);			// Carregar objecte OBJ amb textura com a varis VAO's
 
 			//	Pas de paràmetres textura al shader
-			if (!shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
-			if (!shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+			if (shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
+			if (shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 			free(nomFitxer);
 			}
 	*/
@@ -8055,6 +8141,7 @@ int main(int argc, char** argv)
 			// Apagarla durante los menús.
 			llumGL[3].encesa = false;
 		}
+		actualizarLucesDeEscena();
 
 		draw_Menu_ImGui();
 		if (editorEscenas.ConsumeGuardarRequest())

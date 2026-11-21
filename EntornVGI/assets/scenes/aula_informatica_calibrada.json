@@ -3,7 +3,15 @@
   "architecture": [
     {
       "id": "suelo",
-      "model": "../models/escape_pack/arquitectura/suelo_rejilla.obj",
+      "material": {
+        "roughness": 0.9200000166893005,
+        "texture": "../models/escape_pack/arquitectura/industrial_floor.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/suelo_base.obj",
       "physics": {
         "halfSize": [
           1,
@@ -30,6 +38,14 @@
     },
     {
       "id": "techo",
+      "material": {
+        "roughness": 0.8999999761581421,
+        "texture": "../models/escape_pack/arquitectura/industrial_ceiling.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/techo.obj",
       "physics": {
         "halfSize": [
@@ -57,6 +73,14 @@
     },
     {
       "id": "pared_norte",
+      "material": {
+        "roughness": 0.8199999928474426,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
@@ -84,6 +108,14 @@
     },
     {
       "id": "pared_sur",
+      "material": {
+        "roughness": 0.8199999928474426,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
@@ -114,17 +146,20 @@
   "objects": [
     {
       "id": "pared_este_copy",
+      "material": {
+        "roughness": 0.8199999928474426,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
           1.0,
           1.0,
           1.0
-        ],
-        "offset": [
-          0.0,
-          0.0,
-          0.0
         ],
         "type": "static"
       },
@@ -146,6 +181,14 @@
     },
     {
       "id": "pared_sur_copy",
+      "material": {
+        "roughness": 0.8199999928474426,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
@@ -178,6 +221,14 @@
     },
     {
       "id": "pared_este_copy_copy",
+      "material": {
+        "roughness": 0.8199999928474426,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
@@ -210,6 +261,14 @@
     },
     {
       "id": "pared_norte_copy",
+      "material": {
+        "roughness": 0.8199999928474426,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
@@ -242,6 +301,14 @@
     },
     {
       "id": "pared_norte_copy_copy",
+      "material": {
+        "roughness": 0.8199999928474426,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall.png",
+        "tileSize": [
+          1.0,
+          1.0
+        ]
+      },
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
@@ -273,12 +340,26 @@
       ]
     },
     {
-      "id": "obj_Lampara",
-      "model": "../models/Lampara.obj",
+      "id": "obj_Prop_Light_Wide",
+      "light": {
+        "color": [
+          0.82,
+          0.94,
+          1.0
+        ],
+        "enabled": true,
+        "intensity": 6.0,
+        "offset": [
+          0.0,
+          -0.054,
+          0.0
+        ]
+      },
+      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
-        -1.510202407836914,
-        -2.4502415657043457,
-        -5.824999809265137
+        2.3884658813476563,
+        3.942411422729492,
+        -0.30579718947410583
       ],
       "rotation": [
         90.0,
@@ -286,9 +367,198 @@
         0.0
       ],
       "scale": [
-        0.9999953508377075,
+        0.9999840259552002,
         1.0,
         1.0
+      ]
+    },
+    {
+      "id": "obj_Prop_Light_Wide_mesa",
+      "light": {
+        "color": [
+          0.82,
+          0.94,
+          1.0
+        ],
+        "enabled": true,
+        "intensity": 6.0,
+        "offset": [
+          0.0,
+          -0.054,
+          0.0
+        ]
+      },
+      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "position": [
+        -7.0,
+        15.0,
+        -0.30579718947410583
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
+    },
+    {
+      "id": "rejilla_sector_laboratorio",
+      "model": "../models/escape_pack/arquitectura/rejilla_sector.obj",
+      "position": [
+        -10.0,
+        0.0,
+        -3.130000114440918
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        2.0,
+        4.0,
+        0.10000000149011612
+      ]
+    },
+    {
+      "id": "mesa_laboratorio",
+      "model": "../models/escape_pack/lab/counter_counter/counter_counter.obj",
+      "physics": {
+        "halfSize": [
+          0.31,
+          0.384,
+          0.348
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.348
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -7.0,
+        15.0,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.5,
+        1.5,
+        1.5
+      ]
+    },
+    {
+      "id": "armario_laboratorio",
+      "model": "../models/escape_pack/lab/cabinet_cabinet_two_shelves/cabinet_cabinet_two_shelves.obj",
+      "physics": {
+        "halfSize": [
+          0.31,
+          0.155,
+          0.31
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.31
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -10.0,
+        15.0,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        2.5999999046325684,
+        2.5999999046325684,
+        2.5999999046325684
+      ]
+    },
+    {
+      "id": "terminal_laboratorio",
+      "model": "../models/escape_pack/scifi/Prop_Computer.obj",
+      "position": [
+        -7.0,
+        15.0,
+        -2.00600004196167
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.4000000059604645,
+        0.4000000059604645,
+        0.4000000059604645
+      ]
+    },
+    {
+      "id": "microscopio_laboratorio",
+      "model": "../models/escape_pack/lab/machine_microscope/machine_microscope.obj",
+      "position": [
+        -6.300000190734863,
+        15.0,
+        -2.00600004196167
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "caja_laboratorio",
+      "model": "../models/escape_pack/scifi/Prop_Crate3.obj",
+      "physics": {
+        "halfSize": [
+          0.5,
+          0.5,
+          0.5
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -5.199999809265137,
+        14.0,
+        -2.6500000953674316
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.800000011920929,
+        0.800000011920929,
+        0.800000011920929
       ]
     }
   ],

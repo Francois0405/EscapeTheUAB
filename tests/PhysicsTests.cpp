@@ -420,6 +420,33 @@ namespace
 		comprobar(marcoIgual, "el marco permanece estatico mientras la hoja gira");
 	}
 
+	void PruebaSueloLaboratorioCalibrado()
+	{
+		MundoFisico mundo;
+		EscenaMontada laboratorio(mundo, RutaDeEscena("aula_informatica_calibrada.json"));
+		comprobar(laboratorio.ok, "el laboratorio calibrado monta con todos sus cuerpos Bullet");
+		if (!laboratorio.ok) { std::cerr << laboratorio.error << '\n'; return; }
+
+		const auto colisionables = std::count_if(laboratorio.datos.objetos.begin(), laboratorio.datos.objetos.end(),
+			[](const SceneObject& objeto) { return objeto.fisica.presente; });
+		comprobar(laboratorio.fisica->NumeroDeCuerpos() == static_cast<int>(colisionables),
+			"las placas y decoracion no duplican el collider del suelo");
+		const SceneObject* suelo = nullptr;
+		for (const SceneObject& objeto : laboratorio.datos.objetos)
+			if (objeto.id == "suelo") suelo = &objeto;
+		comprobar(suelo != nullptr && suelo->fisica.presente && suelo->fisica.tipo == TipoCuerpo::Estatico,
+			"el suelo principal conserva un unico cuerpo estatico");
+		if (suelo == nullptr) return;
+
+		const float alturaPavimento = suelo->posicion.z + suelo->escala.z * suelo->fisica.mitadTamano.z;
+		comprobar(mundo.CrearJugador({ 0.0f, 0.0f, alturaPavimento + 0.02f }),
+			"se crea el jugador sobre el pavimento modular");
+		Simular(2.0f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		const float pies = mundo.PosicionPiesJugador().z;
+		comprobar(mundo.JugadorEnSuelo() && pies > alturaPavimento - 0.08f && pies < alturaPavimento + 0.08f,
+			"el jugador permanece apoyado sobre la altura del suelo calibrado");
+	}
+
 	// Cambio de habitacion: sin residuos y sin tocar la demo; carga fallida sin efectos.
 	void PruebaCambioDeHabitacion()
 	{
@@ -1125,6 +1152,7 @@ int main()
 	PruebaEstaticoNoCae();
 	PruebaDinamicoCaeYChoca();
 	PruebaPuertasDesdeJson();
+	PruebaSueloLaboratorioCalibrado();
 	PruebaCambioDeHabitacion();
 	PruebaJugadorSueloYGravedad();
 	PruebaJugadorAndaLibre();

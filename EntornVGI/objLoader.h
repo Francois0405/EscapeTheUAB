@@ -77,6 +77,7 @@ class OBJLOADER_CLASS_DECL COBJModel
 	void _stdcall netejaVAOList_OBJ();
 	void _stdcall netejaTextures_OBJ();
 	void _stdcall draw_TriVAO_OBJ(GLuint sh_programID);
+	void SetInstanceMaterialOverride(GLuint textureId, float shininess) { instanceTextureOverride = textureId; instanceShininessOverride = shininess; }
 
 private:
 	bool _stdcall ReadNextString(char szString[], FILE *hStream);
@@ -105,6 +106,8 @@ private:
 	CVAO VAOList_OBJ[MAX_SIZE_VAOLIST];
 	Material vMaterials[MAX_SIZE_VAOLIST]{};
 	unsigned int materialCount = 0;
+	GLuint instanceTextureOverride = 0;
+	float instanceShininessOverride = -1.0f;
 
 // Funcions CVAO
 	void _stdcall initVAOList_OBJ();
