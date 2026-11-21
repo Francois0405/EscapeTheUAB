@@ -640,7 +640,7 @@ const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 			// Activate automatic texture coord generation if no coords loaded
 			if (!pFaces[0].pTexCoords)
-				GenTexCoords();
+				// GenTexCoords(); // API obsoleta, incompatible con OpenGL Core.
 		
 			// Use default material if no materials are loaded
 			if (!pMaterials)
@@ -879,7 +879,8 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 	const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 // Activate automatic texture coord generation if no coords loaded
-	if (!pFaces[0].pTexCoords) GenTexCoords();
+	// Las coordenadas UV deben venir del OBJ o generarse en la CPU.
+	// La generación automática antigua no funciona en OpenGL Core.
 
 // Use default material if no materials are loaded
 	if (!pMaterials) UseMaterial(NULL);
@@ -1425,8 +1426,17 @@ int COBJModel::LoadTexture2(const char szFileName[_MAX_PATH])
 	glBindTexture(GL_TEXTURE_2D, iTexture);
 
 // Build mip-maps
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MIN_FILTER,
+		GL_LINEAR_MIPMAP_LINEAR
+	);
+
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		GL_LINEAR
+	);
 	
 	return iTexture;
 }

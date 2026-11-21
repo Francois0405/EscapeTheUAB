@@ -52,6 +52,9 @@ uniform mat4 modelMatrix;	// Model Matrix
 uniform sampler2D texture0;	// Imatge textura
 uniform bool textur;		// Booleana d�activaci� (TRUE) de textures o no (FALSE).
 uniform bool flag_invert_y;	// Booleana que activa la inversi� coordenada textura t (o Y) a 1.0-cty segons llibreria SOIL (TRUE) o no (FALSE).
+// Escala fisica de la textura para los cubos arquitectonicos.
+uniform bool uArchitectureTiling;
+uniform float uTileSizeMeters;
 uniform bool fixedLight;	// Booleana que defineix la font de llum fixe en Coordenades M�n (TRUE) o no (FALSE).
 uniform bool sw_material;	// Booleana que indica si el color del v�rtex ve del Material emission, ambient, diffuse, specular (TRUE) o del vector de color del v�rtex in_Color (FALSE)
 uniform bvec4 sw_intensity;	// Filtre per a cada tipus de reflexi�: Emissiva (sw_intensity[0]), Ambient (sw_intensity[1]), Difusa (sw_intensity[2]) o Especular (sw_intensity[2]).
@@ -71,27 +74,40 @@ void main()	// --- L68-
     vertexPV = vec3(viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
 
     //mat4 NormalMatrix = transpose(inverse(viewMatrix * modelMatrix));
-    vec3 N = vec3(normalMatrix * vec4(in_Normal,1.0));
-    vertexNormalPV = normalize(N);
+    mat3 normalMatrixLocal =
+        transpose(inverse(mat3(viewMatrix * modelMatrix)));
+
+    vertexNormalPV = normalize(normalMatrixLocal * in_Normal);
 
 // --- L77- Textura
-    if (flag_invert_y) vertexTexCoord = vec2(in_TexCoord.x,1.0-in_TexCoord.y); // SOIL_FLAG_INVERT_Y
-     else vertexTexCoord = vec2(in_TexCoord.x,in_TexCoord.y);
+// Objetos arquitectonicos: una repeticion por cada uTileSizeMeters
+    // unidades del mundo. Se usa la escala del modelo, no el UV [0,1]
+    // original, porque el mismo OBJ se reutiliza en paredes muy distintas.
+    if (uArchitectureTiling) {
+        vec3 escala = vec3(
+            length(modelMatrix[0].xyz),
+            length(modelMatrix[1].xyz),
+            length(modelMatrix[2].xyz));
+        vec3 p = in_Vertex * escala;
+        vec3 n = abs(in_Normal);
+        float tile = max(uTileSizeMeters, 0.1);
+
+        if (n.z >= n.x && n.z >= n.y) {
+            vertexTexCoord = p.xy / tile; // suelo/techo
+        } else if (n.x >= n.y) {
+            vertexTexCoord = p.yz / tile; // pared normal X
+        } else {
+            vertexTexCoord = p.xz / tile; // pared normal Y
+        }
+    } else {
+        vertexTexCoord = flag_invert_y
+            ? vec2(in_TexCoord.x, 1.0 - in_TexCoord.y)
+            : in_TexCoord;
+    }
     
 // --- L81- Pas color del vertex al Fragent Shader
     vertexColor = in_Color;
 
 // --- L84- Transformacio de Visualitzacio amb Matriu Projeccio (PMatrix), Matriu Cmera (VMatrix) i Matriu TG (MMatrix)
     gl_Position = vec4(projectionMatrix * viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
-
-    // --- INICIO EFECTO PS1 VERTEX SNAPPING ---
-    float snapRes = 160.0; // Cuanto más bajo sea el número, más temblarán los vértices
-    
-    vec4 pos = gl_Position;
-    pos.xyz = pos.xyz / pos.w;
-    pos.xy = floor(pos.xy * snapRes) / snapRes;
-    pos.xyz *= pos.w;
-    
-    gl_Position = pos;
-    // --- FIN EFECTO PS1 ---
 }

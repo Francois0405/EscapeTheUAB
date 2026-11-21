@@ -218,6 +218,51 @@ namespace
 		direccion = glm::vec3(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);       // hacia dónde mira
 	}
 
+	bool modoJuegoFPS(); // Declaración anticipada
+
+	bool linternaMovilActiva = true;
+
+	void actualizarLinternaMovil()
+	{
+		constexpr int idx = 3;
+		auto& luz = llumGL[idx];
+
+		if (!linternaMovilActiva || !mostrarMovil ||
+			!modoJuegoFPS() || editorEscenas.Activo())
+		{
+			luz.encesa = false;
+			return;
+		}
+
+		glm::vec3 origen, direccion;
+		origenYDireccionDeLaMirada(origen, direccion);
+
+		if (glm::length(direccion) < 0.0001f)
+		{
+			luz.encesa = false;
+			return;
+		}
+
+		direccion = glm::normalize(direccion);
+		origen += direccion * 0.15f;
+
+		luz.encesa = true;
+		luz.posicio = { origen.x, origen.y, origen.z, 1.0 };
+		luz.difusa = { 1.0f, 0.96f, 0.88f, 1.0f };
+		luz.especular = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+		luz.atenuacio.a = 0.02;
+		luz.atenuacio.b = 0.08;
+		luz.atenuacio.c = 1.0;
+
+		luz.restringida = true;
+		luz.spotdirection = {
+			direccion.x, direccion.y, direccion.z, 0.0
+		};
+		luz.spotcoscutoff = std::cos(glm::radians(28.0f));
+		luz.spotexponent = 12.0f;
+	}
+
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
 
 	struct ObjetivoInteraccion
@@ -334,9 +379,28 @@ namespace
 		OnProjeccioPerspectiva();
 		OnCameraNavega();
 		OnObjecteCub();
-		OnIluminacioSuau();
+
+		// Iluminación Phong: cálculo por fragmento.
+		OnShaderPhong();
+		oShader = 2;
+		oIlumina = 3;
+
+		// Interpretar las luces en coordenadas del mundo.
+		ifixe = true;
+
 		SkyBoxCube = true;
 		OnVistaSkyBox();
+
+		// Luz general tenue, azulada, para mantener algo de visibilidad.
+		llumGL[0].encesa = true;
+
+		llumGL[0].difusa.r = 0.12f;
+		llumGL[0].difusa.g = 0.15f;
+		llumGL[0].difusa.b = 0.18f;
+
+		llumGL[0].especular.r = 0.03f;
+		llumGL[0].especular.g = 0.03f;
+		llumGL[0].especular.b = 0.03f;
 	}
 
 	void inclinarJugadorFPS(double deltaY)
@@ -1121,6 +1185,19 @@ static void dibujarEscenaEstereo(int anchoVentana, int altoVentana)
 		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, mitad.x, 0, mitad.ancho, altoVentana, OPV.R);
 		ViewMatrix = estereo::VistaDeOjo(vistaCentral, ojo);
 
+		Iluminacio(
+			shader_programID,
+			ilumina,
+			ifixe,
+			ilum2sides,
+			llum_ambient,
+			llumGL,
+			objecte,
+			front_faces,
+			back_line,
+			pas
+		);
+
 		glUseProgram(shader_programID);
 		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
 		Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
@@ -1207,14 +1284,23 @@ static bool dibujarEscenaVR()
 
 void OnPaint(GLFWwindow* window)
 {
-// TODO: Agregue aquí su código de controlador de mensajes
 	if (w <= 0 || h <= 0) return;
 	GLdouble vpv[3] = { 0.0, 0.0, 1.0 };
+
 	if (editorEscenas.Activo())
 	{
 		glDisable(GL_SCISSOR_TEST);
 		glViewport(0, 0, w, h);
-		FonsB();
+
+		// Configuración gráfica del editor.
+		glEnable(GL_DEPTH_TEST);
+		glDepthFunc(GL_LESS);
+		glDepthMask(GL_TRUE);
+		glDisable(GL_CULL_FACE);
+
+		// Fondo neutro y limpieza de profundidad.
+		glClearColor(0.12f, 0.13f, 0.15f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		const ImVec2 displaySize = ImGui::GetIO().DisplaySize;
 		const float aspecto = std::max(1.0f, displaySize.x) / std::max(1.0f, displaySize.y);
 		editorEscenas.Matrices(aspecto, ViewMatrix, ProjectionMatrix);
@@ -1422,8 +1508,17 @@ void dibuixa_Escena() {
 	//glUseProgram(shader_programID);
 
 //	Dibuix SkyBox Cúbic.
-	if (SkyBoxCube) dibuixa_Skybox(skC_programID, cubemapTexture, Vis_Polar, ProjectionMatrix, ViewMatrix);
-
+	// El Skybox se muestra en PLAY, pero no en EDIT.
+	if (SkyBoxCube && !editorEscenas.Activo())
+	{
+		dibuixa_Skybox(
+			skC_programID,
+			cubemapTexture,
+			Vis_Polar,
+			ProjectionMatrix,
+			ViewMatrix
+		);
+	}
 //	Dibuix Coordenades Món i Reixes.
 	dibuixa_Eixos(eixos_programID, eixos, eixos_Id, grid, hgrid, ProjectionMatrix, ViewMatrix);
 
@@ -1447,14 +1542,29 @@ void dibuixa_Escena() {
 				? fisica::MatrizDeObjeto(obj)
 				: escenaFisica->MatrizVisualDe(static_cast<int>(i), obj);
 
+			            // Repetir la textura solo en los cubos de arquitectura base;
+            // no altera las UV originales de muebles ni props importados.
+            const bool arquitecturaBase =
+                obj.modelo.find("escape_pack/arquitectura/suelo.obj") != std::string::npos ||
+                obj.modelo.find("escape_pack/arquitectura/suelo_laboratorio.obj") != std::string::npos ||
+                obj.modelo.find("escape_pack/arquitectura/pared.obj") != std::string::npos ||
+                obj.modelo.find("escape_pack/arquitectura/techo.obj") != std::string::npos;
+            glUseProgram(shader_programID);
+            glUniform1i(glGetUniformLocation(shader_programID, "uArchitectureTiling"),
+                        arquitecturaBase ? GL_TRUE : GL_FALSE);
+            glUniform1f(glGetUniformLocation(shader_programID, "uTileSizeMeters"), 2.5f);
+
 			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
 			dibuixa_EscenaGL(
 				shader_programID, eixos, eixos_Id, grid, hgrid,
 				OBJOBJ, col_obj, sw_material,
-				false, texturesID, textura_map, tFlag_invert_Y,
+				true, texturesID, textura_map, tFlag_invert_Y,
 				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 				it->second.get(), matriz
 			);
+            // No transferir el tiling al siguiente render (movil, props, etc.).
+            glUniform1i(glGetUniformLocation(shader_programID, "uArchitectureTiling"), GL_FALSE);
+
 		}
 
 	}
@@ -2264,9 +2374,22 @@ void MostraEntornVGIWindow(bool* p_open)
 		}
 		if (modoJuegoFPS() && ImGui::BeginMenu("Juego"))
 		{
-			if (ImGui::MenuItem(fpsPausado ? "Reanudar juego FPS" : "Pausar juego FPS"))
+			if (ImGui::MenuItem(
+				estadoActual == ESTADO_PAUSA ? "Reanudar juego FPS" : "Pausar juego FPS"))
 			{
-				fpsPausado = !fpsPausado;
+				if (estadoActual == ESTADO_JUGANDO)
+				{
+					estadoActual = ESTADO_PAUSA;
+					cancelarCargaLanzamiento();
+				}
+				else if (estadoActual == ESTADO_PAUSA)
+				{
+					estadoActual = ESTADO_JUGANDO;
+					fpsTienePosicionAnterior = false;
+					mouseDeltaX = mouseDeltaY = 0.0;
+				}
+
+				fpsPausado = (estadoActual != ESTADO_JUGANDO);
 				sincronizarCursorFPS(window);
 			}
 			ImGui::EndMenu();
@@ -4932,13 +5055,12 @@ void OnShaderPBinaryRead()
 //    - mods: Variable que identifica si la tecla s'ha pulsat directa (mods=0), juntament amb la tecla Shift (mods=1) o la tecla Ctrl (mods=2).
 void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-// TODO: Agregue aquí su código de controlador de mensajes o llame al valor predeterminado
 	const double incr = 0.025f;
 	double modul = 0;
 	GLdouble vdir[3] = { 0, 0, 0 };
 
-// EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
-// (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
+	// EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
+	// (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
 	if (key == GLFW_KEY_E && action == GLFW_RELEASE && cargaLanzamientoActiva)
 	{
@@ -4949,72 +5071,110 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			cancelarCargaLanzamiento();
 		return;
 	}
+
+	// F6: alternar entre PLAY y EDIT.
+	if (key == GLFW_KEY_F6 &&
+		action == GLFW_PRESS &&
+		mods == 0 &&
+		!io.WantTextInput &&
+		estadoActual != ESTADO_MENU_PRINCIPAL)
+	{
+		editorEscenas.Atajo(key, action, mods, false);
+		sincronizarCursorFPS(window);
+		return;
+	}
+
 	if (editorEscenas.Activo())
 	{
 		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
 		sincronizarCursorFPS(window);
 		return;
 	}
-	if (key == GLFW_KEY_E && action == GLFW_PRESS &&
-		(mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_ALT))
+
+	// F: encender/apagar linterna solo durante el juego.
+	if (key == GLFW_KEY_F &&
+		action == GLFW_PRESS &&
+		estadoActual == ESTADO_JUGANDO &&
+		entradaFPSActiva() &&
+		!io.WantTextInput &&
+		!io.WantCaptureKeyboard)
 	{
-		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
-		fijarCapturaCursor(window, false);
+		linternaMovilActiva = !linternaMovilActiva;
+
+		std::cout << "Linterna: "
+				<< (linternaMovilActiva ? "ON" : "OFF")
+				<< std::endl;
 		return;
 	}
+
 	if (modoJuegoFPS())
 	{
-		if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	// ESC: pausar y reanudar.
+	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
+	{
+		if (estadoActual == ESTADO_JUGANDO)
 		{
-			fpsPausado = !fpsPausado;
-			sincronizarCursorFPS(window);
-			return;
+			estadoActual = ESTADO_PAUSA;
+			cancelarCargaLanzamiento();
 		}
-		if (key == GLFW_KEY_M && action == GLFW_PRESS &&
-			(mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT))
+		else if (estadoActual == ESTADO_PAUSA)
 		{
-			fpsCapturaSolicitada = !fpsCapturaSolicitada;
-			sincronizarCursorFPS(window);
-			return;
+			estadoActual = ESTADO_JUGANDO;
+			fpsTienePosicionAnterior = false;
+			mouseDeltaX = mouseDeltaY = 0.0;
 		}
-		if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
-		{
-			mostrarPanelesDebug = !mostrarPanelesDebug;
-			if (mostrarPanelesDebug) show_EntornVGI_window = true;
-			sincronizarCursorFPS(window);
-			return;
-		}
-		// Mantener E carga el lanzamiento; soltarla lanza el objeto sujeto.
-		if (key == GLFW_KEY_E && action == GLFW_PRESS)
-		{
-			if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput) &&
-				!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
-				!gestorOpenXR.SesionEnMarcha())
-			{
-				if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
-				else interactuar();
-			}
-			return;
-		}
-		// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
-		if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
-		{
-			alternarOpenXR();
-			return;
-		}
-		// F2: alternar la vista estereoscópica de prueba (dos ojos en pantalla partida).
-		if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
-		{
-			modoEstereoPrueba = !modoEstereoPrueba;
-			std::cout << "Vista estereoscopica de prueba: " << (modoEstereoPrueba ? "ON" : "OFF") << std::endl;
-			return;
-		}
-		if (fpsPausado || !ventanaConFoco) return;
-		if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D) return;
-		if (key == GLFW_KEY_PRINT_SCREEN && mods == 0 && action == GLFW_PRESS)
-			statusB = !statusB;
+
+		fpsPausado = (estadoActual != ESTADO_JUGANDO);
+		sincronizarCursorFPS(window);
 		return;
 	}
+
+	// Aquí continúa el resto del código FPS.
+	if (key == GLFW_KEY_M && action == GLFW_PRESS &&
+		(mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT))
+	{
+		fpsCapturaSolicitada = !fpsCapturaSolicitada;
+		sincronizarCursorFPS(window);
+		return;
+	}
+	if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
+	{
+		mostrarPanelesDebug = !mostrarPanelesDebug;
+		if (mostrarPanelesDebug) show_EntornVGI_window = true;
+		sincronizarCursorFPS(window);
+		return;
+	}
+	// Mantener E carga el lanzamiento; soltarla lanza el objeto sujeto.
+	if (key == GLFW_KEY_E && action == GLFW_PRESS)
+	{
+		if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput) &&
+			!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
+			!gestorOpenXR.SesionEnMarcha())
+		{
+			if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+			else interactuar();
+		}
+		return;
+	}
+	// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
+	if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
+	{
+		alternarOpenXR();
+		return;
+	}
+	// F2: alternar la vista estereoscópica de prueba (dos ojos en pantalla partida).
+	if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
+	{
+		modoEstereoPrueba = !modoEstereoPrueba;
+		std::cout << "Vista estereoscopica de prueba: " << (modoEstereoPrueba ? "ON" : "OFF") << std::endl;
+		return;
+	}
+	if (fpsPausado || !ventanaConFoco) return;
+	if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D) return;
+	if (key == GLFW_KEY_PRINT_SCREEN && mods == 0 && action == GLFW_PRESS)
+		statusB = !statusB;
+	return;
+}
 
 // (2) ONLY forward mouse data to your underlying app/game.
 	if (!io.WantCaptureKeyboard) { //<Tractament mouse de l'aplicació>}
@@ -7773,8 +7933,8 @@ int main(int argc, char** argv)
 // =========================================================================
 // CONFIGURACIÓ GRÁFICS PS1
 // =========================================================================
-	const int PS1_WIDTH = 320;
-	const int PS1_HEIGHT = 240;
+	const int PS1_WIDTH = 960;
+	const int PS1_HEIGHT = 540;
 
 	unsigned int ps1FBO, ps1ColorTex, ps1RBO;
 	glGenFramebuffers(1, &ps1FBO);
@@ -7839,25 +7999,6 @@ int main(int argc, char** argv)
 		// Poll for and process events
 		glfwPollEvents();
 
-		// 1. Detector de pulsación única (flanco de subida) para la tecla P
-		static bool pPulsadaAntes = false;
-		bool pPulsadaAhora = (glfwGetKey(window, GLFW_KEY_P) == GLFW_PRESS);
-
-		if (pPulsadaAhora && !pPulsadaAntes)
-		{
-			if (estadoActual == ESTADO_JUGANDO)
-			{
-				estadoActual = ESTADO_PAUSA;
-			}
-			else if (estadoActual == ESTADO_PAUSA)
-			{
-				estadoActual = ESTADO_JUGANDO;
-				fpsTienePosicionAnterior = false;
-				mouseDeltaX = mouseDeltaY = 0.0;
-			}
-		}
-		pPulsadaAntes = pPulsadaAhora;
-
 		// 2. Sincronizar la pausa interna del motor (libera/captura el ratón automáticamente)
 		fpsPausado = (estadoActual != ESTADO_JUGANDO);
 
@@ -7900,6 +8041,18 @@ int main(int argc, char** argv)
 			mundoFisico.Actualizar(static_cast<float>(delta));
 			sincronizarJugadorYCamara();
 			actualizarBalanceoVisual(static_cast<float>(delta));
+		}
+
+		// Actualizar la linterna una vez por fotograma,
+		// después de actualizar la cámara y antes de dibujar.
+		if (estadoActual == ESTADO_JUGANDO)
+		{
+			actualizarLinternaMovil();
+		}
+		else
+		{
+			// Apagarla durante los menús.
+			llumGL[3].encesa = false;
 		}
 
 		draw_Menu_ImGui();
@@ -7957,29 +8110,43 @@ int main(int argc, char** argv)
 				int winW = 0, winH = 0;
 				glfwGetFramebufferSize(window, &winW, &winH);
 
-				// 1. Dibujar escena en el Framebuffer de baja resolución (320x240)
-				glBindFramebuffer(GL_FRAMEBUFFER, ps1FBO);
-				w = PS1_WIDTH;
-				h = PS1_HEIGHT;
-				glViewport(0, 0, PS1_WIDTH, PS1_HEIGHT);
-				OnPaint(window);
+				// EDIT: resolución nativa.
+				// PLAY: resolución PS1 (320x240).
+				const bool modoEditor = editorEscenas.Activo();
 
-				// 2. Copiar (Blit) la imagen baja resolución a la pantalla principal con filtro pixelado
-				glBindFramebuffer(GL_READ_FRAMEBUFFER, ps1FBO);
-				glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0); // 0 es la pantalla principal
-
-				glBlitFramebuffer(
-					0, 0, PS1_WIDTH, PS1_HEIGHT, // Origen (tu FBO de 320x240)
-					0, 0, winW, winH,            // Destino (toda la ventana actual)
-					GL_COLOR_BUFFER_BIT,         // Copiar solo el color
-					GL_NEAREST                   // Escalar sin suavizado (píxeles cuadrados)
+				glBindFramebuffer(
+					GL_FRAMEBUFFER,
+					modoEditor ? 0 : ps1FBO
 				);
 
-				// 3. Restaurar el framebuffer por defecto, variables globales y viewport para que ImGui se dibuje nítido encima
+				w = modoEditor ? winW : PS1_WIDTH;
+				h = modoEditor ? winH : PS1_HEIGHT;
+
+				glViewport(0, 0, w, h);
+				OnPaint(window);
+
+				// Solo aplicar el escalado pixelado durante PLAY.
+				if (!modoEditor)
+				{
+					glBindFramebuffer(GL_READ_FRAMEBUFFER, ps1FBO);
+					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+
+					glBlitFramebuffer(
+						0, 0, PS1_WIDTH, PS1_HEIGHT,
+						0, 0, winW, winH,
+						GL_COLOR_BUFFER_BIT,
+						GL_NEAREST
+					);
+				}
+
+				// Restaurar framebuffer y dimensiones reales.
 				glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 				w = winW;
 				h = winH;
-				glViewport(0, 0, w, h);
+
+				glViewport(0, 0, winW, winH);
+
 			}
 
 			// Renderizado final de ImGui e intercambio de buffers

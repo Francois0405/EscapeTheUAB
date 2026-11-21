@@ -108,8 +108,17 @@ int main()
 
 	const fs::path runtimeScene = fs::path(ENTORNVGI_RUNTIME_ASSETS_DIR) / "persistence-test" / "room.json";
 	const fs::path sourceScene = fs::path(ENTORNVGI_SOURCE_ASSETS_DIR) / "persistence-test" / "room.json";
+	
+	// Modelos ficticios necesarios para validar las rutas del JSON.
+	escribir(runtimeScene.parent_path().parent_path() / "models" / "table.obj",
+			"# test model\n");
+
+	escribir(runtimeScene.parent_path().parent_path() / "models" / "door.glb",
+			"# test animated model\n");
+	
 	escribir(runtimeScene, original);
 	escribir(sourceScene, original);
+
 	editor::SerializadorEscenas serializadorConCopiaFuente;
 	comprobar(serializadorConCopiaFuente.Cargar(runtimeScene, error), "carga una escena desde assets de ejecución");
 	comprobar(serializadorConCopiaFuente.RutaFuente() == sourceScene.lexically_normal(),

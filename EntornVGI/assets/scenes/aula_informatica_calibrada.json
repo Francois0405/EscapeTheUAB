@@ -3,7 +3,7 @@
   "architecture": [
     {
       "id": "suelo",
-      "model": "../models/escape_pack/arquitectura/suelo.obj",
+      "model": "../models/escape_pack/arquitectura/suelo_laboratorio.obj",
       "physics": {
         "halfSize": [
           1,
@@ -270,6 +270,25 @@
         3.147869348526001,
         0.15000000596046448,
         1.4499998092651367
+      ]
+    },
+    {
+      "id": "obj_Lampara",
+      "model": "../models/Lampara.obj",
+      "position": [
+        -1.510202407836914,
+        -2.4502415657043457,
+        -5.824999809265137
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.9999953508377075,
+        1.0,
+        1.0
       ]
     }
   ],

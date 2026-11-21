@@ -87,7 +87,13 @@ namespace editor
 	{
 		const bool control = (modificadores & GLFW_MOD_CONTROL) != 0;
 		const bool mayus = (modificadores & GLFW_MOD_SHIFT) != 0;
-		if (accion == GLFW_PRESS && tecla == GLFW_KEY_E && control && (modificadores & GLFW_MOD_ALT)) { Activar(!activo); return; }
+		if (accion == GLFW_PRESS &&
+			tecla == GLFW_KEY_F6 &&
+			!escribiendoTexto)
+		{
+			Activar(!activo);
+			return;
+		}
 		if (!activo) return;
 
 		// Flechas / RePag / AvPag: mover el objeto seleccionado (o la cámara si no hay selección). Admiten repetición del teclado.
@@ -630,26 +636,12 @@ namespace editor
 	{
 		const ImGuiIO& io = ImGui::GetIO();
 		if (!activo)
-		{	// En PLAY: solo un pequeño indicador y el botón para volver al editor, sin tapar el juego.
-			ImGui::SetNextWindowPos(ImVec2(6.0f, 6.0f), ImGuiCond_Always);
-			ImGui::SetNextWindowBgAlpha(0.35f);
-			ImGui::Begin("Editor Toolbar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
-				ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoScrollbar);
-			ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.45f, 1.0f), "PLAY");
-			ImGui::SameLine();
-			if (ImGui::SmallButton("EDIT [Ctrl+Alt+E]")) Activar(true);
-			ImGui::End();
-			return;
-		}
+    		return;
 
 		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
 		ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, AlturaBarra), ImGuiCond_Always);
 		ImGui::Begin("Editor Toolbar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_HorizontalScrollbar);
-		ImGui::TextColored(ImVec4(0.98f, 0.62f, 0.12f, 1.0f), "EDIT");
-		ImGui::SameLine();
-		if (ImGui::Button("Play")) Activar(false);
-		ImGui::SameLine();
 		if (ImGui::Button(modificada ? "Save*" : "Save")) guardarSolicitado = true;
 		ImGui::SameLine();
 		ImGui::BeginDisabled(!historial.PuedeDeshacer());
@@ -922,11 +914,30 @@ namespace editor
 						std::transform(b.begin(), b.end(), b.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 						if (a.find(b) == std::string::npos) continue;
 					}
-					if (ImGui::Selectable(relativa.c_str(), assetSeleccionado == relativa, ImGuiSelectableFlags_AllowDoubleClick))
+					// Nombre visible, sin las carpetas ni la extensión.
+					std::string nombreVisible = modelo.stem().string();
+
+					// Mantener un identificador único aunque haya nombres repetidos.
+					ImGui::PushID(relativa.c_str());
+
+					if (ImGui::Selectable(
+						nombreVisible.c_str(),
+						assetSeleccionado == relativa,
+						ImGuiSelectableFlags_AllowDoubleClick))
 					{
 						assetSeleccionado = relativa;
-						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) anadirSolicitado = true;
+
+						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
+							anadirSolicitado = true;
 					}
+
+					// Mostrar la ruta original al pasar el ratón.
+					if (ImGui::IsItemHovered())
+					{
+						ImGui::SetTooltip("%s", relativa.c_str());
+					}
+
+					ImGui::PopID();
 				}
 			}
 			ImGui::EndChild();
@@ -950,7 +961,7 @@ namespace editor
 	void EditorEscenas::DibujarGizmo(ContextoEscena contexto, int ancho, int alto)
 	{
 		if (!IndiceValido(contexto, seleccionado) || ancho <= 0 || alto <= 0) return;
-		ImGuizmo::SetDrawlist(ImGui::GetForegroundDrawList());   // por encima de los paneles: el gizmo no se esconde detrás
+		ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());   // por encima de los paneles: el gizmo no se esconde detrás
 		ImGuizmo::SetRect(0.0f, 0.0f, static_cast<float>(ancho), static_cast<float>(alto));
 		ImGuizmo::SetOrthographic(camara.Ortografica());
 		glm::mat4 vista, proyeccion;
