@@ -1545,10 +1545,11 @@ void dibuixa_Escena() {
 			            // Repetir la textura solo en los cubos de arquitectura base;
             // no altera las UV originales de muebles ni props importados.
             const bool arquitecturaBase =
-                obj.modelo.find("escape_pack/arquitectura/suelo.obj") != std::string::npos ||
-                obj.modelo.find("escape_pack/arquitectura/suelo_laboratorio.obj") != std::string::npos ||
-                obj.modelo.find("escape_pack/arquitectura/pared.obj") != std::string::npos ||
-                obj.modelo.find("escape_pack/arquitectura/techo.obj") != std::string::npos;
+				obj.modelo.find("escape_pack/arquitectura/suelo.obj") != std::string::npos ||
+				obj.modelo.find("escape_pack/arquitectura/suelo_laboratorio.obj") != std::string::npos ||
+				obj.modelo.find("escape_pack/arquitectura/suelo_rejilla.obj") != std::string::npos ||
+				obj.modelo.find("escape_pack/arquitectura/pared.obj") != std::string::npos ||
+				obj.modelo.find("escape_pack/arquitectura/techo.obj") != std::string::npos;
             glUseProgram(shader_programID);
             glUniform1i(glGetUniformLocation(shader_programID, "uArchitectureTiling"),
                         arquitecturaBase ? GL_TRUE : GL_FALSE);

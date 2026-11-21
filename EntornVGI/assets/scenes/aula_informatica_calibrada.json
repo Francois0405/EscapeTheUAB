@@ -3,7 +3,7 @@
   "architecture": [
     {
       "id": "suelo",
-      "model": "../models/escape_pack/arquitectura/suelo_laboratorio.obj",
+      "model": "../models/escape_pack/arquitectura/suelo_rejilla.obj",
       "physics": {
         "halfSize": [
           1,
