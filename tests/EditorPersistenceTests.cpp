@@ -55,6 +55,7 @@ int main()
 	const std::string original = R"json({
   "version": 1,
   "name": "persistence-test",
+  "indirectLighting": {"intensity":0.20,"ambientBase":0.035,"directScale":0.80,"floorColor":[0.42,0.46,0.43],"skyColor":[0.24,0.28,0.34]},
   "architecture": [
     {"id":"floor","model":"../models/table.obj","position":[0,0,0],"rotation":[0,0,0],"scale":[1,1,1]}
   ],
@@ -75,6 +76,10 @@ int main()
 	comprobar(serializador.Cargar(escena, error), "carga el documento JSON de la escena");
 	DatosEscena datos;
 	comprobar(CargarDatosEscenaJSON(escena, datos, error), "fixture JSON válido");
+	comprobar(std::abs(datos.indirectIntensity - 0.20f) < 1e-6f &&
+		std::abs(datos.indirectAmbientBase - 0.035f) < 1e-6f &&
+		std::abs(datos.directSceneLightScale - 0.80f) < 1e-6f,
+		"carga los parametros de iluminacion configurables");
 	SceneObject mesa = datos.objetos.at(1);
 	mesa.posicion = glm::vec3(7.25f, -3.5f, 1.75f);
 	mesa.rotacion = glm::vec3(15.0f, -20.0f, 90.0f);
@@ -94,6 +99,12 @@ int main()
 	const auto& guardada = guardado["objects"][0];
 	comprobar(guardada["model"] == "../models/table.obj", "preserva la ruta relativa original");
 	comprobar(guardada["position"] == nlohmann::json::array({ 7.25, -3.5, 1.75 }), "persiste posición");
+	comprobar(guardado["indirectLighting"]["intensity"] == 0.20 &&
+		guardado["indirectLighting"]["ambientBase"] == 0.035 &&
+		guardado["indirectLighting"]["directScale"] == 0.80 &&
+		guardado["indirectLighting"]["floorColor"] == nlohmann::json::array({ 0.42, 0.46, 0.43 }) &&
+		guardado["indirectLighting"]["skyColor"] == nlohmann::json::array({ 0.24, 0.28, 0.34 }),
+		"Save preserva intactos los parametros globales de iluminacion");
 	comprobar(guardada["rotation"] == nlohmann::json::array({ 15.0, -20.0, 90.0 }), "persiste rotación");
 	comprobar(guardada["scale"] == nlohmann::json::array({ 1.25, 0.75, 2.0 }), "persiste escala");
 	comprobar(guardada["allowArchitecturePenetration"] == true, "persiste la excepcion explicita de arquitectura");

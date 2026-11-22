@@ -7,6 +7,7 @@
 #include <initializer_list>
 #include <limits>
 #include <algorithm>
+#include <array>
 #include "SceneLoader.h"
 #include "third_party/nlohmann/json.hpp"
 
@@ -22,6 +23,7 @@ bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneA
     std::vector<SceneAperturaPared> ordenadas = aperturas;
     std::sort(ordenadas.begin(), ordenadas.end(), [](const auto& a, const auto& b) { return a.centerU < b.centerU; });
     float cursor = -mitadPared.x;
+    std::unordered_set<std::string> idsApertura, idsPuerta;
     constexpr float margenMinimo = 0.10f;
     for (std::size_t i = 0; i < ordenadas.size(); ++i)
     {
@@ -29,6 +31,9 @@ bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneA
         if ((a.id.empty() && a.idPuerta.empty()) || !std::isfinite(a.centerU) || !std::isfinite(a.ancho) || !std::isfinite(a.alto) ||
             !std::isfinite(a.base) || a.ancho <= 0.0f || a.alto <= 0.0f || a.base < 0.0f)
         { error = "Una apertura contiene ID o dimensiones invalidos."; return false; }
+        const std::string id = a.id.empty() ? a.idPuerta : a.id;
+        if (!idsApertura.insert(id).second || (!a.idPuerta.empty() && !idsPuerta.insert(a.idPuerta).second))
+        { error = "Una pared no puede repetir IDs de aperturas o asociar una puerta dos veces."; return false; }
         const float izquierda = a.centerU - a.ancho * 0.5f;
         const float derecha = a.centerU + a.ancho * 0.5f;
         const float arribaDesdeCentro = -mitadPared.z + a.base + a.alto;
@@ -455,16 +460,38 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
         std::vector<SceneObjetoAnimado> candidatosAnimados;
         SceneSpawn spawn;
         float indirectIntensity = 0.16f;
+        float indirectAmbientBase = 0.025f;
+        float directSceneLightScale = 1.0f;
+        glm::vec3 indirectFloorColor(0.42f, 0.46f, 0.43f);
+        glm::vec3 indirectSkyColor(0.24f, 0.28f, 0.34f);
         if (documento.contains("indirectLighting"))
         {
             const json& indirect = documento["indirectLighting"];
-            if (!indirect.is_object() || !soloClavesConocidas(indirect, { "intensity" }, "indirectLighting", error) ||
+            if (!indirect.is_object() || !soloClavesConocidas(indirect,
+                { "intensity", "ambientBase", "directScale", "floorColor", "skyColor" }, "indirectLighting", error) ||
                 !indirect.contains("intensity") || !leerNumero(indirect["intensity"], indirectIntensity, "indirectLighting.intensity", error) ||
                 indirectIntensity < 0.0f || indirectIntensity > 0.5f)
             {
                 if (error.empty()) error = "indirectLighting.intensity debe estar entre 0 y 0.5.";
                 return false;
             }
+            if (indirect.contains("ambientBase") &&
+                (!leerNumero(indirect["ambientBase"], indirectAmbientBase, "indirectLighting.ambientBase", error) ||
+                    indirectAmbientBase < 0.0f || indirectAmbientBase > 0.15f))
+            { if (error.empty()) error = "indirectLighting.ambientBase debe estar entre 0 y 0.15."; return false; }
+            if (indirect.contains("directScale") &&
+                (!leerNumero(indirect["directScale"], directSceneLightScale, "indirectLighting.directScale", error) ||
+                    directSceneLightScale < 0.0f || directSceneLightScale > 1.5f))
+            { if (error.empty()) error = "indirectLighting.directScale debe estar entre 0 y 1.5."; return false; }
+            for (const auto& [clave, destino] : std::array<std::pair<const char*, glm::vec3*>, 2>{ {
+                { "floorColor", &indirectFloorColor }, { "skyColor", &indirectSkyColor } } })
+                if (indirect.contains(clave))
+                {
+                    if (!leerVector3(indirect[clave], *destino, std::string("indirectLighting.") + clave, error)) return false;
+                    for (int eje = 0; eje < 3; ++eje)
+                        if ((*destino)[eje] < 0.0f || (*destino)[eje] > 1.0f)
+                        { error = std::string("indirectLighting.") + clave + " debe estar entre 0 y 1."; return false; }
+                }
         }
         if (documento.contains("playerSpawn"))
         {
@@ -551,7 +578,8 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
                         if (!entradaApertura.is_object() || !soloClavesConocidas(entradaApertura,
                             { "id", "doorId", "centerU", "width", "height", "base" }, ctxA, error) ||
                             (!entradaApertura.contains("id") && !entradaApertura.contains("doorId")) ||
-                            (entradaApertura.contains("doorId") && !entradaApertura["doorId"].is_string()) ||
+            (entradaApertura.contains("id") && !entradaApertura["id"].is_string()) ||
+            (entradaApertura.contains("doorId") && !entradaApertura["doorId"].is_string()) ||
                             !entradaApertura.contains("centerU") || !entradaApertura.contains("width") || !entradaApertura.contains("height"))
                         { if (error.empty()) error = ctxA + " requiere id, centerU, width y height."; return false; }
                         SceneAperturaPared ap;
@@ -564,8 +592,12 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
                         objeto.pared.aperturas.push_back(std::move(ap));
                     }
                     std::vector<SceneSeccionPared> comprobacion;
-                    if (!GenerarSeccionesPared(glm::abs(objeto.escala), objeto.pared.aperturas, comprobacion, error))
+                    if (!GenerarSeccionesPared(glm::abs(objeto.escala) * objeto.fisica.mitadTamano, objeto.pared.aperturas, comprobacion, error))
                     { error = contexto + ".wall: " + error; return false; }
+                    if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::TipoCuerpo::Estatico ||
+                        objeto.fisica.mitadTamano != glm::vec3(1.0f) ||
+                        objeto.fisica.desplazamiento != glm::vec3(0.0f))
+                    { error = contexto + ".wall requiere un collider static centrado en el cubo de pared."; return false; }
                 }
 
                 for (int eje = 0; eje < 3; ++eje)
@@ -619,6 +651,17 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
                 if (puerta == candidatosAnimados.end() || puerta->aperturaId != apertura.id)
                 { error = "La apertura de '" + pared.id + "' no tiene una puerta animada asociada de forma univoca."; return false; }
             }
+        for (const SceneObjetoAnimado& puerta : candidatosAnimados)
+            if (!puerta.paredId.empty())
+            {
+                const auto pared = std::find_if(candidatos.begin(), candidatos.end(), [&](const SceneObject& item) { return item.id == puerta.paredId; });
+                if (pared == candidatos.end() || !pared->pared.presente)
+                { error = "La puerta '" + puerta.id + "' referencia una pared paramétrica inexistente."; return false; }
+                const auto apertura = std::find_if(pared->pared.aperturas.begin(), pared->pared.aperturas.end(),
+                    [&](const SceneAperturaPared& item) { return item.id == puerta.aperturaId && item.idPuerta == puerta.id; });
+                if (apertura == pared->pared.aperturas.end())
+                { error = "La puerta '" + puerta.id + "' referencia un vano inexistente o asociado a otra instancia."; return false; }
+            }
 
         if (candidatos.empty() && candidatosAnimados.empty())
         {
@@ -630,6 +673,10 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
         datosSalida.nombre = documento["name"].get<std::string>();
         datosSalida.spawn = spawn;
         datosSalida.indirectIntensity = indirectIntensity;
+        datosSalida.indirectAmbientBase = indirectAmbientBase;
+        datosSalida.directSceneLightScale = directSceneLightScale;
+        datosSalida.indirectFloorColor = indirectFloorColor;
+        datosSalida.indirectSkyColor = indirectSkyColor;
         datosSalida.objetos = std::move(candidatos);
         datosSalida.animados = std::move(candidatosAnimados);
         error.clear();

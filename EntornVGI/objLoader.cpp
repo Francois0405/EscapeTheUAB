@@ -506,6 +506,7 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 									// material has been set
 	FILE *hFileT = NULL;
 	int err;
+	const unsigned int primerMaterial = *iCurMaterialIndex;
 
 ////////////////////////////////////////////////////////////////////////
 // Open library file
@@ -608,6 +609,8 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 	}
 
 	fclose(hFileT);
+	for (unsigned int indice = primerMaterial; indice < *iCurMaterialIndex; ++indice)
+		AplicarFallbackAmbientalDesdeDifuso(pMaterials[indice]);
 
 // Increment index cause LoadMaterialLib() assumes that the passed
 // index is always empty

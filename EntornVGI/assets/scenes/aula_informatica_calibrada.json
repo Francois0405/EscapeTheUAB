@@ -1,440 +1,367 @@
 {
   "animated": [
     {
+      "colliders": [
+        {
+          "halfSize": [
+            0.05,
+            1.05,
+            0.04
+          ],
+          "node": "DoorFrame",
+          "offset": [
+            -0.45,
+            1.05,
+            -0.013
+          ],
+          "type": "static"
+        },
+        {
+          "halfSize": [
+            0.05,
+            1.05,
+            0.04
+          ],
+          "node": "DoorFrame",
+          "offset": [
+            0.45,
+            1.05,
+            -0.013
+          ],
+          "type": "static"
+        },
+        {
+          "halfSize": [
+            0.4,
+            0.05,
+            0.04
+          ],
+          "node": "DoorFrame",
+          "offset": [
+            0.0,
+            2.05,
+            -0.013
+          ],
+          "type": "static"
+        },
+        {
+          "halfSize": [
+            0.418,
+            1.005,
+            0.017
+          ],
+          "node": "Door",
+          "offset": [
+            -0.418,
+            -0.041,
+            -0.017
+          ],
+          "type": "kinematic"
+        }
+      ],
       "id": "puerta_acceso_laboratorio",
       "model": "../animations/Puerta_Lab.glb",
       "position": [
         -2.5,
         4.5,
-        -3.05
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
+      "scale": 1.0
+    },
+    {
       "colliders": [
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             -0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.4,
             0.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.0,
             2.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "Door",
-          "type": "kinematic",
           "halfSize": [
             0.418,
             1.005,
             0.017
           ],
+          "node": "Door",
           "offset": [
             -0.418,
             -0.041,
             -0.017
-          ]
+          ],
+          "type": "kinematic"
         }
       ],
-      "scale": 1.0
-    },
-    {
       "id": "puerta_almacen_fregona",
       "model": "../animations/Puerta_Lab.glb",
       "position": [
         4.0,
         -1.5,
-        -3.05
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
+      "scale": 1.0
+    },
+    {
       "colliders": [
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             -0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.4,
             0.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.0,
             2.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "Door",
-          "type": "kinematic",
           "halfSize": [
             0.418,
             1.005,
             0.017
           ],
+          "node": "Door",
           "offset": [
             -0.418,
             -0.041,
             -0.017
-          ]
+          ],
+          "type": "kinematic"
         }
       ],
-      "scale": 1.0
-    },
-    {
       "id": "puerta_sala_combinacion",
       "model": "../animations/Puerta_Lab.glb",
       "position": [
         -0.5,
         -1.5,
-        -3.05
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
+      "scale": 1.0
+    },
+    {
       "colliders": [
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             -0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.4,
             0.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.0,
             2.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "Door",
-          "type": "kinematic",
           "halfSize": [
             0.418,
             1.005,
             0.017
           ],
+          "node": "Door",
           "offset": [
             -0.418,
             -0.041,
             -0.017
-          ]
+          ],
+          "type": "kinematic"
         }
       ],
-      "scale": 1.0
-    },
-    {
       "id": "puerta_pasillo_combinacion",
       "model": "../animations/Puerta_Lab.glb",
       "position": [
         -2.5,
         -4.0,
-        -3.05
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
+      "scale": 1.0
+    },
+    {
       "colliders": [
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             -0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.05,
             1.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.45,
             1.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "DoorFrame",
-          "type": "static",
           "halfSize": [
             0.4,
             0.05,
             0.04
           ],
+          "node": "DoorFrame",
           "offset": [
             0.0,
             2.05,
             -0.013
-          ]
+          ],
+          "type": "static"
         },
         {
-          "node": "Door",
-          "type": "kinematic",
           "halfSize": [
             0.418,
             1.005,
             0.017
           ],
+          "node": "Door",
           "offset": [
             -0.418,
             -0.041,
             -0.017
-          ]
+          ],
+          "type": "kinematic"
         }
       ],
-      "scale": 1.0
-    },
-    {
       "id": "puerta_oficina_pasillo",
       "model": "../animations/Puerta_Lab.glb",
       "position": [
         -5.0,
         1.5,
-        -3.05
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
-      ],
-      "colliders": [
-        {
-          "node": "DoorFrame",
-          "type": "static",
-          "halfSize": [
-            0.05,
-            1.05,
-            0.04
-          ],
-          "offset": [
-            -0.45,
-            1.05,
-            -0.013
-          ]
-        },
-        {
-          "node": "DoorFrame",
-          "type": "static",
-          "halfSize": [
-            0.05,
-            1.05,
-            0.04
-          ],
-          "offset": [
-            0.45,
-            1.05,
-            -0.013
-          ]
-        },
-        {
-          "node": "DoorFrame",
-          "type": "static",
-          "halfSize": [
-            0.4,
-            0.05,
-            0.04
-          ],
-          "offset": [
-            0.0,
-            2.05,
-            -0.013
-          ]
-        },
-        {
-          "node": "Door",
-          "type": "kinematic",
-          "halfSize": [
-            0.418,
-            1.005,
-            0.017
-          ],
-          "offset": [
-            -0.418,
-            -0.041,
-            -0.017
-          ]
-        }
-      ],
-      "scale": 1.0
-    },
-    {
-      "id": "puerta_entrada_recepcion",
-      "model": "../animations/Puerta_Lab.glb",
-      "position": [
-        -5.0,
-        -7.5,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "colliders": [
-        {
-          "node": "DoorFrame",
-          "type": "static",
-          "halfSize": [
-            0.05,
-            1.05,
-            0.04
-          ],
-          "offset": [
-            -0.45,
-            1.05,
-            -0.013
-          ]
-        },
-        {
-          "node": "DoorFrame",
-          "type": "static",
-          "halfSize": [
-            0.05,
-            1.05,
-            0.04
-          ],
-          "offset": [
-            0.45,
-            1.05,
-            -0.013
-          ]
-        },
-        {
-          "node": "DoorFrame",
-          "type": "static",
-          "halfSize": [
-            0.4,
-            0.05,
-            0.04
-          ],
-          "offset": [
-            0.0,
-            2.05,
-            -0.013
-          ]
-        },
-        {
-          "node": "Door",
-          "type": "kinematic",
-          "halfSize": [
-            0.418,
-            1.005,
-            0.017
-          ],
-          "offset": [
-            -0.418,
-            -0.041,
-            -0.017
-          ]
-        }
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": 1.0
     }
@@ -443,15 +370,15 @@
     {
       "id": "suelo",
       "material": {
+        "dirtScale": 0.41999998688697815,
+        "dirtSeed": 17.0,
+        "dirtStrength": 0.20000000298023224,
         "roughness": 0.9200000166893005,
         "texture": "../models/escape_pack/arquitectura/industrial_floor.png",
         "tileSize": [
           1.0,
           1.0
-        ],
-        "dirtStrength": 0.2,
-        "dirtScale": 0.42,
-        "dirtSeed": 17.0
+        ]
       },
       "model": "../models/escape_pack/arquitectura/suelo_base.obj",
       "physics": {
@@ -464,8 +391,8 @@
       },
       "position": [
         -0.5,
-        0,
-        -3.2
+        0.0,
+        -3.200000047683716
       ],
       "rotation": [
         0.0,
@@ -473,19 +400,22 @@
         0.0
       ],
       "scale": [
-        7,
+        7.0,
         7.5,
-        0.15
+        0.15000000596046448
       ]
     },
     {
       "id": "techo",
       "material": {
-        "roughness": 0.94,
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_ceiling_technical_v4.png",
         "tileSize": [
           3.0,
-          2.4
+          2.4000000953674316
         ]
       },
       "model": "../models/escape_pack/arquitectura/techo.obj",
@@ -499,8 +429,8 @@
       },
       "position": [
         -0.5,
-        0,
-        0
+        0.0,
+        0.0
       ],
       "rotation": [
         0.0,
@@ -508,819 +438,811 @@
         0.0
       ],
       "scale": [
-        7,
+        7.0,
         7.5,
-        0.15
+        0.15000000596046448
       ]
     },
     {
       "id": "pared_norte_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
         "tileSize": [
-          2,
-          2.9
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1,
+          1,
+          1
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -0.5,
         7.5,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         7.0,
-        0.15,
-        1.45
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
-    },
-    {
-      "id": "pared_sur_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
-        "tileSize": [
-          2,
-          2.9
-        ],
-        "roughness": 0.94
-      },
-      "position": [
-        -6.5,
-        -7.5,
-        -1.6
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.0,
-        0.15,
-        1.45
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
-    },
-    {
-      "id": "pared_sur_dintel_2",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
-        "tileSize": [
-          2,
-          2.9
-        ],
-        "roughness": 0.94
-      },
-      "position": [
-        -5,
-        -7.5,
-        -0.55
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.5,
-        0.15,
-        0.4
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     },
     {
       "id": "pared_sur_s3",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
         "tileSize": [
-          2,
-          2.9
-        ],
-        "roughness": 0.94
+          2.0,
+          2.9000000953674316
+        ]
       },
-      "position": [
-        1.0,
-        -7.5,
-        -1.6
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        5.5,
-        0.15,
-        1.45
-      ],
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        -0.5,
+        -7.5,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        7.0,
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     },
     {
       "id": "pared_oeste_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
         "tileSize": [
-          2,
-          2.9
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1,
+          1,
+          1
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -7.5,
         0.0,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         7.5,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "pared_este_s1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "pared_este_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         6.5,
         0.0,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         7.5,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_recepcion_pasillo_s1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_recepcion_pasillo_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -6.5,
         1.5,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         1.0,
-        0.15,
-        1.45
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     },
     {
       "id": "tabique_recepcion_pasillo_dintel_2",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
         "tileSize": [
-          2,
-          2.9
-        ],
-        "roughness": 0.94
+          2.0,
+          2.9000000953674316
+        ]
       },
-      "position": [
-        -5,
-        1.5,
-        -0.55
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.5,
-        0.15,
-        0.4
-      ],
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        -5.0,
+        1.5,
+        -0.550000011920929
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.5,
+        0.15000000596046448,
+        0.4000000059604645
+      ]
     },
     {
       "id": "tabique_recepcion_pasillo_s3",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
         "tileSize": [
-          2,
-          2.9
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1,
+          1,
+          1
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -3.5,
         1.5,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         1.0,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_oficina_laboratorio_s1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_oficina_laboratorio_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -2.5,
         2.75,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         1.25,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_oficina_laboratorio_dintel_2",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_oficina_laboratorio_dintel_2",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -2.5,
         4.5,
-        -0.55
+        -0.550000011920929
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         0.5,
-        0.15,
-        0.4
-      ],
+        0.15000000596046448,
+        0.4000000059604645
+      ]
+    },
+    {
+      "id": "tabique_oficina_laboratorio_s3",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_oficina_laboratorio_s3",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -2.5,
         6.25,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         1.25,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_pasillo_acceso_s1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_pasillo_acceso_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -2.5,
         -6.0,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         1.5,
-        0.15,
-        1.45
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     },
     {
       "id": "tabique_pasillo_acceso_dintel_2",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
         "tileSize": [
-          2,
-          2.9
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1,
+          1,
+          1
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -2.5,
-        -4,
-        -0.55
+        -4.0,
+        -0.550000011920929
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         0.5,
-        0.15,
-        0.4
-      ],
+        0.15000000596046448,
+        0.4000000059604645
+      ]
+    },
+    {
+      "id": "tabique_pasillo_acceso_s3",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_pasillo_acceso_s3",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -2.5,
         -2.5,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         1.0,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_pasillo_laboratorio_s1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_pasillo_laboratorio_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -2.5,
         0.0,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         1.5,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_laboratorio_acceso_mantenimiento_s1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_laboratorio_acceso_mantenimiento_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -1.75,
         -1.5,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.75,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_laboratorio_acceso_mantenimiento_dintel_2",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_laboratorio_acceso_mantenimiento_dintel_2",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         -0.5,
         -1.5,
-        -0.55
+        -0.550000011920929
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.5,
-        0.15,
-        0.4
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
+        0.15000000596046448,
+        0.4000000059604645
+      ]
     },
     {
       "id": "tabique_laboratorio_acceso_mantenimiento_s3",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
         "tileSize": [
-          2,
-          2.9
-        ],
-        "roughness": 0.94
+          2.0,
+          2.9000000953674316
+        ]
       },
-      "position": [
-        1.75,
-        -1.5,
-        -1.6
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.75,
-        0.15,
-        1.45
-      ],
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        1.75,
+        -1.5,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.75,
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     },
     {
       "id": "tabique_laboratorio_acceso_mantenimiento_dintel_4",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
         "tileSize": [
-          2,
-          2.9
-        ],
-        "roughness": 0.94
+          2.0,
+          2.9000000953674316
+        ]
       },
-      "position": [
-        4,
-        -1.5,
-        -0.55
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.5,
-        0.15,
-        0.4
-      ],
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        4.0,
+        -1.5,
+        -0.550000011920929
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.5,
+        0.15000000596046448,
+        0.4000000059604645
+      ]
     },
     {
       "id": "tabique_laboratorio_acceso_mantenimiento_s5",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
       "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
         "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
         "tileSize": [
-          2,
-          2.9
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1,
+          1,
+          1
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         5.5,
         -1.5,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         1.0,
-        0.15,
-        1.45
-      ],
+        0.15000000596046448,
+        1.4500000476837158
+      ]
+    },
+    {
+      "id": "tabique_acceso_mantenimiento_s1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "static",
         "halfSize": [
           1,
           1,
           1
-        ]
-      }
-    },
-    {
-      "id": "tabique_acceso_mantenimiento_s1",
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "material": {
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_maintenance_v2.png",
-        "tileSize": [
-          2,
-          2.9
         ],
-        "roughness": 0.94
+        "type": "static"
       },
       "position": [
         1.5,
         -4.5,
-        -1.6
+        -1.600000023841858
       ],
       "rotation": [
-        0,
-        0,
-        90
+        0.0,
+        0.0,
+        90.0
       ],
       "scale": [
         3.0,
-        0.15,
-        1.45
-      ],
-      "physics": {
-        "type": "static",
-        "halfSize": [
-          1,
-          1,
-          1
-        ]
-      }
+        0.15000000596046448,
+        1.4500000476837158
+      ]
     }
   ],
-  "name": "laboratorio_retrofuturista_compacto",
-  "playerSpawn": {
-    "feetPosition": [-6.5, 3.0, -3.05],
-    "lookDirection": [0.0, 1.0, 0.0]
+  "indirectLighting": {
+    "intensity": 0.20,
+    "ambientBase": 0.035,
+    "directScale": 0.45,
+    "floorColor": [0.42, 0.46, 0.43],
+    "skyColor": [0.24, 0.28, 0.34]
   },
-  "indirectLighting": { "intensity": 0.16 },
+  "name": "laboratorio_retrofuturista_compacto",
   "objects": [
     {
       "id": "obj_Prop_Light_Wide",
       "light": {
+        "areaSize": [
+          2.4000000953674316,
+          0.3799999952316284
+        ],
         "color": [
-          0.82,
-          0.94,
+          0.8199999928474426,
+          0.9399999976158142,
           1.0
         ],
         "enabled": true,
         "intensity": 6.0,
-        "areaSize": [
-          2.4,
-          0.38
-        ],
         "offset": [
           0.0,
-          -0.054,
+          -0.05400000140070915,
           0.0
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
         1.5,
-        3.2,
-        -0.24
+        3.200000047683716,
+        -0.23999999463558197
       ],
       "rotation": [
-        90,
-        0,
-        0
+        90.0,
+        0.0,
+        0.0
       ],
       "scale": [
         1.0,
@@ -1331,33 +1253,33 @@
     {
       "id": "obj_Prop_Light_Wide_mesa",
       "light": {
+        "areaSize": [
+          2.4000000953674316,
+          0.3799999952316284
+        ],
         "color": [
-          0.82,
-          0.94,
+          0.8199999928474426,
+          0.9399999976158142,
           1.0
         ],
         "enabled": true,
         "intensity": 6.0,
-        "areaSize": [
-          2.4,
-          0.38
-        ],
         "offset": [
           0.0,
-          -0.054,
+          -0.05400000140070915,
           0.0
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
         0.0,
-        -3.7,
-        -0.24
+        -3.700000047683716,
+        -0.23999999463558197
       ],
       "rotation": [
-        90,
-        0,
-        0
+        90.0,
+        0.0,
+        0.0
       ],
       "scale": [
         1.0,
@@ -1369,19 +1291,19 @@
       "id": "rejilla_sector_laboratorio",
       "model": "../models/escape_pack/arquitectura/rejilla_sector.obj",
       "position": [
-        4.9,
-        -5.3,
-        -3.13
+        4.900000095367432,
+        -5.300000190734863,
+        -3.130000114440918
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.75,
         1.0,
-        0.1
+        0.10000000149011612
       ]
     },
     {
@@ -1402,19 +1324,19 @@
         "type": "static"
       },
       "position": [
-        4.3,
-        6.2,
-        -3.05
+        4.300000190734863,
+        6.199999809265137,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         2.5,
-        2.2,
-        1.3
+        2.200000047683716,
+        1.2999999523162842
       ]
     },
     {
@@ -1435,18 +1357,18 @@
         "type": "static"
       },
       "position": [
-        5.7,
-        6.2,
-        -3.05
+        5.699999809265137,
+        6.199999809265137,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1.7,
-        1.7,
+        1.7000000476837158,
+        1.7000000476837158,
         2.0
       ]
     },
@@ -1454,38 +1376,38 @@
       "id": "terminal_laboratorio",
       "model": "../models/escape_pack/scifi/Prop_Computer.obj",
       "position": [
-        0.55,
-        -2.2,
-        -1.72
+        0.550000011920929,
+        -2.200000047683716,
+        -1.7200000286102295
       ],
       "rotation": [
-        90,
-        0,
-        0
+        90.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.4,
-        0.4,
-        0.4
+        0.4000000059604645,
+        0.4000000059604645,
+        0.4000000059604645
       ]
     },
     {
       "id": "microscopio_laboratorio",
       "model": "../models/escape_pack/lab/machine_microscope/machine_microscope.obj",
       "position": [
-        4.8,
-        6.1,
-        -2.14
+        4.800000190734863,
+        6.099999904632568,
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.85,
-        0.85,
-        0.85
+        0.8500000238418579,
+        0.8500000238418579,
+        0.8500000238418579
       ]
     },
     {
@@ -1506,79 +1428,63 @@
         "type": "static"
       },
       "position": [
-        5.8,
-        2.1,
-        -2.65
+        5.800000190734863,
+        2.0999999046325684,
+        -2.6500000953674316
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.55,
-        0.55,
-        0.55
+        0.550000011920929,
+        0.550000011920929,
+        0.550000011920929
       ]
     },
     {
       "id": "detalle_tubos_mesa",
       "model": "../models/escape_pack/lab/bottle_test_tube_rack/bottle_test_tube_rack.obj",
       "position": [
-        3.7,
-        6.2,
-        -2.14
+        3.700000047683716,
+        6.199999809265137,
+        -2.140000104904175
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.5,
         0.5,
         0.5
-      ],
-      "rotation": [
-        0,
-        0,
-        0
       ]
     },
     {
       "id": "caja_abandonada_pared",
       "model": "../models/escape_pack/kenney/cardboardBoxClosed.obj",
       "position": [
-        -6.8,
+        -6.800000190734863,
         -6.5,
-        -3.05
-      ],
-      "scale": [
-        0.45,
-        0.45,
-        0.45
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.44999998807907104,
+        0.44999998807907104,
+        0.44999998807907104
       ]
     },
     {
       "id": "isla_central_laboratorio",
       "model": "../models/escape_pack/lab/counter_counter/counter_counter.obj",
-      "position": [
-        2.2,
-        2.8,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        2.7,
-        2.7,
-        1.3
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.31,
           0.38,
@@ -1588,48 +1494,48 @@
           0,
           0,
           0.35
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        2.200000047683716,
+        2.799999952316284,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        2.700000047683716,
+        2.700000047683716,
+        1.2999999523162842
+      ]
     },
     {
       "id": "terminal_isla_central",
       "model": "../models/escape_pack/scifi/Prop_Computer.obj",
       "position": [
-        1.7,
-        2.8,
-        -2.14
+        1.7000000476837158,
+        2.799999952316284,
+        -2.140000104904175
       ],
       "rotation": [
-        90,
-        0,
-        0
+        90.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.4,
-        0.4,
-        0.4
+        0.4000000059604645,
+        0.4000000059604645,
+        0.4000000059604645
       ]
     },
     {
       "id": "banco_lateral_fregadero",
       "model": "../models/escape_pack/lab/counter_counter_sink/counter_counter_sink.obj",
-      "position": [
-        -0.5,
-        4.5,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        2.4,
-        2.0,
-        1.3
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.31,
           0.38,
@@ -1639,48 +1545,48 @@
           0,
           0,
           0.54
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        -0.5,
+        4.5,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        2.4000000953674316,
+        2.0,
+        1.2999999523162842
+      ]
     },
     {
       "id": "instrumento_banco_lateral",
       "model": "../models/escape_pack/lab/machine_hot_plate/machine_hot_plate.obj",
       "position": [
-        -0.4,
+        -0.4000000059604645,
         4.5,
-        -2.14
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1.35,
-        1.35,
-        1.35
+        1.350000023841858,
+        1.350000023841858,
+        1.350000023841858
       ]
     },
     {
       "id": "armario_lateral_este",
       "model": "../models/escape_pack/lab/cabinet_cabinet_two_shelves/cabinet_cabinet_two_shelves.obj",
-      "position": [
-        5.8,
-        3.6,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.7,
-        1.7,
-        2.0
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.31,
           0.16,
@@ -1690,29 +1596,29 @@
           0,
           0,
           0.31
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        5.800000190734863,
+        3.5999999046325684,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.7000000476837158,
+        1.7000000476837158,
+        2.0
+      ]
     },
     {
       "id": "armario_lateral_oeste",
       "model": "../models/escape_pack/lab/cabinet_cabinet/cabinet_cabinet.obj",
-      "position": [
-        -1.5,
-        6.7,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.7,
-        1.7,
-        2.0
-      ],
       "physics": {
-        "type": "static",
         "halfSize": [
           0.31,
           0.16,
@@ -1722,40 +1628,56 @@
           0,
           0,
           0.31
-        ]
-      }
+        ],
+        "type": "static"
+      },
+      "position": [
+        -1.5,
+        6.699999809265137,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.7000000476837158,
+        1.7000000476837158,
+        2.0
+      ]
     },
     {
       "id": "caja_tecnica_este",
       "model": "../models/escape_pack/scifi/Prop_Crate3.obj",
       "position": [
-        5.8,
-        -6.6,
-        -2.67
+        5.800000190734863,
+        -6.599999904632568,
+        -2.6700000762939453
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.7,
-        0.7,
-        0.7
+        0.699999988079071,
+        0.699999988079071,
+        0.699999988079071
       ]
     },
     {
       "id": "ventilacion_pared_fondo",
       "model": "../models/escape_pack/scifi/Prop_Vent_Wide.obj",
       "position": [
-        2.3,
-        7.34,
+        2.299999952316284,
+        7.340000152587891,
         -1.25
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         1.25,
@@ -1767,135 +1689,118 @@
       "id": "cable_isla",
       "model": "../models/escape_pack/scifi/Prop_Cable_1.obj",
       "position": [
-        2.2,
+        2.200000047683716,
         3.5,
-        -2.13
+        -2.130000114440918
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.4,
-        0.4,
-        0.4
+        0.4000000059604645,
+        0.4000000059604645,
+        0.4000000059604645
       ]
     },
     {
       "id": "cable_banco_lateral",
       "model": "../models/escape_pack/scifi/Prop_Cable_3.obj",
       "position": [
-        -0.3,
-        5.2,
-        -2.13
+        -0.30000001192092896,
+        5.199999809265137,
+        -2.130000114440918
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.35,
-        0.35,
-        0.35
+        0.3499999940395355,
+        0.3499999940395355,
+        0.3499999940395355
       ]
     },
     {
       "id": "obj_Prop_Light_Wide_03",
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
-      "position": [
-        4.8,
-        -4.4,
-        -0.24
-      ],
-      "rotation": [
-        90,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "light": {
-        "enabled": true,
-        "offset": [
-          0,
-          -0.054,
-          0
+        "areaSize": [
+          2.4000000953674316,
+          0.3799999952316284
         ],
         "color": [
-          0.82,
-          0.94,
+          0.8199999928474426,
+          0.9399999976158142,
           1.0
         ],
+        "enabled": true,
         "intensity": 6.0,
-        "areaSize": [
-          2.4,
-          0.38
+        "offset": [
+          0.0,
+          -0.05400000140070915,
+          0.0
         ]
-      }
+      },
+      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "position": [
+        4.800000190734863,
+        -4.400000095367432,
+        -0.23999999463558197
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "obj_Prop_Light_Wide_04",
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
-      "position": [
-        -5.2,
-        5.2,
-        -0.24
-      ],
-      "rotation": [
-        90,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        1
-      ],
       "light": {
-        "enabled": true,
-        "offset": [
-          0,
-          -0.054,
-          0
+        "areaSize": [
+          2.4000000953674316,
+          0.3799999952316284
         ],
         "color": [
-          0.82,
-          0.94,
+          0.8199999928474426,
+          0.9399999976158142,
           1.0
         ],
+        "enabled": true,
         "intensity": 6.0,
-        "areaSize": [
-          2.4,
-          0.38
+        "offset": [
+          0.0,
+          -0.05400000140070915,
+          0.0
         ]
-      }
+      },
+      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "position": [
+        -5.199999809265137,
+        5.199999809265137,
+        -0.23999999463558197
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "banco_muestras_sur",
       "model": "../models/escape_pack/lab/counter_counter_2_shelves/counter_counter_2_shelves.obj",
-      "position": [
-        -0.2,
-        1.7,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        2.4,
-        2.0,
-        1.3
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.31,
           0.38,
@@ -1905,88 +1810,101 @@
           0,
           0,
           0.348
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -0.20000000298023224,
+        1.7000000476837158,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        2.4000000953674316,
+        2.0,
+        1.2999999523162842
+      ]
     },
     {
       "id": "centrifuga_muestras_sur",
       "model": "../models/escape_pack/lab/machine_centrifuge/machine_centrifuge.obj",
       "position": [
-        -0.7,
-        1.7,
-        -2.14
+        -0.699999988079071,
+        1.7000000476837158,
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1.15,
-        1.15,
-        1.15
+        1.149999976158142,
+        1.149999976158142,
+        1.149999976158142
       ]
     },
     {
       "id": "bascula_muestras_sur",
       "model": "../models/escape_pack/lab/machine_electronic_scale/machine_electronic_scale.obj",
       "position": [
-        0.4,
-        1.7,
-        -2.14
+        0.4000000059604645,
+        1.7000000476837158,
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.9,
-        0.9,
-        0.9
+        0.8999999761581421,
+        0.8999999761581421,
+        0.8999999761581421
       ]
     },
     {
       "id": "frasco_muestras_sur",
       "model": "../models/escape_pack/lab/bottle_glassware_erlenmeyer_flask_medium/bottle_glassware_erlenmeyer_flask_medium.obj",
+      "physics": {
+        "halfSize": [
+          0.055,
+          0.055,
+          0.082
+        ],
+        "mass": 0.35,
+        "offset": [
+          0,
+          0,
+          0.082
+        ],
+        "type": "dynamic"
+      },
       "position": [
-        -0.1,
-        2.1,
-        -2.14
+        -0.10000000149011612,
+        2.0999999046325684,
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.85,
-        0.85,
-        0.85
-      ],
-      "physics": { "type": "dynamic", "halfSize": [0.055, 0.055, 0.082], "offset": [0, 0, 0.082], "mass": 0.35 }
+        0.8500000238418579,
+        0.8500000238418579,
+        0.8500000238418579
+      ]
     },
     {
       "id": "mesa_control_sur",
       "model": "../models/escape_pack/kenney/desk.obj",
-      "position": [
-        -5.1,
-        5.2,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.05,
-        1.05,
-        1.15
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.7345,
           0.3923,
@@ -1996,40 +1914,57 @@
           0,
           0,
           0.3845
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -5.099999904632568,
+        5.199999809265137,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0499999523162842,
+        1.0499999523162842,
+        1.149999976158142
+      ]
     },
     {
       "id": "monitor_control_sur",
       "model": "../models/escape_pack/kenney/computerScreen.obj",
       "position": [
-        -5.1,
-        5.1,
-        -2.14
+        -5.099999904632568,
+        5.099999904632568,
+        -2.140000104904175
       ],
       "rotation": [
-        90,
-        0,
-        0
+        90.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.8,
-        0.8,
-        0.8
+        0.800000011920929,
+        0.800000011920929,
+        0.800000011920929
       ]
     },
     {
       "id": "teclado_control_sur",
       "model": "../models/escape_pack/kenney/computerKeyboard.obj",
       "position": [
-        -5.1,
-        4.65,
-        -2.14
+        -5.099999904632568,
+        4.650000095367432,
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.75,
@@ -2040,24 +1975,7 @@
     {
       "id": "silla_control_sur",
       "model": "../models/escape_pack/kenney/chairDesk.obj",
-      "position": [
-        -5.0,
-        4.0,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.8,
-        0.8,
-        0.8
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.335,
           0.314,
@@ -2067,30 +1985,30 @@
           0,
           0,
           0.608
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -5.0,
+        4.0,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.800000011920929,
+        0.800000011920929,
+        0.800000011920929
+      ]
     },
     {
       "id": "estanteria_suministros_sur",
       "model": "../models/escape_pack/kenney/bookcaseOpen.obj",
-      "position": [
-        -7.0,
-        6.6,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.05,
-        1.05,
-        1.0
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.4,
           0.25,
@@ -2100,49 +2018,49 @@
           0,
           0,
           0.88
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -7.0,
+        6.599999904632568,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0499999523162842,
+        1.0499999523162842,
+        1.0
+      ]
     },
     {
       "id": "papelera_control_sur",
       "model": "../models/escape_pack/kenney/trashcan.obj",
       "position": [
-        -3.4,
-        2.2,
-        -3.05
+        -3.4000000953674316,
+        2.200000047683716,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.8,
-        0.8,
-        0.8
+        0.800000011920929,
+        0.800000011920929,
+        0.800000011920929
       ]
     },
     {
       "id": "banco_embalaje_sur",
       "model": "../models/escape_pack/lab/counter_counter_2_shelves/counter_counter_2_shelves.obj",
-      "position": [
-        4.3,
-        -3.5,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        2.2,
-        1.8,
-        1.3
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.31,
           0.38,
@@ -2152,49 +2070,49 @@
           0,
           0,
           0.348
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        4.300000190734863,
+        -3.5,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        2.200000047683716,
+        1.7999999523162842,
+        1.2999999523162842
+      ]
     },
     {
       "id": "caja_material_embalaje",
       "model": "../models/escape_pack/kenney/cardboardBoxClosed.obj",
       "position": [
-        4.3,
+        4.300000190734863,
         -3.5,
-        -2.14
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.75,
         0.75,
-        0.55
+        0.550000011920929
       ]
     },
     {
       "id": "caja_material_sur",
       "model": "../models/escape_pack/kenney/cardboardBoxOpen.obj",
-      "position": [
-        5.7,
-        -6.4,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1,
-        1,
-        0.9
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.372,
           0.212,
@@ -2204,102 +2122,30 @@
           0,
           0,
           0.281
-        ]
-      }
-    },
-    {
-      "id": "banco_secundario_centro",
-      "model": "../models/escape_pack/lab/counter_counter_3_shelves/counter_counter_3_shelves.obj",
-      "position": [
-        -1.2,
-        -0.3,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        2.4,
-        2.0,
-        1.3
-      ],
-      "physics": {
-        "type": "static",
-        "shape": "box",
-        "halfSize": [
-          0.31,
-          0.38,
-          0.348
         ],
-        "offset": [
-          0,
-          0,
-          0.348
-        ]
-      }
-    },
-    {
-      "id": "balanza_banco_centro",
-      "model": "../models/escape_pack/lab/machine_electronic_scale/machine_electronic_scale.obj",
+        "shape": "box",
+        "type": "static"
+      },
       "position": [
-        -1.4,
-        -0.3,
-        -2.14
+        5.699999809265137,
+        -6.400000095367432,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.95,
-        0.95,
-        0.95
+        1.0,
+        1.0,
+        0.8999999761581421
       ]
-    },
-    {
-      "id": "matraz_banco_centro",
-      "model": "../models/escape_pack/lab/bottle_glassware_erlenmeyer_flask_medium/bottle_glassware_erlenmeyer_flask_medium.obj",
-      "position": [
-        -0.7,
-        -0.2,
-        -2.14
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.85,
-        0.85,
-        0.85
-      ],
-      "physics": { "type": "dynamic", "halfSize": [0.055, 0.055, 0.082], "offset": [0, 0, 0.082], "mass": 0.35 }
     },
     {
       "id": "estanteria_documentacion_centro",
       "model": "../models/escape_pack/kenney/bookcaseClosed.obj",
-      "position": [
-        5.8,
-        1.5,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.05,
-        1.05,
-        1.0
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.4,
           0.25,
@@ -2309,30 +2155,30 @@
           0,
           0,
           0.85
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        5.800000190734863,
+        1.5,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0499999523162842,
+        1.0499999523162842,
+        1.0
+      ]
     },
     {
       "id": "silla_isla_central",
       "model": "../models/escape_pack/kenney/chairDesk.obj",
-      "position": [
-        2.0,
-        1.2,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.75,
-        0.75,
-        0.75
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.335,
           0.314,
@@ -2342,21 +2188,38 @@
           0,
           0,
           0.608
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        2.0,
+        1.2000000476837158,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
     },
     {
       "id": "papelera_isla_central",
       "model": "../models/escape_pack/kenney/trashcan.obj",
       "position": [
-        -0.7,
-        3.7,
-        -3.05
+        -0.699999988079071,
+        3.700000047683716,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.75,
@@ -2367,24 +2230,7 @@
     {
       "id": "banco_investigacion_norte",
       "model": "../models/escape_pack/lab/counter_counter_2_shelves/counter_counter_2_shelves.obj",
-      "position": [
-        2.2,
-        6.2,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        2.5,
-        2.0,
-        1.3
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.31,
           0.38,
@@ -2394,69 +2240,82 @@
           0,
           0,
           0.348
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        2.200000047683716,
+        6.199999809265137,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        2.5,
+        2.0,
+        1.2999999523162842
+      ]
     },
     {
       "id": "analizador_investigacion_norte",
       "model": "../models/escape_pack/lab/machine_centrifuge/machine_centrifuge.obj",
       "position": [
         2.0,
-        6.2,
-        -2.14
+        6.199999809265137,
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1.1,
-        1.1,
-        1.1
+        1.100000023841858,
+        1.100000023841858,
+        1.100000023841858
       ]
     },
     {
       "id": "vaso_investigacion_norte",
       "model": "../models/escape_pack/lab/bottle_glassware_beaker_medium/bottle_glassware_beaker_medium.obj",
+      "physics": {
+        "halfSize": [
+          0.056,
+          0.052,
+          0.054
+        ],
+        "mass": 0.3,
+        "offset": [
+          0,
+          0,
+          0.054
+        ],
+        "type": "dynamic"
+      },
       "position": [
-        2.8,
+        2.799999952316284,
         6.25,
-        -2.14
+        -2.140000104904175
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.8,
-        0.8,
-        0.8
-      ],
-      "physics": { "type": "dynamic", "halfSize": [0.056, 0.052, 0.054], "offset": [0, 0, 0.054], "mass": 0.30 }
+        0.800000011920929,
+        0.800000011920929,
+        0.800000011920929
+      ]
     },
     {
       "id": "silla_mesa_norte",
       "model": "../models/escape_pack/kenney/chairDesk.obj",
-      "position": [
-        -5.7,
-        3.7,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.75,
-        0.75,
-        0.75
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.335,
           0.314,
@@ -2466,21 +2325,38 @@
           0,
           0,
           0.608
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        -5.699999809265137,
+        3.700000047683716,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.75,
+        0.75,
+        0.75
+      ]
     },
     {
       "id": "papelera_lab_norte",
       "model": "../models/escape_pack/kenney/trashcan.obj",
       "position": [
-        -0.9,
-        6.8,
-        -3.05
+        -0.8999999761581421,
+        6.800000190734863,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.75,
@@ -2491,24 +2367,7 @@
     {
       "id": "almacenaje_ala_este",
       "model": "../models/escape_pack/kenney/bookcaseOpen.obj",
-      "position": [
-        5.8,
-        -2.3,
-        -3.05
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.4,
           0.25,
@@ -2518,30 +2377,30 @@
           0,
           0,
           0.88
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        5.800000190734863,
+        -2.299999952316284,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
     },
     {
       "id": "caja_suministros_ala_este",
       "model": "../models/escape_pack/scifi/Prop_Crate3.obj",
-      "position": [
-        2.1,
-        -6.6,
-        -2.675
-      ],
-      "rotation": [
-        0,
-        0,
-        0
-      ],
-      "scale": [
-        0.7,
-        0.7,
-        0.7
-      ],
       "physics": {
-        "type": "static",
-        "shape": "box",
         "halfSize": [
           0.5,
           0.5,
@@ -2551,26 +2410,43 @@
           0,
           0,
           0
-        ]
-      }
+        ],
+        "shape": "box",
+        "type": "static"
+      },
+      "position": [
+        2.0999999046325684,
+        -6.599999904632568,
+        -2.674999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.699999988079071,
+        0.699999988079071,
+        0.699999988079071
+      ]
     },
     {
       "id": "caja_embalaje_ala_este",
       "model": "../models/escape_pack/kenney/cardboardBoxOpen.obj",
       "position": [
-        2.8,
-        -6.6,
-        -3.05
+        2.799999952316284,
+        -6.599999904632568,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        0.8,
-        0.8,
-        0.8
+        0.800000011920929,
+        0.800000011920929,
+        0.800000011920929
       ]
     },
     {
@@ -2578,13 +2454,13 @@
       "model": "../models/escape_pack/kenney/trashcan.obj",
       "position": [
         6.0,
-        -5.8,
-        -3.05
+        -5.800000190734863,
+        -3.049999952316284
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
         0.75,
@@ -2597,20 +2473,32 @@
       "model": "../models/escape_pack/lab/clue_botanical_frame.obj",
       "position": [
         0.0,
-        7.32,
-        -1.55
+        7.320000171661377,
+        -1.5499999523162842
       ],
       "rotation": [
-        0,
-        0,
-        0
+        0.0,
+        0.0,
+        0.0
       ],
       "scale": [
-        1,
-        1,
-        1
+        1.0,
+        1.0,
+        1.0
       ]
     }
   ],
+  "playerSpawn": {
+    "feetPosition": [
+      -6.5,
+      3.0,
+      -3.05
+    ],
+    "lookDirection": [
+      0.0,
+      1.0,
+      0.0
+    ]
+  },
   "version": 1
 }

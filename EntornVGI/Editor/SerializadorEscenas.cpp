@@ -242,10 +242,11 @@ namespace editor
 					++entrada;
 				}
 			}
-			if (!preservarAnimated && documento.contains("animated") && documento["animated"].is_array())
+			if (!preservarAnimated)
 			{
 				json reconciliados = json::array();
 				std::unordered_set<std::string> animadosEscritos;
+				if (documento.contains("animated") && documento["animated"].is_array())
 				for (auto entrada : documento["animated"])
 				{
 					const std::string id = entrada.at("id").get<std::string>();

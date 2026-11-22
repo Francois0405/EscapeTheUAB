@@ -9,11 +9,18 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
+#include <cmath>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <memory>
+#include <set>
+#include <sstream>
 #include <string>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -24,10 +31,236 @@ namespace
         std::ofstream archivo(ruta, std::ios::binary);
         archivo << contenido;
     }
+
+bool validarGeometriaCuadroBotanico(const fs::path& ruta)
+{
+	std::ifstream archivo(ruta);
+	if (!archivo) return false;
+
+	std::vector<glm::vec3> vertices;
+	std::vector<glm::vec2> uv;
+	std::vector<glm::vec3> normales;
+	std::set<std::array<int, 3>> triangulos;
+	int cantidadTriangulos = 0;
+	bool mtllibOriginal = false;
+	bool materialOriginal = false;
+	std::string linea;
+	while (std::getline(archivo, linea))
+	{
+		std::istringstream entrada(linea);
+		std::string tipo;
+		if (!(entrada >> tipo) || tipo[0] == '#') continue;
+		if (tipo == "v")
+		{
+			glm::vec3 v{};
+			if (!(entrada >> v.x >> v.y >> v.z)) return false;
+			vertices.push_back(v);
+		}
+		else if (tipo == "vt")
+		{
+			glm::vec2 t{};
+			if (!(entrada >> t.x >> t.y)) return false;
+			uv.push_back(t);
+		}
+		else if (tipo == "vn")
+		{
+			glm::vec3 n{};
+			if (!(entrada >> n.x >> n.y >> n.z)) return false;
+			normales.push_back(n);
+		}
+		else if (tipo == "mtllib") mtllibOriginal = linea.find("clue_botanical_frame.mtl") != std::string::npos;
+		else if (tipo == "usemtl") materialOriginal = linea.find("BotanicalPlate") != std::string::npos;
+		else if (tipo == "f")
+		{
+			std::array<int, 3> vi{}, ti{}, ni{};
+			for (int i = 0; i < 3; ++i)
+			{
+				std::string token;
+				if (!(entrada >> token)) return false;
+				std::replace(token.begin(), token.end(), '/', ' ');
+				std::istringstream indices(token);
+				if (!(indices >> vi[i] >> ti[i] >> ni[i])) return false;
+				--vi[i]; --ti[i]; --ni[i];
+			}
+			std::string extra;
+			if (entrada >> extra) return false; // Este activo debe triangularse explícitamente.
+			for (int i = 0; i < 3; ++i)
+				if (vi[i] < 0 || vi[i] >= static_cast<int>(vertices.size()) ||
+					ti[i] < 0 || ti[i] >= static_cast<int>(uv.size()) ||
+					ni[i] < 0 || ni[i] >= static_cast<int>(normales.size())) return false;
+
+			const glm::vec3 geometrica = glm::normalize(glm::cross(
+				vertices[vi[1]] - vertices[vi[0]], vertices[vi[2]] - vertices[vi[0]]));
+			for (int i = 0; i < 3; ++i)
+				if (glm::dot(geometrica, glm::normalize(normales[ni[i]])) < 0.999f) return false;
+
+			auto ordenada = vi;
+			std::sort(ordenada.begin(), ordenada.end());
+			if (!triangulos.insert(ordenada).second) return false;
+			++cantidadTriangulos;
+		}
+	}
+	if (vertices.size() != 8 || uv.size() != 4 || normales.size() != 6 ||
+		cantidadTriangulos != 12 || !mtllibOriginal || !materialOriginal) return false;
+
+	const std::array<glm::vec2, 4> uvOriginal = {
+		glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)
+	};
+	for (std::size_t i = 0; i < uvOriginal.size(); ++i)
+		if (glm::length(uv[i] - uvOriginal[i]) > 1.0e-6f) return false;
+
+	float minimoY = vertices.front().y, maximoY = vertices.front().y;
+	for (const glm::vec3& v : vertices)
+	{
+		minimoY = std::min(minimoY, v.y);
+		maximoY = std::max(maximoY, v.y);
+	}
+	return std::abs((maximoY - minimoY) - 0.02f) < 1.0e-6f;
+}
+
+bool renderizarPreviewCuadro(GLuint programa, const fs::path& rutaModelo)
+{
+	GLuint fbo = 0, color = 0, depth = 0;
+	constexpr int ancho = 512, alto = 256, mitadAncho = ancho / 2;
+	glGenFramebuffers(1, &fbo);
+	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+	glGenTextures(1, &color);
+	glBindTexture(GL_TEXTURE_2D, color);
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ancho, alto, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+	glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, color, 0);
+	glGenRenderbuffers(1, &depth);
+	glBindRenderbuffer(GL_RENDERBUFFER, depth);
+	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, ancho, alto);
+	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, depth);
+	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
+	{
+		glBindFramebuffer(GL_FRAMEBUFFER, 0);
+		glDeleteRenderbuffers(1, &depth);
+		glDeleteTextures(1, &color);
+		glDeleteFramebuffers(1, &fbo);
+		return false;
+	}
+
+	glUseProgram(programa);
+	glEnable(GL_DEPTH_TEST);
+	glDepthFunc(GL_LESS);
+	glDisable(GL_CULL_FACE);
+	auto loc = [programa](const char* nombre) { return glGetUniformLocation(programa, nombre); };
+	glUniform1i(loc("fixedLight"), GL_FALSE);
+	glUniform4i(loc("sw_intensity"), GL_FALSE, GL_TRUE, GL_FALSE, GL_FALSE);
+	glUniform4f(loc("LightModelAmbient"), 0.80f, 0.80f, 0.80f, 1.0f);
+	glUniform1i(loc("uLightingDebugMode"), 0);
+	glUniform1f(loc("uIndirectIntensity"), 0.0f);
+	glUniform1f(loc("uIndirectAmbientBase"), 0.0f);
+	glUniform1f(loc("uDirtStrength"), 0.0f);
+	glUniform1f(loc("uTextureEmission"), 0.0f);
+	glUniform1i(loc("uMobileSurface"), GL_FALSE);
+	glUniform1i(loc("modulate"), GL_TRUE);
+	const glm::mat4 projection = glm::ortho(-0.75f, 0.75f, -0.55f, 0.55f, 0.1f, 10.0f);
+	const glm::mat4 model(1.0f);
+	glUniformMatrix4fv(loc("projectionMatrix"), 1, GL_FALSE, glm::value_ptr(projection));
+	glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(model));
+
+	auto frame = std::make_unique<COBJModel>();
+	std::string modelPath = rutaModelo.string();
+	bool correcto = frame->LoadModel(modelPath.data()) == 0;
+	std::vector<unsigned char> pixels(static_cast<std::size_t>(ancho) * alto * 4);
+	std::size_t frontPixels = 0, backPixels = 0;
+	GLenum error = GL_NO_ERROR;
+	if (correcto)
+	{
+		glViewport(0, 0, ancho, alto);
+		glClearColor(0.015f, 0.020f, 0.025f, 1.0f);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		const glm::mat4 frontView = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -2.0f)) *
+			glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+		glViewport(0, 0, mitadAncho, alto);
+		glUniformMatrix4fv(loc("viewMatrix"), 1, GL_FALSE, glm::value_ptr(frontView));
+		frame->draw_TriVAO_OBJ(programa);
+
+		const glm::mat4 backView = glm::translate(glm::mat4(1.0f), glm::vec3(0, 0, -2.0f)) *
+			glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0)) *
+			glm::rotate(glm::mat4(1.0f), glm::radians(180.0f), glm::vec3(0, 0, 1));
+		glViewport(mitadAncho, 0, mitadAncho, alto);
+		glUniformMatrix4fv(loc("viewMatrix"), 1, GL_FALSE, glm::value_ptr(backView));
+		frame->draw_TriVAO_OBJ(programa);
+
+		glReadPixels(0, 0, ancho, alto, GL_RGBA, GL_UNSIGNED_BYTE, pixels.data());
+		for (int y = 0; y < alto; ++y)
+			for (int x = 0; x < ancho; ++x)
+			{
+				const std::size_t p = (static_cast<std::size_t>(y) * ancho + x) * 4;
+				if (pixels[p] > 20 || pixels[p + 1] > 20 || pixels[p + 2] > 20)
+					(x < mitadAncho ? frontPixels : backPixels)++;
+			}
+		error = glGetError();
+		correcto = error == GL_NO_ERROR && frontPixels > 10000 && backPixels > 10000;
+		if (const char* previewPath = std::getenv("ESCAPETHEUAB_BOTANICAL_PREVIEW"))
+		{
+			std::ofstream output(previewPath, std::ios::binary);
+			output << "P6\n" << ancho << ' ' << alto << "\n255\n";
+			for (int y = alto - 1; y >= 0; --y)
+				for (int x = 0; x < ancho; ++x)
+				{
+					const std::size_t p = (static_cast<std::size_t>(y) * ancho + x) * 4;
+					output.write(reinterpret_cast<const char*>(pixels.data() + p), 3);
+				}
+			correcto = correcto && static_cast<bool>(output);
+		}
+	}
+	frame->netejaTextures_OBJ();
+	frame->netejaVAOList_OBJ();
+	glDisable(GL_DEPTH_TEST);
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
+	glDeleteRenderbuffers(1, &depth);
+	glDeleteTextures(1, &color);
+	glDeleteFramebuffers(1, &fbo);
+	if (!correcto)
+		std::cerr << "FALLO: render del cuadro por ambas caras, pixeles front/back="
+			<< frontPixels << '/' << backPixels << ", GL=" << error << ".\n";
+	return correcto;
+}
 }
 
 int main()
 {
+    const fs::path cuadroBotanico = fs::path(ESCAPETHEUAB_SOURCE_DIR) /
+        "EntornVGI/assets/models/escape_pack/lab/clue_botanical_frame.obj";
+    if (!validarGeometriaCuadroBotanico(cuadroBotanico))
+    {
+        std::cerr << "FALLO: geometria del cuadro botanico debe estar cerrada, sin caras repetidas y con UV/normales coherentes.\n";
+        return 1;
+    }
+
+    {
+        Material alfombra{};
+        alfombra.fDiffuse[0] = 0.9433962f;
+        alfombra.fDiffuse[1] = 0.367176f;
+        alfombra.fDiffuse[2] = 0.3426486f;
+        if (!AplicarFallbackAmbientalDesdeDifuso(alfombra) ||
+            std::abs(alfombra.fAmbient[0] - 0.1698113f) > 1.0e-5f ||
+            std::abs(alfombra.fAmbient[1] - 0.0660917f) > 1.0e-5f ||
+            std::abs(alfombra.fAmbient[2] - 0.0616767f) > 1.0e-5f)
+        {
+            std::cerr << "FALLO: Ka=0 debe derivar un ambiente tenue que conserva el color Kd.\n";
+            return 1;
+        }
+
+        Material metal{};
+        metal.fAmbient[0] = 0.18f;
+        metal.fAmbient[1] = 0.12f;
+        metal.fAmbient[2] = 0.08f;
+        metal.fDiffuse[0] = 0.37f;
+        metal.fDiffuse[1] = 0.47f;
+        metal.fDiffuse[2] = 0.47f;
+        if (AplicarFallbackAmbientalDesdeDifuso(metal) || metal.fAmbient[0] != 0.18f ||
+            metal.fAmbient[1] != 0.12f || metal.fAmbient[2] != 0.08f)
+        {
+            std::cerr << "FALLO: el fallback no debe reemplazar un Ka especificado.\n";
+            return 1;
+        }
+    }
+
     if (glfwInit() != GLFW_TRUE)
     {
         std::cout << "SKIP: GLFW no puede inicializarse sin un entorno grafico.\n";
@@ -149,9 +382,10 @@ int main()
             const GLint dirtSeedLocation = glGetUniformLocation(phong, "uDirtSeed");
             const GLint textureEmissionLocation = glGetUniformLocation(phong, "uTextureEmission");
             const GLint mobileSurfaceLocation = glGetUniformLocation(phong, "uMobileSurface");
+            const GLint lightingDebugLocation = glGetUniformLocation(phong, "uLightingDebugMode");
             if (!linked || intensityLocation < 0 || emissionLocation < 0 || tileLocation < 0 ||
                 dirtStrengthLocation < 0 || dirtScaleLocation < 0 || dirtSeedLocation < 0 ||
-                textureEmissionLocation < 0 || mobileSurfaceLocation < 0)
+                textureEmissionLocation < 0 || mobileSurfaceLocation < 0 || lightingDebugLocation < 0)
             {
                 std::cerr << "FALLO: GLSL Phong no enlaza o pierde uniforms de material/tiling.\n";
                 ++failures;
@@ -171,6 +405,7 @@ int main()
                 glUniform1f(dirtSeedLocation, 17.0f);
                 glUniform1f(textureEmissionLocation, 0.18f);
                 glUniform1i(mobileSurfaceLocation, GL_TRUE);
+                glUniform1i(lightingDebugLocation, 0);
                 const GLenum materialNuevoError = glGetError();
                 if (intensidadError != GL_NO_ERROR || emisionError3 != GL_INVALID_OPERATION || emisionError4 != GL_NO_ERROR || materialNuevoError != GL_NO_ERROR)
                 {
@@ -231,6 +466,12 @@ int main()
                 glUniform1f(loc("uDirtStrength"), 0.0f);
                 glUniform1f(loc("uTextureEmission"), 0.0f);
                 glUniform1i(loc("uMobileSurface"), GL_FALSE);
+                glUniform1f(loc("uIndirectIntensity"), 0.0f);
+                glUniform1f(loc("uIndirectAmbientBase"), 0.0f);
+                glUniform1f(loc("uSceneDirectScale"), 1.0f);
+                glUniform3f(loc("uIndirectFloorColor"), 0.42f, 0.46f, 0.43f);
+                glUniform3f(loc("uIndirectSkyColor"), 0.24f, 0.28f, 0.34f);
+                glUniform1i(loc("uIndirectOccluderCount"), 0);
                 glUniform1i(loc("uOccluderCount"), 1);
                 // La pared esta girada 90 grados: su eje fino local pasa a ser el normal mundial.
                 const glm::mat4 paredMundo = glm::translate(glm::mat4(1.0f), glm::vec3(0.35f, 0.0f, 1.0f))
@@ -272,6 +513,149 @@ int main()
                     ++failures;
                 }
 
+                // Un Ka=0 de un MTL recibe el fallback proporcional a Kd:
+                // con luz directa apagada, el modo ambiental debe conservar el rojo.
+                glUniform4i(loc("sw_intensity"), GL_FALSE, GL_TRUE, GL_FALSE, GL_FALSE);
+                glUniform1i(loc("LightSource[4].sw_light"), GL_FALSE);
+                glUniform1i(loc("uLightingDebugMode"), 1);
+                glUniform4f(loc("LightModelAmbient"), 0.26f, 0.27f, 0.30f, 1.0f);
+                glUniform4f(loc("material.diffuse"), 0.9433962f, 0.367176f, 0.3426486f, 1.0f);
+                glUniform4f(loc("material.ambient"), 0.18f * 0.9433962f,
+                    0.18f * 0.367176f, 0.18f * 0.3426486f, 1.0f);
+                glUniform1f(loc("uIndirectIntensity"), 0.0f);
+                glUniform1f(loc("uIndirectAmbientBase"), 0.035f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                unsigned char ambienteRojo[4] = {};
+                glReadPixels(32, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, ambienteRojo);
+                const GLenum ambienteError = glGetError();
+                if (ambienteError != GL_NO_ERROR || ambienteRojo[0] < 8 ||
+                    ambienteRojo[0] <= ambienteRojo[1] * 2)
+                {
+                    std::cerr << "FALLO: Ka=0 no conserva una respuesta ambiental rojiza: RGB="
+                        << static_cast<int>(ambienteRojo[0]) << ',' << static_cast<int>(ambienteRojo[1]) << ','
+                        << static_cast<int>(ambienteRojo[2]) << ", GL=" << ambienteError << ".\n";
+                    ++failures;
+                }
+                glUniform1i(loc("uLightingDebugMode"), 5);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                unsigned char albedoRojo[4] = {};
+                glReadPixels(32, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, albedoRojo);
+                if (glGetError() != GL_NO_ERROR || albedoRojo[0] < 220 || albedoRojo[1] < 75)
+                {
+                    std::cerr << "FALLO: el modo Albedo no muestra el Kd original: RGB="
+                        << static_cast<int>(albedoRojo[0]) << ',' << static_cast<int>(albedoRojo[1]) << ','
+                        << static_cast<int>(albedoRojo[2]) << ".\n";
+                    ++failures;
+                }
+                glUniform1i(loc("uLightingDebugMode"), 0);
+                glUniform1f(loc("uIndirectAmbientBase"), 0.035f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                unsigned char habitacionSinLuces[4] = {};
+                glReadPixels(32, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, habitacionSinLuces);
+                if (glGetError() != GL_NO_ERROR || habitacionSinLuces[0] == 0 || habitacionSinLuces[0] > 24)
+                {
+                    std::cerr << "FALLO: el residuo ambiental sin luminarias debe seguir oscuro: rojo="
+                        << static_cast<int>(habitacionSinLuces[0]) << ".\n";
+                    ++failures;
+                }
+                glUniform1f(loc("uIndirectAmbientBase"), 0.0f);
+                glUniform1i(loc("LightSource[4].sw_light"), GL_TRUE);
+
+                // Aísla la contribución local indirecta: sin pared, ambos receptores
+                // reciben relleno; al añadir el OBB arquitectónico, el oculto queda negro.
+                glUniform4i(loc("sw_intensity"), GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE);
+                glUniform1f(loc("uIndirectIntensity"), 0.35f);
+                glUniform1f(loc("uSceneDirectScale"), 0.0f);
+                glUniform3f(loc("LightSource[4].attenuation"), 0.0f, 0.08f, 1.0f);
+                glUniform1i(loc("uIndirectOccluderCount"), 0);
+                glClear(GL_COLOR_BUFFER_BIT);
+                for (float x : { -0.7f, 0.7f })
+                {
+                    const glm::mat4 modelo = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, 0));
+                    glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelo));
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                }
+                unsigned char reboteVisible[4] = {}, reboteSinPared[4] = {};
+                glReadPixels(10, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, reboteVisible);
+                glReadPixels(54, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, reboteSinPared);
+                glUniform1i(loc("uIndirectOccluderCount"), 1);
+                glUniformMatrix4fv(loc("uIndirectOccluderWorldToLocal[0]"), 1, GL_FALSE, glm::value_ptr(mundoALocal));
+                glUniform3f(loc("uIndirectOccluderHalfSize[0]"), 1.0f, 0.18f, 1.2f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                for (float x : { -0.7f, 0.7f })
+                {
+                    const glm::mat4 modelo = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, 0));
+                    glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelo));
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                }
+                unsigned char reboteOculto[4] = {};
+                glReadPixels(54, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, reboteOculto);
+                glUniform1i(loc("uIndirectOccluderCount"), 0);
+                glUniform1i(loc("LightSource[4].sw_light"), GL_FALSE);
+                glClear(GL_COLOR_BUFFER_BIT);
+                const glm::mat4 receptorDerecho = glm::translate(glm::mat4(1.0f), glm::vec3(0.7f, 0, 0));
+                glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(receptorDerecho));
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                unsigned char reboteApagado[4] = {};
+                glReadPixels(54, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, reboteApagado);
+                glUniform1i(loc("LightSource[4].sw_light"), GL_TRUE);
+                glUniform1f(loc("uSceneDirectScale"), 1.0f);
+                const GLenum reboteError = glGetError();
+                if (reboteError != GL_NO_ERROR || reboteVisible[0] < 20 ||
+                    reboteSinPared[0] < reboteVisible[0] / 2 || reboteOculto[0] > reboteVisible[0] / 5 ||
+                    reboteApagado[0] > 1)
+                {
+                    std::cerr << "FALLO: el rebote local no ilumina sin obstáculos y bloquea la pared: visible="
+                        << static_cast<int>(reboteVisible[0]) << ", libre=" << static_cast<int>(reboteSinPared[0])
+                        << ", oculto=" << static_cast<int>(reboteOculto[0]) << ", apagado="
+                        << static_cast<int>(reboteApagado[0]) << ", GL=" << reboteError << ".\n";
+                    ++failures;
+                }
+                glUniform1f(loc("uIndirectIntensity"), 0.0f);
+                glUniform1i(loc("uIndirectOccluderCount"), 0);
+                glUniform4i(loc("sw_intensity"), GL_FALSE, GL_FALSE, GL_TRUE, GL_FALSE);
+
+                // El ajuste de intensidad de la escena no debe afectar slots 0-3 y,
+                // con el relleno apagado, escala la luz directa de techo hasta cero.
+                glUniform1f(loc("uSceneDirectScale"), 0.0f);
+                glClear(GL_COLOR_BUFFER_BIT);
+                const glm::mat4 receptorVisible = glm::translate(glm::mat4(1.0f), glm::vec3(-0.7f, 0, 0));
+                glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(receptorVisible));
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                unsigned char escenaApagada[4] = {};
+                glReadPixels(10, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, escenaApagada);
+                const GLenum escalaError = glGetError();
+                if (escalaError != GL_NO_ERROR || escenaApagada[0] > 1)
+                {
+                    std::cerr << "FALLO: uSceneDirectScale=0 no apaga la luz de escena: valor="
+                        << static_cast<int>(escenaApagada[0]) << ", GL=" << escalaError << ".\n";
+                    ++failures;
+                }
+				glUniform1i(loc("LightSource[3].sw_light"), GL_TRUE);
+				glUniform4f(loc("LightSource[3].position"), 0, 0, 2, 1);
+				glUniform4f(loc("LightSource[3].diffuse"), 1, 1, 1, 1);
+				glUniform4f(loc("LightSource[3].specular"), 0, 0, 0, 1);
+				glUniform3f(loc("LightSource[3].attenuation"), 0, 0, 1);
+				glUniform1i(loc("LightSource[3].restricted"), GL_FALSE);
+				glUniform1i(loc("LightSource[3].areaSource"), GL_FALSE);
+				glClear(GL_COLOR_BUFFER_BIT);
+				glDrawArrays(GL_TRIANGLES, 0, 6);
+				unsigned char linternaConEscalaCero[4] = {};
+				glReadPixels(10, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, linternaConEscalaCero);
+				glUniform1i(loc("LightSource[3].sw_light"), GL_FALSE);
+				const GLenum linternaError = glGetError();
+				if (linternaError != GL_NO_ERROR || linternaConEscalaCero[0] < 80)
+				{
+					std::cerr << "FALLO: directScale de escena afecta a la linterna del slot 3: valor="
+						<< static_cast<int>(linternaConEscalaCero[0]) << ", GL=" << linternaError << ".\n";
+					++failures;
+				}
+                glUniform1f(loc("uSceneDirectScale"), 1.0f);
+
 				// La emisión del difusor de la luminaria debe seguir el mismo interruptor
 				// que la fuente de luz: con escala cero no queda superficie encendida.
 				glUniform4i(loc("sw_intensity"), GL_TRUE, GL_FALSE, GL_FALSE, GL_FALSE);
@@ -298,6 +682,8 @@ int main()
 						<< static_cast<int>(emisionApagada[0]) << ", GL=" << emisionError << ".\n";
 					++failures;
 				}
+
+				if (!renderizarPreviewCuadro(phong, cuadroBotanico)) ++failures;
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
                 glDeleteBuffers(1, &vbo); glDeleteVertexArrays(1, &vao);
                 glDeleteTextures(1, &colorTexture); glDeleteFramebuffers(1, &framebuffer);
@@ -403,7 +789,8 @@ int main()
             assets / "scifi/Prop_Vent_Wide.obj",
             assets / "lab/counter_counter_sink/counter_counter_sink.obj",
             assets / "lab/cabinet_cabinet/cabinet_cabinet.obj",
-            assets / "lab/machine_hot_plate/machine_hot_plate.obj"
+            assets / "lab/machine_hot_plate/machine_hot_plate.obj",
+		    assets / "lab/clue_botanical_frame.obj"
         };
         std::ifstream sueloSimple(assets / "arquitectura/suelo_base.obj");
         int triangulosSuelo = 0;

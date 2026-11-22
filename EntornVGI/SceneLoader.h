@@ -133,6 +133,10 @@ struct DatosEscena
     std::string nombre;
     SceneSpawn spawn;
     float indirectIntensity = 0.16f; // aproximación hemisférica basada en luminarias visibles
+    float indirectAmbientBase = 0.025f;
+    float directSceneLightScale = 1.0f;
+    glm::vec3 indirectFloorColor{ 0.42f, 0.46f, 0.43f };
+    glm::vec3 indirectSkyColor{ 0.24f, 0.28f, 0.34f };
     std::vector<SceneObject> objetos;            // arquitectura + objetos OBJ
     std::vector<SceneObjetoAnimado> animados;    // objetos GLB animados (lista opcional)
 };

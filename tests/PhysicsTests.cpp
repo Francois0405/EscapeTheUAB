@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 
 using namespace fisica;
 namespace fs = std::filesystem;
@@ -35,6 +36,30 @@ namespace
 	}
 
 	bool casi(float a, float b, float tolerancia) { return std::fabs(a - b) <= tolerancia; }
+
+	void PruebaRecursoIconoInteraccion()
+	{
+		const fs::path fuente = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "res/ui/hand.png";
+		const fs::path runtime = fs::path(ESCAPETHEUAB_RUNTIME_ASSET_ROOT) / "res/ui/hand.png";
+		comprobar(fs::is_regular_file(fuente), "hand.png existe en recursos fuente");
+		comprobar(fs::is_regular_file(runtime), "hand.png se copia junto al ejecutable independientemente del cwd de CTest");
+		if (!fs::is_regular_file(fuente) || !fs::is_regular_file(runtime)) return;
+		std::ifstream a(fuente, std::ios::binary), b(runtime, std::ios::binary);
+		const std::vector<unsigned char> bytesA((std::istreambuf_iterator<char>(a)), {});
+		const std::vector<unsigned char> bytesB((std::istreambuf_iterator<char>(b)), {});
+		comprobar(bytesA == bytesB, "la textura runtime es la misma que el icono hand.png original");
+		const bool pngValido = bytesA.size() > 26 && bytesA[0] == 0x89 && bytesA[1] == 'P' &&
+			bytesA[2] == 'N' && bytesA[3] == 'G' && bytesA[25] == 6 && bytesA[24] == 8;
+		comprobar(pngValido, "hand.png es PNG RGBA de 8 bits con transparencia");
+		if (pngValido)
+		{
+			const unsigned ancho = (static_cast<unsigned>(bytesA[16]) << 24) | (static_cast<unsigned>(bytesA[17]) << 16) |
+				(static_cast<unsigned>(bytesA[18]) << 8) | bytesA[19];
+			const unsigned alto = (static_cast<unsigned>(bytesA[20]) << 24) | (static_cast<unsigned>(bytesA[21]) << 16) |
+				(static_cast<unsigned>(bytesA[22]) << 8) | bytesA[23];
+			comprobar(ancho == 512 && alto == 512, "el icono conserva su resolución original de 512x512; el HUD lo escala a 34 px");
+		}
+	}
 
 	// Simula 'segundos' de tiempo real en fotogramas de duración fija 'deltaFotograma'.
 	template <typename Funcion>
@@ -379,11 +404,14 @@ namespace
 		comprobar(hojasCerradas.size() == 2, "una hoja cinematica por puerta");
 		const glm::vec3 ojosFrentePuerta(4.5f, 3.0f, -0.65f);
 		const glm::vec3 miradaPuerta(1.0f, 0.0f, 0.0f);
+		float distanciaPuerta = 0.0f;
 		const IdCuerpo impactoPuerta = mundo.CuerpoAlFinalDelRayo(
-			ojosFrentePuerta, miradaPuerta, glb::RADIO_INTERACCION);
+			ojosFrentePuerta, miradaPuerta, glb::RADIO_INTERACCION, &distanciaPuerta);
 		comprobar(habitacion.fisica->ObjetoAnimadoDeCuerpo(impactoPuerta) == 1 &&
 			glb::BuscarObjetoInteractuable(anim, ojosFrentePuerta, miradaPuerta) == &anim.objetos[1],
 			"el raycast visible y la consulta de puerta identifican el mismo objetivo");
+		comprobar(std::isfinite(distanciaPuerta) && distanciaPuerta > 0.0f && distanciaPuerta < glb::RADIO_INTERACCION,
+			"la consulta de interacción conserva la distancia real del primer impacto de Bullet");
 		// Hoja cerrada: centro a 1.0 m del suelo (-1.7), entre los dos postes del marco, sobre el eje de la puerta.
 		for (const CajaColision& h : hojasCerradas)
 			comprobar(casi(h.pose.posicion.z, -1.7f + 1.009f, 0.01f) && casi(h.pose.posicion.x, 6.0f, 0.05f),
@@ -418,6 +446,48 @@ namespace
 		for (std::size_t i = 0; marcoIgual && i < estaticasAntes.size(); ++i)
 			marcoIgual = Cerca(estaticasAntes[i], estaticasDespues[i], 1e-6f);
 		comprobar(marcoIgual, "el marco permanece estatico mientras la hoja gira");
+	}
+
+	void PruebaParedParametricaConPuerta()
+	{
+		MundoFisico mundo;
+		SceneObject pared;
+		pared.id = "wall"; pared.categoria = "architecture"; pared.posicion = glm::vec3(0.0f);
+		pared.rotacion = glm::vec3(0.0f); pared.escala = glm::vec3(5.0f, 0.15f, 1.5f);
+		pared.fisica.presente = true; pared.fisica.tipo = TipoCuerpo::Estatico;
+		pared.fisica.mitadTamano = glm::vec3(1.0f); pared.pared.presente = true;
+		pared.pared.aperturas.push_back({ "door", 0.0f, 1.04f, 2.1f, 0.0f, "door-opening" });
+		SceneObjetoAnimado door;
+		door.id = "door";
+		door.modelo = (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/animations/Puerta_Lab.glb").string();
+		door.posicion = glm::vec3(0.0f, 0.0f, -1.5f);
+		door.colisionadores = {
+			{"DoorFrame", TipoCuerpo::Estatico, {0.05f,1.05f,0.04f}, {-0.45f,1.05f,-0.013f}},
+			{"DoorFrame", TipoCuerpo::Estatico, {0.05f,1.05f,0.04f}, {0.45f,1.05f,-0.013f}},
+			{"DoorFrame", TipoCuerpo::Estatico, {0.4f,0.05f,0.04f}, {0.0f,2.05f,-0.013f}},
+			{"Door", TipoCuerpo::Cinematico, {0.418f,1.005f,0.017f}, {-0.418f,-0.041f,-0.017f}}
+		};
+		door.paredId = "wall"; door.aperturaId = "door-opening";
+		glb::EscenaAnimada animados;
+		std::string error;
+		comprobar(glb::AnadirObjeto(animados, door.id, door.modelo, door.posicion, 0.0f, error), "carga GLB para pared paramétrica");
+		fisica::EscenaFisica escena(mundo);
+		comprobar(escena.Crear({pared}, animados, {door}, error), "Bullet construye colliders segmentados para el vano");
+		comprobar(escena.NumeroDeCuerpos() == 7, "tres paños de pared sustituyen al collider completo y se suman cuatro colliders de puerta");
+		if (escena.NumeroDeCuerpos() != 7) return;
+		const glm::vec3 origen(0.0f, -1.0f, -0.5f);
+		const glm::vec3 direccion(0.0f, 1.0f, 0.0f);
+		comprobar(mundo.CuerpoAlFinalDelRayo(origen, direccion, 2.0f) != CuerpoInvalido,
+			"la hoja cerrada bloquea el cruce en el centro del vano");
+		glb::AlternarPuerta(animados.objetos[0]);
+		for (int i = 0; i < 240; ++i)
+		{
+			glb::ActualizarObjetos(animados, MundoFisico::PasoFijo);
+			escena.SincronizarCinematicos(animados);
+			mundo.Actualizar(MundoFisico::PasoFijo);
+		}
+		comprobar(mundo.CuerpoAlFinalDelRayo(origen, direccion, 2.0f) == CuerpoInvalido,
+			"con la hoja abierta el rayo atraviesa el vano sin chocar con la pared");
 	}
 
 	void PruebaSueloLaboratorioCalibrado()
@@ -1212,6 +1282,7 @@ namespace
 
 int main()
 {
+	PruebaRecursoIconoInteraccion();
 	PruebaGravedad();
 	PruebaCaidaLibre();
 	PruebaPasoFijo();
@@ -1224,6 +1295,7 @@ int main()
 	PruebaEstaticoNoCae();
 	PruebaDinamicoCaeYChoca();
 	PruebaPuertasDesdeJson();
+	PruebaParedParametricaConPuerta();
 	PruebaSueloLaboratorioCalibrado();
 	PruebaArranqueEnSpawnDelLaboratorio();
 	PruebaCambioDeHabitacion();

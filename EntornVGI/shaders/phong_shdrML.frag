@@ -16,9 +16,13 @@
 #define MaxLights 8
 uniform bool uMaterialEmission;
 #define MaxOccluders 12
+#define MaxIndirectOccluders 24
 uniform int uOccluderCount;
 uniform mat4 uOccluderWorldToLocal[MaxOccluders];
 uniform vec3 uOccluderHalfSize[MaxOccluders];
+uniform int uIndirectOccluderCount;
+uniform mat4 uIndirectOccluderWorldToLocal[MaxIndirectOccluders];
+uniform vec3 uIndirectOccluderHalfSize[MaxIndirectOccluders];
 uniform float uLampEmissionScale;
 
 // ---- L14- Estructures Font de LLum i Material (coeficients reflectivitat).
@@ -73,7 +77,11 @@ uniform Light LightSource[MaxLights];	// Vector de fonts de llum.
 uniform Material material;	// Vector de coeficients reflectivitat de materials.
 uniform float uDirtStrength;
 uniform float uIndirectIntensity;
+uniform float uIndirectAmbientBase;
+uniform float uSceneDirectScale;
 uniform vec3 uIndirectFloorColor;
+uniform vec3 uIndirectSkyColor;
+uniform int uLightingDebugMode; // 0=final, 1=ambient, 2=directa, 3=indirecta, 4=normales, 5=albedo
 uniform float uDirtScale;
 uniform float uDirtSeed;
 uniform float uTextureEmission;
@@ -88,7 +96,7 @@ bool segmentoBloqueadoPorArquitectura(vec3 origenMundo, vec3 destinoMundo)
 	float longitudSegmento = length(segmento);
 	if (longitudSegmento < 1.0e-4) return false;
 	float margenT = 0.01 / longitudSegmento;
-	for (int indice = 0; indice < MaxOccluders; ++indice)
+ for (int indice = 0; indice < MaxOccluders; ++indice)
 	{
 		if (indice >= uOccluderCount) break;
 		vec3 origen = (uOccluderWorldToLocal[indice] * vec4(origenMundo, 1.0)).xyz;
@@ -113,6 +121,42 @@ bool segmentoBloqueadoPorArquitectura(vec3 origenMundo, vec3 destinoMundo)
 			}
 		}
 		// No auto-sombrear el emisor ni la cara receptora que coincide con la caja.
+		if (interseca && entrada <= salida && salida > margenT && entrada > margenT && salida < 1.0 - margenT)
+			return true;
+	}
+	return false;
+}
+
+bool segmentoBloqueadoParaRebote(vec3 origenMundo, vec3 destinoMundo)
+{
+	vec3 segmento = destinoMundo - origenMundo;
+	float longitudSegmento = length(segmento);
+	if (longitudSegmento < 1.0e-4) return false;
+	float margenT = 0.01 / longitudSegmento;
+	for (int indice = 0; indice < MaxIndirectOccluders; ++indice)
+	{
+		if (indice >= uIndirectOccluderCount) break;
+		vec3 origen = (uIndirectOccluderWorldToLocal[indice] * vec4(origenMundo, 1.0)).xyz;
+		vec3 destino = (uIndirectOccluderWorldToLocal[indice] * vec4(destinoMundo, 1.0)).xyz;
+		vec3 direccion = destino - origen;
+		float entrada = 0.0;
+		float salida = 1.0;
+		bool interseca = true;
+		for (int eje = 0; eje < 3; ++eje)
+		{
+			if (abs(direccion[eje]) < 1.0e-7)
+			{
+				if (origen[eje] < -uIndirectOccluderHalfSize[indice][eje] ||
+					origen[eje] > uIndirectOccluderHalfSize[indice][eje]) interseca = false;
+			}
+			else
+			{
+				float t0 = (-uIndirectOccluderHalfSize[indice][eje] - origen[eje]) / direccion[eje];
+				float t1 = ( uIndirectOccluderHalfSize[indice][eje] - origen[eje]) / direccion[eje];
+				entrada = max(entrada, min(t0, t1));
+				salida = min(salida, max(t0, t1));
+			}
+		}
 		if (interseca && entrada <= salida && salida > margenT && entrada > margenT && salida < 1.0 - margenT)
 			return true;
 	}
@@ -165,6 +209,10 @@ vec3 phongModel(inout int numMat, inout float aValue)
 
 // ---- Luz directa con oclusión de cajas OBB y muestras rectangulares.
     mat4 inverseView = fixedLight ? mat4(1.0) : inverse(viewMatrix);
+    vec3 normalWorld = normalize(mat3(inverseView) * N);
+    float hemisphereUp = clamp(normalWorld.z * 0.5 + 0.5, 0.0, 1.0);
+    float hemisphere = 0.30 + 0.70 * max(normalWorld.z, 0.0);
+    vec3 baseDiffuse = sw_material ? material.diffuse.rgb : vertexColor.rgb;
     const vec2 areaPattern[4] = vec2[4](vec2(-0.5,-0.5), vec2(0.5,-0.5), vec2(-0.5,0.5), vec2(0.5,0.5));
     for (int i = 0; i < MaxLights; ++i)
     {
@@ -177,6 +225,27 @@ vec3 phongModel(inout int numMat, inout float aValue)
         vec3 axisUPV = mat3(viewMatrix) * LightSource[i].areaAxisU;
         vec3 axisVPV = mat3(viewMatrix) * LightSource[i].areaAxisV;
         spotDirectionPV = normalize(mat3(viewMatrix) * LightSource[i].spotDirection);
+
+        // Aproximacion de rebote por una sonda bajo cada luminaria. Su visibilidad
+        // no depende del cono ni del rayo directo; la arquitectura y el radio limitan
+        // la luz a la habitacion cercana.
+        if (i >= 4 && LightSource[i].position.w == 1.0)
+        {
+            const float probeDrop = 0.75;
+            const float probeRadius = 6.0;
+            vec3 probePositionWorld = basePositionWorld - vec3(0.0, 0.0, probeDrop);
+            vec3 probeToFragment = vertexWorldPosition - probePositionWorld;
+            float probeDistance = length(probeToFragment);
+            if (probeDistance < probeRadius && !segmentoBloqueadoParaRebote(probePositionWorld, vertexWorldPosition))
+            {
+                float distanceSquared = probeDistance * probeDistance;
+                float attenuation = 1.0 / (1.0 + LightSource[i].attenuation.y * probeDistance +
+                    LightSource[i].attenuation.x * distanceSquared);
+                float roomFade = 1.0 - smoothstep(probeRadius * 0.68, probeRadius, probeDistance);
+                float lampLuminance = dot(max(LightSource[i].diffuse.rgb, vec3(0.0)), vec3(0.2126, 0.7152, 0.0722));
+                indirectLampAvailability += attenuation * roomFade * clamp(lampLuminance, 0.0, 1.0);
+            }
+        }
 
         for (int sampleIndex = 0; sampleIndex < 4; ++sampleIndex)
         {
@@ -213,8 +282,6 @@ vec3 phongModel(inout int numMat, inout float aValue)
             if (sampleFatt > 0.0 && LightSource[i].position.w == 1.0 &&
                 segmentoBloqueadoPorArquitectura(samplePositionWorld, vertexWorldPosition)) sampleFatt = 0.0;
 
-            if (i >= 4) indirectLampAvailability += sampleFatt * sampleWeight;
-
             Idiffuse = vec3(0.0);
             if (sw_intensity[2])
             {
@@ -243,17 +310,20 @@ vec3 phongModel(inout int numMat, inout float aValue)
                 else Ispecular = vertexColor.rgb * LightSource[i].specular.rgb * specularLight * sampleFatt;
                 Ispecular = clamp(Ispecular, 0.0, 1.0);
             }
-            ILlums += (Idiffuse + Ispecular) * sampleWeight;
+            ILlums += (Idiffuse + Ispecular) * sampleWeight * (i >= 4 ? clamp(uSceneDirectScale, 0.0, 1.5) : 1.0);
         }
     }
     vec3 emisionMTL = (uMaterialEmission && !(sw_material && sw_intensity[0]))
         ? material.emission.rgb * uLampEmissionScale : vec3(0.0);
-    vec3 normalWorld = normalize(mat3(inverseView) * N);
-    float hemisphere = 0.30 + 0.70 * max(normalWorld.z, 0.0);
-    vec3 baseDiffuse = sw_material ? material.diffuse.rgb : vertexColor.rgb;
+    vec3 ambientHemisphereColor = mix(uIndirectFloorColor, uIndirectSkyColor, hemisphereUp);
+    vec3 ambientBase = baseDiffuse * ambientHemisphereColor * clamp(uIndirectAmbientBase, 0.0, 0.15);
     vec3 indirect = baseDiffuse * uIndirectFloorColor * clamp(uIndirectIntensity, 0.0, 0.5) *
-        clamp(indirectLampAvailability, 0.0, 1.0) * hemisphere;
-   return Iemissive + emisionMTL + Iambient + ILlums + indirect;
+        clamp(indirectLampAvailability * 2.0, 0.0, 1.0) * hemisphere;
+    if (uLightingDebugMode == 1) return Iambient + ambientBase;
+    if (uLightingDebugMode == 2) return ILlums;
+    if (uLightingDebugMode == 3) return indirect;
+    if (uLightingDebugMode == 4) return normalWorld * 0.5 + 0.5;
+   return Iemissive + emisionMTL + Iambient + ILlums + indirect + ambientBase;
 }
 
 float hash21(vec2 p)
@@ -312,4 +382,13 @@ void main ()
     else { // Intensitat sense textura
            FragColor = fragmentColor;   
          }
+    if (uLightingDebugMode == 5)
+    {
+        vec3 albedo = sw_material ? material.diffuse.rgb : vertexColor.rgb;
+        if (textur) albedo *= texture(texture0, vertexTexCoord).rgb;
+        FragColor = vec4(clamp(albedo, 0.0, 1.0), 1.0);
+        return;
+    }
+    if (uLightingDebugMode > 0)
+        FragColor = vec4(clamp(fragmentColor.rgb, 0.0, 1.0), fragmentColor.a);
 }

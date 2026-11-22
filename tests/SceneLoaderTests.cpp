@@ -273,6 +273,10 @@ int main()
     // 5) Una carga fallida no publica nada: los datos previos quedan intactos.
     DatosEscena previos;
     comprobar(CargarDatosEscenaJSON(temp / "animado-dos.json", previos, error), "preparar datos previos");
+    comprobar(std::abs(previos.indirectAmbientBase - 0.025f) < 1e-6f &&
+        std::abs(previos.directSceneLightScale - 1.0f) < 1e-6f &&
+        previos.indirectFloorColor == glm::vec3(0.42f, 0.46f, 0.43f),
+        "las escenas antiguas reciben valores ambientales predeterminados y mantienen la intensidad directa");
     comprobar(!CargarDatosEscenaJSON(temp / "a3.json", previos, error) && previos.animados.size() == 2 &&
         previos.objetos.size() == 1, "carga fallida no modifica los datos previos");
 
@@ -280,7 +284,10 @@ int main()
     const fs::path escenaLaboratorio = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/scenes/aula_informatica_calibrada.json";
     comprobar(CargarDatosEscenaJSON(escenaLaboratorio, laboratorio, error),
         "la escena calibrada y sus nuevas rutas de materiales se cargan");
-    comprobar(std::abs(laboratorio.indirectIntensity - 0.16f) < 1e-6f,
+    comprobar(std::abs(laboratorio.indirectIntensity - 0.20f) < 1e-6f &&
+        std::abs(laboratorio.indirectAmbientBase - 0.035f) < 1e-6f &&
+        std::abs(laboratorio.directSceneLightScale - 0.45f) < 1e-6f &&
+        laboratorio.indirectSkyColor == glm::vec3(0.24f, 0.28f, 0.34f),
         "la intensidad indirecta de habitación se carga desde JSON");
     comprobar(laboratorio.spawn.presente && laboratorio.spawn.pies == glm::vec3(-6.5f, 3.0f, -3.05f) &&
         glm::length(laboratorio.spawn.direccion - glm::vec3(0.0f, 1.0f, 0.0f)) < 1e-5f,
@@ -314,6 +321,10 @@ int main()
     }
     comprobar(suelos == 1, "la escena contiene una sola superficie visual de suelo");
     comprobar(lucesEscena == 4, "las cuatro luminarias quedan dentro de los slots de escena 4-7");
+    for (const auto& objeto : laboratorio.objetos)
+        if (objeto.luz.presente)
+            comprobar(std::abs(objeto.luz.intensidad - 6.0f) < 1e-6f,
+                "el ajuste de escala directa no altera la configuración de intensidad por luminaria");
 
     std::error_code cleanupError;
     fs::remove_all(temp, cleanupError);

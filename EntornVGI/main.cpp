@@ -34,6 +34,7 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <limits>
 
 // CODI NOSTRE
 
@@ -155,6 +156,7 @@ namespace
 	bool fpsTienePosicionAnterior = false;
 	bool ventanaConFoco = true;
 	bool mostrarPanelesDebug = false;
+	int modoDiagnosticoIluminacion = 0;
 	double fpsUltimoX = 0.0;
 	double fpsUltimoY = 0.0;
 	bool mostrarMovil = true;
@@ -223,15 +225,29 @@ namespace
 
 	void cargarTexturaManoInteraccion()
 	{
-		std::string ruta = "res/ui/hand.png";
-		if (!std::filesystem::exists(ruta) && std::filesystem::exists("../res/ui/hand.png"))
-			ruta = "../res/ui/hand.png";
+		std::error_code ec;
+		const std::filesystem::path rutaAbs = std::filesystem::absolute("res/ui/hand.png", ec).lexically_normal();
+		if (ec || !std::filesystem::is_regular_file(rutaAbs, ec))
+		{
+			std::fprintf(stderr, "No se encuentra res/ui/hand.png desde la raiz de recursos '%s'. "
+				"Comprueba que EntornVGI_runtime_resources se haya ejecutado.\n",
+				std::filesystem::current_path(ec).string().c_str());
+			return;
+		}
 
 		int ancho = 0, alto = 0, canales = 0;
-		unsigned char* pixels = SOIL_load_image(ruta.c_str(), &ancho, &alto, &canales, SOIL_LOAD_RGBA);
+		unsigned char* pixels = SOIL_load_image(rutaAbs.string().c_str(), &ancho, &alto, &canales, SOIL_LOAD_RGBA);
 		if (pixels == nullptr)
 		{
-			std::fprintf(stderr, "No se pudo cargar %s: %s\n", ruta.c_str(), SOIL_last_result());
+			std::fprintf(stderr, "No se pudo cargar el icono de interaccion '%s': %s\n",
+				rutaAbs.string().c_str(), SOIL_last_result());
+			return;
+		}
+		if (ancho <= 0 || alto <= 0)
+		{
+			std::fprintf(stderr, "El icono de interaccion tiene dimensiones invalidas (%d x %d): %s\n",
+				ancho, alto, rutaAbs.string().c_str());
+			SOIL_free_image_data(pixels);
 			return;
 		}
 
@@ -269,6 +285,7 @@ namespace
 	}
 
 	bool modoJuegoFPS(); // Declaración anticipada
+	bool entradaFPSActiva();
 
 	bool linternaMovilActiva = true;
 	bool lamparasLaboratorioActivas = true;
@@ -336,14 +353,17 @@ namespace
 	void actualizarOclusoresPhong()
 	{
 		constexpr int maxOclusores = 12;
+		constexpr int maxOclusoresIndirectos = 24;
 		std::array<glm::mat4, maxOclusores> mundoALocal{};
 		std::array<GLfloat, maxOclusores * 3> mitades{};
+		std::array<glm::mat4, maxOclusoresIndirectos> mundoALocalIndirectos{};
+		std::array<GLfloat, maxOclusoresIndirectos * 3> mitadesIndirectas{};
 		int cantidad = 0;
+		int cantidadIndirecta = 0;
 		for (const SceneObject& objeto : objetosEscena)
 		{
 			if (!objeto.fisica.presente ||
 				objeto.fisica.tipo != fisica::TipoCuerpo::Estatico) continue;
-			if (cantidad >= maxOclusores) break;
 			const glm::mat4 matrizObjeto = fisica::MatrizDeObjeto(objeto);
 			glm::mat4 giro(1.0f);
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
@@ -351,11 +371,23 @@ namespace
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
 			const glm::vec3 centro = glm::vec3(matrizObjeto * glm::vec4(objeto.fisica.desplazamiento, 1.0f));
 			const glm::mat4 mundoCollider = glm::translate(glm::mat4(1.0f), centro) * giro;
-			mundoALocal[static_cast<std::size_t>(cantidad)] = glm::inverse(mundoCollider);
-			for (int eje = 0; eje < 3; ++eje)
-				mitades[static_cast<std::size_t>(cantidad) * 3 + static_cast<std::size_t>(eje)] =
-					std::abs(objeto.escala[eje]) * objeto.fisica.mitadTamano[eje];
-			++cantidad;
+			const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
+			if (cantidad < maxOclusores)
+			{
+				mundoALocal[static_cast<std::size_t>(cantidad)] = glm::inverse(mundoCollider);
+				for (int eje = 0; eje < 3; ++eje)
+					mitades[static_cast<std::size_t>(cantidad) * 3 + static_cast<std::size_t>(eje)] = mitad[eje];
+				++cantidad;
+			}
+			// El rebote se bloquea por arquitectura, no por mesas/sillas: así una silla bajo
+			// una mesa recibe relleno local sin que la luz pueda saltar a otra habitación.
+			if (objeto.categoria == "architecture" && cantidadIndirecta < maxOclusoresIndirectos)
+			{
+				mundoALocalIndirectos[static_cast<std::size_t>(cantidadIndirecta)] = glm::inverse(mundoCollider);
+				for (int eje = 0; eje < 3; ++eje)
+					mitadesIndirectas[static_cast<std::size_t>(cantidadIndirecta) * 3 + static_cast<std::size_t>(eje)] = mitad[eje];
+				++cantidadIndirecta;
+			}
 		}
 
 		glUseProgram(shader_programID);
@@ -366,6 +398,14 @@ namespace
 			const GLint tamanos = glGetUniformLocation(shader_programID, "uOccluderHalfSize[0]");
 			if (matrices >= 0) glUniformMatrix4fv(matrices, cantidad, GL_FALSE, glm::value_ptr(mundoALocal[0]));
 			if (tamanos >= 0) glUniform3fv(tamanos, cantidad, mitades.data());
+		}
+		glUniform1i(glGetUniformLocation(shader_programID, "uIndirectOccluderCount"), cantidadIndirecta);
+		if (cantidadIndirecta > 0)
+		{
+			const GLint matrices = glGetUniformLocation(shader_programID, "uIndirectOccluderWorldToLocal[0]");
+			const GLint tamanos = glGetUniformLocation(shader_programID, "uIndirectOccluderHalfSize[0]");
+			if (matrices >= 0) glUniformMatrix4fv(matrices, cantidadIndirecta, GL_FALSE, glm::value_ptr(mundoALocalIndirectos[0]));
+			if (tamanos >= 0) glUniform3fv(tamanos, cantidadIndirecta, mitadesIndirectas.data());
 		}
 	}
 
@@ -420,7 +460,11 @@ namespace
 		AccionInteraccion accion = AccionInteraccion::Ninguna;
 		int indiceDinamico = -1;
 		glb::ObjetoAnimado* objetoAnimado = nullptr;
+		float distancia = std::numeric_limits<float>::infinity();
+		const char* texto = "";
 	};
+
+	ObjetivoInteraccion objetivoInteraccionActual;
 
 	ObjetivoInteraccion buscarObjetivoInteraccion()
 	{
@@ -429,12 +473,13 @@ namespace
 		glm::vec3 origen, direccion;
 		origenYDireccionDeLaMirada(origen, direccion);
 		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
-		const fisica::IdCuerpo cuerpoMirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, alcance);
+		float distancia = std::numeric_limits<float>::infinity();
+		const fisica::IdCuerpo cuerpoMirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, alcance, &distancia);
 		if (cuerpoMirado == fisica::CuerpoInvalido) return {};
 
 		const int indiceDinamico = escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoMirado);
 		if (indiceDinamico >= 0)
-			return { AccionInteraccion::Recoger, indiceDinamico };
+			return { AccionInteraccion::Recoger, indiceDinamico, nullptr, distancia, "[E] Coger" };
 
 		const int indiceAnimado = escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoMirado);
 		if (indiceAnimado < 0 || indiceAnimado >= static_cast<int>(objetosAnimados.objetos.size()))
@@ -447,7 +492,15 @@ namespace
 		const AccionInteraccion accion =
 			(puerta->estado == glb::EstadoPuerta::Cerrada || puerta->estado == glb::EstadoPuerta::Cerrando)
 			? AccionInteraccion::Abrir : AccionInteraccion::Cerrar;
-		return { accion, -1, puerta };
+		return { accion, -1, puerta, distancia, accion == AccionInteraccion::Abrir ? "[E] Abrir" : "[E] Cerrar" };
+	}
+
+	void actualizarObjetivoInteraccion(bool permitido)
+	{
+		objetivoInteraccionActual = {};
+		if (!permitido || !entradaFPSActiva() || editorEscenas.Activo() ||
+			mostrarPanelesDebug || gestorOpenXR.SesionEnMarcha() || escenaFisica->HayAgarre()) return;
+		objetivoInteraccionActual = buscarObjetivoInteraccion();
 	}
 
 	void iniciarCargaLanzamiento()
@@ -463,7 +516,7 @@ namespace
 	// Quien la llame debe comprobar antes la pausa, el foco y el teclado de ImGui (PuedeInteractuar).
 	void interactuar()
 	{
-		const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
+		const ObjetivoInteraccion objetivo = objetivoInteraccionActual;
 		if (objetivo.accion == AccionInteraccion::Recoger)
 		{
 			glm::vec3 origen, direccion;
@@ -519,6 +572,10 @@ namespace
 	std::string nombreEscenaActiva;
 	SceneSpawn spawnEscenaActiva;
 	float intensidadIndirectaEscena = 0.16f;
+	float intensidadAmbientalBaseEscena = 0.025f;
+	float escalaLuzDirectaEscena = 1.0f;
+	glm::vec3 colorReboteSueloEscena{ 0.42f, 0.46f, 0.43f };
+	glm::vec3 colorReboteCieloEscena{ 0.24f, 0.28f, 0.34f };
 	bool escenaTieneGeometriaValida = false;
 
 	void fijarCamaraAlSpawn(const SceneSpawn& spawn)
@@ -871,6 +928,10 @@ namespace
 		serializadorEscena = std::move(nuevoSerializador);
 		spawnEscenaActiva = datos.spawn;
 		intensidadIndirectaEscena = datos.indirectIntensity;
+		intensidadAmbientalBaseEscena = datos.indirectAmbientBase;
+		escalaLuzDirectaEscena = datos.directSceneLightScale;
+		colorReboteSueloEscena = datos.indirectFloorColor;
+		colorReboteCieloEscena = datos.indirectSkyColor;
 		if (!spawnEscenaActiva.presente)
 		{
 			spawnEscenaActiva.presente = true; // escenas antiguas conservan la vista existente como fallback
@@ -1730,7 +1791,13 @@ void dibuixa_Escena() {
 	actualizarOclusoresPhong();
 	glUseProgram(shader_programID);
 	glUniform1f(glGetUniformLocation(shader_programID, "uIndirectIntensity"), intensidadIndirectaEscena);
-	glUniform3f(glGetUniformLocation(shader_programID, "uIndirectFloorColor"), 0.42f, 0.46f, 0.43f);
+	glUniform1f(glGetUniformLocation(shader_programID, "uIndirectAmbientBase"), intensidadAmbientalBaseEscena);
+	glUniform1f(glGetUniformLocation(shader_programID, "uSceneDirectScale"), escalaLuzDirectaEscena);
+	glUniform1i(glGetUniformLocation(shader_programID, "uLightingDebugMode"), modoDiagnosticoIluminacion);
+	glUniform3f(glGetUniformLocation(shader_programID, "uIndirectFloorColor"),
+		colorReboteSueloEscena.r, colorReboteSueloEscena.g, colorReboteSueloEscena.b);
+	glUniform3f(glGetUniformLocation(shader_programID, "uIndirectSkyColor"),
+		colorReboteCieloEscena.r, colorReboteCieloEscena.g, colorReboteCieloEscena.b);
 	glUniform1f(glGetUniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
 	const bool renderizarMovil = modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr;
 	glm::mat4 matrizMovilMundo(1.0f);
@@ -2204,8 +2271,8 @@ static void dibujarHUDInteraccion()
 			IM_COL32(230, 235, 225, 230), "Mantener E carga el lanzamiento; soltar E lanza");
 		return;
 	}
-	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
-	if (objetivo.accion != AccionInteraccion::Recoger) return;
+	const ObjetivoInteraccion objetivo = objetivoInteraccionActual;
+	if (objetivo.accion == AccionInteraccion::Ninguna) return;
 
 	const float tamanoIcono = 34.0f;
 	const float x = (io.DisplaySize.x - tamanoIcono) * 0.5f;
@@ -2216,7 +2283,7 @@ static void dibujarHUDInteraccion()
 		dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
 			ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
 	}
-	dl->AddText(ImVec2(x + tamanoIcono + 6.0f, y + 10.0f), IM_COL32(230, 235, 225, 235), "[E] Recoger");
+	dl->AddText(ImVec2(x + tamanoIcono + 6.0f, y + 10.0f), IM_COL32(230, 235, 225, 235), objetivo.texto);
 }
 
 GLuint texturaFondoMenu = 0;
@@ -2506,6 +2573,12 @@ void draw_Menu_ImGui()
 		}
 		ImGui::End();
 
+		ImGui::Begin("Diagnostico de iluminacion");
+		const char* modosIluminacion[] = { "Final", "Ambiental", "Directa", "Indirecta", "Normales", "Albedo" };
+		ImGui::Combo("Vista", &modoDiagnosticoIluminacion, modosIluminacion, IM_ARRAYSIZE(modosIluminacion));
+		ImGui::TextUnformatted("Solo afecta al shader Phong; vuelve a Final para la escena normal.");
+		ImGui::End();
+
 		ImGui::Begin("Demo puerta");
 		if (ImGui::Button("Abrir puerta")) iniciarPuertaDemo();
 		ImGui::Text("tiempo: %.2f / %.2f s", reproductorPuertaDemo.tiempo, reproductorPuertaDemo.duracion);
@@ -2710,6 +2783,7 @@ void ShowArxiusOptions()
 
 			free(nomFitxer);
 		}
+
 	}
 
 	if (ImGui::MenuItem("Obrir Fractal", "(<Shift>+#)")) {
@@ -8311,6 +8385,9 @@ int main(int argc, char** argv)
 			sincronizarJugadorYCamara();
 			actualizarBalanceoVisual(static_cast<float>(delta));
 		}
+
+		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
+		actualizarObjetivoInteraccion(estadoActual == ESTADO_JUGANDO);
 
 		// La linterna se ancla durante el dibujo, una vez calculada la ViewMatrix actual.
 		if (estadoActual != ESTADO_JUGANDO) llumGL[3].encesa = false;

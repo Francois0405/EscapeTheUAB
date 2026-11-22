@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace fisica
 {
@@ -491,8 +492,10 @@ namespace fisica
 
 	// ---- Agarre --------------------------------------------------------------
 
-	IdCuerpo MundoFisico::CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance) const
+	IdCuerpo MundoFisico::CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
+		float* distanciaImpacto) const
 	{
+		if (distanciaImpacto != nullptr) *distanciaImpacto = std::numeric_limits<float>::infinity();
 		if (glm::length(direccion) < 1.0e-6f) return CuerpoInvalido;
 		const glm::vec3 fin = origen + glm::normalize(direccion) * alcance;
 		btCollisionWorld::ClosestRayResultCallback resultado(ABullet(origen), ABullet(fin));
@@ -500,6 +503,8 @@ namespace fisica
 		resultado.m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
 		impl->mundo.rayTest(ABullet(origen), ABullet(fin), resultado);
 		if (!resultado.hasHit()) return CuerpoInvalido;
+		if (distanciaImpacto != nullptr)
+			*distanciaImpacto = alcance * static_cast<float>(resultado.m_closestHitFraction);
 
 		for (std::size_t i = 0; i < impl->cuerpos.size(); ++i)
 			if (impl->cuerpos[i].cuerpo.get() == resultado.m_collisionObject) return static_cast<IdCuerpo>(i);
