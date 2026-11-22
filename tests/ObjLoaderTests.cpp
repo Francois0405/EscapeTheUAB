@@ -1,9 +1,14 @@
 #include "framework.h"
 #include "objLoader.h"
+#include <SOIL2.h>
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <glm/gtc/type_ptr.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <algorithm>
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -67,7 +72,16 @@ int main()
         glCompileShader(shader);
         GLint correcto = GL_FALSE;
         glGetShaderiv(shader, GL_COMPILE_STATUS, &correcto);
-        if (!correcto) { glDeleteShader(shader); return 0; }
+        if (!correcto)
+        {
+            GLint longitud = 0;
+            glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &longitud);
+            std::string log(static_cast<std::size_t>(std::max(longitud, 1)), '\0');
+            glGetShaderInfoLog(shader, longitud, nullptr, log.data());
+            std::cerr << "GLSL compile error: " << log.c_str() << '\n';
+            glDeleteShader(shader);
+            return 0;
+        }
         return shader;
     };
     const char* vertexSource = "#version 330 core\nuniform bvec4 sw_intensity;\nvoid main(){ gl_Position=vec4(sw_intensity.x?0.1:0.2,sw_intensity.y?0.1:0.2,sw_intensity.z?0.1:0.2,sw_intensity.w?1.0:0.5); }\n";
@@ -130,7 +144,14 @@ int main()
             const GLint intensityLocation = glGetUniformLocation(phong, "sw_intensity");
             const GLint emissionLocation = glGetUniformLocation(phong, "material.emission");
             const GLint tileLocation = glGetUniformLocation(phong, "uWorldTileSize");
-            if (!linked || intensityLocation < 0 || emissionLocation < 0 || tileLocation < 0)
+            const GLint dirtStrengthLocation = glGetUniformLocation(phong, "uDirtStrength");
+            const GLint dirtScaleLocation = glGetUniformLocation(phong, "uDirtScale");
+            const GLint dirtSeedLocation = glGetUniformLocation(phong, "uDirtSeed");
+            const GLint textureEmissionLocation = glGetUniformLocation(phong, "uTextureEmission");
+            const GLint mobileSurfaceLocation = glGetUniformLocation(phong, "uMobileSurface");
+            if (!linked || intensityLocation < 0 || emissionLocation < 0 || tileLocation < 0 ||
+                dirtStrengthLocation < 0 || dirtScaleLocation < 0 || dirtSeedLocation < 0 ||
+                textureEmissionLocation < 0 || mobileSurfaceLocation < 0)
             {
                 std::cerr << "FALLO: GLSL Phong no enlaza o pierde uniforms de material/tiling.\n";
                 ++failures;
@@ -145,12 +166,141 @@ int main()
                 const GLenum emisionError3 = glGetError();
                 glUniform4f(emissionLocation, 0.2f, 0.3f, 0.4f, 1.0f);
                 const GLenum emisionError4 = glGetError();
-                if (intensidadError != GL_NO_ERROR || emisionError3 != GL_INVALID_OPERATION || emisionError4 != GL_NO_ERROR)
+                glUniform1f(dirtStrengthLocation, 0.2f);
+                glUniform1f(dirtScaleLocation, 0.42f);
+                glUniform1f(dirtSeedLocation, 17.0f);
+                glUniform1f(textureEmissionLocation, 0.18f);
+                glUniform1i(mobileSurfaceLocation, GL_TRUE);
+                const GLenum materialNuevoError = glGetError();
+                if (intensidadError != GL_NO_ERROR || emisionError3 != GL_INVALID_OPERATION || emisionError4 != GL_NO_ERROR || materialNuevoError != GL_NO_ERROR)
                 {
                     std::cerr << "FALLO: contrato uniforms Phong: bvec4=" << intensidadError <<
-                        ", vec4 con 3 comp=" << emisionError3 << ", vec4 completo=" << emisionError4 << ".\n";
+                        ", vec4 con 3 comp=" << emisionError3 << ", vec4 completo=" << emisionError4 <<
+                        ", nuevos materiales=" << materialNuevoError << ".\n";
                     ++failures;
                 }
+
+                // Mini escena GPU: dos receptores bajo la misma luz, con una caja OBB
+                // opaca solo entre la fuente y el receptor derecho.
+                GLuint framebuffer = 0, colorTexture = 0, vao = 0, vbo = 0;
+                glGenFramebuffers(1, &framebuffer);
+                glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
+                glGenTextures(1, &colorTexture);
+                glBindTexture(GL_TEXTURE_2D, colorTexture);
+                glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, 64, 32, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+                glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+                glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, colorTexture, 0);
+
+                const float quad[] = {
+                    -0.18f,-0.18f,0,  1,1,1,1,  0,0,1,  0,0,
+                     0.18f,-0.18f,0,  1,1,1,1,  0,0,1,  1,0,
+                     0.18f, 0.18f,0,  1,1,1,1,  0,0,1,  1,1,
+                    -0.18f,-0.18f,0,  1,1,1,1,  0,0,1,  0,0,
+                     0.18f, 0.18f,0,  1,1,1,1,  0,0,1,  1,1,
+                    -0.18f, 0.18f,0,  1,1,1,1,  0,0,1,  0,1
+                };
+                glGenVertexArrays(1, &vao);
+                glBindVertexArray(vao);
+                glGenBuffers(1, &vbo);
+                glBindBuffer(GL_ARRAY_BUFFER, vbo);
+                glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
+                const GLsizei stride = 12 * static_cast<GLsizei>(sizeof(float));
+                glEnableVertexAttribArray(0); glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+                glEnableVertexAttribArray(1); glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(3 * sizeof(float)));
+                glEnableVertexAttribArray(2); glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(7 * sizeof(float)));
+                glEnableVertexAttribArray(3); glVertexAttribPointer(3, 2, GL_FLOAT, GL_FALSE, stride, reinterpret_cast<void*>(10 * sizeof(float)));
+
+                auto loc = [phong](const char* nombre) { return glGetUniformLocation(phong, nombre); };
+                const glm::mat4 identidad(1.0f);
+                glUniformMatrix4fv(loc("viewMatrix"), 1, GL_FALSE, glm::value_ptr(identidad));
+                glUniformMatrix4fv(loc("projectionMatrix"), 1, GL_FALSE, glm::value_ptr(identidad));
+                glUniform1i(loc("fixedLight"), GL_TRUE);
+                glUniform1i(loc("sw_material"), GL_TRUE);
+                glUniform4i(loc("sw_intensity"), GL_FALSE, GL_FALSE, GL_TRUE, GL_FALSE);
+                glUniform1i(loc("textur"), GL_FALSE);
+                glUniform1i(loc("modulate"), GL_TRUE);
+                glUniform1i(loc("uMaterialEmission"), GL_FALSE);
+                glUniform4f(loc("material.diffuse"), 1, 1, 1, 1);
+                glUniform4f(loc("material.ambient"), 0, 0, 0, 1);
+                glUniform4f(loc("material.emission"), 0, 0, 0, 1);
+                glUniform4f(loc("material.specular"), 0, 0, 0, 1);
+                glUniform1f(loc("material.shininess"), 16.0f);
+                glUniform4f(loc("LightModelAmbient"), 0, 0, 0, 1);
+                glUniform1f(loc("uLampEmissionScale"), 1.0f);
+                glUniform1f(loc("uDirtStrength"), 0.0f);
+                glUniform1f(loc("uTextureEmission"), 0.0f);
+                glUniform1i(loc("uMobileSurface"), GL_FALSE);
+                glUniform1i(loc("uOccluderCount"), 1);
+                // La pared esta girada 90 grados: su eje fino local pasa a ser el normal mundial.
+                const glm::mat4 paredMundo = glm::translate(glm::mat4(1.0f), glm::vec3(0.35f, 0.0f, 1.0f))
+                    * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
+                const glm::mat4 mundoALocal = glm::inverse(paredMundo);
+                glUniformMatrix4fv(loc("uOccluderWorldToLocal[0]"), 1, GL_FALSE, glm::value_ptr(mundoALocal));
+                glUniform3f(loc("uOccluderHalfSize[0]"), 1.0f, 0.18f, 1.2f);
+                glUniform1i(loc("LightSource[4].sw_light"), GL_TRUE);
+                glUniform4f(loc("LightSource[4].position"), 0, 0, 2, 1);
+                glUniform4f(loc("LightSource[4].diffuse"), 1, 1, 1, 1);
+                glUniform4f(loc("LightSource[4].specular"), 0, 0, 0, 1);
+                glUniform3f(loc("LightSource[4].attenuation"), 0, 0, 1);
+                glUniform1i(loc("LightSource[4].restricted"), GL_FALSE);
+                glUniform1i(loc("LightSource[4].areaSource"), GL_FALSE);
+                glUniform3f(loc("LightSource[4].areaAxisU"), 1, 0, 0);
+                glUniform3f(loc("LightSource[4].areaAxisV"), 0, 1, 0);
+                glUniform2f(loc("LightSource[4].areaHalfSize"), 1.2f, 0.19f);
+
+                glDisable(GL_BLEND); glDisable(GL_CULL_FACE); glDisable(GL_DEPTH_TEST);
+                glViewport(0, 0, 64, 32);
+                glClearColor(0, 0, 0, 1);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glBindVertexArray(vao);
+                for (float x : { -0.7f, 0.7f })
+                {
+                    const glm::mat4 modelo = glm::translate(glm::mat4(1.0f), glm::vec3(x, 0, 0));
+                    glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(modelo));
+                    glDrawArrays(GL_TRIANGLES, 0, 6);
+                }
+                unsigned char visible[4] = {}, oculta[4] = {};
+                glReadPixels(10, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, visible);
+                glReadPixels(54, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, oculta);
+                const GLenum renderError = glGetError();
+                if (renderError != GL_NO_ERROR || visible[0] < 80 || oculta[0] > visible[0] / 5)
+                {
+                    std::cerr << "FALLO: la prueba GPU de oclusion no separa superficie visible/oculta: visible="
+                        << static_cast<int>(visible[0]) << ", oculta=" << static_cast<int>(oculta[0])
+                        << ", GL=" << renderError << ".\n";
+                    ++failures;
+                }
+
+				// La emisión del difusor de la luminaria debe seguir el mismo interruptor
+				// que la fuente de luz: con escala cero no queda superficie encendida.
+				glUniform4i(loc("sw_intensity"), GL_TRUE, GL_FALSE, GL_FALSE, GL_FALSE);
+				glUniform1i(loc("uMaterialEmission"), GL_TRUE);
+				glUniform4f(loc("material.emission"), 0.78f, 0.90f, 1.0f, 1.0f);
+				glUniform1i(loc("uOccluderCount"), 0);
+				glUniform1f(loc("uLampEmissionScale"), 1.0f);
+				glClear(GL_COLOR_BUFFER_BIT);
+				const glm::mat4 modeloCentro(1.0f);
+				glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(modeloCentro));
+				glDrawArrays(GL_TRIANGLES, 0, 6);
+				unsigned char emisionEncendida[4] = {};
+				glReadPixels(32, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, emisionEncendida);
+				glUniform1f(loc("uLampEmissionScale"), 0.0f);
+				glClear(GL_COLOR_BUFFER_BIT);
+				glDrawArrays(GL_TRIANGLES, 0, 6);
+				unsigned char emisionApagada[4] = {};
+				glReadPixels(32, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, emisionApagada);
+				const GLenum emisionError = glGetError();
+				if (emisionError != GL_NO_ERROR || emisionEncendida[0] < 150 || emisionApagada[0] > 1)
+				{
+					std::cerr << "FALLO: emision MTL no sigue el estado: encendida="
+						<< static_cast<int>(emisionEncendida[0]) << ", apagada="
+						<< static_cast<int>(emisionApagada[0]) << ", GL=" << emisionError << ".\n";
+					++failures;
+				}
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glDeleteBuffers(1, &vbo); glDeleteVertexArrays(1, &vao);
+                glDeleteTextures(1, &colorTexture); glDeleteFramebuffers(1, &framebuffer);
             }
         }
         else { std::cerr << "FALLO: GLSL Phong no compila en el contexto OpenGL disponible.\n"; ++failures; }
@@ -158,6 +308,23 @@ int main()
         if (phong) glDeleteProgram(phong);
         if (vsId) glDeleteShader(vsId);
         if (fsId) glDeleteShader(fsId);
+    }
+
+    {
+        const fs::path arquitectura = fs::path(ESCAPETHEUAB_SOURCE_DIR) /
+            "EntornVGI/assets/models/escape_pack/arquitectura";
+        for (const char* nombre : { "industrial_wall_lab.png", "industrial_wall_maintenance.png" })
+        {
+            int ancho = 0, alto = 0, canales = 0;
+            const fs::path ruta = arquitectura / nombre;
+            unsigned char* pixeles = SOIL_load_image(ruta.string().c_str(), &ancho, &alto, &canales, SOIL_LOAD_RGBA);
+            if (pixeles == nullptr || ancho != 512 || alto != 512)
+            {
+                std::cerr << "FALLO: SOIL no carga textura modular 512x512: " << ruta << '\n';
+                ++failures;
+            }
+            if (pixeles != nullptr) SOIL_free_image_data(pixeles);
+        }
     }
 
     const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
@@ -228,7 +395,15 @@ int main()
             assets / "scifi/Prop_Crate3.obj",
             assets / "lab/counter_counter/counter_counter.obj",
             assets / "lab/cabinet_cabinet_two_shelves/cabinet_cabinet_two_shelves.obj",
-            assets / "lab/machine_microscope/machine_microscope.obj"
+            assets / "lab/machine_microscope/machine_microscope.obj",
+            assets / "lab/bottle_test_tube_rack/bottle_test_tube_rack.obj",
+            assets / "kenney/cardboardBoxClosed.obj",
+            assets / "scifi/Prop_Cable_1.obj",
+            assets / "scifi/Prop_Cable_3.obj",
+            assets / "scifi/Prop_Vent_Wide.obj",
+            assets / "lab/counter_counter_sink/counter_counter_sink.obj",
+            assets / "lab/cabinet_cabinet/cabinet_cabinet.obj",
+            assets / "lab/machine_hot_plate/machine_hot_plate.obj"
         };
         std::ifstream sueloSimple(assets / "arquitectura/suelo_base.obj");
         int triangulosSuelo = 0;

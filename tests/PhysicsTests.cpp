@@ -427,10 +427,12 @@ namespace
 		comprobar(laboratorio.ok, "el laboratorio calibrado monta con todos sus cuerpos Bullet");
 		if (!laboratorio.ok) { std::cerr << laboratorio.error << '\n'; return; }
 
-		const auto colisionables = std::count_if(laboratorio.datos.objetos.begin(), laboratorio.datos.objetos.end(),
-			[](const SceneObject& objeto) { return objeto.fisica.presente; });
-		comprobar(laboratorio.fisica->NumeroDeCuerpos() == static_cast<int>(colisionables),
-			"las placas y decoracion no duplican el collider del suelo");
+		int colisionables = static_cast<int>(std::count_if(laboratorio.datos.objetos.begin(), laboratorio.datos.objetos.end(),
+			[](const SceneObject& objeto) { return objeto.fisica.presente; }));
+		for (const SceneObjetoAnimado& animado : laboratorio.datos.animados)
+			colisionables += static_cast<int>(animado.colisionadores.size());
+		comprobar(laboratorio.fisica->NumeroDeCuerpos() == colisionables,
+			"suelo y arquitectura conservan colliders unicos; se cuentan tambien los marcos y hojas de puerta GLB");
 		const SceneObject* suelo = nullptr;
 		for (const SceneObject& objeto : laboratorio.datos.objetos)
 			if (objeto.id == "suelo") suelo = &objeto;
@@ -445,6 +447,76 @@ namespace
 		const float pies = mundo.PosicionPiesJugador().z;
 		comprobar(mundo.JugadorEnSuelo() && pies > alturaPavimento - 0.08f && pies < alturaPavimento + 0.08f,
 			"el jugador permanece apoyado sobre la altura del suelo calibrado");
+
+		// Integración geométrica: abrir la hoja GLB permite cruzar el vano rotado
+		// entre recepción y laboratorio, sin atravesar los dos tramos de pared.
+		glb::ObjetoAnimado* puerta = glb::BuscarObjeto(laboratorio.animados, "puerta_acceso_laboratorio");
+		comprobar(puerta != nullptr, "la escena compacta incluye la puerta recepción/laboratorio");
+		if (puerta == nullptr) return;
+		glb::IniciarAnimacion(*puerta);
+		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
+		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
+		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
+		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
+		Simular(1.2f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
+		comprobar(mundo.PosicionPiesJugador().x > -2.2f,
+			"el vano de la puerta abierta deja pasar al jugador y la pared maciza contigua lo sigue bloqueando");
+		glb::AlternarPuerta(*puerta);
+		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
+		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
+		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
+		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
+		Simular(1.2f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
+		comprobar(mundo.PosicionPiesJugador().x < -2.7f,
+			"la hoja cinemática cerrada bloquea el vano y no permite atravesar la pared");
+	}
+
+	void PruebaArranqueEnSpawnDelLaboratorio()
+	{
+		MundoFisico mundo;
+		EscenaMontada laboratorio(mundo, RutaDeEscena("aula_informatica_calibrada.json"));
+		comprobar(laboratorio.ok, "se monta la misma escena que carga el inicio del juego");
+		if (!laboratorio.ok) { std::cerr << laboratorio.error << '\n'; return; }
+		comprobar(laboratorio.datos.spawn.presente, "la escena proporciona spawn explícito para PLAY");
+		if (!laboratorio.datos.spawn.presente) return;
+
+		const glm::vec3 spawn = laboratorio.datos.spawn.pies;
+		comprobar(spawn.x > -7.25f && spawn.x < -2.75f && spawn.y > 1.75f && spawn.y < 7.25f,
+			"el spawn está dentro de la recepción y separado de sus paredes");
+		glm::vec3 pies, normal;
+		std::string error;
+		const bool valido = mundo.ValidarSpawnJugador(spawn, pies, normal, error);
+		comprobar(valido, "Bullet confirma suelo bajo los pies y espacio para la cápsula");
+		if (!valido) { std::cerr << "Spawn laboratorio: " << error << '\n'; return; }
+		comprobar(normal.z > 0.95f && std::abs(pies.z - spawn.z) < 0.02f,
+			"el ajuste de spawn coincide con la cara superior del pavimento");
+		comprobar(mundo.CrearJugador(pies), "se crea el controlador Bullet desde el spawn validado");
+		const glm::vec3 ojos = mundo.PosicionPiesJugador() + glm::vec3(0, 0, mundo.AlturaOjosJugador());
+		comprobar(casi(ojos.z, pies.z + 1.70f, 0.001f), "la altura de ojos se deriva de los pies y la altura FPS");
+		Simular(2.0f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		const glm::vec3 trasDosSegundos = mundo.PosicionPiesJugador();
+		std::cout << "[inicio laboratorio] spawn feet=" << pies.x << ',' << pies.y << ',' << pies.z
+			<< " eyes=" << ojos.x << ',' << ojos.y << ',' << ojos.z << " feet+2s="
+			<< trasDosSegundos.x << ',' << trasDosSegundos.y << ',' << trasDosSegundos.z << '\n';
+		comprobar(mundo.JugadorEnSuelo() && casi(trasDosSegundos.z, pies.z, 0.06f),
+			"tras dos segundos el jugador sigue apoyado sobre el suelo del laboratorio");
+		comprobar(glm::length(glm::vec2(trasDosSegundos.x - pies.x, trasDosSegundos.y - pies.y)) < 0.01f,
+			"el jugador de inicio no deriva hacia fuera de la recepción sin entrada");
+
+		const fs::path runtimeRoot = ESCAPETHEUAB_RUNTIME_ASSET_ROOT;
+		const fs::path runtimeScene = runtimeRoot / "assets/scenes/aula_informatica_calibrada.json";
+		comprobar(fs::is_regular_file(runtimeScene), "la copia de ejecución incluye el JSON de laboratorio actualizado");
+		if (fs::is_regular_file(runtimeScene))
+		{
+			DatosEscena runtimeData;
+			comprobar(CargarDatosEscenaJSON(runtimeScene, runtimeData, error) && runtimeData.spawn.presente &&
+				runtimeData.spawn.pies == spawn,
+				"la aplicación y CTest encuentran la misma configuración de spawn en el directorio de ejecución");
+		}
+		for (const char* recurso : { "assets/models/escape_pack/arquitectura/suelo_base.obj", "assets/animations/Puerta_Lab.glb" })
+			comprobar(fs::is_regular_file(runtimeRoot / recurso), "los recursos actualizados de la escena están copiados junto al ejecutable");
 	}
 
 	// Cambio de habitacion: sin residuos y sin tocar la demo; carga fallida sin efectos.
@@ -1153,6 +1225,7 @@ int main()
 	PruebaDinamicoCaeYChoca();
 	PruebaPuertasDesdeJson();
 	PruebaSueloLaboratorioCalibrado();
+	PruebaArranqueEnSpawnDelLaboratorio();
 	PruebaCambioDeHabitacion();
 	PruebaJugadorSueloYGravedad();
 	PruebaJugadorAndaLibre();

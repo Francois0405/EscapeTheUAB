@@ -1,0 +1,17 @@
+mtllib clue_botanical_frame.mtl
+o ClueBotanicalFrame
+v -0.6 0 -0.45
+v 0.6 0 -0.45
+v 0.6 0 0.45
+v -0.6 0 0.45
+vt 0 0
+vt 1 0
+vt 1 1
+vt 0 1
+vn 0 -1 0
+vn 0 1 0
+usemtl BotanicalPlate
+f 1/1/1 3/3/1 2/2/1
+f 1/1/1 4/4/1 3/3/1
+f 2/2/2 3/3/2 1/1/2
+f 3/3/2 4/4/2 1/1/2

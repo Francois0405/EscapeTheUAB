@@ -201,7 +201,12 @@ struct LLUM
 	CPunt3D spotdirection;	// Vector de direció de la font de llum restringida (x,y,z).
 	GLfloat spotcoscutoff;	// Coseno de l'angle d'obertura de la font de llum restringida.
 	GLfloat spotInnerCosCutoff;	// Inner cosine for a smooth spotlight transition.
-	GLfloat spotexponent;	// Exponent que indica l'atenuació de la font del centre de l'eix a l'exterior, segons model de Warn.
+	GLfloat spotexponent;
+	bool areaSource = false;
+	CPunt3D areaAxisU{};
+	CPunt3D areaAxisV{};
+	GLfloat areaHalfSizeU = 0.0f;
+	GLfloat areaHalfSizeV = 0.0f;
 };
 
 #endif

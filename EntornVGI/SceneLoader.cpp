@@ -6,10 +6,61 @@
 #include <cmath>
 #include <initializer_list>
 #include <limits>
+#include <algorithm>
 #include "SceneLoader.h"
 #include "third_party/nlohmann/json.hpp"
 
 using nlohmann::json;
+
+bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneAperturaPared>& aperturas,
+    std::vector<SceneSeccionPared>& secciones, std::string& error)
+{
+    std::vector<SceneSeccionPared> resultado;
+    if (!std::isfinite(mitadPared.x) || !std::isfinite(mitadPared.y) || !std::isfinite(mitadPared.z) ||
+        mitadPared.x <= 0.0f || mitadPared.y <= 0.0f || mitadPared.z <= 0.0f)
+    { error = "Las dimensiones de pared deben ser finitas y positivas."; return false; }
+    std::vector<SceneAperturaPared> ordenadas = aperturas;
+    std::sort(ordenadas.begin(), ordenadas.end(), [](const auto& a, const auto& b) { return a.centerU < b.centerU; });
+    float cursor = -mitadPared.x;
+    constexpr float margenMinimo = 0.10f;
+    for (std::size_t i = 0; i < ordenadas.size(); ++i)
+    {
+        const auto& a = ordenadas[i];
+        if ((a.id.empty() && a.idPuerta.empty()) || !std::isfinite(a.centerU) || !std::isfinite(a.ancho) || !std::isfinite(a.alto) ||
+            !std::isfinite(a.base) || a.ancho <= 0.0f || a.alto <= 0.0f || a.base < 0.0f)
+        { error = "Una apertura contiene ID o dimensiones invalidos."; return false; }
+        const float izquierda = a.centerU - a.ancho * 0.5f;
+        const float derecha = a.centerU + a.ancho * 0.5f;
+        const float arribaDesdeCentro = -mitadPared.z + a.base + a.alto;
+        if (izquierda < -mitadPared.x + margenMinimo || derecha > mitadPared.x - margenMinimo ||
+            arribaDesdeCentro > mitadPared.z - margenMinimo)
+        { error = "La apertura '" + (a.id.empty() ? a.idPuerta : a.id) + "' invade el margen de esquina o supera la altura de la pared."; return false; }
+        if (izquierda < cursor + margenMinimo)
+        { error = "Las aperturas de pared se solapan o no conservan el margen minimo."; return false; }
+
+        const float anchoLateral = izquierda - cursor;
+        if (anchoLateral > 0.001f)
+            resultado.push_back({ glm::vec3((cursor + izquierda) * 0.5f, 0.0f, 0.0f),
+                glm::vec3(anchoLateral * 0.5f, mitadPared.y, mitadPared.z) });
+        const float zAperturaInferior = -mitadPared.z + a.base;
+        if (a.base > 0.001f)
+            resultado.push_back({ glm::vec3(a.centerU, 0.0f, (-mitadPared.z + zAperturaInferior) * 0.5f),
+                glm::vec3(a.ancho * 0.5f, mitadPared.y, a.base * 0.5f) });
+        const float altoDintel = mitadPared.z - arribaDesdeCentro;
+        if (altoDintel > 0.001f)
+            resultado.push_back({ glm::vec3(a.centerU, 0.0f, (arribaDesdeCentro + mitadPared.z) * 0.5f),
+                glm::vec3(a.ancho * 0.5f, mitadPared.y, altoDintel * 0.5f) });
+        cursor = derecha;
+    }
+    const float anchoFinal = mitadPared.x - cursor;
+    if (anchoFinal > 0.001f)
+        resultado.push_back({ glm::vec3((cursor + mitadPared.x) * 0.5f, 0.0f, 0.0f),
+            glm::vec3(anchoFinal * 0.5f, mitadPared.y, mitadPared.z) });
+    if (resultado.empty()) { error = "La pared no tiene secciones solidas."; return false; }
+    secciones = std::move(resultado);
+    error.clear();
+    return true;
+}
 
 namespace
 {
@@ -164,7 +215,7 @@ namespace
             error = ctx + " debe ser un objeto JSON.";
             return false;
         }
-        if (!soloClavesConocidas(datos, { "enabled", "offset", "color", "intensity" }, ctx, error)) return false;
+        if (!soloClavesConocidas(datos, { "enabled", "offset", "color", "intensity", "areaSize" }, ctx, error)) return false;
         if (datos.contains("enabled"))
         {
             if (!datos["enabled"].is_boolean()) { error = ctx + ".enabled debe ser booleano."; return false; }
@@ -178,6 +229,18 @@ namespace
         if (datos.contains("intensity") && !leerNumero(datos["intensity"], luz.intensidad, ctx + ".intensity", error)) return false;
         if (!(luz.intensidad > 0.0f) || luz.intensidad > 16.0f)
         { error = ctx + ".intensity debe estar entre 0 y 16."; return false; }
+        if (datos.contains("areaSize"))
+        {
+            const json& tamano = datos["areaSize"];
+            if (!tamano.is_array() || tamano.size() != 2 || !tamano[0].is_number() || !tamano[1].is_number())
+            { error = ctx + ".areaSize debe ser [ancho, fondo] en unidades locales."; return false; }
+            luz.areaSize = glm::vec2(tamano[0].get<float>(), tamano[1].get<float>());
+            if (!std::isfinite(luz.areaSize.x) || !std::isfinite(luz.areaSize.y) ||
+                luz.areaSize.x < 0.0f || luz.areaSize.y < 0.0f ||
+                luz.areaSize.x > 10.0f || luz.areaSize.y > 10.0f ||
+                ((luz.areaSize.x == 0.0f) != (luz.areaSize.y == 0.0f)))
+            { error = ctx + ".areaSize debe ser [0,0] o tener ambas dimensiones entre 0 y 10."; return false; }
+        }
         luz.presente = true;
         return true;
     }
@@ -189,7 +252,7 @@ namespace
         const json& datos = entrada["material"];
         const std::string ctx = contexto + ".material";
         if (!datos.is_object()) { error = ctx + " debe ser un objeto JSON."; return false; }
-        if (!soloClavesConocidas(datos, { "texture", "tileSize", "roughness" }, ctx, error)) return false;
+        if (!soloClavesConocidas(datos, { "texture", "tileSize", "roughness", "dirtStrength", "dirtScale", "dirtSeed" }, ctx, error)) return false;
         if (datos.contains("texture"))
         {
             if (!datos["texture"].is_string() || datos["texture"].get<std::string>().empty())
@@ -215,6 +278,13 @@ namespace
         if (datos.contains("roughness") && !leerNumero(datos["roughness"], material.roughness, ctx + ".roughness", error)) return false;
         if (material.roughness < 0.0f || material.roughness > 1.0f)
         { error = ctx + ".roughness debe estar entre 0 y 1."; return false; }
+        if (datos.contains("dirtStrength") && !leerNumero(datos["dirtStrength"], material.dirtStrength, ctx + ".dirtStrength", error)) return false;
+        if (material.dirtStrength < 0.0f || material.dirtStrength > 0.5f)
+        { error = ctx + ".dirtStrength debe estar entre 0 y 0.5."; return false; }
+        if (datos.contains("dirtScale") && !leerNumero(datos["dirtScale"], material.dirtScale, ctx + ".dirtScale", error)) return false;
+        if (material.dirtScale < 0.05f || material.dirtScale > 4.0f)
+        { error = ctx + ".dirtScale debe estar entre 0.05 y 4 celdas por metro."; return false; }
+        if (datos.contains("dirtSeed") && !leerNumero(datos["dirtSeed"], material.dirtSeed, ctx + ".dirtSeed", error)) return false;
         material.presente = true;
         return true;
     }
@@ -228,7 +298,7 @@ namespace
             error = contexto + " debe ser un objeto JSON.";
             return false;
         }
-        if (!soloClavesConocidas(entrada, { "id", "model", "position", "rotation", "scale", "animation", "colliders" },
+        if (!soloClavesConocidas(entrada, { "id", "model", "position", "rotation", "scale", "animation", "colliders", "allowArchitecturePenetration", "wallId", "openingId" },
             contexto, error)) return false;
         for (const char* campo : { "id", "model", "position" })
             if (!entrada.contains(campo))
@@ -248,6 +318,22 @@ namespace
         }
         objeto.id = entrada["id"].get<std::string>();
         objeto.modelo = entrada["model"].get<std::string>();
+        if (entrada.contains("wallId") != entrada.contains("openingId"))
+        { error = contexto + " requiere wallId y openingId conjuntamente."; return false; }
+        if (entrada.contains("wallId"))
+        {
+            if (!entrada["wallId"].is_string() || !entrada["openingId"].is_string() ||
+                entrada["wallId"].get<std::string>().empty() || entrada["openingId"].get<std::string>().empty())
+            { error = contexto + ".wallId/openingId deben ser textos no vacios."; return false; }
+            objeto.paredId = entrada["wallId"].get<std::string>();
+            objeto.aperturaId = entrada["openingId"].get<std::string>();
+        }
+        if (entrada.contains("allowArchitecturePenetration"))
+        {
+            if (!entrada["allowArchitecturePenetration"].is_boolean())
+            { error = contexto + ".allowArchitecturePenetration debe ser booleano."; return false; }
+            objeto.permitirPenetracionArquitectura = entrada["allowArchitecturePenetration"].get<bool>();
+        }
         if (!leerVector3(entrada["position"], objeto.posicion, contexto + ".position", error)) return false;
 
         if (entrada.contains("rotation"))
@@ -367,6 +453,39 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
 
         std::vector<SceneObject> candidatos;
         std::vector<SceneObjetoAnimado> candidatosAnimados;
+        SceneSpawn spawn;
+        float indirectIntensity = 0.16f;
+        if (documento.contains("indirectLighting"))
+        {
+            const json& indirect = documento["indirectLighting"];
+            if (!indirect.is_object() || !soloClavesConocidas(indirect, { "intensity" }, "indirectLighting", error) ||
+                !indirect.contains("intensity") || !leerNumero(indirect["intensity"], indirectIntensity, "indirectLighting.intensity", error) ||
+                indirectIntensity < 0.0f || indirectIntensity > 0.5f)
+            {
+                if (error.empty()) error = "indirectLighting.intensity debe estar entre 0 y 0.5.";
+                return false;
+            }
+        }
+        if (documento.contains("playerSpawn"))
+        {
+            const json& entrada = documento["playerSpawn"];
+            if (!entrada.is_object() || !soloClavesConocidas(entrada, { "feetPosition", "lookDirection" }, "playerSpawn", error))
+                return false;
+            if (!entrada.contains("feetPosition") || !entrada.contains("lookDirection"))
+            {
+                error = "playerSpawn requiere 'feetPosition' y 'lookDirection'.";
+                return false;
+            }
+            if (!leerVector3(entrada["feetPosition"], spawn.pies, "playerSpawn.feetPosition", error) ||
+                !leerVector3(entrada["lookDirection"], spawn.direccion, "playerSpawn.lookDirection", error)) return false;
+            if (glm::length(spawn.direccion) < 1.0e-4f)
+            {
+                error = "playerSpawn.lookDirection no puede ser un vector nulo.";
+                return false;
+            }
+            spawn.direccion = glm::normalize(spawn.direccion);
+            spawn.presente = true;
+        }
         std::unordered_set<std::string> ids;   // los ids son unicos en TODA la escena (OBJ y animados)
         for (const char* coleccion : { "architecture", "objects" })
         {
@@ -404,6 +523,12 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
                 objeto.id = entrada["id"].get<std::string>();
                 objeto.categoria = coleccion;
                 objeto.modelo = entrada["model"].get<std::string>();
+                if (entrada.contains("allowArchitecturePenetration"))
+                {
+                    if (!entrada["allowArchitecturePenetration"].is_boolean())
+                    { error = contexto + ".allowArchitecturePenetration debe ser booleano."; return false; }
+                    objeto.permitirPenetracionArquitectura = entrada["allowArchitecturePenetration"].get<bool>();
+                }
                 if (!leerVector3(entrada["position"], objeto.posicion, contexto + ".position", error) ||
                     !leerVector3(entrada["rotation"], objeto.rotacion, contexto + ".rotation", error) ||
                     !leerVector3(entrada["scale"], objeto.escala, contexto + ".scale", error))
@@ -411,6 +536,37 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
 
                 if (!leerFisica(entrada, objeto.fisica, contexto, error) || !leerLuz(entrada, objeto.luz, contexto, error) ||
                     !leerMaterial(entrada, objeto.material, ruta.parent_path(), contexto, error)) return false;
+
+                if (entrada.contains("wall"))
+                {
+                    const json& wall = entrada["wall"];
+                    if (!wall.is_object() || !soloClavesConocidas(wall, { "apertures" }, contexto + ".wall", error) ||
+                        !wall.contains("apertures") || !wall["apertures"].is_array())
+                    { if (error.empty()) error = contexto + ".wall.apertures debe ser una lista."; return false; }
+                    objeto.pared.presente = true;
+                    for (std::size_t a = 0; a < wall["apertures"].size(); ++a)
+                    {
+                        const json& entradaApertura = wall["apertures"][a];
+                        const std::string ctxA = contexto + ".wall.apertures[" + std::to_string(a) + "]";
+                        if (!entradaApertura.is_object() || !soloClavesConocidas(entradaApertura,
+                            { "id", "doorId", "centerU", "width", "height", "base" }, ctxA, error) ||
+                            (!entradaApertura.contains("id") && !entradaApertura.contains("doorId")) ||
+                            (entradaApertura.contains("doorId") && !entradaApertura["doorId"].is_string()) ||
+                            !entradaApertura.contains("centerU") || !entradaApertura.contains("width") || !entradaApertura.contains("height"))
+                        { if (error.empty()) error = ctxA + " requiere id, centerU, width y height."; return false; }
+                        SceneAperturaPared ap;
+                        ap.id = entradaApertura.contains("id") ? entradaApertura["id"].get<std::string>() : entradaApertura["doorId"].get<std::string>();
+                        ap.idPuerta = entradaApertura.contains("doorId") ? entradaApertura["doorId"].get<std::string>() : std::string{};
+                        if (!leerNumero(entradaApertura["centerU"], ap.centerU, ctxA + ".centerU", error) ||
+                            !leerNumero(entradaApertura["width"], ap.ancho, ctxA + ".width", error) ||
+                            !leerNumero(entradaApertura["height"], ap.alto, ctxA + ".height", error) ||
+                            (entradaApertura.contains("base") && !leerNumero(entradaApertura["base"], ap.base, ctxA + ".base", error))) return false;
+                        objeto.pared.aperturas.push_back(std::move(ap));
+                    }
+                    std::vector<SceneSeccionPared> comprobacion;
+                    if (!GenerarSeccionesPared(glm::abs(objeto.escala), objeto.pared.aperturas, comprobacion, error))
+                    { error = contexto + ".wall: " + error; return false; }
+                }
 
                 for (int eje = 0; eje < 3; ++eje)
                 {
@@ -453,6 +609,17 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
             }
         }
 
+        for (const SceneObject& pared : candidatos)
+            for (const SceneAperturaPared& apertura : pared.pared.aperturas)
+            {
+                if (apertura.idPuerta.empty()) continue; // hueco intencional sin puerta
+                const auto puerta = std::find_if(candidatosAnimados.begin(), candidatosAnimados.end(), [&](const auto& a) {
+                    return a.id == apertura.idPuerta && a.paredId == pared.id;
+                });
+                if (puerta == candidatosAnimados.end() || puerta->aperturaId != apertura.id)
+                { error = "La apertura de '" + pared.id + "' no tiene una puerta animada asociada de forma univoca."; return false; }
+            }
+
         if (candidatos.empty() && candidatosAnimados.empty())
         {
             error = "La escena debe contener al menos un elemento.";
@@ -461,6 +628,8 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
 
         // Todo es valido: ahora si se publica (nunca un resultado parcial).
         datosSalida.nombre = documento["name"].get<std::string>();
+        datosSalida.spawn = spawn;
+        datosSalida.indirectIntensity = indirectIntensity;
         datosSalida.objetos = std::move(candidatos);
         datosSalida.animados = std::move(candidatosAnimados);
         error.clear();

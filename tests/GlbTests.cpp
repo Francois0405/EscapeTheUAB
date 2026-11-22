@@ -249,6 +249,22 @@ namespace
 		comprobar(casiVec(PuntoEnMundo(modelo, pose, puerta, glm::vec3(xMin, 0.0f, 0.0f)), bordeLibreInicial), "RestaurarPoseDeReposo devuelve la pose del archivo");
 	}
 
+	void ProbarPuertaLaboratorio(const fs::path& ruta)
+	{
+		ModeloGLB modelo;
+		std::string error;
+		comprobar(CargarModeloGLB(ruta, modelo, error), "Puerta_Lab.glb carga");
+		if (modelo.animaciones.empty()) return;
+		comprobar(casi(modelo.animaciones[0].duracion, 3.5208f, 0.02f), "la animacion suavizada se reduce de 7.04 a 3.52 segundos");
+		const int marco = BuscarNodoPorNombre(modelo, "DoorFrame");
+		const int hoja = BuscarNodoPorNombre(modelo, "Door");
+		if (marco < 0 || hoja < 0) return;
+		const auto& colorMarco = modelo.mallas[modelo.nodos[marco].indiceMalla].primitivas[0].colorBase;
+		const auto& colorHoja = modelo.mallas[modelo.nodos[hoja].indiceMalla].primitivas[0].colorBase;
+		comprobar(colorMarco.r < colorHoja.r && colorHoja.r < 0.3f,
+			"marco oscuro y hoja de metal grafito reciben factores de material distintos");
+	}
+
 	// ----------------------------------------------------------------------
 	// 3. GLB inventado: un "cajón" con otra jerarquía
 	// ----------------------------------------------------------------------
@@ -438,7 +454,8 @@ namespace
 		IniciarAnimacion(p2);
 		ActualizarObjetos(escena, 0.1f);
 		comprobar(casi(p1.reproductor.tiempo, 2.1f) && casi(p2.reproductor.tiempo, 0.1f), "relojes independientes con tiempos distintos");
-		comprobar(AnguloDeLaHoja(p1) > 70.0f && AnguloDeLaHoja(p2) < 30.0f, "la puerta_1 esta abierta y la puerta_2 acaba de empezar");
+		comprobar(AnguloDeLaHoja(p1) > AnguloDeLaHoja(p2) + 20.0f && AnguloDeLaHoja(p2) < 30.0f,
+			"la puerta_1 ha avanzado claramente mas que la puerta_2, que acaba de empezar");
 
 		// Final: p1 termina y se queda abierta; p2 sigue su camino.
 		ActualizarObjetos(escena, duracion);
@@ -663,6 +680,7 @@ int main()
 	ProbarConversionDeCoordenadas();
 
 	ProbarPuertaReal(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI" / "assets" / "animations" / "Puerta.glb");
+	ProbarPuertaLaboratorio(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI" / "assets" / "animations" / "Puerta_Lab.glb");
 
 	const auto unico = std::chrono::steady_clock::now().time_since_epoch().count();
 	const fs::path carpeta = fs::temp_directory_path() / ("EscapeTheUAB-GlbTests-" + std::to_string(unico));

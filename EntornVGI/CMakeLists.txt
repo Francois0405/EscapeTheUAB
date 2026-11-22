@@ -50,6 +50,7 @@ set(ENTORNVGI_SOURCES
 	Editor/LimitesModelo.cpp
 	Editor/SelectorObjetos.cpp
 	Editor/SerializadorEscenas.cpp
+	Editor/ValidadorColocacion.cpp
 	Editor/VisibilidadEditor.cpp
 	EscenaFisica.cpp
 	escena.cpp

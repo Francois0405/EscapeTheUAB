@@ -12,6 +12,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 
 #include <chrono>
+#include <array>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
@@ -215,6 +216,7 @@ int main()
 			{ 1, glm::translate(glm::mat4(1.0f), glm::vec3(1, 1, 0.45f)), ConMitadMinima(unidad, 0.02f) },                              // mueble OBJ sin fisica
 			{ 2, glm::translate(glm::mat4(1.0f), glm::vec3(-2, 1, 0.0f)), ConMitadMinima(puerta, 0.05f) },                              // puerta GLB (fina)
 			{ 3, glm::translate(glm::mat4(1.0f), glm::vec3(1, 1, 1.1f)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.06f)), unidad },     // objeto pequeno sobre el mueble
+			{ 4, glm::translate(glm::mat4(1.0f), glm::vec3(3.1f, 0, 0)) * glm::scale(glm::mat4(1.0f), glm::vec3(0.15f, 8, 2.5f)), unidad }, // pared delgada
 		};
 		const glm::vec4 rect(0, 0, 1280, 720);
 		// Camara superior ortografica como EditorEscenas::Matrices.
@@ -231,6 +233,7 @@ int main()
 		comprobar(ElegirMasCercano(RayoDesdePantalla(vista, proy, pantallaDe({ -2, 1, 1.0f }), rect), candidatos) == 2, "vista superior: se selecciona la puerta GLB fina");
 		comprobar(ElegirMasCercano(RayoDesdePantalla(vista, proy, pantallaDe({ 1, 1, 0.5f }), rect), candidatos) == 3, "se prefiere el objeto pequeno que esta encima del mueble");
 		comprobar(ElegirMasCercano(RayoDesdePantalla(vista, proy, pantallaDe({ 1.4f, 1.3f, 0.0f }), rect), candidatos) == 1, "mueble OBJ sin colisionador seleccionable");
+		comprobar(ElegirMasCercano(RayoDesdePantalla(vista, proy, pantallaDe({ 3.1f, 0.0f, 1.0f }), rect), candidatos) == 4, "pared grande y delgada seleccionable en Top View");
 		comprobar(ElegirMasCercano(RayoDesdePantalla(vista, proy, pantallaDe({ -2.8f, -1.8f, 0.0f }), rect), candidatos) == 0, "suelo/arquitectura seleccionable");
 		comprobar(ElegirMasCercano(RayoDesdePantalla(vista, proy, pantallaDe({ 6, 6, 0.0f }), rect), candidatos) == -1, "clic en vacio: sin seleccion");
 
@@ -241,6 +244,66 @@ int main()
 		const glm::vec2 centroPuerta((cp.x / cp.w * 0.5f + 0.5f) * 1280.0f, (1.0f - (cp.y / cp.w * 0.5f + 0.5f)) * 720.0f);
 		comprobar(ElegirMasCercano(RayoDesdePantalla(vp, pp, centroPuerta, rect), candidatos) == 2, "perspectiva: se selecciona la puerta");
 		comprobar(!RayoDesdePantalla(vp, pp, centroPuerta, glm::vec4(0, 0, 0, 0)).valido, "viewport degenerado: rayo invalido");
+	}
+
+	// ---------------------------------------------------------------- Camara y flechas
+	// Regresión de arbitraje selección/gizmo: el clic de selección se consume hasta soltar
+	// y nunca llega a Manipulate(), aunque el objeto recién elegido aparezca bajo el cursor.
+	{
+		const std::vector<std::pair<const char*, glm::vec3>> casos = {
+			{ "OBJ en Top View", { 2.0f, 3.0f, -3.2f } },
+			{ "pared grande y delgada", { 0.0f, 5.0f, -0.2f } },
+			{ "objeto pequeño sobre otro", { 1.0f, 1.0f, 0.85f } },
+			{ "puerta GLB", { -2.0f, 1.0f, 0.0f } },
+		};
+		for (const auto& [nombre, posicion] : casos)
+		{
+			glm::mat4 modelo = glm::translate(glm::mat4(1.0f), posicion) * glm::scale(glm::mat4(1.0f), glm::vec3(2.0f, 0.08f, 2.5f));
+			const glm::mat4 original = modelo;
+			HistorialEscena historialSeleccion;
+			BloqueoGizmoTrasSeleccion bloqueo;
+			bloqueo.Bloquear();
+			const glm::mat4 saltoAccidental = glm::translate(modelo, glm::vec3(0.0f, 0.0f, -187.581f));
+			const bool aceptarClic = bloqueo.PermitirManipular(true);
+			if (aceptarClic) modelo = saltoAccidental;
+			comprobar(!aceptarClic && modelo == original, nombre);
+			comprobar(!bloqueo.PermitirManipular(true) && modelo == original, "mantener pulsado tras seleccionar no inicia el arrastre");
+			comprobar(!bloqueo.PermitirManipular(false) && !bloqueo.Bloqueado(), "soltar termina el bloqueo sin mutar el objeto");
+			comprobar(bloqueo.PermitirManipular(true), "una pulsación posterior puede iniciar un movimiento real");
+			comprobar(!historialSeleccion.TransaccionAbierta() && !historialSeleccion.PuedeDeshacer(), "seleccionar no abre ni registra una operacion Undo");
+		}
+
+		CamaraEditor camara;
+		camara.CambiarVista(Vista::Superior);
+		glm::mat4 original = glm::translate(glm::mat4(1.0f), glm::vec3(4.0f, -2.0f, -3.2f));
+		glm::mat4 movida = glm::translate(original, glm::vec3(1.25f, -0.5f, 187.581f));
+		ConservarAlturaEnTop(movida, original, camara.vista == Vista::Superior, true);
+		comprobar(casi(movida[3].x, 5.25f) && casi(movida[3].y, -2.5f) && casi(movida[3].z, -3.2f),
+			"Top View permite mover XY y preserva Z incluso con ejes locales");
+		ConservarAlturaEnTop(movida, original, true, false);
+		comprobar(casi(movida[3].z, -3.2f), "la operacion de movimiento en Top mantiene la altura tras filtrar el candidato");
+		const std::array<Vista, 4> vistas = { Vista::Perspectiva, Vista::Superior, Vista::Frontal, Vista::Derecha };
+		for (int vuelta = 0; vuelta < 3; ++vuelta)
+			for (Vista vista : vistas)
+			{
+				camara.CambiarVista(vista);
+				glm::mat4 vistaM, proyeccionM;
+				camara.Matrices(16.0f / 9.0f, vistaM, proyeccionM);
+				BloqueoGizmoTrasSeleccion bloqueo;
+				bloqueo.Bloquear();
+				comprobar(!bloqueo.PermitirManipular(true) && original[3] == glm::vec4(4.0f, -2.0f, -3.2f, 1.0f),
+					"seleccion y cambios repetidos de vista no cambian la transformacion");
+			}
+
+		HistorialEscena historial;
+		EstadoEscena antes = Estado({ Objeto("mesa", "objects", { 1.0f, 2.0f, -3.2f }) });
+		historial.IniciarTransaccion(antes);
+		EstadoEscena despues = antes;
+		despues.objetos[0].posicion += glm::vec3(1.0f, 2.0f, 0.0f);
+		comprobar(historial.CerrarTransaccion(despues) && historial.PuedeDeshacer(), "un arrastre real crea una sola operacion Undo");
+		EstadoEscena actual = despues;
+		comprobar(historial.Deshacer(actual) && actual.objetos[0].posicion == antes.objetos[0].posicion, "Undo restaura la transformacion previa al arrastre");
+		comprobar(historial.Rehacer(actual) && actual.objetos[0].posicion == despues.objetos[0].posicion, "Redo restaura la transformacion movida");
 	}
 
 	// ---------------------------------------------------------------- Camara y flechas

@@ -27,6 +27,10 @@ struct Light
 	vec3 spotDirection;	// Vector de direcci� de la font restringida (Coord. M�n).
 	float spotCosCutoff;
 	float spotInnerCosCutoff;
+	bool areaSource;
+	vec3 areaAxisU;
+	vec3 areaAxisV;
+	vec2 areaHalfSize;
 	float spotExponent;	// Exponent per al c�lcul intenstitat font restringida segons model Warn.
 };
 
@@ -68,11 +72,13 @@ out vec3 vertexPV;
 out vec3 vertexNormalPV;
 out vec2 vertexTexCoord;
 out vec4 vertexColor;
+out vec3 vertexWorldPosition;
 
 void main()	// --- L68-
 {
 // --- L70- Calcul variables out.
     vertexPV = vec3(viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
+    vertexWorldPosition = vec3(modelMatrix * vec4(in_Vertex, 1.0));
 
     //mat4 NormalMatrix = transpose(inverse(viewMatrix * modelMatrix));
     mat3 normalMatrixLocal =

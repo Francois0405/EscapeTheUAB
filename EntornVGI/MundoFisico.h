@@ -23,6 +23,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace fisica
@@ -135,6 +136,10 @@ namespace fisica
 
 		// Crea la cápsula con los pies en 'posicionPies'. Falso si ya existía.
 		bool CrearJugador(const glm::vec3& posicionPies);
+		// Comprueba suelo cercano y espacio libre para la cápsula del jugador. Si el
+		// pavimento difiere unos centímetros, devuelve los pies ajustados a su superficie.
+		bool ValidarSpawnJugador(const glm::vec3& posicionPies, glm::vec3& piesAjustados, glm::vec3& normalSuelo,
+			std::string& error) const;
 		void EliminarJugador();
 		bool HayJugador() const;
 

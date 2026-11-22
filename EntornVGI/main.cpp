@@ -32,6 +32,7 @@
 #include "Editor/SerializadorEscenas.h"
 #include <iostream>
 #include <algorithm>
+#include <array>
 #include <cmath>
 
 // CODI NOSTRE
@@ -41,6 +42,7 @@
 #include <memory>
 #include <unordered_map>
 #include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
 
 // ---------------------------
 
@@ -59,8 +61,6 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 	namespace fs = std::filesystem;
 	std::error_code ec;
 	std::vector<fs::path> candidates;
-	candidates.push_back(fs::current_path(ec));
-
 	if (executablePath != nullptr && executablePath[0] != '\0')
 	{
 		fs::path executable = fs::weakly_canonical(fs::path(executablePath), ec);
@@ -71,12 +71,13 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 			candidates.push_back(executable.parent_path().parent_path().parent_path());
 		}
 	}
+	candidates.push_back(fs::current_path(ec));
 
 	for (const auto& candidate : candidates)
 	{
 		ec.clear();
 		if (fs::exists(candidate / "shaders" / "gouraud_shdrML.vert", ec) &&
-			fs::exists(candidate / "assets" / "scenes" / "habitacion_beta.json", ec))
+			fs::exists(candidate / "assets" / "scenes" / "aula_informatica_calibrada.json", ec))
 		{
 			fs::current_path(candidate, ec);
 			if (!ec)
@@ -99,6 +100,19 @@ namespace
 		if (id <= 0) return 0;
 		texturasMaterialEscena.emplace(clave, static_cast<GLuint>(id));
 		return static_cast<GLuint>(id);
+	}
+
+	unsigned int texturaParaEditor(const std::filesystem::path& ruta)
+	{
+		std::error_code ec;
+		const auto absoluta = std::filesystem::absolute(ruta, ec).lexically_normal();
+		if (ec || !std::filesystem::is_regular_file(absoluta, ec)) return 0;
+		const std::string clave = absoluta.string();
+		if (const auto it = texturasMaterialEscena.find(clave); it != texturasMaterialEscena.end()) return it->second;
+		const GLint id = loadIMA_SOIL(clave.c_str());
+		if (id <= 0) return 0;
+		texturasMaterialEscena.emplace(clave, static_cast<GLuint>(id));
+		return static_cast<unsigned int>(id);
 	}
 
 	void liberarTexturasMaterialEscena()
@@ -266,9 +280,13 @@ namespace
 		constexpr int primerSlot = 4;
 		const bool hayLucesDeEscena = std::any_of(objetosEscena.begin(), objetosEscena.end(),
 			[](const SceneObject& objeto) { return objeto.luz.presente; });
-		if (!hayLucesDeEscena) return;
 		for (int slot = primerSlot; slot < NUM_MAX_LLUMS; ++slot)
+		{
 			llumGL[slot].encesa = false;
+			llumGL[slot].areaSource = false;
+			llumGL[slot].areaHalfSizeU = llumGL[slot].areaHalfSizeV = 0.0f;
+		}
+		if (!hayLucesDeEscena) return;
 
 		if (!lamparasLaboratorioActivas) return;
 
@@ -281,6 +299,9 @@ namespace
 
 			auto& luz = llumGL[slot++];
 			const glm::mat4 modelo = fisica::MatrizDeObjeto(objeto);
+			const glm::vec3 ejeU = glm::normalize(glm::vec3(modelo[0]));
+			const glm::vec3 ejeV = glm::normalize(glm::vec3(modelo[2]));
+			const glm::vec3 direccion = glm::normalize(glm::mat3(modelo) * glm::vec3(0.0f, -1.0f, 0.0f));
 			const glm::vec3 posicion(modelo * glm::vec4(objeto.luz.desplazamiento, 1.0f));
 			luz.posicio = { posicion.x, posicion.y, posicion.z, 1.0 };
 			luz.difusa = { objeto.luz.color.r * objeto.luz.intensidad,
@@ -291,10 +312,15 @@ namespace
 			luz.atenuacio.b = 0.08;
 			luz.atenuacio.c = 1.0;
 			luz.restringida = true;
-			luz.spotdirection = { 0.0, 0.0, -1.0, 0.0 };
+			luz.spotdirection = { direccion.x, direccion.y, direccion.z, 0.0 };
 			luz.spotcoscutoff = std::cos(glm::radians(68.0f));
 			luz.spotInnerCosCutoff = std::cos(glm::radians(48.0f));
 			luz.spotexponent = 1.0f;
+			luz.areaSource = objeto.luz.areaSize.x > 0.0f && objeto.luz.areaSize.y > 0.0f;
+			luz.areaAxisU = { ejeU.x, ejeU.y, ejeU.z, 0.0 };
+			luz.areaAxisV = { ejeV.x, ejeV.y, ejeV.z, 0.0 };
+			luz.areaHalfSizeU = objeto.luz.areaSize.x * glm::length(glm::vec3(modelo[0])) * 0.5f;
+			luz.areaHalfSizeV = objeto.luz.areaSize.y * glm::length(glm::vec3(modelo[2])) * 0.5f;
 			luz.encesa = true;
 		}
 		static std::size_t ultimoAviso = 0;
@@ -307,46 +333,84 @@ namespace
 		}
 	}
 
-	void actualizarLinternaMovil()
+	void actualizarOclusoresPhong()
+	{
+		constexpr int maxOclusores = 12;
+		std::array<glm::mat4, maxOclusores> mundoALocal{};
+		std::array<GLfloat, maxOclusores * 3> mitades{};
+		int cantidad = 0;
+		for (const SceneObject& objeto : objetosEscena)
+		{
+			if (!objeto.fisica.presente ||
+				objeto.fisica.tipo != fisica::TipoCuerpo::Estatico) continue;
+			if (cantidad >= maxOclusores) break;
+			const glm::mat4 matrizObjeto = fisica::MatrizDeObjeto(objeto);
+			glm::mat4 giro(1.0f);
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
+			giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
+			const glm::vec3 centro = glm::vec3(matrizObjeto * glm::vec4(objeto.fisica.desplazamiento, 1.0f));
+			const glm::mat4 mundoCollider = glm::translate(glm::mat4(1.0f), centro) * giro;
+			mundoALocal[static_cast<std::size_t>(cantidad)] = glm::inverse(mundoCollider);
+			for (int eje = 0; eje < 3; ++eje)
+				mitades[static_cast<std::size_t>(cantidad) * 3 + static_cast<std::size_t>(eje)] =
+					std::abs(objeto.escala[eje]) * objeto.fisica.mitadTamano[eje];
+			++cantidad;
+		}
+
+		glUseProgram(shader_programID);
+		glUniform1i(glGetUniformLocation(shader_programID, "uOccluderCount"), cantidad);
+		if (cantidad > 0)
+		{
+			const GLint matrices = glGetUniformLocation(shader_programID, "uOccluderWorldToLocal[0]");
+			const GLint tamanos = glGetUniformLocation(shader_programID, "uOccluderHalfSize[0]");
+			if (matrices >= 0) glUniformMatrix4fv(matrices, cantidad, GL_FALSE, glm::value_ptr(mundoALocal[0]));
+			if (tamanos >= 0) glUniform3fv(tamanos, cantidad, mitades.data());
+		}
+	}
+
+	glm::mat4 matrizLocalMovilActual()
+	{
+		const float idle = intensidadIdle;
+		const float bob = pesoCaminata * intensidadWalking;
+		glm::mat4 matriz(1.0f);
+		matriz = glm::translate(matriz, movilPosicion + glm::vec3(
+			std::sin(faseCaminata) * bob * 0.45f,
+			std::sin(tiempoFPS * 1.4f) * idle + std::abs(std::sin(faseCaminata)) * bob, 0.0f));
+		matriz = glm::rotate(matriz, glm::radians(movilRotacion.x) + std::sin(tiempoFPS * 1.4f) * idle + mouseSwayY, glm::vec3(1, 0, 0));
+		matriz = glm::rotate(matriz, glm::radians(movilRotacion.y) - std::sin(faseCaminata) * bob * 0.8f - mouseSwayX, glm::vec3(0, 1, 0));
+		matriz = glm::rotate(matriz, glm::radians(movilRotacion.z) + std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0, 0, 1));
+		return glm::scale(matriz, glm::vec3(movilEscala));
+	}
+
+	void actualizarLinternaMovil(const glm::mat4& matrizMovilMundo)
 	{
 		constexpr int idx = 3;
 		auto& luz = llumGL[idx];
+		if (!linternaMovilActiva || !mostrarMovil || !modoJuegoFPS() || editorEscenas.Activo())
+		{ luz.encesa = false; return; }
 
-		if (!linternaMovilActiva || !mostrarMovil ||
-			!modoJuegoFPS() || editorEscenas.Activo())
-		{
-			luz.encesa = false;
-			return;
-		}
-
-		glm::vec3 origen, direccion;
-		origenYDireccionDeLaMirada(origen, direccion);
-
-		if (glm::length(direccion) < 0.0001f)
-		{
-			luz.encesa = false;
-			return;
-		}
-
-		direccion = glm::normalize(direccion);
-		origen += direccion * 0.15f;
+		// Phone.obj coloca el conjunto cámara/flash trasero en el saliente superior de la cara +Y.
+		const glm::vec3 ledLocal(0.614f, 0.068f, -1.412f);
+		const glm::vec3 origen = glm::vec3(matrizMovilMundo * glm::vec4(ledLocal, 1.0f));
+		const glm::vec3 frenteTelefono = glm::normalize(glm::vec3(matrizMovilMundo * glm::vec4(0, -1, 0, 0)));
+		// También sigue la orientación del ojo actual cuando el renderizado usa OpenXR.
+		glm::vec3 mirada = glm::vec3(glm::inverse(ViewMatrix) * glm::vec4(0, 0, -1, 0));
+		if (glm::length(mirada) < 0.0001f) { luz.encesa = false; return; }
+		mirada = glm::normalize(mirada);
+		const glm::vec3 direccion = glm::normalize(glm::mix(frenteTelefono, mirada, 0.68f));
 
 		luz.encesa = true;
 		luz.posicio = { origen.x, origen.y, origen.z, 1.0 };
-		luz.difusa = { 1.0f, 0.96f, 0.88f, 1.0f };
+		luz.difusa = { 0.88f, 0.90f, 0.84f, 1.0f };
 		luz.especular = { 1.0f, 1.0f, 1.0f, 1.0f };
-
-		luz.atenuacio.a = 0.02;
-		luz.atenuacio.b = 0.08;
-		luz.atenuacio.c = 1.0;
-
+		luz.atenuacio.a = 0.02; luz.atenuacio.b = 0.08; luz.atenuacio.c = 1.0;
 		luz.restringida = true;
-		luz.spotdirection = {
-			direccion.x, direccion.y, direccion.z, 0.0
-		};
-		luz.spotcoscutoff = std::cos(glm::radians(36.0f));
-		luz.spotInnerCosCutoff = std::cos(glm::radians(22.0f));
-		luz.spotexponent = 1.0f;
+		luz.spotdirection = { direccion.x, direccion.y, direccion.z, 0.0 };
+		luz.spotcoscutoff = std::cos(glm::radians(48.0f));
+		luz.spotInnerCosCutoff = std::cos(glm::radians(28.0f));
+		luz.spotexponent = 1.15f;
+		luz.areaSource = false;
 	}
 
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
@@ -453,6 +517,21 @@ namespace
 namespace
 {
 	std::string nombreEscenaActiva;
+	SceneSpawn spawnEscenaActiva;
+	float intensidadIndirectaEscena = 0.16f;
+	bool escenaTieneGeometriaValida = false;
+
+	void fijarCamaraAlSpawn(const SceneSpawn& spawn)
+	{
+		const float alturaOjos = mundoFisico.HayJugador() ? mundoFisico.AlturaOjosJugador() : fisica::MedidasJugador::AlturaOjos;
+		const glm::vec3 ojos = spawn.pies + glm::vec3(0.0f, 0.0f, alturaOjos);
+		const glm::vec3 direccion = glm::normalize(spawn.direccion);
+		opvN.x = ojos.x; opvN.y = ojos.y; opvN.z = ojos.z;
+		n[0] = ojos.x + direccion.x;
+		n[1] = ojos.y + direccion.y;
+		n[2] = ojos.z + direccion.z;
+		angleZ = 0.0;
+	}
 
 	void aplicarPresetJuego()
 	{
@@ -528,12 +607,40 @@ namespace
 
 	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
 	// el suelo ya exista y el jugador no caiga al vacío.
-	void crearJugadorFisico()
+	bool crearJugadorFisico()
 	{
-		if (mundoFisico.HayJugador()) return;
-		const glm::vec3 pies = posicionPiesDesdeCamara();
-		mundoFisico.CrearJugador(pies);
-		std::cout << "Jugador fisico creado con los pies en (" << pies.x << ", " << pies.y << ", " << pies.z << ")." << std::endl;
+		if (!escenaTieneGeometriaValida || !escenaFisica || escenaFisica->NumeroDeCuerpos() == 0)
+		{
+			std::cerr << "No se puede iniciar: la escena no tiene geometria fisica valida." << std::endl;
+			return false;
+		}
+		glm::vec3 pies, normalSuelo;
+		std::string error;
+		if (!mundoFisico.ValidarSpawnJugador(spawnEscenaActiva.pies, pies, normalSuelo, error))
+		{
+			std::cerr << "Spawn invalido para la escena '" << nombreEscenaActiva << "': " << error << std::endl;
+			return false;
+		}
+		spawnEscenaActiva.pies = pies;
+		if (mundoFisico.HayJugador())
+		{
+			if (!mundoFisico.ActualizarJugadorAgachado(false, 1.0f))
+			{
+				std::cerr << "No se puede reiniciar el spawn: hay un obstaculo sobre la capsula." << std::endl;
+				return false;
+			}
+			mundoFisico.TeletransportarJugador(pies);
+		}
+		else if (!mundoFisico.CrearJugador(pies))
+		{
+			std::cerr << "No se pudo crear la capsula Bullet del jugador." << std::endl;
+			return false;
+		}
+		fijarCamaraAlSpawn(spawnEscenaActiva);
+		std::cout << "Spawn validado: pies (" << pies.x << ", " << pies.y << ", " << pies.z
+			<< "), ojos Z=" << pies.z + mundoFisico.AlturaOjosJugador() << ", normal suelo ("
+			<< normalSuelo.x << ", " << normalSuelo.y << ", " << normalSuelo.z << ")." << std::endl;
+		return true;
 	}
 
 	// Convierte las teclas WASD en una velocidad horizontal DEL MUNDO (sin tocar la posición).
@@ -570,7 +677,6 @@ namespace
 		if (!modoJuegoFPS())
 		{
 			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
-			mundoFisico.TeletransportarJugador(posicionPiesDesdeCamara());
 			return;
 		}
 		const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
@@ -742,7 +848,12 @@ namespace
 			liberarModelosTemporales();
 			return false;
 		}
-		if (objetosValidos.empty() && datos.animados.empty()) return false;
+		if ((objetosValidos.empty() && datos.animados.empty()) || nuevaFisica->NumeroDeCuerpos() == 0)
+		{
+			std::cerr << "La escena no contiene geometria/colliders fisicos cargables; se cancela el arranque." << std::endl;
+			liberarModelosTemporales();
+			return false;
+		}
 
 		// 5) Todo ha ido bien: AHORA se sustituye la habitación anterior.
 		escenaFisica->Vaciar();                        // retira sus colisiones del mundo
@@ -758,11 +869,31 @@ namespace
 		nombreEscenaActiva = std::move(datos.nombre);
 		datosAnimadosEscena = std::move(datos.animados);
 		serializadorEscena = std::move(nuevoSerializador);
+		spawnEscenaActiva = datos.spawn;
+		intensidadIndirectaEscena = datos.indirectIntensity;
+		if (!spawnEscenaActiva.presente)
+		{
+			spawnEscenaActiva.presente = true; // escenas antiguas conservan la vista existente como fallback
+			spawnEscenaActiva.pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+			glm::vec3 mirada(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y),
+				static_cast<float>(n[2] - opvN.z));
+			spawnEscenaActiva.direccion = glm::length(mirada) > 1e-4f ? glm::normalize(mirada) : glm::vec3(1, 0, 0);
+		}
+		escenaTieneGeometriaValida = escenaFisica->NumeroDeCuerpos() > 0;
+		fijarCamaraAlSpawn(spawnEscenaActiva);
+		if (mundoFisico.HayJugador() && !crearJugadorFisico())
+		{
+			mundoFisico.EliminarJugador();
+			escenaTieneGeometriaValida = false;
+			return false;
+		}
 		editorEscenas.NuevaEscena();
 		{
 			std::error_code rutaModelos;
 			const auto raiz = std::filesystem::absolute(ruta.parent_path() / ".." / "models", rutaModelos).lexically_normal();
 			if (!rutaModelos && std::filesystem::is_directory(raiz)) editorEscenas.FijarRaizModelos(raiz);
+			editorEscenas.FijarRaizEscena(std::filesystem::absolute(ruta.parent_path(), rutaModelos).lexically_normal());
+			editorEscenas.FijarRaizAnimaciones(std::filesystem::absolute(ruta.parent_path() / ".." / "animations", rutaModelos).lexically_normal());
 		}
 		objecte = OBJOBJ;
 		textura = true;
@@ -770,7 +901,10 @@ namespace
 		glUseProgram(shader_programID);
 		glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
 		glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
-		std::cout << "Escena cargada: " << nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
+		std::error_code rutaEscenaError;
+		const auto rutaEscenaAbsoluta = std::filesystem::absolute(ruta, rutaEscenaError).lexically_normal();
+		std::cout << "Escena cargada desde " << (rutaEscenaError ? ruta.string() : rutaEscenaAbsoluta.string()) << ": "
+			<< nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
 			<< " animadas, " << escenaFisica->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
 		return true;
 	}
@@ -857,8 +991,8 @@ void InitGL()
 	oPolars = -1;
 
 // Entorn VGI: Variables de control de l'opció CÀMERA->NAVEGA?
-	n[0] = 14;	n[1] = 0.0;		n[2] = -1.7;
-	opvN.x = 14;	opvN.y = -21.0;	opvN.z = -1.7;
+	n[0] = -5.5;	n[1] = 4.0;		n[2] = -1.35;
+	opvN.x = -6.5;	opvN.y = 4.0;	opvN.z = -1.35;
 	angleZ = 0.0;
 	
 // Entorn VGI: Variables de control de l'opció CÀMERA->GEODE?
@@ -923,6 +1057,8 @@ void InitGL()
 			llumGL[i].restringida = false;
 			llumGL[i].spotdirection.x = 0.0;	llumGL[i].spotdirection.y = 0.0;	llumGL[i].spotdirection.z = 0.0; llumGL[i].spotdirection.w = 0.0;
 			llumGL[i].spotcoscutoff = 0.0;		llumGL[i].spotInnerCosCutoff = 0.0;		llumGL[i].spotexponent = 0.0;
+			llumGL[i].areaSource = false;
+			llumGL[i].areaHalfSizeU = llumGL[i].areaHalfSizeV = 0.0f;
 		}
 
 // ---------------- LLUM #0 - (+Z) no restringida, amb atenuació constant (a,b,c) = (0,0,1)
@@ -1591,6 +1727,28 @@ void configura_Escena() {
 
 // dibuixa_Escena: Funcio que crida al dibuix dels diferents elements de l'escana
 void dibuixa_Escena() {
+	actualizarOclusoresPhong();
+	glUseProgram(shader_programID);
+	glUniform1f(glGetUniformLocation(shader_programID, "uIndirectIntensity"), intensidadIndirectaEscena);
+	glUniform3f(glGetUniformLocation(shader_programID, "uIndirectFloorColor"), 0.42f, 0.46f, 0.43f);
+	glUniform1f(glGetUniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
+	const bool renderizarMovil = modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr;
+	glm::mat4 matrizMovilMundo(1.0f);
+	if (renderizarMovil)
+	{
+		// ViewMatrix ya corresponde al fotograma y al ojo actuales.
+		matrizMovilMundo = glm::inverse(ViewMatrix) * matrizLocalMovilActual();
+		actualizarLinternaMovil(matrizMovilMundo);
+		// La vista sube las luces antes de calcular ViewMatrix; resincronizamos solo sus uniforms tras
+		// conocer la matriz real del móvil. Esto mantiene intactos los slots de lámparas 4-7.
+		glUseProgram(shader_programID);
+		Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
+	}
+	else llumGL[3].encesa = false;
+	glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), 0.0f);
+	glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.0f);
+	glUniform1i(glGetUniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
+
 
 	//glUseProgram(shader_programID);
 
@@ -1624,10 +1782,27 @@ void dibuixa_Escena() {
 			if (it == modelosHabitacion.end())
 				continue;
 
-			// Estáticos y objetos sin físicas: matriz de la escena. Dinámicos: la que calcula Bullet.
-			const glm::mat4 matriz = editorEscenas.Activo()
-				? fisica::MatrizDeObjeto(obj)
-				: escenaFisica->MatrizVisualDe(static_cast<int>(i), obj);
+			// Un muro paramétrico se dibuja como paños generados al vuelo. El OBJ compartido
+			// sigue intacto y el material/UV de mundo se comparte entre todas las secciones.
+			std::vector<glm::mat4> matrices;
+			if (obj.pared.presente && !obj.pared.aperturas.empty())
+			{
+				std::vector<SceneSeccionPared> secciones;
+				std::string errorPared;
+				if (GenerarSeccionesPared(glm::abs(obj.escala), obj.pared.aperturas, secciones, errorPared))
+				{
+					const glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(obj.rotacion.z), glm::vec3(0, 0, 1));
+					for (const auto& seccion : secciones)
+					{
+						glm::mat4 m = glm::translate(glm::mat4(1.0f), obj.posicion + glm::vec3(giro * glm::vec4(seccion.centroLocal, 0.0f)));
+						m = glm::rotate(m, glm::radians(obj.rotacion.z), glm::vec3(0, 0, 1));
+						matrices.push_back(glm::scale(m, seccion.mitad));
+					}
+				}
+				else std::cerr << "Pared paramétrica '" << obj.id << "' inválida: " << errorPared << '\n';
+			}
+			if (matrices.empty()) matrices.push_back(editorEscenas.Activo()
+				? fisica::MatrizDeObjeto(obj) : escenaFisica->MatrizVisualDe(static_cast<int>(i), obj));
 
 			const GLuint texturaOverride = texturaDeMaterial(obj.material);
 			const float rugosidad = std::clamp(obj.material.roughness, 0.0f, 1.0f);
@@ -1638,17 +1813,25 @@ void dibuixa_Escena() {
 				obj.material.presente ? GL_TRUE : GL_FALSE);
 			glUniform2f(glGetUniformLocation(shader_programID, "uWorldTileSize"),
 				obj.material.tileSize.x, obj.material.tileSize.y);
+			glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), obj.material.dirtStrength);
+			glUniform1f(glGetUniformLocation(shader_programID, "uDirtScale"), obj.material.dirtScale);
+			glUniform1f(glGetUniformLocation(shader_programID, "uDirtSeed"), obj.material.dirtSeed);
+			const float emisionLuminaria = obj.luz.presente
+				? (obj.luz.encendida && lamparasLaboratorioActivas ? 1.0f : 0.0f) : 1.0f;
+			glUniform1f(glGetUniformLocation(shader_programID, "uLampEmissionScale"), emisionLuminaria);
 
-			// Dibuixem el model amb la posició, rotació i escala de l'objecte.
-			dibuixa_EscenaGL(
-				shader_programID, eixos, eixos_Id, grid, hgrid,
-				OBJOBJ, col_obj, sw_material,
-				true, texturesID, textura_map, tFlag_invert_Y,
-				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-				it->second.get(), matriz
-			);
+			for (const glm::mat4& matriz : matrices)
+				dibuixa_EscenaGL(
+					shader_programID, eixos, eixos_Id, grid, hgrid,
+					OBJOBJ, col_obj, sw_material,
+					true, texturesID, textura_map, tFlag_invert_Y,
+					npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
+					it->second.get(), matriz
+				);
 			it->second->SetInstanceMaterialOverride(0, -1.0f);
+			glUniform1f(glGetUniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
 			glUniform1i(glGetUniformLocation(shader_programID, "uWorldTiling"), GL_FALSE);
+			glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), 0.0f);
 
 		}
 
@@ -1706,30 +1889,18 @@ void dibuixa_Escena() {
 		glb::DibujarObjetosAnimados(objetosAnimados, shader_programID);
 	}
 
-	if (modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr)
+	if (renderizarMovil)
 	{
-		const float idle = intensidadIdle;
-		const float bob = pesoCaminata * intensidadWalking;
-		glm::mat4 matrizLocal(1.0f);
-		matrizLocal = glm::translate(matrizLocal, movilPosicion + glm::vec3(
-			std::sin(faseCaminata) * bob * 0.45f,
-			std::sin(tiempoFPS * 1.4f) * idle + std::abs(std::sin(faseCaminata)) * bob,
-			0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.x) +
-			std::sin(tiempoFPS * 1.4f) * idle + mouseSwayY, glm::vec3(1.0f, 0.0f, 0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.y) -
-			std::sin(faseCaminata) * bob * 0.8f - mouseSwayX, glm::vec3(0.0f, 1.0f, 0.0f));
-		matrizLocal = glm::rotate(matrizLocal, glm::radians(movilRotacion.z) +
-			std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0.0f, 0.0f, 1.0f));
-		matrizLocal = glm::scale(matrizLocal, glm::vec3(movilEscala));
-		const glm::mat4 matrizMovil = glm::inverse(ViewMatrix) * matrizLocal;
-
 		const bool texturaAnterior = textura;
 		textura = true;
+		glUniform1i(glGetUniformLocation(shader_programID, "uMobileSurface"), GL_TRUE);
+		glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.045f);
 		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
 			textura, texturesID, textura_map, tFlag_invert_Y,
 			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-			phoneOBJ, matrizMovil);
+			phoneOBJ, matrizMovilMundo);
+		glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.0f);
+		glUniform1i(glGetUniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
 		textura = texturaAnterior;
 	}
 
@@ -2025,17 +2196,27 @@ static void dibujarHUDInteraccion()
 			IM_COL32(235, 220, 150, 245), 2.0f);
 	}
 
-	if (texturaManoInteraccion == 0 || io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
+	if (io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
 		return;
+	if (escenaFisica->HayAgarre())
+	{
+		dl->AddText(ImVec2(io.DisplaySize.x * 0.5f + 16.0f, io.DisplaySize.y * 0.5f + 31.0f),
+			IM_COL32(230, 235, 225, 230), "Mantener E carga el lanzamiento; soltar E lanza");
+		return;
+	}
 	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
 	if (objetivo.accion != AccionInteraccion::Recoger) return;
 
 	const float tamanoIcono = 34.0f;
 	const float x = (io.DisplaySize.x - tamanoIcono) * 0.5f;
 	const float y = std::min(io.DisplaySize.y * 0.5f + 24.0f, io.DisplaySize.y - tamanoIcono - 12.0f);
-	const ImTextureID textura = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texturaManoInteraccion));
-	dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
-		ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
+	if (texturaManoInteraccion != 0)
+	{
+		const ImTextureID textura = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texturaManoInteraccion));
+		dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
+			ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
+	}
+	dl->AddText(ImVec2(x + tamanoIcono + 6.0f, y + 10.0f), IM_COL32(230, 235, 225, 235), "[E] Recoger");
 }
 
 GLuint texturaFondoMenu = 0;
@@ -3808,47 +3989,21 @@ void OnVistaPolarsZ()
 // CÀMERA--> NAVEGA:  Mode de navegació sobre un pla amb botons de teclat o de mouse (nav) (opció booleana)
 void OnCameraNavega()
 {
-// TODO: Agregue aquí su código de controlador de comandos
+// Seleccionar el modo Navega conserva la pose actual; no es un teletransporte.
 	if (projeccio != ORTO || projeccio != CAP)
-	{	camera = CAM_NAVEGA;
-		// Desactivació de zoom, mobil, Transformacions Geomètriques via mouse i pan 
-		//		si navega activat
-		mobil = false;	zzoom = false;	satelit = false;
-		transX = false;	transY = false;	transZ = false;
-		//pan = false;
-		tr_cpv.x = 0.0;		tr_cpv.y = 0.0;		tr_cpv.z = 0.0;		// Inicialitzar a 0 desplaçament de pantalla
-		tr_cpvF.x = 0.0;	tr_cpvF.y = 0.0;	tr_cpvF.x = 0.0;	// Inicialitzar a 0 desplaçament de pantalla
-
-		// Incialitzar variables Navega segons configuració eixos en Polars
-		if (Vis_Polar == POLARZ) {
-			opvN.x = 14;	opvN.y = -21.0;	opvN.z = -1.7;
-			n[0] = 14;	n[1] = 0.0;		n[2] = -1.7;
-			angleZ = 0.0;
-			}
-		else if (Vis_Polar == POLARY) {
-			opvN.x = 0.0;	opvN.y = 0.0;	opvN.z = 10.0; // opvN = (10,0,0)
-			n[0] = 0.0;		n[1] = 0.0;		n[2] = 0.0;
-			angleZ = 0.0;
-			}
-		else if (Vis_Polar == POLARX) {
-			opvN.x = 0.0;	opvN.y = 10.0;	opvN.z = 0.0;	 // opvN = (0,10,0)
-			n[0] = 0.0;		n[1] = 0.0;		n[2] = 0.0;
-			angleZ = 0.0;
-			}
+	{
+		camera = CAM_NAVEGA;
+		mobil = false; zzoom = false; satelit = false;
+		transX = false; transY = false; transZ = false;
+		tr_cpv.x = 0.0; tr_cpv.y = 0.0; tr_cpv.z = 0.0;
+		tr_cpvF.x = 0.0; tr_cpvF.y = 0.0; tr_cpvF.z = 0.0;
 	}
 }
-
 // Tornar a lloc d'origen
 void OnCameraOrigenNavega()
 {
-// TODO: Agregue aquí su código de controlador de comandos
-	if (camera == CAM_NAVEGA) 
-		{	n[0] = 14;	n[1] = 0.0;		n[2] = -1.7;
-			opvN.x = 14;	opvN.y = -21.0;	opvN.z = -1.7;
-			angleZ = 0.0;
-		}
+	if (camera == CAM_NAVEGA && spawnEscenaActiva.presente) crearJugadorFisico();
 }
-
 
 // CÀMERA--> GEODE:  Mode de navegació centrat a l'origent mirant un punt en coord. esfèriques (R,alfa,beta) (opció booleana)
 void OnCameraGeode()
@@ -7981,6 +8136,23 @@ int main(int argc, char** argv)
 	glfwSetWindowFocusCallback(window, OnWindowFocus);
 	glfwSetWindowCloseCallback(window, OnWindowCloseRequest);
 	editorEscenas.FijarCargadorModelos(cargarModeloParaEditor);
+	editorEscenas.FijarCargadorTexturas(texturaParaEditor);
+	editorEscenas.FijarCargadorPuertas([](const std::filesystem::path& ruta, const SceneObjetoAnimado& datos,
+		editor::ContextoEscena contexto, std::string& error)
+	{
+		std::error_code ec;
+		const auto absoluta = std::filesystem::absolute(ruta, ec).lexically_normal();
+		if (ec || !std::filesystem::is_regular_file(absoluta, ec)) { error = "El GLB seleccionado no existe."; return false; }
+		const std::string clave = absoluta.string();
+		const bool modeloNuevo = !contexto.escenaGlb.modelos.contains(clave);
+		if (!glb::AnadirObjeto(contexto.escenaGlb, datos.id, clave, datos.posicion, datos.giroZGrados, error)) return false;
+		glb::ObjetoAnimado* instancia = glb::BuscarObjeto(contexto.escenaGlb, datos.id);
+		if (instancia == nullptr) { error = "No se pudo crear la instancia GLB."; return false; }
+		instancia->escala = datos.escala;
+		if (!datos.animacion.empty() && !glb::SeleccionarAnimacion(*instancia, datos.animacion, error)) return false;
+		if (modeloNuevo) glb::SubirModeloAGPU(contexto.escenaGlb.modelos.at(clave));
+		return true;
+	});
 	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun)OnMouseButton);			// - Directly redirect GLFW mouse button events
 	glfwSetCursorPosCallback(window, (GLFWcursorposfun)OnMouseMove);				// - Directly redirect GLFW mouse position events
 	glfwSetScrollCallback(window, (GLFWscrollfun)OnMouseWheel);						// - Directly redirect GLFW mouse wheel events
@@ -8011,8 +8183,18 @@ int main(int argc, char** argv)
 
 	// Arrancar directamente con la habitación y la configuración de juego.
 	aplicarPresetJuego();
-	cargarYAplicarEscena("assets/scenes/aula_informatica_calibrada.json");
-	crearJugadorFisico();   // con la habitación ya cargada: el suelo existe
+	std::error_code raizActivaError;
+	std::cerr << "Directorio de recursos activo: " << std::filesystem::current_path(raizActivaError).string() << std::endl;
+	if (!cargarYAplicarEscena("assets/scenes/aula_informatica_calibrada.json") || !crearJugadorFisico())
+	{
+		std::cerr << "Inicio cancelado: no se inicia PLAY sin escena, suelo y spawn Bullet validados." << std::endl;
+		ImGui_ImplOpenGL3_Shutdown();
+		ImGui_ImplGlfw_Shutdown();
+		ImGui::DestroyContext();
+		glfwDestroyWindow(window);
+		glfwTerminate();
+		return EXIT_FAILURE;
+	}
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
 	OnFramebufferSize(window, w, h);
@@ -8130,20 +8312,20 @@ int main(int argc, char** argv)
 			actualizarBalanceoVisual(static_cast<float>(delta));
 		}
 
-		// Actualizar la linterna una vez por fotograma,
-		// después de actualizar la cámara y antes de dibujar.
-		if (estadoActual == ESTADO_JUGANDO)
-		{
-			actualizarLinternaMovil();
-		}
-		else
-		{
-			// Apagarla durante los menús.
-			llumGL[3].encesa = false;
-		}
+		// La linterna se ancla durante el dibujo, una vez calculada la ViewMatrix actual.
+		if (estadoActual != ESTADO_JUGANDO) llumGL[3].encesa = false;
 		actualizarLucesDeEscena();
 
 		draw_Menu_ImGui();
+		if (editorEscenas.ConsumeReconstruirFisicaRequest())
+		{
+			std::string errorEditor;
+			if (!reconstruirFisicaTrasEdicion(errorEditor))
+			{
+				std::cerr << "No se pudo actualizar Bullet tras cambiar instancias GLB: " << errorEditor << '\n';
+				editorEscenas.InformarEstado("Physics rebuild failed: " + errorEditor, true);
+			}
+		}
 		if (editorEscenas.ConsumeGuardarRequest())
 		{
 			std::string errorGuardado;

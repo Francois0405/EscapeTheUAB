@@ -64,6 +64,42 @@ else()
 endif()
 add_test(NAME EditorTests COMMAND EditorTests)
 
+add_executable(EditorPlacementTests
+	EditorPlacementTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/ValidadorColocacion.cpp
+)
+target_include_directories(EditorPlacementTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_compile_features(EditorPlacementTests PRIVATE cxx_std_20)
+if(TARGET glm::glm)
+	target_link_libraries(EditorPlacementTests PRIVATE glm::glm)
+else()
+	target_link_libraries(EditorPlacementTests PRIVATE glm)
+endif()
+add_test(NAME EditorPlacementTests COMMAND EditorPlacementTests)
+
+# Prueba de integración sin ventana: ejecuta ImGuizmo sobre un contexto ImGui real
+# para comprobar que el gesto que selecciona nunca se convierte en un arrastre.
+add_executable(EditorGizmoInteractionTests
+	EditorGizmoInteractionTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/third_party/ImGuizmo.cpp
+	${PROJECT_SOURCE_DIR}/include/ImGui/imgui.cpp
+	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_draw.cpp
+	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_tables.cpp
+	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_widgets.cpp
+)
+target_include_directories(EditorGizmoInteractionTests PRIVATE
+	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/EntornVGI/third_party
+	${PROJECT_SOURCE_DIR}/include/ImGui
+)
+target_compile_features(EditorGizmoInteractionTests PRIVATE cxx_std_20)
+if(TARGET glm::glm)
+	target_link_libraries(EditorGizmoInteractionTests PRIVATE glm::glm)
+else()
+	target_link_libraries(EditorGizmoInteractionTests PRIVATE glm)
+endif()
+add_test(NAME EditorGizmoInteractionTests COMMAND EditorGizmoInteractionTests)
+
 add_executable(GlbTests
 	GlbTests.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
@@ -76,6 +112,7 @@ target_include_directories(GlbTests PRIVATE
 target_compile_definitions(GlbTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
 	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${CMAKE_BINARY_DIR}/bin"
 )
 if(TARGET glm::glm)
 	target_link_libraries(GlbTests PRIVATE glm::glm)
@@ -101,6 +138,7 @@ target_include_directories(PhysicsTests PRIVATE
 target_compile_definitions(PhysicsTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
 	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${CMAKE_BINARY_DIR}/bin"
 )
 if(TARGET glm::glm)
 	target_link_libraries(PhysicsTests PRIVATE glm::glm EntornVGI_bullet)

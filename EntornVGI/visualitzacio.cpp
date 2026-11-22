@@ -50,6 +50,11 @@ void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool
 			? std::min(lumin[i].spotInnerCosCutoff, 0.9999f)
 			: std::cos(std::acos(exterior) * 0.72f);
 		glUniform1f(glGetUniformLocation(sh_programID, ("LightSource[" + std::to_string(i) + "].spotInnerCosCutoff").c_str()), interior);
+		const std::string prefijo = "LightSource[" + std::to_string(i) + "].";
+		glUniform1i(glGetUniformLocation(sh_programID, (prefijo + "areaSource").c_str()), lumin[i].areaSource ? GL_TRUE : GL_FALSE);
+		glUniform3f(glGetUniformLocation(sh_programID, (prefijo + "areaAxisU").c_str()), lumin[i].areaAxisU.x, lumin[i].areaAxisU.y, lumin[i].areaAxisU.z);
+		glUniform3f(glGetUniformLocation(sh_programID, (prefijo + "areaAxisV").c_str()), lumin[i].areaAxisV.x, lumin[i].areaAxisV.y, lumin[i].areaAxisV.z);
+		glUniform2f(glGetUniformLocation(sh_programID, (prefijo + "areaHalfSize").c_str()), lumin[i].areaHalfSizeU, lumin[i].areaHalfSizeV);
 	}
 
 // ---------------- LLUM #0 - (+Z)

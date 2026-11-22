@@ -44,6 +44,22 @@ namespace
 
 int main()
 {
+    {
+        std::vector<SceneSeccionPared> secciones;
+        std::string errorPared;
+        const std::vector<SceneAperturaPared> vanos = {
+            {"door_a", -1.0f, 0.9f, 2.1f, 0.0f}, {"door_b", 1.0f, 1.0f, 2.1f, 0.0f}
+        };
+        comprobar(GenerarSeccionesPared(glm::vec3(5.0f, 0.15f, 1.5f), vanos, secciones, errorPared),
+            "una pared reutilizable genera varios tramos alrededor de dos aperturas");
+        comprobar(secciones.size() == 5, "dos huecos producen laterales continuos y dos dinteles");
+        comprobar(!GenerarSeccionesPared(glm::vec3(1.0f, 0.15f, 1.5f),
+            {{"door_edge", 0.6f, 0.9f, 2.1f, 0.0f}}, secciones, errorPared),
+            "un vano cercano a la esquina se rechaza por margen insuficiente");
+        comprobar(!GenerarSeccionesPared(glm::vec3(3.0f, 0.15f, 1.5f),
+            {{"a", 0.0f, 1.2f, 2.1f, 0.0f}, {"b", 0.5f, 1.2f, 2.1f, 0.0f}}, secciones, errorPared),
+            "aperturas solapadas se rechazan sin generar geometria parcial");
+    }
     const auto unique = std::chrono::steady_clock::now().time_since_epoch().count();
     const fs::path temp = fs::temp_directory_path() / ("EscapeTheUAB-SceneLoaderTests-" + std::to_string(unique));
     fs::create_directories(temp / "models");
@@ -59,6 +75,10 @@ int main()
     comprobar(cargar(habitacion, objetos, error, nombre), "habitacion_beta.json debe cargar");
     comprobar(objetos.size() == 12, "habitacion_beta debe contener 12 instancias");
     comprobar(nombre == "habitacion_beta", "nombre de habitacion_beta");
+
+    DatosEscena escenaAntigua;
+    comprobar(CargarDatosEscenaJSON(habitacion, escenaAntigua, error) && !escenaAntigua.spawn.presente,
+        "escenas antiguas sin playerSpawn siguen siendo válidas y usan fallback de cámara");
 
     escribir(temp / "malformed.json", "{no-json");
     comprobar(!cargar(temp / "malformed.json", objetos, error, nombre), "JSON malformado se rechaza");
@@ -97,7 +117,7 @@ int main()
         "se conservan los parametros de luz de escena");
     std::string conMaterial = object;
     conMaterial.insert(conMaterial.size() - 1,
-        ",\"material\":{\"texture\":\"models/floor.png\",\"tileSize\":[1.0,1.0],\"roughness\":0.92}");
+        ",\"material\":{\"texture\":\"models/floor.png\",\"tileSize\":[1.0,1.0],\"roughness\":0.92,\"dirtStrength\":0.2,\"dirtScale\":0.42,\"dirtSeed\":17}");
     escribir(temp / "scene-material.json", escena("[" + conMaterial + "]"));
     DatosEscena datosMaterial;
     comprobar(CargarDatosEscenaJSON(temp / "scene-material.json", datosMaterial, error),
@@ -105,14 +125,30 @@ int main()
     comprobar(datosMaterial.objetos.size() == 1 && datosMaterial.objetos[0].material.presente &&
         datosMaterial.objetos[0].material.textura == "models/floor.png" &&
         datosMaterial.objetos[0].material.tileSize == glm::vec2(1.0f) &&
-        datosMaterial.objetos[0].material.roughness == 0.92f,
+        datosMaterial.objetos[0].material.roughness == 0.92f &&
+        datosMaterial.objetos[0].material.dirtStrength == 0.2f &&
+        datosMaterial.objetos[0].material.dirtScale == 0.42f &&
+        datosMaterial.objetos[0].material.dirtSeed == 17.0f,
         "el material conserva sus parametros por instancia");
+    std::string materialAntiguo = object;
+    materialAntiguo.insert(materialAntiguo.size() - 1,
+        ",\"material\":{\"texture\":\"models/floor.png\",\"tileSize\":[1.0,1.0],\"roughness\":0.92}");
+    escribir(temp / "scene-material-legacy.json", escena("[" + materialAntiguo + "]"));
+    comprobar(CargarDatosEscenaJSON(temp / "scene-material-legacy.json", datosMaterial, error) &&
+        datosMaterial.objetos[0].material.dirtStrength == 0.0f,
+        "los materiales JSON anteriores mantienen suciedad desactivada por defecto");
     std::string materialFueraDeRango = conMaterial;
     const auto tileSize = materialFueraDeRango.find("[1.0,1.0]");
     materialFueraDeRango.replace(tileSize, std::string("[1.0,1.0]").size(), "[0.01,1.0]");
     escribir(temp / "scene-material-invalid.json", escena("[" + materialFueraDeRango + "]"));
     comprobar(!CargarDatosEscenaJSON(temp / "scene-material-invalid.json", datosMaterial, error),
         "se rechaza tiling que provocaria un patron excesivamente fino");
+    std::string suciedadFueraDeRango = conMaterial;
+    suciedadFueraDeRango.replace(suciedadFueraDeRango.find("\"dirtStrength\":0.2"),
+        std::string("\"dirtStrength\":0.2").size(), "\"dirtStrength\":0.8");
+    escribir(temp / "scene-dirt-invalid.json", escena("[" + suciedadFueraDeRango + "]"));
+    comprobar(!CargarDatosEscenaJSON(temp / "scene-dirt-invalid.json", datosMaterial, error),
+        "se rechaza una intensidad de suciedad excesiva");
     std::string luzInvalida = conLuz;
     const auto colorLuz = luzInvalida.find("[0.8,0.9,1]");
     luzInvalida.replace(colorLuz, std::string("[0.8,0.9,1]").size(), "[0.8,0.9,1.2]");
@@ -199,6 +235,15 @@ int main()
     comprobar(datos.animados.size() == 1 && datos.animados[0].giroZGrados == -90.0f && datos.animados[0].escala == 2.0f &&
         datos.animados[0].animacion == "Abrir" && datos.animados[0].colisionadores[0].tipo == fisica::TipoCuerpo::Cinematico,
         "objeto animado: giro, escala, animacion y colisionador se leen bien");
+    const std::string paredConVano = R"json({"version":1,"name":"parametric-wall","architecture":[
+      {"id":"wall","model":"models/cube.obj","position":[0,0,0],"rotation":[0,0,0],"scale":[5,0.15,1.5],
+       "physics":{"type":"static","halfSize":[1,1,1]},
+       "wall":{"apertures":[{"doorId":"door","centerU":0,"width":0.9,"height":2.1}]}}
+      ],"objects":[],"animated":[{"id":"door","model":"models/puerta.glb","position":[0,0,0],"wallId":"wall","openingId":"door"}]} )json";
+    escribir(temp / "wall-opening.json", paredConVano);
+    comprobar(CargarDatosEscenaJSON(temp / "wall-opening.json", datos, error) && datos.objetos[0].pared.aperturas.size() == 1 &&
+        datos.animados[0].paredId == "wall" && datos.animados[0].aperturaId == "door",
+        "pared paramétrica y asociación puerta-vano explícitas cargan con sus rutas intactas");
     std::string distinto = animado;
     distinto.replace(distinto.find("\"p1\""), 4, "\"p2\"");
     escribir(temp / "animado-dos.json", conAnimados("[" + animado + "," + distinto + "]"));
@@ -230,6 +275,45 @@ int main()
     comprobar(CargarDatosEscenaJSON(temp / "animado-dos.json", previos, error), "preparar datos previos");
     comprobar(!CargarDatosEscenaJSON(temp / "a3.json", previos, error) && previos.animados.size() == 2 &&
         previos.objetos.size() == 1, "carga fallida no modifica los datos previos");
+
+    DatosEscena laboratorio;
+    const fs::path escenaLaboratorio = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/scenes/aula_informatica_calibrada.json";
+    comprobar(CargarDatosEscenaJSON(escenaLaboratorio, laboratorio, error),
+        "la escena calibrada y sus nuevas rutas de materiales se cargan");
+    comprobar(std::abs(laboratorio.indirectIntensity - 0.16f) < 1e-6f,
+        "la intensidad indirecta de habitación se carga desde JSON");
+    comprobar(laboratorio.spawn.presente && laboratorio.spawn.pies == glm::vec3(-6.5f, 3.0f, -3.05f) &&
+        glm::length(laboratorio.spawn.direccion - glm::vec3(0.0f, 1.0f, 0.0f)) < 1e-5f,
+        "spawn del laboratorio expresa pies y orientación en coordenadas del mundo");
+    const auto dinamico = [&](const char* id) -> const SceneObject* {
+        for (const SceneObject& item : laboratorio.objetos) if (item.id == id) return &item;
+        return nullptr;
+    };
+    const SceneObject* frasco = dinamico("frasco_muestras_sur");
+    const SceneObject* vaso = dinamico("vaso_investigacion_norte");
+    const SceneObject* escritorio = dinamico("mesa_control_sur");
+    comprobar(frasco && frasco->fisica.presente && frasco->fisica.tipo == fisica::TipoCuerpo::Dinamico && frasco->fisica.masa > 0.0f,
+        "frasco de muestras está configurado como manipulable dinámico");
+    comprobar(vaso && vaso->fisica.presente && vaso->fisica.tipo == fisica::TipoCuerpo::Dinamico,
+        "vaso de investigación tiene collider dinámico");
+    comprobar(escritorio && (!escritorio->fisica.presente || escritorio->fisica.tipo == fisica::TipoCuerpo::Estatico),
+        "mobiliario grande permanece estático");
+    std::size_t suelos = 0;
+    std::size_t lucesEscena = 0;
+    for (const auto& objeto : laboratorio.objetos)
+    {
+        if (objeto.luz.presente && objeto.luz.encendida) ++lucesEscena;
+        if (objeto.modelo.find("suelo_base.obj") != std::string::npos)
+        {
+            ++suelos;
+            comprobar(objeto.fisica.presente && objeto.fisica.tipo == fisica::TipoCuerpo::Estatico,
+                "el suelo reutilizable conserva su collider estático");
+            comprobar(objeto.material.dirtStrength > 0.0f,
+                "la máscara de suciedad se configura en la escena");
+        }
+    }
+    comprobar(suelos == 1, "la escena contiene una sola superficie visual de suelo");
+    comprobar(lucesEscena == 4, "las cuatro luminarias quedan dentro de los slots de escena 4-7");
 
     std::error_code cleanupError;
     fs::remove_all(temp, cleanupError);

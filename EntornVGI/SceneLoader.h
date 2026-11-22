@@ -30,6 +30,7 @@ struct SceneLuz
     glm::vec3 desplazamiento = glm::vec3(0.0f);
     glm::vec3 color = glm::vec3(0.82f, 0.94f, 1.0f);
     float intensidad = 1.0f;
+	glm::vec2 areaSize = glm::vec2(0.0f); // dimensiones completas locales; cero = foco puntual
 };
 
 // Sobrescritura de material por instancia. tileSize expresa metros por repeticion
@@ -40,7 +41,40 @@ struct SceneMaterial
     std::string textura; // relativa al JSON de escena
     glm::vec2 tileSize = glm::vec2(1.0f);
     float roughness = 0.85f;
+    // Máscara procedural determinista en coordenadas de mundo. strength=0 conserva escenas antiguas.
+    float dirtStrength = 0.0f;
+    float dirtScale = 0.45f; // frecuencia en celdas por metro
+    float dirtSeed = 0.0f;
 };
+
+// Apertura rectangular en una pared paramétrica. centerU y base se expresan en metros
+// desde el centro de pared y el pie inferior, respectivamente.
+struct SceneAperturaPared
+{
+    std::string idPuerta;
+    float centerU = 0.0f;
+    float ancho = 0.9f;
+    float alto = 2.1f;
+    float base = 0.0f;
+	std::string id;
+};
+
+struct ScenePared
+{
+    bool presente = false;
+    std::vector<SceneAperturaPared> aperturas;
+};
+
+struct SceneSeccionPared
+{
+    glm::vec3 centroLocal{ 0.0f };
+    glm::vec3 mitad{ 0.0f };
+};
+
+// Particiona una caja de pared en paños laterales, dinteles y posibles zócalos.
+// Rechaza aperturas solapadas, demasiado próximas a extremos o fuera de altura.
+bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneAperturaPared>& aperturas,
+    std::vector<SceneSeccionPared>& secciones, std::string& error);
 
 struct SceneObject
 {
@@ -55,6 +89,8 @@ struct SceneObject
     SceneFisica fisica;   // opcional: sin "physics" en el JSON queda con presente = false
     SceneLuz luz;         // opcional: fuente Phong atada al objeto, sin colision extra
     SceneMaterial material; // opcional: material configurable por instancia
+    ScenePared pared;       // opcional: definición lógica con aperturas, no altera el OBJ compartido
+    bool permitirPenetracionArquitectura = false; // excepción deliberada, desactivada por defecto
 };
 
 // Caja de colisión de UN nodo de un modelo animado (la hoja de la puerta, su marco...).
@@ -77,12 +113,26 @@ struct SceneObjetoAnimado
     float escala = 1.0f;                 // escala uniforme
     std::string animacion;               // nombre de la animación; vacío = la primera del archivo
     std::vector<SceneColisionador> colisionadores;
+    bool permitirPenetracionArquitectura = false; // excepción deliberada, desactivada por defecto
+    std::string paredId;
+    std::string aperturaId;
+};
+
+// Punto inicial opcional de la escena. position son los pies del jugador en metros;
+// lookDirection es un vector del mundo y no contiene la altura de ojos.
+struct SceneSpawn
+{
+    bool presente = false;
+    glm::vec3 pies{ 0.0f };
+    glm::vec3 direccion{ 1.0f, 0.0f, 0.0f };
 };
 
 // Todo lo que describe un archivo de escena.
 struct DatosEscena
 {
     std::string nombre;
+    SceneSpawn spawn;
+    float indirectIntensity = 0.16f; // aproximación hemisférica basada en luminarias visibles
     std::vector<SceneObject> objetos;            // arquitectura + objetos OBJ
     std::vector<SceneObjetoAnimado> animados;    // objetos GLB animados (lista opcional)
 };

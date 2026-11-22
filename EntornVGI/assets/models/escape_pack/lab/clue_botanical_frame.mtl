@@ -1,0 +1,8 @@
+newmtl BotanicalPlate
+Ka 0.55 0.55 0.50
+Kd 1.0 1.0 1.0
+Ks 0.08 0.08 0.08
+Ns 24
+d 1.0
+illum 2
+map_Kd botanical_reference_plate.png
