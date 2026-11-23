@@ -156,6 +156,7 @@ namespace
 	bool fpsTienePosicionAnterior = false;
 	bool ventanaConFoco = true;
 	bool mostrarPanelesDebug = false;
+	bool mostrarContadorFPS = false;
 	int modoDiagnosticoIluminacion = 0;
 	double fpsUltimoX = 0.0;
 	double fpsUltimoY = 0.0;
@@ -2549,6 +2550,7 @@ void draw_Menu_ImGui()
 				mundoFisico.FraccionAgachado() * 100.0f, mundoFisico.JugadorEnSuelo() ? "si" : "no");
 			ImGui::Checkbox("Porcentaje junto a la barra", &mostrarPorcentajeEstamina);
 			if (ImGui::Button("Rellenar estamina")) movimientoJugador.Reiniciar();
+			ImGui::Checkbox("Mostrar FPS en esquina superior derecha", &mostrarContadorFPS);
 			ImGui::SeparatorText("Velocidades (m/s)");
 			ImGui::SliderFloat("Caminar", &pm.velocidadCaminar, 0.5f, 6.0f, "%.2f");
 			ImGui::SliderFloat("Agachado", &pm.velocidadAgachado, 0.3f, 4.0f, "%.2f");
@@ -2665,6 +2667,21 @@ void draw_Menu_ImGui()
 
 	editorEscenas.DibujarInterfaz(editor::ContextoEscena{ objetosEscena, datosAnimadosEscena, objetosAnimados },
 		static_cast<int>(ImGui::GetIO().DisplaySize.x), static_cast<int>(ImGui::GetIO().DisplaySize.y));
+
+	if (modoJuegoFPS() && mostrarContadorFPS)
+	{
+		const ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImGui::SetNextWindowPos(
+			ImVec2(viewport->Pos.x + viewport->Size.x - 12.0f, viewport->Pos.y + 12.0f),
+			ImGuiCond_Always, ImVec2(1.0f, 0.0f));
+		ImGui::SetNextWindowBgAlpha(0.7f);
+		const ImGuiWindowFlags flags = ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize |
+			ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+			ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoInputs;
+		if (ImGui::Begin("FPS Overlay", nullptr, flags))
+			ImGui::Text("FPS: %.0f", ImGui::GetIO().Framerate);
+		ImGui::End();
+	}
 
 // Rendering ImGui Menus
 	ImGui::Render();
