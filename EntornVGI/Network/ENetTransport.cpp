@@ -21,6 +21,7 @@ namespace net
 				inited_ = true;
 				if (opt_.isHost)
 				{
+					// ENET_HOST_ANY escucha en todas las interfaces IPv4 locales, incluida Tailscale.
 					ENetAddress a{}; a.host = ENET_HOST_ANY; a.port = opt_.port;
 					host_ = enet_host_create(&a, opt_.maxClients, kChannelCount, 0, 0);
 					return host_ != nullptr;

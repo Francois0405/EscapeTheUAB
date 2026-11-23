@@ -143,7 +143,9 @@ namespace netjuego
 			if (!arranqueOk_.load())
 			{
 				Fallar(sinTransporte_.load() ? "ENet no esta incluido en esta compilacion: sin transporte de red. Se sigue offline."
-					: (cfg_.rol == net::Role::Host ? "No se pudo abrir el puerto del host (¿en uso?)." : "No se pudo iniciar la conexion con el host."));
+					: (cfg_.rol == net::Role::Host
+						? "No se pudo escuchar UDP en todas las interfaces en el puerto " + std::to_string(cfg_.puerto) + ". Comprueba si esta en uso."
+						: "No se pudo iniciar la conexion a " + cfg_.host + ":" + std::to_string(cfg_.puerto) + ". Comprueba la direccion, el puerto y que ENet pueda abrir UDP."));
 				return;
 			}
 			fase_ = FaseRed::Activa; recuperacionSucia_ = true;
@@ -165,8 +167,19 @@ namespace netjuego
 		if (cfg_.rol == net::Role::Client)
 		{
 			const net::ConnectionState st = servicio_->State();
-			if (st == net::ConnectionState::Disconnected) { Fallar("Conexion con el host perdida."); return; }
-			if (st == net::ConnectionState::Rejected) { Fallar("El host rechazo la conexion: " + (mensaje_.empty() ? std::string("sin motivo") : mensaje_)); return; }
+			if (st == net::ConnectionState::Disconnected)
+			{
+				Fallar("Sin respuesta de " + cfg_.host + ":" + std::to_string(cfg_.puerto) +
+					". Comprueba que el host esta activo, que ambos equipos tienen acceso en la tailnet y que el firewall local permite UDP en el puerto indicado.");
+				return;
+			}
+			if (st == net::ConnectionState::Rejected)
+			{
+				// NetService publica el estado y el evento por caminos separados; espera un frame si el motivo aun no llego.
+				if (mensaje_.empty()) return;
+				Fallar("El host rechazo la conexion: " + mensaje_);
+				return;
+			}
 		}
 		else DifundirHost(ahora);
 

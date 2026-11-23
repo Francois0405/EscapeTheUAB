@@ -31,6 +31,7 @@
 #include "NetJuego.h"
 #include "NetAdaptadores.h"
 #include "NetAvatar.h"
+#include "Network/PreferenciasRed.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include <iostream>
@@ -2526,12 +2527,17 @@ static void dibujarPanelRed()
 	if (!d.mensaje.empty()) ImGui::TextWrapped("%s", d.mensaje.c_str());
 	const bool libre = d.fase == FaseRed::Offline || d.fase == FaseRed::Error;
 	static int modo = -1; static char ip[64]; static int puerto = netjuego::kPuertoPorDefecto; static char nombre[33];
+	static std::string errorEntrada;
 	if (modo < 0)
 	{
 		modo = configRedPendiente.rol == net::Role::Host ? 1 : (configRedPendiente.rol == net::Role::Client ? 2 : 0);
-		std::snprintf(ip, sizeof ip, "%s", configRedPendiente.host.c_str());
+		netjuego::UltimoEndpoint ultimo;
+		const bool hayUltimo = netjuego::CargarUltimoEndpoint(ultimo);
+		const std::string& hostInicial = configRedPendiente.rol == net::Role::Client ? configRedPendiente.host : (hayUltimo ? ultimo.host : configRedPendiente.host);
+		std::snprintf(ip, sizeof ip, "%s", hostInicial.c_str());
 		std::snprintf(nombre, sizeof nombre, "%s", configRedPendiente.nombre.c_str());
-		puerto = configRedPendiente.puerto;
+		puerto = configRedPendiente.rol == net::Role::Client || configRedPendiente.rol == net::Role::Host
+			? configRedPendiente.puerto : (hayUltimo ? ultimo.puerto : configRedPendiente.puerto);
 	}
 	if (libre)
 	{
@@ -2546,16 +2552,28 @@ static void dibujarPanelRed()
 			static int enet = -1;
 			if (enet < 0) enet = netjuego::RedJuego::EnetDisponible() ? 1 : 0;   // solo al elegir red; no inicializa ENet
 			if (!enet) ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "ENet no incluido en esta compilacion.");
+			if (!errorEntrada.empty()) ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "%s", errorEntrada.c_str());
 			if (ImGui::Button("Iniciar"))
 			{
+				errorEntrada.clear();
 				netjuego::ConfigRed cfg;
 				cfg.rol = modo == 1 ? net::Role::Host : net::Role::Client;
 				cfg.nombre = nombre[0] ? nombre : "jugador";
 				std::string error;
-				if (!netjuego::PuertoValido(puerto)) std::cerr << "Red: puerto fuera de rango (1-65535)." << std::endl;
+				if (!netjuego::PuertoValido(puerto)) errorEntrada = "Puerto fuera de rango: usa un valor entre 1 y 65535.";
 				else if (cfg.rol == net::Role::Client && !netjuego::ParsearEndpoint(std::string(ip) + ":" + std::to_string(puerto), cfg.host, cfg.puerto, error))
-					std::cerr << "Red: " << error << std::endl;
-				else { cfg.puerto = static_cast<uint16_t>(puerto); configRedPendiente = cfg; iniciarRed(cfg); }
+					errorEntrada = error;
+				else
+				{
+					cfg.puerto = static_cast<uint16_t>(puerto);
+					if (cfg.rol == net::Role::Client)
+					{
+						std::string errorGuardado;
+						if (!netjuego::GuardarUltimoEndpoint({ cfg.host, cfg.puerto }, errorGuardado))
+							errorEntrada = "No se guardo la ultima direccion: " + errorGuardado;
+					}
+					configRedPendiente = cfg; iniciarRed(cfg);
+				}
 			}
 		}
 	}
@@ -8377,6 +8395,12 @@ int main(int argc, char** argv)
 		{
 			std::cerr << "Argumentos de red ignorados: " << errorRed << std::endl;
 			configRedPendiente = netjuego::ConfigRed{};
+		}
+		else if (configRedPendiente.rol == net::Role::Client)
+		{
+			std::string errorGuardado;
+			if (!netjuego::GuardarUltimoEndpoint({ configRedPendiente.host, configRedPendiente.puerto }, errorGuardado))
+				std::cerr << "Red: no se guardo la ultima direccion: " << errorGuardado << std::endl;
 		}
 	}
 

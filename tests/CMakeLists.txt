@@ -274,6 +274,15 @@ endif()
 target_compile_features(NetJuegoTests PRIVATE cxx_std_20)
 add_test(NAME NetJuegoTests COMMAND NetJuegoTests)
 
+# Persistencia del ultimo destino de red: usa una ruta temporal aislada.
+add_executable(NetworkPreferencesTests
+	NetworkPreferencesTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Network/PreferenciasRed.cpp
+)
+target_include_directories(NetworkPreferencesTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_compile_features(NetworkPreferencesTests PRIVATE cxx_std_20)
+add_test(NAME NetworkPreferencesTests COMMAND NetworkPreferencesTests)
+
 # Bucle local con ENet REAL (127.0.0.1). Solo si la capa de red encontro ENet; sin ENet no se registra.
 if(TARGET EntornVGI_network AND ENTORNVGI_NETWORK_TIENE_ENET)
 	add_executable(ENetLoopbackTests ENetLoopbackTests.cpp)

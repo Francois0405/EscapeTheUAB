@@ -43,6 +43,7 @@ endif()
 add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_party/SOIL2")
 
 option(ENTORNVGI_ENABLE_NETWORK "Compilar la capa de red (ENet opcional)" ON)
+option(ENTORNVGI_REQUIRE_ENET "Fallar la configuracion si ENet no esta disponible" OFF)
 add_subdirectory(Network)
 
 set(ENTORNVGI_SOURCES
@@ -65,6 +66,7 @@ set(ENTORNVGI_SOURCES
 	MundoFisico.cpp
 	NetAvatar.cpp
 	NetJuego.cpp
+	Network/PreferenciasRed.cpp
 	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
 	OpenXRManager.cpp

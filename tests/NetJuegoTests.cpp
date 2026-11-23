@@ -156,6 +156,7 @@ int main()
 	// ---------------- configuracion ----------------
 	{
 		ConfigRed c; std::string err;
+		std::string host; uint16_t puerto = 1;
 		char a0[] = "x";
 		char* argv0[] = { a0 };
 		ok(ParsearArgumentos(1, argv0, c, err) && c.rol == Role::Offline, "sin argumentos = offline por defecto");
@@ -165,12 +166,15 @@ int main()
 		char cn[] = "--connect", ep[] = "192.168.1.20:7001";
 		char* argvC[] = { a0, cn, ep };
 		ok(ParsearArgumentos(3, argvC, c, err) && c.rol == Role::Client && c.host == "192.168.1.20" && c.puerto == 7001, "--connect ip:puerto");
+		ok(ParsearEndpoint("100.64.23.7:7777", host, puerto, err) && host == "100.64.23.7" && puerto == 7777, "IPv4 Tailscale y puerto por defecto");
+		ok(ParsearEndpoint("100.127.255.254:65535", host, puerto, err) && puerto == 65535, "IPv4 tailnet en limite superior");
+		ok(!ParsearEndpoint("100.300.1.2:7777", host, puerto, err) && !ParsearEndpoint("100.1.2:7777", host, puerto, err), "IPv4 literal invalida rechazada");
 		char mal[] = "--connect", ep2[] = "host malo:99999";
 		char* argvM[] = { a0, mal, ep2 };
 		ok(!ParsearArgumentos(3, argvM, c, err), "endpoint invalido rechazado");
 		char pm[] = "70000"; char* argvP[] = { a0, h, p, pm };
 		ok(!ParsearArgumentos(4, argvP, c, err), "puerto fuera de rango rechazado");
-		std::string host; uint16_t puerto = 1;
+		puerto = 1;
 		ok(ParsearEndpoint("10.0.0.5", host, puerto, err) && puerto == 1 && host == "10.0.0.5", "endpoint sin puerto conserva el actual");
 		ok(!ParsearEndpoint("", host, puerto, err) && !ParsearEndpoint("a:0", host, puerto, err) && !ParsearEndpoint("a:x", host, puerto, err), "endpoint vacio/puerto 0/no numerico");
 	}

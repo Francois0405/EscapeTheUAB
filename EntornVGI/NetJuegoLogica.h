@@ -46,6 +46,23 @@ namespace netjuego
 
 	inline bool PuertoValido(long p) { return p >= 1 && p <= 65535; }
 
+	inline bool IPv4LiteralValida(const std::string& host)
+	{
+		if (host.find_first_not_of("0123456789.") != std::string::npos || host.find('.') == std::string::npos) return true; // nombre DNS
+		size_t inicio = 0;
+		for (int octeto = 0; octeto < 4; ++octeto)
+		{
+			const size_t fin = host.find('.', inicio);
+			const size_t final = octeto == 3 ? host.size() : fin;
+			if (final == std::string::npos || final == inicio || final - inicio > 3 || (octeto == 3 && fin != std::string::npos)) return false;
+			unsigned valor = 0;
+			for (size_t i = inicio; i < final; ++i) valor = valor * 10 + static_cast<unsigned>(host[i] - '0');
+			if (valor > 255) return false;
+			inicio = final + 1;
+		}
+		return true;
+	}
+
 	// "host" o "host:puerto" (IPv4 o nombre DNS). No acepta espacios ni caracteres raros.
 	inline bool ParsearEndpoint(const std::string& texto, std::string& host, uint16_t& puerto, std::string& error)
 	{
@@ -60,6 +77,7 @@ namespace netjuego
 			p = std::stol(ps);
 		}
 		if (h.empty() || h.size() > 253) { error = "IP o nombre de host vacio o demasiado largo"; return false; }
+		if (!IPv4LiteralValida(h)) { error = "La direccion IPv4 no es valida"; return false; }
 		for (char c : h)
 		{
 			const bool ok = (c >= '0' && c <= '9') || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '.' || c == '-' || c == '_';
