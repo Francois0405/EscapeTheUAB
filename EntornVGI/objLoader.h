@@ -97,6 +97,7 @@ class OBJLOADER_CLASS_DECL COBJModel
 	void _stdcall netejaTextures_OBJ();
 	void _stdcall draw_TriVAO_OBJ(GLuint sh_programID);
 	void SetInstanceMaterialOverride(GLuint textureId, float shininess) { instanceTextureOverride = textureId; instanceShininessOverride = shininess; }
+	bool GetLocalBounds(Vector3D& minimum, Vector3D& maximum) const { if (!hasBounds) return false; minimum = boundsMin; maximum = boundsMax; return true; }
 
 private:
 	bool _stdcall ReadNextString(char szString[], FILE *hStream);
@@ -127,6 +128,8 @@ private:
 	unsigned int materialCount = 0;
 	GLuint instanceTextureOverride = 0;
 	float instanceShininessOverride = -1.0f;
+	Vector3D boundsMin{}, boundsMax{};
+	bool hasBounds = false;
 
 // Funcions CVAO
 	void _stdcall initVAOList_OBJ();

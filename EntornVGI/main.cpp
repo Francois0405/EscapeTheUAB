@@ -35,6 +35,10 @@
 #include <array>
 #include <cmath>
 #include <limits>
+#include <chrono>
+#include "UniformCache.h"
+#include "FrustumCulling.h"
+#include "RenderMetrics.h"
 
 // CODI NOSTRE
 
@@ -126,7 +130,7 @@ namespace
 	void aplicarIntensidadMaterial(GLuint programa, bool ambienteActivo = true)
 	{
 		if (programa == 0) return;
-		const GLint localizacion = glGetUniformLocation(programa, "sw_intensity");
+		const GLint localizacion = glcache::UniformLocation(programa, "sw_intensity");
 		if (localizacion < 0) return;
 		GLint programaAnterior = 0;
 		glGetIntegerv(GL_CURRENT_PROGRAM, &programaAnterior);
@@ -157,6 +161,33 @@ namespace
 	bool ventanaConFoco = true;
 	bool mostrarPanelesDebug = false;
 	bool mostrarContadorFPS = false;
+	bool renderizadoOptimizado = true;
+	bool oclusoresPhongInvalidos = true;
+	GLuint consultasGpu[3]{};
+	bool consultaGpuPendiente[3]{};
+	int consultaGpuActual = 0;
+	double ultimoGpuMs = 0.0;
+	bool consultaGpuActiva = false;
+	void iniciarConsultaGpu()
+	{
+		if (!renderMetrics::enabled) return;
+		if (consultasGpu[0] == 0) glGenQueries(3, consultasGpu);
+		const int slot = consultaGpuActual;
+		if (consultaGpuPendiente[slot])
+		{
+			GLint disponible = GL_FALSE;
+			glGetQueryObjectiv(consultasGpu[slot], GL_QUERY_RESULT_AVAILABLE, &disponible);
+			if (disponible) { GLuint64 ns = 0; glGetQueryObjectui64v(consultasGpu[slot], GL_QUERY_RESULT, &ns); ultimoGpuMs = static_cast<double>(ns) / 1.0e6; consultaGpuPendiente[slot] = false; }
+		}
+		consultaGpuActiva = !consultaGpuPendiente[slot];
+		if (consultaGpuActiva) glBeginQuery(GL_TIME_ELAPSED, consultasGpu[slot]);
+	}
+	void finalizarConsultaGpu()
+	{
+		if (!renderMetrics::enabled || consultasGpu[0] == 0) return;
+		if (consultaGpuActiva) { glEndQuery(GL_TIME_ELAPSED); consultaGpuPendiente[consultaGpuActual] = true; }
+		consultaGpuActual = (consultaGpuActual + 1) % 3;
+	}
 	int modoDiagnosticoIluminacion = 0;
 	double fpsUltimoX = 0.0;
 	double fpsUltimoY = 0.0;
@@ -348,6 +379,27 @@ namespace
 
 	void actualizarOclusoresPhong()
 	{
+		const auto inicio = std::chrono::steady_clock::now();
+		static std::size_t firmaAnterior = 0;
+		static GLuint programaAnterior = 0;
+		size_t firma = 1469598103934665603ull;
+		auto mezclar = [&firma](size_t valor) { firma ^= valor; firma *= 1099511628211ull; };
+		for (const SceneObject& objeto : objetosEscena)
+		{
+			if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::TipoCuerpo::Estatico) continue;
+			for (int eje = 0; eje < 3; ++eje)
+			{
+				mezclar(std::hash<float>{}(objeto.posicion[eje])); mezclar(std::hash<float>{}(objeto.rotacion[eje]));
+				mezclar(std::hash<float>{}(objeto.escala[eje])); mezclar(std::hash<float>{}(objeto.fisica.mitadTamano[eje]));
+				mezclar(std::hash<float>{}(objeto.fisica.desplazamiento[eje]));
+			}
+			mezclar(std::hash<std::string>{}(objeto.categoria));
+		}
+		if (renderizadoOptimizado && !oclusoresPhongInvalidos && firma == firmaAnterior && programaAnterior == shader_programID)
+		{
+			if (renderMetrics::enabled) renderMetrics::oclusoresMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicio).count();
+			return;
+		}
 		constexpr int maxOclusores = 12;
 		constexpr int maxOclusoresIndirectos = 24;
 		std::array<glm::mat4, maxOclusores> mundoALocal{};
@@ -387,22 +439,24 @@ namespace
 		}
 
 		glUseProgram(shader_programID);
-		glUniform1i(glGetUniformLocation(shader_programID, "uOccluderCount"), cantidad);
+		glUniform1i(glcache::UniformLocation(shader_programID, "uOccluderCount"), cantidad);
 		if (cantidad > 0)
 		{
-			const GLint matrices = glGetUniformLocation(shader_programID, "uOccluderWorldToLocal[0]");
-			const GLint tamanos = glGetUniformLocation(shader_programID, "uOccluderHalfSize[0]");
+			const GLint matrices = glcache::UniformLocation(shader_programID, "uOccluderWorldToLocal[0]");
+			const GLint tamanos = glcache::UniformLocation(shader_programID, "uOccluderHalfSize[0]");
 			if (matrices >= 0) glUniformMatrix4fv(matrices, cantidad, GL_FALSE, glm::value_ptr(mundoALocal[0]));
 			if (tamanos >= 0) glUniform3fv(tamanos, cantidad, mitades.data());
 		}
-		glUniform1i(glGetUniformLocation(shader_programID, "uIndirectOccluderCount"), cantidadIndirecta);
+		glUniform1i(glcache::UniformLocation(shader_programID, "uIndirectOccluderCount"), cantidadIndirecta);
 		if (cantidadIndirecta > 0)
 		{
-			const GLint matrices = glGetUniformLocation(shader_programID, "uIndirectOccluderWorldToLocal[0]");
-			const GLint tamanos = glGetUniformLocation(shader_programID, "uIndirectOccluderHalfSize[0]");
+			const GLint matrices = glcache::UniformLocation(shader_programID, "uIndirectOccluderWorldToLocal[0]");
+			const GLint tamanos = glcache::UniformLocation(shader_programID, "uIndirectOccluderHalfSize[0]");
 			if (matrices >= 0) glUniformMatrix4fv(matrices, cantidadIndirecta, GL_FALSE, glm::value_ptr(mundoALocalIndirectos[0]));
 			if (tamanos >= 0) glUniform3fv(tamanos, cantidadIndirecta, mitadesIndirectas.data());
 		}
+		firmaAnterior = firma; programaAnterior = shader_programID; oclusoresPhongInvalidos = false;
+		if (renderMetrics::enabled) renderMetrics::oclusoresMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicio).count();
 	}
 
 	glm::mat4 matrizLocalMovilActual()
@@ -963,6 +1017,7 @@ namespace
 		for (auto& entrada : modelosHabitacion) entrada.second->netejaTextures_OBJ();
 		modelosHabitacion = std::move(nuevosModelos);
 		objetosEscena = std::move(objetosValidos);
+		oclusoresPhongInvalidos = true;
 		liberarObjetosAnimados();                      // libera de la GPU los GLB anteriores
 		objetosAnimados = std::move(nuevosAnimados);
 		glb::SubirEscenaAnimadaAGPU(objetosAnimados);  // el contexto OpenGL ya existe en este punto
@@ -1004,8 +1059,8 @@ namespace
 		textura = true;
 		tFlag_invert_Y = false;
 		glUseProgram(shader_programID);
-		glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
-		glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+		glUniform1i(glcache::UniformLocation(shader_programID, "textur"), textura);
+		glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 		std::error_code rutaEscenaError;
 		const auto rutaEscenaAbsoluta = std::filesystem::absolute(ruta, rutaEscenaError).lexically_normal();
 		std::cout << "Escena cargada desde " << (rutaEscenaError ? ruta.string() : rutaEscenaAbsoluta.string()) << ": "
@@ -1527,7 +1582,7 @@ static void dibujarEscenaEstereo(int anchoVentana, int altoVentana)
 		);
 
 		glUseProgram(shader_programID);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		glUniformMatrix4fv(glcache::UniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
 		Iluminacio(shader_programID, ilumina, ifixe, ilum2sides, llum_ambient, llumGL, objecte, front_faces, back_line, pas);
 
 		configura_Escena();
@@ -1588,8 +1643,8 @@ static bool dibujarEscenaVR()
 			ViewMatrix = vr::VistaDeOjoVR(ojo.pose, anclaje);
 
 			glUseProgram(shader_programID);
-			glUniformMatrix4fv(glGetUniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
-			glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+			glUniformMatrix4fv(glcache::UniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+			glUniformMatrix4fv(glcache::UniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
 
 			Fons(c_fons);   // limpia color y profundidad del framebuffer del ojo (ya enlazado)
 			if (test_vis) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
@@ -1633,11 +1688,11 @@ void OnPaint(GLFWwindow* window)
 		const float aspecto = std::max(1.0f, displaySize.x) / std::max(1.0f, displaySize.y);
 		editorEscenas.Matrices(aspecto, ViewMatrix, ProjectionMatrix);
 		glUseProgram(shader_programID);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		glUniformMatrix4fv(glcache::UniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glcache::UniformLocation(shader_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
 		glUseProgram(eixos_programID);
-		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		glUniformMatrix4fv(glcache::UniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glcache::UniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
 		configura_Escena();
 		dibuixa_Escena();
 		return;
@@ -1887,11 +1942,11 @@ namespace
 		}
 
 		glUseProgram(eixos_programID);
-		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
-		glUniformMatrix4fv(glGetUniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
+		glUniformMatrix4fv(glcache::UniformLocation(eixos_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
+		glUniformMatrix4fv(glcache::UniformLocation(eixos_programID, "viewMatrix"), 1, GL_FALSE, &ViewMatrix[0][0]);
 
 		glLineWidth(2.5f);
-		glDrawArrays(GL_LINES, 0, 2);
+		renderMetrics::DrawArrays(GL_LINES, 0, 2);
 		glLineWidth(1.0f);
 
 		glBindVertexArray(0);
@@ -1901,17 +1956,20 @@ namespace
 
 // dibuixa_Escena: Funcio que crida al dibuix dels diferents elements de l'escana
 void dibuixa_Escena() {
+	const auto inicioEscena = std::chrono::steady_clock::now();
+	glcache::enabled = renderizadoOptimizado;
+	iniciarConsultaGpu();
 	actualizarOclusoresPhong();
 	glUseProgram(shader_programID);
-	glUniform1f(glGetUniformLocation(shader_programID, "uIndirectIntensity"), intensidadIndirectaEscena);
-	glUniform1f(glGetUniformLocation(shader_programID, "uIndirectAmbientBase"), intensidadAmbientalBaseEscena);
-	glUniform1f(glGetUniformLocation(shader_programID, "uSceneDirectScale"), escalaLuzDirectaEscena);
-	glUniform1i(glGetUniformLocation(shader_programID, "uLightingDebugMode"), modoDiagnosticoIluminacion);
-	glUniform3f(glGetUniformLocation(shader_programID, "uIndirectFloorColor"),
+	glUniform1f(glcache::UniformLocation(shader_programID, "uIndirectIntensity"), intensidadIndirectaEscena);
+	glUniform1f(glcache::UniformLocation(shader_programID, "uIndirectAmbientBase"), intensidadAmbientalBaseEscena);
+	glUniform1f(glcache::UniformLocation(shader_programID, "uSceneDirectScale"), escalaLuzDirectaEscena);
+	glUniform1i(glcache::UniformLocation(shader_programID, "uLightingDebugMode"), modoDiagnosticoIluminacion);
+	glUniform3f(glcache::UniformLocation(shader_programID, "uIndirectFloorColor"),
 		colorReboteSueloEscena.r, colorReboteSueloEscena.g, colorReboteSueloEscena.b);
-	glUniform3f(glGetUniformLocation(shader_programID, "uIndirectSkyColor"),
+	glUniform3f(glcache::UniformLocation(shader_programID, "uIndirectSkyColor"),
 		colorReboteCieloEscena.r, colorReboteCieloEscena.g, colorReboteCieloEscena.b);
-	glUniform1f(glGetUniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
+	glUniform1f(glcache::UniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
 	const bool renderizarMovil = modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr;
 	glm::mat4 matrizMovilMundo(1.0f);
 	if (renderizarMovil)
@@ -1935,9 +1993,9 @@ void dibuixa_Escena() {
 	}
 
 	else llumGL[3].encesa = false;
-	glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), 0.0f);
-	glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.0f);
-	glUniform1i(glGetUniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
+	glUniform1f(glcache::UniformLocation(shader_programID, "uDirtStrength"), 0.0f);
+	glUniform1f(glcache::UniformLocation(shader_programID, "uTextureEmission"), 0.0f);
+	glUniform1i(glcache::UniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
 
 
 	//glUseProgram(shader_programID);
@@ -1993,22 +2051,40 @@ void dibuixa_Escena() {
 			}
 			if (matrices.empty()) matrices.push_back(editorEscenas.Activo()
 				? fisica::MatrizDeObjeto(obj) : escenaFisica->MatrizVisualDe(static_cast<int>(i), obj));
+			if (renderizadoOptimizado)
+			{
+				Vector3D minimo{}, maximo{};
+				if (it->second->GetLocalBounds(minimo, maximo))
+				{
+					const glm::vec3 lo(minimo.fX, minimo.fY, minimo.fZ), hi(maximo.fX, maximo.fY, maximo.fZ);
+					const glm::mat4 vp = ProjectionMatrix * ViewMatrix;
+					matrices.erase(std::remove_if(matrices.begin(), matrices.end(), [&](const glm::mat4& m)
+					{
+						const bool fuera = CajaFueraDeFrustum(vp, m, lo, hi);
+						if (renderMetrics::enabled) { if (fuera) ++renderMetrics::descartados; else ++renderMetrics::visibles; }
+						return fuera;
+					}), matrices.end());
+				}
+				else if (renderMetrics::enabled) ++renderMetrics::visibles;
+			}
+			else if (renderMetrics::enabled) ++renderMetrics::visibles;
+			if (matrices.empty()) continue;
 
 			const GLuint texturaOverride = texturaDeMaterial(obj.material);
 			const float rugosidad = std::clamp(obj.material.roughness, 0.0f, 1.0f);
 			const float brilloPhong = 4.0f + std::pow(1.0f - rugosidad, 4.0f) * 124.0f;
 			it->second->SetInstanceMaterialOverride(texturaOverride, obj.material.presente ? brilloPhong : -1.0f);
 			glUseProgram(shader_programID);
-			glUniform1i(glGetUniformLocation(shader_programID, "uWorldTiling"),
+			glUniform1i(glcache::UniformLocation(shader_programID, "uWorldTiling"),
 				obj.material.presente ? GL_TRUE : GL_FALSE);
-			glUniform2f(glGetUniformLocation(shader_programID, "uWorldTileSize"),
+			glUniform2f(glcache::UniformLocation(shader_programID, "uWorldTileSize"),
 				obj.material.tileSize.x, obj.material.tileSize.y);
-			glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), obj.material.dirtStrength);
-			glUniform1f(glGetUniformLocation(shader_programID, "uDirtScale"), obj.material.dirtScale);
-			glUniform1f(glGetUniformLocation(shader_programID, "uDirtSeed"), obj.material.dirtSeed);
+			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtStrength"), obj.material.dirtStrength);
+			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtScale"), obj.material.dirtScale);
+			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtSeed"), obj.material.dirtSeed);
 			const float emisionLuminaria = obj.luz.presente
 				? (obj.luz.encendida && lamparasLaboratorioActivas ? 1.0f : 0.0f) : 1.0f;
-			glUniform1f(glGetUniformLocation(shader_programID, "uLampEmissionScale"), emisionLuminaria);
+			glUniform1f(glcache::UniformLocation(shader_programID, "uLampEmissionScale"), emisionLuminaria);
 
 			for (const glm::mat4& matriz : matrices)
 				dibuixa_EscenaGL(
@@ -2019,9 +2095,9 @@ void dibuixa_Escena() {
 					it->second.get(), matriz
 				);
 			it->second->SetInstanceMaterialOverride(0, -1.0f);
-			glUniform1f(glGetUniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
-			glUniform1i(glGetUniformLocation(shader_programID, "uWorldTiling"), GL_FALSE);
-			glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), 0.0f);
+			glUniform1f(glcache::UniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
+			glUniform1i(glcache::UniformLocation(shader_programID, "uWorldTiling"), GL_FALSE);
+			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtStrength"), 0.0f);
 
 		}
 
@@ -2076,21 +2152,21 @@ void dibuixa_Escena() {
 	if (objetosAnimadosListos && editorEscenas.MostrarAnimados())
 	{
 		glUseProgram(shader_programID);
-		glb::DibujarObjetosAnimados(objetosAnimados, shader_programID);
+		glb::DibujarObjetosAnimados(objetosAnimados, shader_programID, ProjectionMatrix * ViewMatrix, renderizadoOptimizado);
 	}
 
 	if (renderizarMovil)
 	{
 		const bool texturaAnterior = textura;
 		textura = true;
-		glUniform1i(glGetUniformLocation(shader_programID, "uMobileSurface"), GL_TRUE);
-		glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.045f);
+		glUniform1i(glcache::UniformLocation(shader_programID, "uMobileSurface"), GL_TRUE);
+		glUniform1f(glcache::UniformLocation(shader_programID, "uTextureEmission"), 0.045f);
 		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
 			textura, texturesID, textura_map, tFlag_invert_Y,
 			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
 			phoneOBJ, matrizMovilMundo);
-		glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.0f);
-		glUniform1i(glGetUniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
+		glUniform1f(glcache::UniformLocation(shader_programID, "uTextureEmission"), 0.0f);
+		glUniform1i(glcache::UniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
 		textura = texturaAnterior;
 	}
 
@@ -2120,6 +2196,8 @@ void dibuixa_Escena() {
 
 	// Dibujar el rayo láser del mando derecho en VR.
 	dibujarRayoMandoVR();
+	finalizarConsultaGpu();
+	if (renderMetrics::enabled) renderMetrics::escenaMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioEscena).count();
 }
 
 
@@ -2654,7 +2732,7 @@ void draw_Menu_ImGui()
 	}
 	if (modoJuegoFPS() && mostrarPanelesDebug)
 	{
-		ImGui::Begin("Movil FPS");
+		/*ImGui::Begin("Movil FPS");
 		ImGui::Checkbox("Mostrar movil", &mostrarMovil);
 		ImGui::InputFloat3("Posicion", &movilPosicion.x, "%.3f");
 		ImGui::InputFloat3("Rotacion (grados)", &movilRotacion.x, "%.1f");
@@ -2663,7 +2741,7 @@ void draw_Menu_ImGui()
 		ImGui::SliderFloat("Intensidad walking", &intensidadWalking, 0.0f, 0.08f, "%.3f");
 		ImGui::SliderFloat("Intensidad mouse", &intensidadMouse, 0.0f, 0.003f, "%.4f");
 		ImGui::Text("deltaTime: %.4f s", deltaFPS);
-		ImGui::End();
+		ImGui::End();*/
 
 		ImGui::Begin("Movimiento FPS");
 		{
@@ -2676,6 +2754,19 @@ void draw_Menu_ImGui()
 			ImGui::Checkbox("Porcentaje junto a la barra", &mostrarPorcentajeEstamina);
 			if (ImGui::Button("Rellenar estamina")) movimientoJugador.Reiniciar();
 			ImGui::Checkbox("Mostrar FPS en esquina superior derecha", &mostrarContadorFPS);
+			ImGui::Checkbox("Renderizado optimizado (frustum culling)", &renderizadoOptimizado);
+			ImGui::Checkbox("Instrumentacion de render", &renderMetrics::enabled);
+			if (renderMetrics::enabled)
+			{
+				ImGui::Text("Frame actual %.2f ms (%.1f FPS), muestras: %zu", renderMetrics::lastFrameMs,
+					renderMetrics::lastFrameMs > 0.0 ? 1000.0 / renderMetrics::lastFrameMs : 0.0, renderMetrics::frameMs.size());
+				ImGui::Text("Frame P50/P95/P99: %.2f / %.2f / %.2f ms", renderMetrics::Percentile(0.50), renderMetrics::Percentile(0.95), renderMetrics::Percentile(0.99));
+				ImGui::Text("Draw calls OBJ/GLB: %llu | objetos visibles/descartados: %llu / %llu",
+					renderMetrics::drawCalls, renderMetrics::visibles, renderMetrics::descartados);
+				ImGui::Text("CPU escena %.3f ms | oclusores %.3f ms", renderMetrics::escenaMs, renderMetrics::oclusoresMs);
+				ImGui::Text("CPU fisica %.3f ms | animacion %.3f ms | update luces %.3f ms", renderMetrics::fisicaMs, renderMetrics::animacionMs, renderMetrics::lucesMs);
+				ImGui::Text("GPU escena (consulta retardada): %.3f ms", ultimoGpuMs);
+			}
 			ImGui::SeparatorText("Velocidades (m/s)");
 			ImGui::SliderFloat("Caminar", &pm.velocidadCaminar, 0.5f, 6.0f, "%.2f");
 			ImGui::SliderFloat("Agachado", &pm.velocidadAgachado, 0.3f, 4.0f, "%.2f");
@@ -2698,18 +2789,6 @@ void draw_Menu_ImGui()
 			ImGui::SliderFloat("Amortiguacion al parar", &pb.salida, 1.0f, 20.0f, "%.1f");
 			ImGui::Text("fase: %.2f rad | peso: %.2f", balanceoCamara.Fase(), balanceoCamara.Peso());
 		}
-		ImGui::End();
-
-		ImGui::Begin("Diagnostico de iluminacion");
-		const char* modosIluminacion[] = { "Final", "Ambiental", "Directa", "Indirecta", "Normales", "Albedo" };
-		ImGui::Combo("Vista", &modoDiagnosticoIluminacion, modosIluminacion, IM_ARRAYSIZE(modosIluminacion));
-		ImGui::TextUnformatted("Solo afecta al shader Phong; vuelve a Final para la escena normal.");
-		ImGui::End();
-
-		ImGui::Begin("Demo puerta");
-		if (ImGui::Button("Abrir puerta")) iniciarPuertaDemo();
-		ImGui::Text("tiempo: %.2f / %.2f s", reproductorPuertaDemo.tiempo, reproductorPuertaDemo.duracion);
-		ImGui::Text("angulo: %.1f grados", anguloPuertaDemo);
 		ImGui::End();
 
 		ImGui::Begin("Fisica (Bullet)");
@@ -2920,8 +2999,8 @@ void ShowArxiusOptions()
 			int error = ObOBJ->LoadModel(nomFitxer);			// Carregar objecte OBJ amb textura com a varis VAO's
 
 			//	Pas de paràmetres textura al shader
-			glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
-			glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+			glUniform1i(glcache::UniformLocation(shader_programID, "textur"), textura);
+			glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 
 			free(nomFitxer);
 		}
@@ -3712,7 +3791,7 @@ void ShowEntornVGIWindow(bool* p_open)
 		ImGui::Spacing();
 
 		// Pas de color material o color VAO al shader
-		glUniform1i(glGetUniformLocation(shader_programID, "sw_material"), sw_material[4]);
+		glUniform1i(glcache::UniformLocation(shader_programID, "sw_material"), sw_material[4]);
 
 		if (ImGui::BeginTable("split", 2))
 		{	ImGui::TableNextColumn(); ImGui::Checkbox("Emissio? (<Ctrl>+F6)", &sw_material[0]);
@@ -3743,7 +3822,7 @@ void ShowEntornVGIWindow(bool* p_open)
 
 		ImGui::Spacing();
 		ImGui::Checkbox("Flag_Invert_Y? (<Ctrl>+K)", &tFlag_invert_Y);
-		if (tFlag_invert_Y && shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+		if (tFlag_invert_Y && shader_programID) glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 	}
 
 // DESPLEGABLE LLUMS
@@ -3930,8 +4009,8 @@ void OnArxiuObrirFitxerObj()
 		int error = ObOBJ->LoadModel(nomFitxer);			// Carregar objecte OBJ amb textura com a varis VAO's
 
 		//	Pas de paràmetres textura al shader
-		glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
-		glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+		glUniform1i(glcache::UniformLocation(shader_programID, "textur"), textura);
+		glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 		free(nomFitxer);
 	}
 }
@@ -4982,7 +5061,7 @@ void OnIluminacioPlana()
 	if (ilumina != PLANA) 
 		{	ilumina = PLANA;	shader = FLAT_SHADER; oIlumina = 2;
 			// Elimina shader anterior
-			shaderLighting.DeleteProgram();
+			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
 			// Càrrega Flat shader
 			shader_programID = shaderLighting.loadFileShaders("./shaders/flat_shdrML.vert", "./shaders/flat_shdrML.frag");
 		}
@@ -4997,7 +5076,7 @@ void OnIluminacioSuau()
 	if (ilumina != SUAU) 
 		{	ilumina = SUAU;		shader = GOURAUD_SHADER;
 			// Elimina shader anterior
-			shaderLighting.DeleteProgram();
+			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
 			// Càrrega Flat shader
 			shader_programID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
 		}
@@ -5011,7 +5090,7 @@ void OnMaterialReflmaterial()
 	sw_material[4] = !sw_material[4];	sw_il = true;
 
 	// Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_material"), sw_material[4]);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_material"), sw_material[4]);
 }
 
 
@@ -5066,7 +5145,7 @@ void OnIluminacioTextures()
 	textura = !textura;
 
 //	Pas de textura al shader
-	glUniform1i(glGetUniformLocation(shader_programID, "texture"), textura);
+	glUniform1i(glcache::UniformLocation(shader_programID, "texture"), textura);
 }
 
 
@@ -5099,8 +5178,8 @@ void OnIluminacioTexturaFitxerimatge()
 			texturesID[0] = loadIMA_SOIL(nomFitxer);
 
 			//	Pas de textura al shader
-			glUniform1i(glGetUniformLocation(shader_programID, "texture0"), GLint(0));
-			glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+			glUniform1i(glcache::UniformLocation(shader_programID, "texture0"), GLint(0));
+			glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 			free(nomFitxer);
 		}
 }
@@ -5114,7 +5193,7 @@ void OnIluminacioTexturaFlagInvertY()
 	if (textura) tFlag_invert_Y = !tFlag_invert_Y;
 
 //	Pas de paràmetres textura al shader
-	glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+	glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -5140,7 +5219,7 @@ void OnLlumsLlum0()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[0]"), llumGL[0].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[0]"), llumGL[0].encesa);
 }
 
 
@@ -5152,7 +5231,7 @@ void OnLlumsLlum1()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[1]"), llumGL[1].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[1]"), llumGL[1].encesa);
 }
 
 
@@ -5164,7 +5243,7 @@ void OnLlumsLlum2()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[2]"), llumGL[2].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[2]"), llumGL[2].encesa);
 }
 
 
@@ -5176,7 +5255,7 @@ void OnLlumsLlum3()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[3]"), llumGL[3].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[3]"), llumGL[3].encesa);
 }
 
 
@@ -5188,7 +5267,7 @@ void OnLlumsLlum4()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[4]"), llumGL[4].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[4]"), llumGL[4].encesa);
 }
 
 // LLUMS-->ON/OFF: Activació /Desactivació llum 5 (GL_LIGHT5)
@@ -5199,7 +5278,7 @@ void OnLlumsLlum5()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[5]"), llumGL[5].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[5]"), llumGL[5].encesa);
 }
 
 // LLUMS-->ON/OFF: Activació /Desactivació llum 6 (GL_LIGHT6)
@@ -5210,7 +5289,7 @@ void OnLlumsLlum6()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[6]"), llumGL[6].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[6]"), llumGL[6].encesa);
 }
 
 // LLUMS-->ON/OFF: Activació /Desactivació llum 7 (GL_LIGHT7)
@@ -5221,7 +5300,7 @@ void OnLlumsLlum7()
 	sw_il = true;
 
 // Pas màscara llums
-	glUniform1i(glGetUniformLocation(shader_programID, "sw_lights[7]"), llumGL[7].encesa);
+	glUniform1i(glcache::UniformLocation(shader_programID, "sw_lights[7]"), llumGL[7].encesa);
 }
 
 /* ------------------------------------------------------------------------- */
@@ -5241,7 +5320,7 @@ void OnShaderFlat()
 	fprintf(stderr, "Flat Shader: \n");
 
 // Elimina shader anterior
-	shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Flat shader
 	newShaderID = shaderLighting.loadFileShaders("./shaders/flat_shdrML.vert", "./shaders/flat_shdrML.frag");
 
@@ -5266,7 +5345,7 @@ void OnShaderGouraud()
 	fprintf(stderr, "Gouraud Shader: \n");
 
 // Elimina shader anterior
-	shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Gouraud shader 
 	newShaderID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
 
@@ -5292,7 +5371,7 @@ void OnShaderPhong()
 	fprintf(stderr, "Phong Shader: \n");
 
 // Elimina shader anterior
-	shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Phong Shader
 	newShaderID = shaderLighting.loadFileShaders("./shaders/phong_shdrML.vert", "./shaders/phong_shdrML.frag");
 
@@ -5351,7 +5430,7 @@ void OnShaderLoadFiles()
 
 // Entorn VGI: Carrega dels shaders
 // Elimina shader anterior
-	shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 	newShaderID = shaderLighting.loadFileShaders(nomVertS, nomFragS);
 
 // Càrrega shaders dels fitxers
@@ -5490,6 +5569,7 @@ void OnShaderPBinaryRead()
 			}
 		else {
 			//shaderLighting.DeleteProgram();	// Eliminar shader anterior
+			glcache::InvalidateAll(); oclusoresPhongInvalidos = true;
 			shader_programID = shader_BinProgramID; // Assignar nou Binary Program com l'actual.
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glUseProgram(shader_programID);			// Activa shader llegit.
@@ -5732,8 +5812,8 @@ void Teclat_Shift(int key, GLFWwindow* window)
 			int error = ObOBJ->LoadModel(nomFitxer);			// Carregar objecte OBJ amb textura com a varis VAO's
 
 			//	Pas de paràmetres textura al shader
-			if (shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "textur"), textura);
-			if (shader_programID) glUniform1i(glGetUniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
+			if (shader_programID) glUniform1i(glcache::UniformLocation(shader_programID, "textur"), textura);
+			if (shader_programID) glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
 			free(nomFitxer);
 			}
 	*/
@@ -8476,6 +8556,8 @@ int main(int argc, char** argv)
 		now = glfwGetTime();
 		delta = now - previous;
 		previous = now;
+		renderMetrics::AddFrame(delta * 1000.0);
+		renderMetrics::BeginRender();
 
 		// Entorn VGI. Timer: for each timer do this
 		time -= delta;
@@ -8521,7 +8603,9 @@ int main(int argc, char** argv)
 			const bool animacionPausada = editorEscenas.Activo() || fpsPausado ||
 				(!ventanaConFoco && !gestorOpenXR.SesionEnMarcha());
 			actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
+			const auto inicioAnimacion = std::chrono::steady_clock::now();
 			glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
+			if (renderMetrics::enabled) renderMetrics::animacionMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioAnimacion).count();
 			gestorOpenXR.ProcesarEventos();
 
 			if (gestorOpenXR.SesionEnMarcha() && entradaFPSActiva())
@@ -8541,7 +8625,9 @@ int main(int argc, char** argv)
 			escenaFisica->SincronizarCinematicos(objetosAnimados);
 			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
 			mundoFisico.FijarPausa(animacionPausada);
+			const auto inicioFisica = std::chrono::steady_clock::now();
 			mundoFisico.Actualizar(static_cast<float>(delta));
+			if (renderMetrics::enabled) renderMetrics::fisicaMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioFisica).count();
 			sincronizarJugadorYCamara();
 			actualizarBalanceoVisual(static_cast<float>(delta));
 		}
@@ -8551,7 +8637,9 @@ int main(int argc, char** argv)
 
 		// La linterna se ancla durante el dibujo, una vez calculada la ViewMatrix actual.
 		if (estadoActual != ESTADO_JUGANDO) llumGL[3].encesa = false;
+		const auto inicioLuces = std::chrono::steady_clock::now();
 		actualizarLucesDeEscena();
+		if (renderMetrics::enabled) renderMetrics::lucesMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioLuces).count();
 
 		draw_Menu_ImGui();
 		if (editorEscenas.ConsumeReconstruirFisicaRequest())
@@ -8733,6 +8821,8 @@ int main(int argc, char** argv)
 	}
 
 	// Delete GPU programs while the OpenGL context that created them is current.
+	glcache::InvalidateAll(); oclusoresPhongInvalidos = true;
+	if (consultasGpu[0] != 0) glDeleteQueries(3, consultasGpu);
 	if (shaderLighting.getProgramID() != -1) shaderLighting.DeleteProgram();
 	if (shaderSkyBox.getProgramID() != -1) shaderSkyBox.DeleteProgram();
 	if (shaderEixos.getProgramID() != -1) shaderEixos.DeleteProgram();

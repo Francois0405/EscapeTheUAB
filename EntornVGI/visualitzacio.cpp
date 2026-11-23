@@ -14,6 +14,7 @@
 //
 
 #include "framework.h"
+#include "RenderMetrics.h"
 
 // Entorn V3D. QUATERNIONS: Include per a la definici� del tipus GL_QUAT i crida a les funcions de quatern.
 #include "quatern.h"
@@ -679,7 +680,7 @@ GLuint deixos()
 	GLuint vaoId = 0;	// VAO Index
 	GLuint vboId = 0;	// VBO Index
 
-// vertex coords array for glDrawArrays() =====================================
+// vertex coords array for renderMetrics::DrawArrays() =====================================
 // The World Coordinates Axes (WCA) are 3 lines, one over X axis (red), one over Y axis (green), one over Z axis(blue),
 // the WCA cube consists of 6 vertices (3 axes * 4 vertices = 6 vertices). And, each
 // vertex is 3 components (x,y,z) of doubles, therefore, the size of vertex
@@ -758,7 +759,7 @@ void draw_Eixos(GLuint vaoId)
 //	glLineWidth(2.0);
 
 	glBindVertexArray(vaoId);
-	glDrawArrays(GL_LINES, 0, 6);
+	renderMetrics::DrawArrays(GL_LINES, 0, 6);
 	glBindVertexArray(0);
 
 // Restaurar el gruix de la linia dels eixos

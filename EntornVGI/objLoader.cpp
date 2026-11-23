@@ -13,6 +13,9 @@
 
 #include "framework.h"
 #include "objLoader.h"
+#include "UniformCache.h"
+#include "RenderMetrics.h"
+#include <algorithm>
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
@@ -145,6 +148,7 @@ _stdcall COBJModel::COBJModel()
 {
 // Inicialitzar la llista de VAO's.
 	initVAOList_OBJ();
+	hasBounds = false;
 }
 
 _stdcall COBJModel::~COBJModel()
@@ -264,6 +268,12 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 				&pVertices[CurrentIndex.iVertexCount].fZ);
 			if (nScanReturn != 3)
 				return failLoad(EINVAL);
+			const Vector3D& vertex = pVertices[CurrentIndex.iVertexCount];
+			if (!hasBounds) { boundsMin = boundsMax = vertex; hasBounds = true; }
+			else {
+				boundsMin.fX = std::min(boundsMin.fX, vertex.fX); boundsMin.fY = std::min(boundsMin.fY, vertex.fY); boundsMin.fZ = std::min(boundsMin.fZ, vertex.fZ);
+				boundsMax.fX = std::max(boundsMax.fX, vertex.fX); boundsMax.fY = std::max(boundsMax.fY, vertex.fY); boundsMax.fZ = std::max(boundsMax.fZ, vertex.fZ);
+			}
 			// Next vertex
 			CurrentIndex.iVertexCount++;
 		}
@@ -1134,31 +1144,31 @@ void _stdcall COBJModel::UseMaterial_ShaderID(GLuint sh_programID, Material pMat
 		// diffuse/specular values and appeared incorrectly tinted or shiny.
 		const bool emissive = pMaterial.fEmmissive[0] > 0.0f ||
 			pMaterial.fEmmissive[1] > 0.0f || pMaterial.fEmmissive[2] > 0.0f;
-		glUniform4f(glGetUniformLocation(sh_programID, "material.emission"),
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.emission"),
 			pMaterial.fEmmissive[0], pMaterial.fEmmissive[1], pMaterial.fEmmissive[2], 1.0f);
-		glUniform1i(glGetUniformLocation(sh_programID, "uMaterialEmission"), emissive ? GL_TRUE : GL_FALSE);
+		glUniform1i(glcache::UniformLocation(sh_programID, "uMaterialEmission"), emissive ? GL_TRUE : GL_FALSE);
 
 		color[0] = pMaterial.fAmbient[0]; color[1] = pMaterial.fAmbient[1]; color[2] = pMaterial.fAmbient[2];
-		glUniform4f(glGetUniformLocation(sh_programID, "material.ambient"), color[0], color[1], color[2], color[3]);
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.ambient"), color[0], color[1], color[2], color[3]);
 		color[0] = pMaterial.fDiffuse[0]; color[1] = pMaterial.fDiffuse[1]; color[2] = pMaterial.fDiffuse[2];
-		glUniform4f(glGetUniformLocation(sh_programID, "material.diffuse"), color[0], color[1], color[2], color[3]);
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.diffuse"), color[0], color[1], color[2], color[3]);
 		color[0] = pMaterial.fSpecular[0]; color[1] = pMaterial.fSpecular[1]; color[2] = pMaterial.fSpecular[2];
-		glUniform4f(glGetUniformLocation(sh_programID, "material.specular"), color[0], color[1], color[2], color[3]);
-		glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), pMaterial.fShininess);
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.specular"), color[0], color[1], color[2], color[3]);
+		glUniform1f(glcache::UniformLocation(sh_programID, "material.shininess"), pMaterial.fShininess);
 
 		if (pMaterial.iTextureID)
 		{
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, pMaterial.iTextureID);
-			glUniform1i(glGetUniformLocation(sh_programID, "texture0"), GLint(0));
-			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_TRUE);
+			glUniform1i(glcache::UniformLocation(sh_programID, "texture0"), GLint(0));
+			glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_TRUE);
 		}
-		else glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
+		else glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_FALSE);
 	}
 	else
 	{
-		glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
-		glUniform1i(glGetUniformLocation(sh_programID, "uMaterialEmission"), GL_FALSE);
+		glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_FALSE);
+		glUniform1i(glcache::UniformLocation(sh_programID, "uMaterialEmission"), GL_FALSE);
 	}
 }
 
@@ -1571,7 +1581,7 @@ void _stdcall COBJModel::draw_TriVAO_Object_OBJ(GLint k)
 	if (VAOList_OBJ[k].vaoId != 0) {
 		glBindVertexArray(VAOList_OBJ[k].vaoId);
 		//glBindBuffer(GL_ARRAY_BUFFER, vboId);
-		glDrawArrays(GL_TRIANGLES, 0, VAOList_OBJ[k].nVertexs);
+		renderMetrics::DrawArrays(GL_TRIANGLES, 0, VAOList_OBJ[k].nVertexs);
 		glBindVertexArray(0);
 	}
 }
@@ -1587,16 +1597,16 @@ void _stdcall COBJModel::draw_TriVAO_OBJ(GLuint sh_programID)
 		if (materialIndex >= 0 && static_cast<unsigned int>(materialIndex) < materialCount)
 			UseMaterial_ShaderID(sh_programID, vMaterials[materialIndex]);
 		else
-			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
+			glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_FALSE);
 		if (instanceTextureOverride != 0)
 		{
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, instanceTextureOverride);
-			glUniform1i(glGetUniformLocation(sh_programID, "texture0"), 0);
-			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_TRUE);
+			glUniform1i(glcache::UniformLocation(sh_programID, "texture0"), 0);
+			glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_TRUE);
 		}
 		if (instanceShininessOverride >= 0.0f)
-			glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), instanceShininessOverride);
+			glUniform1f(glcache::UniformLocation(sh_programID, "material.shininess"), instanceShininessOverride);
 		draw_TriVAO_Object_OBJ(i);
 	}
 }

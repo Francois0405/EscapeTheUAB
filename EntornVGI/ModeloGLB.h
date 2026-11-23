@@ -38,6 +38,9 @@ namespace glb
 		std::vector<glm::vec3> normales;
 		std::vector<unsigned int> indices;   // de tres en tres: un triángulo
 		glm::vec4 colorBase = glm::vec4(1.0f);
+		glm::vec3 boundsMin = glm::vec3(0.0f);
+		glm::vec3 boundsMax = glm::vec3(0.0f);
+		bool tieneBounds = false;
 
 		// Identificadores de OpenGL. Los rellena DibujoGLB; 0 significa "aún no subido".
 		unsigned int vao = 0;
