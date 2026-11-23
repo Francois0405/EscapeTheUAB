@@ -25,7 +25,7 @@ namespace editor
 
 	inline bool Iguales(const SceneFisica& a, const SceneFisica& b)
 	{
-		return a.presente == b.presente && a.tipo == b.tipo && a.mitadTamano == b.mitadTamano &&
+		return a.presente == b.presente && a.tipo == b.tipo && a.forma == b.forma && a.mitadTamano == b.mitadTamano &&
 			a.desplazamiento == b.desplazamiento && a.masa == b.masa;
 	}
 

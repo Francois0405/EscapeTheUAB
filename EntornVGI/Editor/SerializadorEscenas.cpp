@@ -342,11 +342,13 @@ namespace editor
 				if (objeto.fisica.presente)
 				{
 					json fisica = {
-						{"type", objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico ? "dynamic" : "static"},
+						{"type", objeto.fisica.tipo == fisica::TipoCuerpo::Rebotador ? "bouncy" :
+							(objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico ? "dynamic" : "static")},
 						{"halfSize", VectorJSON(objeto.fisica.mitadTamano)},
 						{"offset", VectorJSON(objeto.fisica.desplazamiento)}
 					};
-					if (objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico) fisica["mass"] = objeto.fisica.masa;
+					if (objeto.fisica.forma == fisica::FormaCuerpo::Esfera) fisica["shape"] = "sphere";
+					if (fisica::EsCuerpoDinamico(objeto.fisica.tipo)) fisica["mass"] = objeto.fisica.masa;
 					nueva["physics"] = std::move(fisica);
 				}
 				documento["objects"].push_back(std::move(nueva));

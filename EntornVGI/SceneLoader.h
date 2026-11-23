@@ -15,8 +15,9 @@
 struct SceneFisica
 {
     bool presente = false;                                  // false = el objeto no tiene físicas
-    fisica::TipoCuerpo tipo = fisica::TipoCuerpo::Estatico; // "static" o "dynamic"
-    glm::vec3 mitadTamano = glm::vec3(0.5f);                // "halfSize": medias dimensiones de la caja
+    fisica::TipoCuerpo tipo = fisica::TipoCuerpo::Estatico; // static, dynamic o bouncy
+    fisica::FormaCuerpo forma = fisica::FormaCuerpo::Caja;
+    glm::vec3 mitadTamano = glm::vec3(0.5f);                // "halfSize": medias dimensiones; radio para esfera
     glm::vec3 desplazamiento = glm::vec3(0.0f);             // "offset": centro de la caja respecto al origen del modelo
     float masa = 0.0f;                                      // "mass" en kg (solo dinámicos)
 };

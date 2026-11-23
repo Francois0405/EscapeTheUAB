@@ -203,6 +203,18 @@ int main()
     comprobar(CargarDatosEscenaJSON(temp / "fisica-estatica.json", datos, error) &&
         datos.objetos[0].fisica.tipo == fisica::TipoCuerpo::Estatico && datos.objetos[0].fisica.desplazamiento == glm::vec3(0.0f),
         "physics estatico: offset opcional vale 0");
+    escribir(temp / "fisica-rebotador.json", conFisica(
+        "{\"type\":\"bouncy\",\"shape\":\"sphere\",\"halfSize\":[1,1,1],\"mass\":0.25}"));
+    comprobar(CargarDatosEscenaJSON(temp / "fisica-rebotador.json", datos, error) &&
+        datos.objetos[0].fisica.tipo == fisica::TipoCuerpo::Rebotador &&
+        datos.objetos[0].fisica.forma == fisica::FormaCuerpo::Esfera &&
+        datos.objetos[0].fisica.masa == 0.25f,
+        "physics bouncy carga como esfera dinamica con masa");
+    escribir(temp / "fisica-rebotador-caja.json", conFisica(
+        "{\"type\":\"bouncy\",\"shape\":\"box\",\"halfSize\":[1,1,1],\"mass\":0.25}"));
+    comprobar(!CargarDatosEscenaJSON(temp / "fisica-rebotador-caja.json", datos, error) &&
+        error.find("sphere") != std::string::npos,
+        "physics bouncy rechaza una forma que no sea esfera");
 
     // 3) Fisica incorrecta: error comprensible que dice QUE campo falla.
     const auto contiene = [](const std::string& texto, const char* trozo) { return texto.find(trozo) != std::string::npos; };
@@ -296,6 +308,13 @@ int main()
         for (const SceneObject& item : laboratorio.objetos) if (item.id == id) return &item;
         return nullptr;
     };
+    const SceneObject* hiriti = dinamico("hiriti");
+    comprobar(hiriti && hiriti->modelo == "../models/Hiriti.obj" &&
+        hiriti->posicion == glm::vec3(-5.5f, -5.65f, -3.0f) &&
+        hiriti->fisica.tipo == fisica::TipoCuerpo::Rebotador &&
+        hiriti->fisica.forma == fisica::FormaCuerpo::Esfera &&
+        hiriti->fisica.desplazamiento == glm::vec3(0.0f, 0.0f, 0.75f),
+        "Hiriti tiene esfera rebotadora en el punto de apoyo solicitado");
     const SceneObject* frasco = dinamico("frasco_muestras_sur");
     const SceneObject* vaso = dinamico("vaso_investigacion_norte");
     const SceneObject* escritorio = dinamico("mesa_control_sur");

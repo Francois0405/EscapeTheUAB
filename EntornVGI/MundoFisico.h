@@ -37,7 +37,14 @@ namespace fisica
 	//   Dinamico   : masa > 0, lo mueven la gravedad y las colisiones.
 	//   Cinematico : lo movemos NOSOTROS cada fotograma (p. ej. la hoja de una puerta animada);
 	//                empuja a los dinámicos pero nada le empuja a él.
-	enum class TipoCuerpo { Estatico, Dinamico, Cinematico };
+	enum class TipoCuerpo { Estatico, Dinamico, Cinematico, Rebotador };
+
+	constexpr bool EsCuerpoDinamico(TipoCuerpo tipo)
+	{
+		return tipo == TipoCuerpo::Dinamico || tipo == TipoCuerpo::Rebotador;
+	}
+
+	enum class FormaCuerpo { Caja, Esfera };
 
 	// Posición y orientación de un cuerpo en coordenadas del motor.
 	struct PoseCuerpo
@@ -99,6 +106,8 @@ namespace fisica
 		// en los dinámicos. Devuelve CuerpoInvalido si los datos no son válidos.
 		IdCuerpo CrearCaja(TipoCuerpo tipo, const glm::vec3& centro, const glm::quat& rotacion,
 			const glm::vec3& mitadTamano, float masaKg);
+		IdCuerpo CrearEsfera(TipoCuerpo tipo, const glm::vec3& centro, float radio, float masaKg);
+		bool AplicarImpulso(IdCuerpo id, const glm::vec3& impulso);
 
 		// Mueve un cuerpo cinemático a una pose nueva (llamar antes de Actualizar).
 		void MoverCinematico(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion);
@@ -195,6 +204,9 @@ namespace fisica
 
 	private:
 		void ImpulsarCuerpoSujeto();   // un "tirón" de la mano antes de cada paso fijo
+		void EmpujarRebotadores();
+		IdCuerpo CrearForma(TipoCuerpo tipo, const glm::vec3& centro, const glm::quat& rotacion,
+			const glm::vec3& mitadTamano, float masaKg, FormaCuerpo forma);
 
 		// El "pimpl" evita incluir las cabeceras de Bullet en todo el proyecto.
 		struct Impl;

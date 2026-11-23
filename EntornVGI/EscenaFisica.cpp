@@ -113,12 +113,15 @@ namespace fisica
 			const glm::vec3 centro = objeto.posicion + glm::vec3(giro * glm::vec4(desplazamiento, 0.0f));
 			const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
 
-			const IdCuerpo id = mundo.CrearCaja(objeto.fisica.tipo, centro, glm::quat_cast(glm::mat3(giro)),
-				mitad, objeto.fisica.masa);
+			const IdCuerpo id = objeto.fisica.forma == FormaCuerpo::Esfera
+				? mundo.CrearEsfera(objeto.fisica.tipo, centro,
+					std::max({ mitad.x, mitad.y, mitad.z }), objeto.fisica.masa)
+				: mundo.CrearCaja(objeto.fisica.tipo, centro, glm::quat_cast(glm::mat3(giro)),
+					mitad, objeto.fisica.masa);
 			if (id == CuerpoInvalido)
 				return fallar("no se pudo crear la caja fisica de '" + objeto.id + "' (tamano o masa no validos)");
 			todos.push_back(id);
-			if (objeto.fisica.tipo == TipoCuerpo::Dinamico)
+			if (EsCuerpoDinamico(objeto.fisica.tipo))
 				dinamicos.push_back({ i, id, desplazamiento, objeto.escala });
 		}
 
@@ -152,6 +155,25 @@ namespace fisica
 		}
 		error.clear();
 		return true;
+	}
+
+	bool EscenaFisica::ImpulsarObjetoDinamico(int indiceObjeto, const glm::vec3& impulso)
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto)
+				return mundo.AplicarImpulso(dinamico.cuerpo, impulso);
+		return false;
+	}
+
+	bool EscenaFisica::PosicionObjetoDinamico(int indiceObjeto, glm::vec3& posicion) const
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto)
+			{
+				posicion = mundo.PoseDe(dinamico.cuerpo).posicion;
+				return true;
+			}
+		return false;
 	}
 
 	void EscenaFisica::SincronizarCinematicos(const glb::EscenaAnimada& animados)

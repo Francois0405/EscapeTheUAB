@@ -250,3 +250,16 @@ add_executable(MovimientoFPSTests
 target_include_directories(MovimientoFPSTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
 target_compile_features(MovimientoFPSTests PRIVATE cxx_std_20)
 add_test(NAME MovimientoFPSTests COMMAND MovimientoFPSTests)
+
+# Descubrimiento por mirada y animacion de Hiriti (sin ventana ni fisica).
+add_executable(AnimacionHiritiTests
+	AnimacionHiritiTests.cpp
+)
+target_include_directories(AnimacionHiritiTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_compile_features(AnimacionHiritiTests PRIVATE cxx_std_20)
+if(TARGET glm::glm)
+	target_link_libraries(AnimacionHiritiTests PRIVATE glm::glm)
+else()
+	target_link_libraries(AnimacionHiritiTests PRIVATE glm)
+endif()
+add_test(NAME AnimacionHiritiTests COMMAND AnimacionHiritiTests)

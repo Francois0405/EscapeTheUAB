@@ -8,6 +8,7 @@
 //   5. Colisión con el suelo y reposo (demo del cubo) y reinicio.
 // -----------------------------------------------------------------------------
 #include "EscenaFisica.h"
+#include "AnimacionHiriti.h"
 #include "MundoFisico.h"
 #include "SceneLoader.h"
 #include "VistaEstereo.h"
@@ -1278,6 +1279,36 @@ namespace
 		comprobar(!otro.SujetarCuerpo(estatico) && !otro.SujetarCuerpo(CuerpoInvalido), "no se puede sujetar un estatico ni un id invalido");
 		(void)ojos2;
 	}
+
+	void PruebaRebotadorYEmpujeDelJugador()
+	{
+		MundoFisico mundo;
+		mundo.CrearCajaEstatica({ 0.0f, 0.0f, -0.15f }, { 3.0f, 3.0f, 0.15f });
+		const IdCuerpo esfera = mundo.CrearEsfera(TipoCuerpo::Rebotador, { 0.0f, 0.0f, 0.2f }, 0.2f, 0.25f);
+		comprobar(esfera != CuerpoInvalido, "se crea la esfera rebotadora");
+		mundo.AplicarImpulso(esfera, { 0.0f, 0.0f, 0.75f });
+		int botes = 0;
+		float velocidadZAnterior = mundo.VelocidadDe(esfera).z;
+		Simular(6.0f, MundoFisico::PasoFijo, [&](float delta) {
+			mundo.Actualizar(delta);
+			const float velocidadZ = mundo.VelocidadDe(esfera).z;
+			if (velocidadZAnterior < -0.1f && velocidadZ > 0.1f) ++botes;
+			velocidadZAnterior = velocidadZ;
+		});
+		comprobar(botes >= juego::AnimacionHiriti::NumeroBotes,
+			"Hiriti conserva siete botes perceptibles con restitucion alta");
+
+		MundoFisico mundoConJugador;
+		mundoConJugador.CrearCajaEstatica({ 0.0f, 0.0f, -0.15f }, { 3.0f, 3.0f, 0.15f });
+		const IdCuerpo empujable = mundoConJugador.CrearEsfera(
+			TipoCuerpo::Rebotador, { 0.0f, 0.0f, 0.2f }, 0.2f, 0.25f);
+		comprobar(mundoConJugador.CrearJugador({ -0.8f, 0.0f, 0.0f }),
+			"se crea el jugador para probar el empuje");
+		mundoConJugador.FijarVelocidadJugador({ 2.0f, 0.0f, 0.0f });
+		Simular(0.8f, MundoFisico::PasoFijo, [&](float delta) { mundoConJugador.Actualizar(delta); });
+		comprobar(mundoConJugador.PoseDe(empujable).posicion.x > 0.1f,
+			"caminar hacia Hiriti lo empuja y lo desplaza");
+	}
 }
 
 int main()
@@ -1317,6 +1348,7 @@ int main()
 	PruebaAgarreContraPared();
 	PruebaSeleccionInteraccionConObstruccion();
 	PruebaCambioDeHabitacionConObjetoAgarrado();
+	PruebaRebotadorYEmpujeDelJugador();
 
 	if (fallos == 0) std::cout << "PhysicsTests: todas las pruebas pasan\n";
 	else std::cerr << "PhysicsTests: " << fallos << " fallo(s)\n";

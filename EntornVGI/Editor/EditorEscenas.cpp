@@ -1348,24 +1348,29 @@ namespace editor
 				}
 				ImGui::Separator();
 				ImGui::TextUnformatted("Physics");
-				int tipo = !objeto.fisica.presente ? 0 : (objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico ? 2 : 1);
+				int tipo = !objeto.fisica.presente ? 0 :
+					(objeto.fisica.tipo == fisica::TipoCuerpo::Rebotador ? 3 :
+						(objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico ? 2 : 1));
 				const int tipoAnterior = tipo;
-				const char* tipos[] = { "None", "Static box", "Dynamic box" };
-				if (ImGui::Combo("Collider", &tipo, tipos, 3) && tipo != tipoAnterior)
+				const char* tipos[] = { "None", "Static box", "Dynamic box", "Bouncy sphere" };
+				if (ImGui::Combo("Collider", &tipo, tipos, 4) && tipo != tipoAnterior)
 				{
 					historial.Registrar(Capturar(contexto));
 					hayRespaldo = false;
 					objeto.fisica.presente = tipo != 0;
 					if (tipo != 0)
 					{
+						objeto.fisica.forma = tipo == 3 ? fisica::FormaCuerpo::Esfera : fisica::FormaCuerpo::Caja;
 						if (tipoAnterior == 0)
 						{	// medidas iniciales a partir de los límites del modelo
 							const CajaLocal caja = CajaDeObjeto(objeto);
 							objeto.fisica.mitadTamano = caja.MitadTamano();
 							objeto.fisica.desplazamiento = caja.Centro();
 						}
-						objeto.fisica.tipo = tipo == 2 ? fisica::TipoCuerpo::Dinamico : fisica::TipoCuerpo::Estatico;
-						if (tipo == 2 && objeto.fisica.masa <= 0.0f) objeto.fisica.masa = 5.0f;
+						objeto.fisica.tipo = tipo == 3 ? fisica::TipoCuerpo::Rebotador :
+							(tipo == 2 ? fisica::TipoCuerpo::Dinamico : fisica::TipoCuerpo::Estatico);
+						if ((tipo == 2 || tipo == 3) && objeto.fisica.masa <= 0.0f)
+							objeto.fisica.masa = 0.25f;
 					}
 					MarcarModificada();
 				}
@@ -1379,7 +1384,7 @@ namespace editor
 					}
 					if (ImGui::InputFloat3("Offset", &objeto.fisica.desplazamiento.x, "%.3f"))
 					{ AbrirTransaccionSiHaceFalta(); MarcarModificada(); }
-					if (objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico &&
+					if (fisica::EsCuerpoDinamico(objeto.fisica.tipo) &&
 						ImGui::InputFloat("Mass (kg)", &objeto.fisica.masa, 0.5f, 5.0f, "%.2f"))
 					{
 						if (!(objeto.fisica.masa > 0.0f)) objeto.fisica.masa = 0.1f;

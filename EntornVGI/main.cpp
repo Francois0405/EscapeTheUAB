@@ -28,6 +28,7 @@
 #include "VistaEstereo.h"
 #include "OpenXRManager.h"
 #include "MovimientoFPS.h"
+#include "AnimacionHiriti.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include <iostream>
@@ -175,6 +176,12 @@ namespace
 	double mouseDeltaY = 0.0;
 	float tiempoFPS = 0.0f;
 	float deltaFPS = 0.0f;
+	juego::AnimacionHiriti animacionHiriti;
+
+	float radioHiriti(const SceneObject& objeto)
+	{
+		return std::max({ std::abs(objeto.escala.x), std::abs(objeto.escala.y), std::abs(objeto.escala.z) });
+	}
 
 	// --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
 	fps::MovimientoJugador movimientoJugador;
@@ -535,6 +542,30 @@ namespace
 		glm::vec3 origen, direccion;
 		origenYDireccionDeLaMirada(origen, direccion);
 		escenaFisica->ActualizarAgarre(origen, direccion);
+	}
+
+	void actualizarHiriti(bool puedeDescubrir)
+	{
+		const auto hiriti = std::find_if(objetosEscena.begin(), objetosEscena.end(),
+			[](const SceneObject& objeto) { return objeto.id == "hiriti"; });
+		if (hiriti == objetosEscena.end())
+		{
+			animacionHiriti.Reiniciar();
+			return;
+		}
+
+		glm::vec3 origen(0.0f), direccion(0.0f);
+		if (puedeDescubrir) origenYDireccionDeLaMirada(origen, direccion);
+		const int indice = static_cast<int>(std::distance(objetosEscena.begin(), hiriti));
+		glm::vec3 centro = hiriti->posicion;
+		escenaFisica->PosicionObjetoDinamico(indice, centro);
+		// La primera mirada emite el evento donde se puede conectar la reproducción de audio.
+		if (animacionHiriti.Actualizar(puedeDescubrir, origen, direccion, centro, radioHiriti(*hiriti)))
+		{
+			if (!escenaFisica->ImpulsarObjetoDinamico(indice, glm::vec3(0.0f, 0.0f, 0.75f)))
+				std::cerr << "No se pudo dar el impulso inicial a Hiriti.\n";
+			std::cout << "Has descubierto a Hiriti.\n";
+		}
 	}
 
 	void liberarObjetosAnimados()
@@ -963,6 +994,7 @@ namespace
 		for (auto& entrada : modelosHabitacion) entrada.second->netejaTextures_OBJ();
 		modelosHabitacion = std::move(nuevosModelos);
 		objetosEscena = std::move(objetosValidos);
+		animacionHiriti.Reiniciar();
 		liberarObjetosAnimados();                      // libera de la GPU los GLB anteriores
 		objetosAnimados = std::move(nuevosAnimados);
 		glb::SubirEscenaAnimadaAGPU(objetosAnimados);  // el contexto OpenGL ya existe en este punto
@@ -1993,7 +2025,6 @@ void dibuixa_Escena() {
 			}
 			if (matrices.empty()) matrices.push_back(editorEscenas.Activo()
 				? fisica::MatrizDeObjeto(obj) : escenaFisica->MatrizVisualDe(static_cast<int>(i), obj));
-
 			const GLuint texturaOverride = texturaDeMaterial(obj.material);
 			const float rugosidad = std::clamp(obj.material.roughness, 0.0f, 1.0f);
 			const float brilloPhong = 4.0f + std::pow(1.0f - rugosidad, 4.0f) * 124.0f;
@@ -8547,6 +8578,8 @@ int main(int argc, char** argv)
 		}
 
 		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
+		actualizarHiriti(estadoActual == ESTADO_JUGANDO &&
+			entradaFPSActiva() && !gestorOpenXR.SesionEnMarcha());
 		actualizarObjetivoInteraccion(estadoActual == ESTADO_JUGANDO);
 
 		// La linterna se ancla durante el dibujo, una vez calculada la ViewMatrix actual.

@@ -54,6 +54,8 @@ namespace fisica
 		// en otra EscenaFisica o llamar a Vaciar() antes.
 		bool Crear(const std::vector<SceneObject>& objetos, const glb::EscenaAnimada& animados,
 			const std::vector<SceneObjetoAnimado>& datosAnimados, std::string& error);
+		bool ImpulsarObjetoDinamico(int indiceObjeto, const glm::vec3& impulso);
+		bool PosicionObjetoDinamico(int indiceObjeto, glm::vec3& posicion) const;
 
 		// Retira del mundo todos los cuerpos de esta escena (y solo los suyos).
 		void Vaciar();

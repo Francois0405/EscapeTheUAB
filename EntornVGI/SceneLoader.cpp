@@ -133,10 +133,11 @@ namespace
             const std::string texto = valor.get<std::string>();
             if (texto == "static") { tipo = fisica::TipoCuerpo::Estatico; return true; }
             if (texto == "dynamic" && !permitirCinematico) { tipo = fisica::TipoCuerpo::Dinamico; return true; }
+            if (texto == "bouncy" && !permitirCinematico) { tipo = fisica::TipoCuerpo::Rebotador; return true; }
             if (texto == "kinematic" && permitirCinematico) { tipo = fisica::TipoCuerpo::Cinematico; return true; }
         }
         error = contexto + ".type debe ser " +
-            (permitirCinematico ? "\"static\" o \"kinematic\"." : "\"static\" o \"dynamic\".");
+            (permitirCinematico ? "\"static\" o \"kinematic\"." : "\"static\", \"dynamic\" o \"bouncy\".");
         return false;
     }
 
@@ -180,18 +181,25 @@ namespace
             return false;
         }
         if (!leerTipo(datos["type"], false, fisica.tipo, ctx, error)) return false;
-        if (datos.contains("shape") && !(datos["shape"].is_string() && datos["shape"] == "box"))
+        if (datos.contains("shape"))
         {
-            error = ctx + ".shape solo admite \"box\" en esta version.";
-            return false;
+            if (!datos["shape"].is_string())
+            { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
+            const std::string forma = datos["shape"].get<std::string>();
+            if (forma == "box") fisica.forma = fisica::FormaCuerpo::Caja;
+            else if (forma == "sphere") fisica.forma = fisica::FormaCuerpo::Esfera;
+            else
+            { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
         }
+        if (fisica.tipo == fisica::TipoCuerpo::Rebotador && fisica.forma != fisica::FormaCuerpo::Esfera)
+        { error = ctx + " de tipo bouncy requiere shape \"sphere\"."; return false; }
         if (!leerCaja(datos, fisica.mitadTamano, fisica.desplazamiento, ctx, error)) return false;
 
-        if (fisica.tipo == fisica::TipoCuerpo::Dinamico)
+        if (fisica::EsCuerpoDinamico(fisica.tipo))
         {
             if (!datos.contains("mass"))
             {
-                error = ctx + " es dynamic y necesita 'mass' (kg).";
+                error = ctx + " es dinámico y necesita 'mass' (kg).";
                 return false;
             }
             if (!leerNumero(datos["mass"], fisica.masa, ctx + ".mass", error)) return false;
@@ -203,7 +211,7 @@ namespace
         }
         else if (datos.contains("mass"))
         {
-            error = ctx + ".mass solo tiene sentido en cuerpos dynamic.";
+            error = ctx + ".mass solo tiene sentido en cuerpos dynamic o bouncy.";
             return false;
         }
         fisica.presente = true;

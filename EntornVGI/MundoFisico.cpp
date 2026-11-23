@@ -4,6 +4,7 @@
 
 #include <btBulletDynamicsCommon.h>
 #include <BulletCollision/CollisionDispatch/btGhostObject.h>
+#include <BulletCollision/CollisionDispatch/btManifoldResult.h>
 #include <BulletDynamics/Character/btKinematicCharacterController.h>
 
 #include <algorithm>
@@ -16,6 +17,20 @@ namespace fisica
 	{
 		btVector3 ABullet(const glm::vec3& v) { return btVector3(v.x, v.y, v.z); }
 		glm::vec3 AGlm(const btVector3& v) { return glm::vec3(v.x(), v.y(), v.z()); }
+		constexpr int IndiceMaterialRebotador = 0x484952;
+
+		bool AjustarContactoRebotador(btManifoldPoint& contacto,
+			const btCollisionObjectWrapper* objetoA, int, int,
+			const btCollisionObjectWrapper* objetoB, int, int)
+		{
+			if (objetoA->getCollisionObject()->getUserIndex() == IndiceMaterialRebotador ||
+				objetoB->getCollisionObject()->getUserIndex() == IndiceMaterialRebotador)
+			{
+				contacto.m_combinedRestitution = 0.82f;
+				contacto.m_combinedFriction = 0.2f;
+			}
+			return true;
+		}
 	}
 
 	// Todo lo que Bullet necesita. El ORDEN de los miembros importa: se destruyen en
@@ -33,11 +48,13 @@ namespace fisica
 		struct Cuerpo
 		{
 			TipoCuerpo tipo = TipoCuerpo::Estatico;
-			std::unique_ptr<btBoxShape> forma;
+			glm::vec3 mitadTamano{ 0.0f };
+			std::unique_ptr<btCollisionShape> forma;
 			std::unique_ptr<btDefaultMotionState> estadoMovimiento;
 			std::unique_ptr<btRigidBody> cuerpo;
 		};
 		std::vector<Cuerpo> cuerpos;
+		glm::vec3 velocidadDeseadaJugador{ 0.0f };
 
 		// Jugador. El "fantasma" (ghost) es un objeto que detecta contactos pero no recibe
 		// fuerzas: el controlador de personaje lo mueve él mismo. Necesita que el broadphase
@@ -55,7 +72,13 @@ namespace fisica
 		IdCuerpo GuardarCuerpo(Cuerpo&& nuevo)
 		{
 			for (std::size_t i = 0; i < cuerpos.size(); ++i)
-				if (!cuerpos[i].cuerpo) { cuerpos[i] = std::move(nuevo); return static_cast<IdCuerpo>(i); }
+				if (!cuerpos[i].cuerpo)
+				{
+					nuevo.cuerpo->setUserIndex2(static_cast<int>(i));
+					cuerpos[i] = std::move(nuevo);
+					return static_cast<IdCuerpo>(i);
+				}
+			nuevo.cuerpo->setUserIndex2(static_cast<int>(cuerpos.size()));
 			cuerpos.push_back(std::move(nuevo));
 			return static_cast<IdCuerpo>(cuerpos.size()) - 1;
 		}
@@ -72,6 +95,7 @@ namespace fisica
 		// Z es vertical en este motor: la gravedad tira hacia -Z (9,81 m/s^2).
 		impl->mundo.setGravity(btVector3(0.0f, 0.0f, -9.81f));
 		impl->broadphase.getOverlappingPairCache()->setInternalGhostPairCallback(&impl->llamadaFantasma);
+		gContactAddedCallback = AjustarContactoRebotador;
 	}
 
 	MundoFisico::~MundoFisico()
@@ -94,6 +118,7 @@ namespace fisica
 		{
 			// maxSubSteps = 0 y fixedTimeStep = PasoFijo => Bullet hace EXACTAMENTE un paso
 			// de 1/60 s. El bucle de acumulación lo controlamos nosotros, no Bullet.
+			EmpujarRebotadores();
 			ImpulsarCuerpoSujeto();   // antes de cada paso: la mano tira del objeto
 			impl->mundo.stepSimulation(PasoFijo, 0, PasoFijo);
 			acumulador -= PasoFijo;
@@ -120,21 +145,80 @@ namespace fisica
 		cuerpo->setAngularVelocity(btVector3(0, 0, 0));      // no gira solo mientras se sujeta
 	}
 
+	void MundoFisico::EmpujarRebotadores()
+	{
+		if (!impl->fantasmaJugador || !impl->controladorJugador) return;
+		glm::vec2 movimiento(impl->velocidadDeseadaJugador.x, impl->velocidadDeseadaJugador.y);
+		const float rapidez = glm::length(movimiento);
+		if (rapidez < 0.1f) return;
+		movimiento /= rapidez;
+
+		const glm::vec3 centroJugador = AGlm(impl->fantasmaJugador->getWorldTransform().getOrigin());
+		for (int i = 0; i < impl->fantasmaJugador->getNumOverlappingObjects(); ++i)
+		{
+			btRigidBody* cuerpo = btRigidBody::upcast(impl->fantasmaJugador->getOverlappingObject(i));
+			if (cuerpo == nullptr || cuerpo->getInvMass() <= 0.0f) continue;
+			const int id = cuerpo->getUserIndex2();
+			if (id < 0 || id >= static_cast<int>(impl->cuerpos.size()) ||
+				impl->cuerpos[static_cast<std::size_t>(id)].tipo != TipoCuerpo::Rebotador ||
+				id == impl->cuerpoSujeto)
+				continue;
+
+			glm::vec2 haciaObjeto(cuerpo->getWorldTransform().getOrigin().x() - centroJugador.x,
+				cuerpo->getWorldTransform().getOrigin().y() - centroJugador.y);
+			const float distancia = glm::length(haciaObjeto);
+			if (distancia < 1.0e-4f) continue;
+			haciaObjeto /= distancia;
+			const float avance = glm::dot(movimiento, haciaObjeto);
+			if (avance < 0.2f) continue;
+
+			const float masa = 1.0f / static_cast<float>(cuerpo->getInvMass());
+			const float magnitudImpulso = masa * std::min(rapidez, 5.0f) * 0.08f * avance;
+			cuerpo->activate(true);
+			cuerpo->applyCentralImpulse(ABullet(glm::vec3(movimiento.x, movimiento.y, 0.0f) * magnitudImpulso));
+
+			btVector3 velocidad = cuerpo->getLinearVelocity();
+			const float rapidezHorizontal = std::sqrt(velocidad.x() * velocidad.x() + velocidad.y() * velocidad.y());
+			if (rapidezHorizontal > 7.0f)
+			{
+				const float escala = 7.0f / rapidezHorizontal;
+				velocidad.setX(velocidad.x() * escala);
+				velocidad.setY(velocidad.y() * escala);
+				cuerpo->setLinearVelocity(velocidad);
+			}
+		}
+	}
+
 	glm::vec3 MundoFisico::Gravedad() const { return AGlm(impl->mundo.getGravity()); }
 
 	IdCuerpo MundoFisico::CrearCaja(TipoCuerpo tipo, const glm::vec3& centro, const glm::quat& rotacion,
 		const glm::vec3& mitadTamano, float masaKg)
 	{
-		// Una caja de lado 0 (o negativo / no finito) no tiene forma: la rechazamos.
+		return CrearForma(tipo, centro, rotacion, mitadTamano, masaKg, FormaCuerpo::Caja);
+	}
+
+	IdCuerpo MundoFisico::CrearEsfera(TipoCuerpo tipo, const glm::vec3& centro, float radio, float masaKg)
+	{
+		return CrearForma(tipo, centro, glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+			glm::vec3(radio), masaKg, FormaCuerpo::Esfera);
+	}
+
+	IdCuerpo MundoFisico::CrearForma(TipoCuerpo tipo, const glm::vec3& centro, const glm::quat& rotacion,
+		const glm::vec3& mitadTamano, float masaKg, FormaCuerpo forma)
+	{
 		const bool tamanoValido = mitadTamano.x > 0.0f && mitadTamano.y > 0.0f && mitadTamano.z > 0.0f &&
 			std::isfinite(mitadTamano.x + mitadTamano.y + mitadTamano.z);
 		if (!tamanoValido) return CuerpoInvalido;
-		if (tipo == TipoCuerpo::Dinamico && !(masaKg > 0.0f)) return CuerpoInvalido;
-		const float masa = (tipo == TipoCuerpo::Dinamico) ? masaKg : 0.0f;   // estático/cinemático: masa 0
+		if (EsCuerpoDinamico(tipo) && !(masaKg > 0.0f)) return CuerpoInvalido;
+		const float masa = EsCuerpoDinamico(tipo) ? masaKg : 0.0f;
 
 		Impl::Cuerpo nuevo;
 		nuevo.tipo = tipo;
-		nuevo.forma = std::make_unique<btBoxShape>(ABullet(mitadTamano));
+		nuevo.mitadTamano = mitadTamano;
+		if (forma == FormaCuerpo::Esfera)
+			nuevo.forma = std::make_unique<btSphereShape>(mitadTamano.x);
+		else
+			nuevo.forma = std::make_unique<btBoxShape>(ABullet(mitadTamano));
 
 		btTransform transformacion;
 		transformacion.setIdentity();
@@ -147,9 +231,17 @@ namespace fisica
 
 		btRigidBody::btRigidBodyConstructionInfo info(masa, nuevo.estadoMovimiento.get(),
 			nuevo.forma.get(), inercia);
-		info.m_friction = 0.8f;
-		info.m_restitution = 0.1f;   // casi sin rebote
+		info.m_friction = tipo == TipoCuerpo::Rebotador ? 0.2f : 0.8f;
+		info.m_restitution = tipo == TipoCuerpo::Rebotador ? 0.82f : 0.1f;
 		nuevo.cuerpo = std::make_unique<btRigidBody>(info);
+		if (tipo == TipoCuerpo::Rebotador)
+		{
+			nuevo.cuerpo->setUserIndex(IndiceMaterialRebotador);
+			nuevo.cuerpo->setCollisionFlags(nuevo.cuerpo->getCollisionFlags() |
+				btCollisionObject::CF_CUSTOM_MATERIAL_CALLBACK);
+			nuevo.cuerpo->setRollingFriction(0.02f);
+			nuevo.cuerpo->setSpinningFriction(0.02f);
+		}
 		if (tipo == TipoCuerpo::Cinematico)
 		{
 			// Bullet no lo simula: lee su pose del "motion state" que le damos nosotros.
@@ -159,6 +251,15 @@ namespace fisica
 
 		impl->mundo.addRigidBody(nuevo.cuerpo.get());
 		return impl->GuardarCuerpo(std::move(nuevo));
+	}
+
+	bool MundoFisico::AplicarImpulso(IdCuerpo id, const glm::vec3& impulso)
+	{
+		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
+		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo)) return false;
+		cuerpo->activate(true);
+		cuerpo->applyCentralImpulse(ABullet(impulso));
+		return true;
 	}
 
 	void MundoFisico::MoverCinematico(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion)
@@ -243,7 +344,7 @@ namespace fisica
 			CajaColision caja;
 			caja.tipo = c.tipo;
 			caja.pose = PoseDe(static_cast<IdCuerpo>(i));
-			caja.mitadTamano = AGlm(c.forma->getHalfExtentsWithMargin());
+			caja.mitadTamano = c.mitadTamano;
 			caja.dormido = EstaDormido(static_cast<IdCuerpo>(i));
 			cajas.push_back(caja);
 		}
@@ -373,6 +474,7 @@ namespace fisica
 	bool MundoFisico::CrearJugador(const glm::vec3& posicionPies)
 	{
 		if (HayJugador()) return false;
+		impl->velocidadDeseadaJugador = glm::vec3(0.0f);
 		alturaJugador = MedidasJugador::Altura;
 		impl->formaJugador = std::make_unique<btCapsuleShapeZ>(MedidasJugador::Radio, AlturaCilindroDePie);
 
@@ -406,6 +508,7 @@ namespace fisica
 	void MundoFisico::EliminarJugador()
 	{
 		if (!HayJugador()) return;
+		impl->velocidadDeseadaJugador = glm::vec3(0.0f);
 		impl->mundo.removeAction(impl->controladorJugador.get());
 		impl->mundo.removeCollisionObject(impl->fantasmaJugador.get());
 		impl->controladorJugador.reset();   // el controlador apunta al fantasma: muere primero
@@ -419,6 +522,7 @@ namespace fisica
 
 	void MundoFisico::FijarVelocidadJugador(const glm::vec3& metrosPorSegundo)
 	{
+		impl->velocidadDeseadaJugador = glm::vec3(metrosPorSegundo.x, metrosPorSegundo.y, 0.0f);
 		if (!HayJugador()) return;
 		// Bullet no quiere una velocidad sino el DESPLAZAMIENTO de cada paso. Como todos los
 		// pasos duran lo mismo (PasoFijo), basta multiplicar: independiente de los FPS.
@@ -473,6 +577,7 @@ namespace fisica
 	void MundoFisico::TeletransportarJugador(const glm::vec3& posicionPies)
 	{
 		if (!HayJugador()) return;
+		impl->velocidadDeseadaJugador = glm::vec3(0.0f);
 		impl->controladorJugador->warp(CentroDesdePies(posicionPies, alturaJugador));
 	}
 
@@ -513,7 +618,7 @@ namespace fisica
 
 	bool MundoFisico::EsDinamico(IdCuerpo id) const
 	{
-		return impl->Buscar(id) != nullptr && impl->cuerpos[id].tipo == TipoCuerpo::Dinamico;
+		return impl->Buscar(id) != nullptr && EsCuerpoDinamico(impl->cuerpos[id].tipo);
 	}
 
 	bool MundoFisico::SujetarCuerpo(IdCuerpo id)
