@@ -1,3 +1,7 @@
+#define STB_VORBIS_HEADER_ONLY
+#include <stb_vorbis.c>
+#undef STB_VORBIS_HEADER_ONLY
+#define STB_VORBIS_INCLUDE_STB_VORBIS_H
 #define MINIAUDIO_IMPLEMENTATION
 #include <vector>
 #include <cstdlib>
@@ -50,10 +54,19 @@ void AudioManager::shutdown() {
 }
 
 void AudioManager::playOneShot(const std::string& filepath, float volume) {
-    if (!m_initialized || !std::filesystem::exists(filepath)) return;
+    if (!m_initialized) {
+        std::cerr << "[AudioManager] No se puede reproducir sin inicializar el motor: " << filepath << "\n";
+        return;
+    }
+    if (!std::filesystem::exists(filepath)) {
+        std::cerr << "[AudioManager] Archivo no encontrado: " << filepath << "\n";
+        return;
+    }
 
-    // ma_engine_play_sound dispara el audio en un hilo secundario sin bloquear el render
-    ma_engine_play_sound(m_engine, filepath.c_str(), NULL);
+    // ma_engine_play_sound dispara el audio en un hilo secundario sin bloquear el render.
+    const ma_result result = ma_engine_play_sound(m_engine, filepath.c_str(), NULL);
+    if (result != MA_SUCCESS)
+        std::cerr << "[AudioManager] Error al reproducir " << filepath << " (codigo " << result << ").\n";
 }
 
 bool AudioManager::loadSound(const std::string& id, const std::string& filepath, bool loop, bool spatial) {

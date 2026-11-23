@@ -28,13 +28,16 @@
 #include "VistaEstereo.h"
 #include "OpenXRManager.h"
 #include "MovimientoFPS.h"
+#include "AudioManager.h"
 #include "AnimacionHiriti.h"
+#include "TemporizadorAmbiente.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include <iostream>
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <random>
 #include <limits>
 
 // CODI NOSTRE
@@ -176,7 +179,9 @@ namespace
 	double mouseDeltaY = 0.0;
 	float tiempoFPS = 0.0f;
 	float deltaFPS = 0.0f;
+	AudioManager audioManager;
 	juego::AnimacionHiriti animacionHiriti;
+	juego::TemporizadorAmbiente temporizadorAmbiente;
 
 	float radioHiriti(const SceneObject& objeto)
 	{
@@ -527,7 +532,12 @@ namespace
 		{
 			glm::vec3 origen, direccion;
 			origenYDireccionDeLaMirada(origen, direccion);
-			escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
+			if (escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion) &&
+				objetivo.indiceDinamico >= 0 &&
+				objetivo.indiceDinamico < static_cast<int>(objetosEscena.size()) &&
+				objetosEscena[objetivo.indiceDinamico].id == "hiriti" &&
+				animacionHiriti.MarcarAgarrado())
+				audioManager.playOneShot("assets/audio/hirity/story/lohashechobien.ogg");
 		}
 		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
 			objetivo.objetoAnimado != nullptr)
@@ -544,7 +554,7 @@ namespace
 		escenaFisica->ActualizarAgarre(origen, direccion);
 	}
 
-	void actualizarHiriti(bool puedeDescubrir)
+	void actualizarHiriti(bool puedeDescubrir, bool puedeProcesarColisiones, float delta)
 	{
 		const auto hiriti = std::find_if(objetosEscena.begin(), objetosEscena.end(),
 			[](const SceneObject& objeto) { return objeto.id == "hiriti"; });
@@ -554,18 +564,46 @@ namespace
 			return;
 		}
 
+		if (puedeDescubrir && animacionHiriti.ActualizarAgarrame(delta))
+			audioManager.playOneShot("assets/audio/hirity/story/agarrame.ogg");
+
 		glm::vec3 origen(0.0f), direccion(0.0f);
 		if (puedeDescubrir) origenYDireccionDeLaMirada(origen, direccion);
 		const int indice = static_cast<int>(std::distance(objetosEscena.begin(), hiriti));
+		const int varianteDanio = animacionHiriti.ActualizarContacto(
+			puedeProcesarColisiones && escenaFisica->HayContactoObjetoDinamico(indice));
+		if (varianteDanio >= 0)
+			audioManager.playOneShot(varianteDanio == 0
+				? "assets/audio/hirity/damage/damagehirity.ogg"
+				: "assets/audio/hirity/damage/damegehiritylong.ogg");
+
 		glm::vec3 centro = hiriti->posicion;
 		escenaFisica->PosicionObjetoDinamico(indice, centro);
-		// La primera mirada emite el evento donde se puede conectar la reproducción de audio.
+		// La primera mirada dispara el saludo y el impulso inicial.
 		if (animacionHiriti.Actualizar(puedeDescubrir, origen, direccion, centro, radioHiriti(*hiriti)))
 		{
+			static std::mt19937 generador(std::random_device{}());
+			static std::uniform_int_distribution<int> probabilidadGallego(1, 5);
+			const char* saludo = probabilidadGallego(generador) == 1
+				? "assets/audio/hirity/story/holahiritygallego.ogg"
+				: "assets/audio/hirity/story/holahirity.ogg";
+			audioManager.playOneShot(saludo);
+
 			if (!escenaFisica->ImpulsarObjetoDinamico(indice, glm::vec3(0.0f, 0.0f, 0.75f)))
 				std::cerr << "No se pudo dar el impulso inicial a Hiriti.\n";
 			std::cout << "Has descubierto a Hiriti.\n";
 		}
+	}
+
+	void actualizarAudioAmbiente(bool activo, float delta)
+	{
+		if (!temporizadorAmbiente.Actualizar(activo, delta)) return;
+
+		static std::mt19937 generador(std::random_device{}());
+		static std::uniform_int_distribution<int> tipoAmbiente(0, 1);
+		audioManager.playOneShot(tipoAmbiente(generador) == 0
+			? "assets/audio/hirity/ambient/cough.ogg"
+			: "assets/audio/hirity/ambient/pasosfuertes.ogg");
 	}
 
 	void liberarObjetosAnimados()
@@ -853,11 +891,15 @@ namespace
 		const float carga = std::clamp(tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f);
 		cancelarCargaLanzamiento();
 		if (!escenaFisica->HayAgarre()) return;
+		const int objetoLanzado = escenaFisica->ObjetoAgarrado();
 
 		glm::vec3 origen, direccion;
 		origenYDireccionDeLaMirada(origen, direccion);
 		const float rapidez = 3.0f + 12.0f * carga;
-		escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez);
+		if (escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez) &&
+			objetoLanzado >= 0 && objetoLanzado < static_cast<int>(objetosEscena.size()) &&
+			objetosEscena[objetoLanzado].id == "hiriti")
+			animacionHiriti.MarcarLanzadoPorJugador();
 	}
 
 	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
@@ -8247,6 +8289,7 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severi
 int main(int argc, char** argv)
 {
 	SetWorkingDirectoryToAssetRoot(argc > 0 ? argv[0] : nullptr);
+	audioManager.init();
 
 // Entorn VGI. Timer: Variables
 	float time = elapsedTime;
@@ -8579,7 +8622,10 @@ int main(int argc, char** argv)
 
 		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
 		actualizarHiriti(estadoActual == ESTADO_JUGANDO &&
-			entradaFPSActiva() && !gestorOpenXR.SesionEnMarcha());
+			entradaFPSActiva() && !gestorOpenXR.SesionEnMarcha(),
+			estadoActual == ESTADO_JUGANDO && !editorEscenas.Activo(), static_cast<float>(delta));
+		actualizarAudioAmbiente(estadoActual == ESTADO_JUGANDO && !editorEscenas.Activo(),
+			static_cast<float>(delta));
 		actualizarObjetivoInteraccion(estadoActual == ESTADO_JUGANDO);
 
 		// La linterna se ancla durante el dibujo, una vez calculada la ViewMatrix actual.

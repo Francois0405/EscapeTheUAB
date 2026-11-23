@@ -314,6 +314,21 @@ namespace fisica
 		return cuerpo ? AGlm(cuerpo->getLinearVelocity()) : glm::vec3(0.0f);
 	}
 
+	bool MundoFisico::HayContacto(IdCuerpo id) const
+	{
+		const btRigidBody* cuerpo = impl->Buscar(id);
+		if (cuerpo == nullptr) return false;
+
+		for (int i = 0; i < impl->despachador.getNumManifolds(); ++i)
+		{
+			const btPersistentManifold* manifold = impl->despachador.getManifoldByIndexInternal(i);
+			if (manifold->getBody0() != cuerpo && manifold->getBody1() != cuerpo) continue;
+			for (int j = 0; j < manifold->getNumContacts(); ++j)
+				if (manifold->getContactPoint(j).getDistance() <= btScalar(0.0)) return true;
+		}
+		return false;
+	}
+
 	bool MundoFisico::EstaDormido(IdCuerpo id) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);

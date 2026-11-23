@@ -127,6 +127,8 @@ namespace fisica
 
 		// Velocidad lineal actual (m/s). Útil para saber si un cuerpo ya está en reposo.
 		glm::vec3 VelocidadDe(IdCuerpo id) const;
+		// True si el cuerpo tiene al menos un punto de contacto activo con otro cuerpo.
+		bool HayContacto(IdCuerpo id) const;
 
 		// True si Bullet ha "dormido" el cuerpo porque lleva un rato quieto.
 		bool EstaDormido(IdCuerpo id) const;

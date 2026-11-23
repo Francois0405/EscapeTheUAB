@@ -56,6 +56,7 @@ namespace fisica
 			const std::vector<SceneObjetoAnimado>& datosAnimados, std::string& error);
 		bool ImpulsarObjetoDinamico(int indiceObjeto, const glm::vec3& impulso);
 		bool PosicionObjetoDinamico(int indiceObjeto, glm::vec3& posicion) const;
+		bool HayContactoObjetoDinamico(int indiceObjeto) const;
 
 		// Retira del mundo todos los cuerpos de esta escena (y solo los suyos).
 		void Vaciar();

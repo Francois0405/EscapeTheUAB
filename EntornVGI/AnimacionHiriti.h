@@ -2,6 +2,7 @@
 #define ENTORNVGI_ANIMACION_HIRITI_H
 
 #include <algorithm>
+#include <cmath>
 #include <glm/glm.hpp>
 
 namespace juego
@@ -11,6 +12,7 @@ namespace juego
 	public:
 		static constexpr int NumeroBotes = 7;
 		static constexpr float AlcanceDescubrimiento = 10.0f;
+		static constexpr float TiempoHastaAgarrame = 5.0f;
 
 		bool Actualizar(bool puedeDescubrir, const glm::vec3& origen,
 			const glm::vec3& direccion, const glm::vec3& centro, float radio)
@@ -18,14 +20,57 @@ namespace juego
 			if (!m_descubierto && puedeDescubrir && EstaMirando(origen, direccion, centro, radio))
 			{
 				m_descubierto = true;
+				m_esperandoAgarrame = true;
+				m_tiempoDesdeDescubrimiento = 0.0f;
 				return true;
 			}
 			return false;
 		}
 
+		bool ActualizarAgarrame(float delta)
+		{
+			if (!m_esperandoAgarrame || !std::isfinite(delta) || delta <= 0.0f) return false;
+
+			m_tiempoDesdeDescubrimiento += delta;
+			if (m_tiempoDesdeDescubrimiento < TiempoHastaAgarrame) return false;
+
+			m_esperandoAgarrame = false;
+			return true;
+		}
+
+		bool MarcarAgarrado()
+		{
+			if (!m_descubierto || m_agarrado) return false;
+			m_agarrado = true;
+			m_esperandoAgarrame = false;
+			return true;
+		}
+
+		void MarcarLanzadoPorJugador()
+		{
+			m_lanzadoPorJugador = true;
+		}
+
+		int ActualizarContacto(bool hayContacto)
+		{
+			const bool nuevoImpacto = m_lanzadoPorJugador && hayContacto && !m_habiaContacto;
+			m_habiaContacto = hayContacto;
+			if (!nuevoImpacto) return -1;
+
+			const int variante = m_siguienteSonidoDanio;
+			m_siguienteSonidoDanio = 1 - m_siguienteSonidoDanio;
+			return variante;
+		}
+
 		void Reiniciar()
 		{
 			m_descubierto = false;
+			m_esperandoAgarrame = false;
+			m_agarrado = false;
+			m_tiempoDesdeDescubrimiento = 0.0f;
+			m_lanzadoPorJugador = false;
+			m_habiaContacto = false;
+			m_siguienteSonidoDanio = 0;
 		}
 
 	private:
@@ -46,6 +91,12 @@ namespace juego
 		}
 
 		bool m_descubierto = false;
+		bool m_esperandoAgarrame = false;
+		bool m_agarrado = false;
+		float m_tiempoDesdeDescubrimiento = 0.0f;
+		bool m_lanzadoPorJugador = false;
+		bool m_habiaContacto = false;
+		int m_siguienteSonidoDanio = 0;
 	};
 }
 

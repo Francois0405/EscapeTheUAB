@@ -315,6 +315,7 @@ namespace
 		const std::vector<SceneObject> objetos = { suelo, caja };
 		comprobar(Crear(escena, objetos, error), "crear suelo y caja");
 		comprobar(escena.NumeroDeCuerpos() == 2 && escena.NumeroDeDinamicos() == 1, "dos cuerpos, uno dinamico");
+		comprobar(!escena.HayContactoObjetoDinamico(1), "la caja no tiene contacto antes de caer");
 
 		const glm::mat4 antes = escena.MatrizVisualDe(1, caja);
 		comprobar(Cerca(glm::vec3(antes[3]), caja.posicion), "al empezar, el dibujo coincide con la posicion del JSON");
@@ -322,6 +323,7 @@ namespace
 		Avanzar(mundo, 0.3f);
 		comprobar(escena.MatrizVisualDe(1, caja)[3].z < 1.0f - 0.2f, "a los 0.3 s la caja ya ha caido");
 		Avanzar(mundo, 5.0f);
+		comprobar(escena.HayContactoObjetoDinamico(1), "se detecta el contacto de la caja con el suelo");
 
 		// En reposo: el centro de la caja esta a 0.25 m sobre el suelo y el ORIGEN del modelo (su base) toca el suelo.
 		const glm::mat4 despues = escena.MatrizVisualDe(1, caja);

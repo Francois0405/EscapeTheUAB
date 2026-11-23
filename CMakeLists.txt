@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.25)
 project(EntornVGI LANGUAGES C CXX)
 
 include(CTest)
+find_path(ENTORNVGI_STB_INCLUDE_DIR stb_vorbis.c PATH_SUFFIXES stb REQUIRED)
 
 # Bullet Physics (fisica). vcpkg (Windows/macOS) y libbullet-dev (Linux) instalan el
 # mismo BulletConfig.cmake, que define BULLET_INCLUDE_DIRS y BULLET_LIBRARIES.

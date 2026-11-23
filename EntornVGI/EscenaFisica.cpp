@@ -176,6 +176,13 @@ namespace fisica
 		return false;
 	}
 
+	bool EscenaFisica::HayContactoObjetoDinamico(int indiceObjeto) const
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto) return mundo.HayContacto(dinamico.cuerpo);
+		return false;
+	}
+
 	void EscenaFisica::SincronizarCinematicos(const glb::EscenaAnimada& animados)
 	{
 		for (const Colision& caja : colisionesNodo)
