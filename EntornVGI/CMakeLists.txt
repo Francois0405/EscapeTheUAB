@@ -62,6 +62,7 @@ set(ENTORNVGI_SOURCES
 	MundoFisico.cpp
 	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
+	ObjMeshOptimization.cpp
 	OpenXRManager.cpp
 	quatern.cpp
 	SceneLoader.cpp
@@ -80,6 +81,10 @@ set(IMGUI_SOURCES
 )
 
 add_executable(EntornVGI ${ENTORNVGI_SOURCES} ${IMGUI_SOURCES})
+if(ENTORNVGI_MESHOPT_TARGET)
+    target_link_libraries(EntornVGI PRIVATE ${ENTORNVGI_MESHOPT_TARGET})
+    target_compile_definitions(EntornVGI PRIVATE ENTORNVGI_HAS_MESHOPTIMIZER=1)
+endif()
 
 target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}

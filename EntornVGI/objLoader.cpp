@@ -15,6 +15,8 @@
 #include "objLoader.h"
 #include "UniformCache.h"
 #include "RenderMetrics.h"
+#include "ObjMeshOptimization.h"
+#include <utility>
 #include <algorithm>
 #include <cerrno>
 #include <climits>
@@ -873,6 +875,22 @@ const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 }
 
 
+// Generate an indexed VAO separately for each OBJ material group.
+// If the optional dependency is disabled, keep the exact legacy upload.
+static CVAO LoadOptimizedObjVAO(const std::vector<double>& positions,
+                                const std::vector<double>& normals,
+                                const std::vector<double>& colors,
+                                const std::vector<double>& texcoords)
+{
+    objmeshopt::IndexedGeometry indexed;
+    if (objmeshopt::Build(positions, normals, colors, texcoords, indexed)) {
+        return load_TRIANGLES_EBO(std::move(indexed.positions), std::move(indexed.normals),
+                                  std::move(indexed.colors), std::move(indexed.texcoords),
+                                  std::move(indexed.indices));
+    }
+    return load_TRIANGLES_VAO(positions, normals, colors, texcoords);
+}
+
 void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 	const unsigned int iFaceCount,
 	const Material* pMaterials)
@@ -918,7 +936,7 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 				{	// Canvi de material per a les cares del fitxer OBJ
 					if (nv > 0) {
 						// Creaci� d'un VAO i un VBO i c�rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
-						objVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
+						objVAO = LoadOptimizedObjVAO(vertices, normals, colors, textures);
 						Set_VAOList_OBJ(index_VAO, objVAO);
 						index_VAO = index_VAO + 1;
 						vertices.resize(0);		colors.resize(0);	normals.resize(0);		textures.resize(0);// Reinicialitzar vectors
@@ -1112,7 +1130,7 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 
 	if (nv != 0) 
 	{	// Creaci� del darrer VAO i un VBO i c�rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
-		objVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
+		objVAO = LoadOptimizedObjVAO(vertices, normals, colors, textures);
 		Set_VAOList_OBJ(index_VAO, objVAO);
 	}
 
@@ -1581,7 +1599,14 @@ void _stdcall COBJModel::draw_TriVAO_Object_OBJ(GLint k)
 	if (VAOList_OBJ[k].vaoId != 0) {
 		glBindVertexArray(VAOList_OBJ[k].vaoId);
 		//glBindBuffer(GL_ARRAY_BUFFER, vboId);
-		renderMetrics::DrawArrays(GL_TRIANGLES, 0, VAOList_OBJ[k].nVertexs);
+		if (VAOList_OBJ[k].eboId != 0 && VAOList_OBJ[k].nIndices > 0) {
+            // load_TRIANGLES_EBO unbinds the EBO during creation: rebind it on
+            // the correct VAO before issuing indexed draw in core OpenGL.
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VAOList_OBJ[k].eboId);
+            renderMetrics::DrawElements(GL_TRIANGLES, VAOList_OBJ[k].nIndices, GL_UNSIGNED_INT, nullptr);
+        } else {
+            renderMetrics::DrawArrays(GL_TRIANGLES, 0, VAOList_OBJ[k].nVertexs);
+        }
 		glBindVertexArray(0);
 	}
 }
