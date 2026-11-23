@@ -1930,7 +1930,10 @@ void dibuixa_Escena() {
 			// En PC: anclado a la cámara
 			matrizMovilMundo = glm::inverse(ViewMatrix) * matrizLocalMovilActual();
 		}
+
+		actualizarLinternaMovil(matrizMovilMundo);
 	}
+
 	else llumGL[3].encesa = false;
 	glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), 0.0f);
 	glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.0f);
@@ -8595,8 +8598,6 @@ int main(int argc, char** argv)
 			hayPiesFotogramaAnterior = false;
 			sincronizarCursorFPS(window);
 		}
-
-		actualizarLinternaMovil();
 
 		// Con VR en marcha, la escena se dibuja en el visor (y se refleja en la ventana). Sin VR, o si el visor
 		// no está mostrando imagen, se dibuja la vista de escritorio con normalidad.
