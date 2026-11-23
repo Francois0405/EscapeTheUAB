@@ -92,6 +92,23 @@ namespace fisica
 			if (!objeto.fisica.presente) continue;   // sin físicas: se queda como antes
 
 			const glm::mat4 giro = RotacionDeObjeto(objeto);
+			if (objeto.pared.presente && !objeto.pared.aperturas.empty())
+			{
+				std::vector<SceneSeccionPared> secciones;
+				std::string errorPared;
+				if (!GenerarSeccionesPared(glm::abs(objeto.escala) * objeto.fisica.mitadTamano,
+					objeto.pared.aperturas, secciones, errorPared))
+					return fallar("pared '" + objeto.id + "': " + errorPared);
+				for (const auto& seccion : secciones)
+				{
+					const glm::vec3 centroSeccion = objeto.posicion + glm::vec3(giro * glm::vec4(seccion.centroLocal, 0.0f));
+					const IdCuerpo id = mundo.CrearCaja(TipoCuerpo::Estatico, centroSeccion,
+						glm::quat_cast(glm::mat3(giro)), seccion.mitad, 0.0f);
+					if (id == CuerpoInvalido) return fallar("no se pudo crear un segmento fisico de la pared '" + objeto.id + "'");
+					todos.push_back(id);
+				}
+				continue; // sustituye el collider original por los paños sólidos que rodean las aperturas
+			}
 			const glm::vec3 desplazamiento = objeto.escala * objeto.fisica.desplazamiento;   // escala UNA vez
 			const glm::vec3 centro = objeto.posicion + glm::vec3(giro * glm::vec4(desplazamiento, 0.0f));
 			const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;

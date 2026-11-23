@@ -5,6 +5,7 @@
 #include "CamaraEditor.h"
 #include "HistorialEscena.h"
 #include "LimitesModelo.h"
+#include "ValidadorColocacion.h"
 #include "VisibilidadEditor.h"
 
 #include <GLFW/glfw3.h>
@@ -32,6 +33,9 @@ namespace editor
 
 	// Carga (o reutiliza) un OBJ en la GPU. Devuelve la clave con la que la escena dibuja ese modelo.
 	using CargadorModelo = std::function<bool(const std::filesystem::path& ruta, std::string& clave, std::string& error)>;
+	using CargadorTextura = std::function<unsigned int(const std::filesystem::path& ruta)>;
+	using CargadorPuerta = std::function<bool(const std::filesystem::path& ruta, const SceneObjetoAnimado& datos,
+		ContextoEscena contexto, std::string& error)>;
 
 	class EditorEscenas
 	{
@@ -44,9 +48,14 @@ namespace editor
 		bool ConsumeGuardarRequest();
 		bool ConsumeCerrarConfirmado();
 		bool ConsumeCerrarTrasGuardar();
+		bool ConsumeReconstruirFisicaRequest() { const bool v = reconstruirFisicaSolicitada; reconstruirFisicaSolicitada = false; return v; }
 
 		void FijarCargadorModelos(CargadorModelo cargador) { cargadorModelos = std::move(cargador); }
+		void FijarCargadorTexturas(CargadorTextura cargador) { cargadorTexturas = std::move(cargador); }
+		void FijarCargadorPuertas(CargadorPuerta cargador) { cargadorPuertas = std::move(cargador); }
 		void FijarRaizModelos(const std::filesystem::path& raiz);
+		void FijarRaizEscena(const std::filesystem::path& raiz) { raizEscena = raiz; }
+		void FijarRaizAnimaciones(const std::filesystem::path& raiz) { raizAnimaciones = raiz; inventarioPuertasCargado = false; }
 		// Una escena nueva (cargada desde disco) borra historial y selección.
 		void NuevaEscena();
 
@@ -75,9 +84,13 @@ namespace editor
 		// Añade un OBJ ya cargado en la GPU. Devuelve el id de la instancia nueva ("" si falla).
 		std::string AgregarModelo(ContextoEscena contexto, const std::string& clave, bool yArribaAZArriba, bool colisionador, bool dinamico);
 		bool DuplicarSeleccion(ContextoEscena contexto);
-		bool EliminarSeleccion(ContextoEscena contexto);
+		bool EliminarSeleccion(ContextoEscena contexto, bool cerrarHueco = true);
 		const HistorialEscena& Historial() const { return historial; }
-		void Seleccionar(int indice) { seleccionado = indice; seleccionCambiada = true; }
+		void Seleccionar(int indice)
+		{
+			if (seleccionado != indice) { previsualizacionGizmoActiva = false; previsualizacionGizmoInvalida = false; idPrevisualizacionGizmo.clear(); }
+			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Bloquear();
+		}
 		VisibilidadEditor& Visibilidad() { return visibilidad; }
 
 	private:
@@ -97,6 +110,11 @@ namespace editor
 		ElementoSeleccionable Elemento(const ContextoEscena& contexto, int indice);
 		CajaLocal CajaDeObjeto(const SceneObject& objeto);
 		CajaLocal CajaDeAnimado(const ContextoEscena& contexto, const SceneObjetoAnimado& animado);
+		std::vector<CajaOrientada> CajasDeObjeto(const SceneObject& objeto, const glm::mat4& matriz);
+		std::vector<CajaOrientada> CajasDeAnimado(const ContextoEscena& contexto, const SceneObjetoAnimado& animado);
+		ResultadoColocacion ValidarObjeto(const ContextoEscena& contexto, const SceneObject& candidato, int indiceIgnorado,
+			const glm::mat4* matrizPropuesta = nullptr);
+		ResultadoColocacion ValidarAnimado(const ContextoEscena& contexto, const SceneObjetoAnimado& candidato, int indiceIgnorado);
 		std::string IdUnico(const ContextoEscena& contexto, const std::string& base) const;
 		float AlturaDelSuelo(const ContextoEscena& contexto) const;
 
@@ -109,10 +127,16 @@ namespace editor
 		void DibujarInspector(ContextoEscena contexto);
 		void DibujarAssetBrowser(ContextoEscena contexto);
 		void DibujarGizmo(ContextoEscena contexto, int ancho, int alto);
+		void FijarSeleccion(int indice)
+		{
+			if (seleccionado != indice) { previsualizacionGizmoActiva = false; previsualizacionGizmoInvalida = false; idPrevisualizacionGizmo.clear(); }
+			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Bloquear();
+		}
 		void DibujarContornoSeleccion(ContextoEscena contexto, int ancho, int alto);
 		void SeleccionarPorRaton(ContextoEscena contexto, int ancho, int alto);
 		void ProcesarSolicitudes(ContextoEscena contexto);
 		void AnadirDesdeAssetBrowser(ContextoEscena contexto);
+		bool InstalarPuertaEnPared(ContextoEscena contexto, int indicePuerta, int indicePared);
 		void CambiarTransformacion(SceneObject& objeto, const glm::mat4& matriz);
 		void MarcarModificada() { modificada = true; }
 		void DibujarOpcionesCamara();
@@ -126,14 +150,18 @@ namespace editor
 		bool rehacerSolicitado = false;
 		bool duplicarSolicitado = false;
 		bool eliminarSolicitado = false;
+		bool eliminarConservarHuecoSolicitado = false;
 		bool anadirSolicitado = false;
 		bool confirmacionCierre = false;
 		bool cerrarConfirmado = false;
 		bool cerrarTrasGuardar = false;
 		bool enfocarSolicitado = false;
 		bool modificada = false;
+		bool reconstruirFisicaSolicitada = false;
+		std::unordered_map<std::string, glb::ObjetoAnimado> glbEliminados;
 		bool local = false;
 		bool snap = false;
+		BloqueoGizmoTrasSeleccion bloqueoGizmoTrasSeleccion;
 		bool mostrarColisionadores = false;
 		bool seleccionCambiada = false;
 		bool mensajeEsError = false;
@@ -175,6 +203,11 @@ namespace editor
 		int operacionDepuracion = 0;
 		bool gizmoSobre = false;
 		std::string mensajeEstado;
+		std::string mensajeColocacion;
+		bool previsualizacionGizmoActiva = false;
+		bool previsualizacionGizmoInvalida = false;
+		glm::mat4 matrizPrevisualizacionGizmo{ 1.0f };
+		std::string idPrevisualizacionGizmo;
 
 		// Historial y transacciones (arrastre del gizmo / edición de un campo = UNA operación).
 		HistorialEscena historial;
@@ -192,11 +225,22 @@ namespace editor
 		std::unordered_map<std::string, CajaLocal> cajasObj;
 		std::unordered_map<std::string, CajaLocal> cajasGlb;
 		CargadorModelo cargadorModelos;
+		CargadorTextura cargadorTexturas;
+		CargadorPuerta cargadorPuertas;
 		std::filesystem::path raizModelos = "assets/models";
+		std::filesystem::path raizEscena;
+		std::filesystem::path raizAnimaciones = "assets/animations";
 		std::vector<std::filesystem::path> modelosDisponibles;
 		bool inventarioCargado = false;
 		std::string assetSeleccionado;
 		char filtroAssets[64] = {};
+		char filtroTexturas[128] = {};
+		int categoriaTexturas = 0;
+		int paredDestinoPuerta = -1;
+		std::vector<std::filesystem::path> puertasDisponibles;
+		bool inventarioPuertasCargado = false;
+		bool assetEsPuerta = false;
+		std::filesystem::path puertaSeleccionada;
 		bool assetYArriba = true;
 		bool assetColisionador = false;
 		bool assetDinamico = false;

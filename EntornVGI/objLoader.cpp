@@ -123,6 +123,7 @@ std::string ResolveAssetPath(const std::string& baseDir, std::string name)
 #define MTL_AMBIENT_ID	 "Ka"
 #define MTL_DIFFUSE_ID	 "Kd"
 #define MTL_SPECULAR_ID	 "Ks"
+#define MTL_EMISSION_ID	 "Ke"
 #define MTL_SHININESS_ID "Ns"
 
 // Maximum size of a string that could be read out of the OBJ file
@@ -505,6 +506,7 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 									// material has been set
 	FILE *hFileT = NULL;
 	int err;
+	const unsigned int primerMaterial = *iCurMaterialIndex;
 
 ////////////////////////////////////////////////////////////////////////
 // Open library file
@@ -571,6 +573,14 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 				&pMaterials[*iCurMaterialIndex].fSpecular[2]);
 		}
 
+		if (!strncmp(szString, MTL_EMISSION_ID, sizeof(MTL_EMISSION_ID)))
+		{	// Read MTL self-illumination for lamp diffusers and emissive props.
+			fscanf(hFileT, "%f %f %f",
+				&pMaterials[*iCurMaterialIndex].fEmmissive[0],
+				&pMaterials[*iCurMaterialIndex].fEmmissive[1],
+				&pMaterials[*iCurMaterialIndex].fEmmissive[2]);
+		}
+
 // Texture map name
 		if (!strncmp(szString, MTL_TEXTURE_ID, sizeof(MTL_TEXTURE_ID)))
 		{	// Read texture filename
@@ -599,6 +609,8 @@ bool _stdcall COBJModel::LoadMaterialLib(const char szFileName[],
 	}
 
 	fclose(hFileT);
+	for (unsigned int indice = primerMaterial; indice < *iCurMaterialIndex; ++indice)
+		AplicarFallbackAmbientalDesdeDifuso(pMaterials[indice]);
 
 // Increment index cause LoadMaterialLib() assumes that the passed
 // index is always empty
@@ -640,7 +652,7 @@ const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 			// Activate automatic texture coord generation if no coords loaded
 			if (!pFaces[0].pTexCoords)
-				GenTexCoords();
+				// GenTexCoords(); // API obsoleta, incompatible con OpenGL Core.
 		
 			// Use default material if no materials are loaded
 			if (!pMaterials)
@@ -879,7 +891,8 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 	const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 // Activate automatic texture coord generation if no coords loaded
-	if (!pFaces[0].pTexCoords) GenTexCoords();
+	// Las coordenadas UV deben venir del OBJ o generarse en la CPU.
+	// La generación automática antigua no funciona en OpenGL Core.
 
 // Use default material if no materials are loaded
 	if (!pMaterials) UseMaterial(NULL);
@@ -1114,12 +1127,24 @@ void _stdcall COBJModel::UseMaterial_ShaderID(GLuint sh_programID, Material pMat
 ////////////////////////////////////////////////////////////////////////
 	float color[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
-	//glColor3f(1.0,1.0,1.0);
-// Look for the presence of a texture and activate texturing if succeed
 	if (pMaterial.szName[0] != '\0')
 	{
-		//glUniform4i(glGetUniformLocation(sh_programID, "sw_intensity"), false, true, true, true);
-		//glUniform1i(glGetUniformLocation(sh_programID, "sw_material"), true);
+		// MTL coefficients apply to textured and untextured materials alike. Previously
+		// map_Kd skipped these uniforms, so textured walls inherited the previous object's
+		// diffuse/specular values and appeared incorrectly tinted or shiny.
+		const bool emissive = pMaterial.fEmmissive[0] > 0.0f ||
+			pMaterial.fEmmissive[1] > 0.0f || pMaterial.fEmmissive[2] > 0.0f;
+		glUniform4f(glGetUniformLocation(sh_programID, "material.emission"),
+			pMaterial.fEmmissive[0], pMaterial.fEmmissive[1], pMaterial.fEmmissive[2], 1.0f);
+		glUniform1i(glGetUniformLocation(sh_programID, "uMaterialEmission"), emissive ? GL_TRUE : GL_FALSE);
+
+		color[0] = pMaterial.fAmbient[0]; color[1] = pMaterial.fAmbient[1]; color[2] = pMaterial.fAmbient[2];
+		glUniform4f(glGetUniformLocation(sh_programID, "material.ambient"), color[0], color[1], color[2], color[3]);
+		color[0] = pMaterial.fDiffuse[0]; color[1] = pMaterial.fDiffuse[1]; color[2] = pMaterial.fDiffuse[2];
+		glUniform4f(glGetUniformLocation(sh_programID, "material.diffuse"), color[0], color[1], color[2], color[3]);
+		color[0] = pMaterial.fSpecular[0]; color[1] = pMaterial.fSpecular[1]; color[2] = pMaterial.fSpecular[2];
+		glUniform4f(glGetUniformLocation(sh_programID, "material.specular"), color[0], color[1], color[2], color[3]);
+		glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), pMaterial.fShininess);
 
 		if (pMaterial.iTextureID)
 		{
@@ -1128,24 +1153,12 @@ void _stdcall COBJModel::UseMaterial_ShaderID(GLuint sh_programID, Material pMat
 			glUniform1i(glGetUniformLocation(sh_programID, "texture0"), GLint(0));
 			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_TRUE);
 		}
-		else {
-			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
-
-			color[0] = pMaterial.fAmbient[0];	color[1] = pMaterial.fAmbient[1];	color[2] = pMaterial.fAmbient[2];
-			glUniform4f(glGetUniformLocation(sh_programID, "material.ambient"), color[0], color[1], color[2], color[3]);
-
-			color[0] = pMaterial.fDiffuse[0];	color[1] = pMaterial.fDiffuse[1];	color[2] = pMaterial.fDiffuse[2];
-			glUniform4f(glGetUniformLocation(sh_programID, "material.diffuse"), color[0], color[1], color[2], color[3]);
-
-			color[0] = pMaterial.fSpecular[0];	color[1] = pMaterial.fSpecular[1];	color[2] = pMaterial.fSpecular[2];
-			glUniform4f(glGetUniformLocation(sh_programID, "material.specular"), color[0], color[1], color[2], color[3]);
-
-			glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), pMaterial.fShininess);
-		}
+		else glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
 	}
 	else
 	{
 		glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
+		glUniform1i(glGetUniformLocation(sh_programID, "uMaterialEmission"), GL_FALSE);
 	}
 }
 
@@ -1425,8 +1438,17 @@ int COBJModel::LoadTexture2(const char szFileName[_MAX_PATH])
 	glBindTexture(GL_TEXTURE_2D, iTexture);
 
 // Build mip-maps
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MIN_FILTER,
+		GL_LINEAR_MIPMAP_LINEAR
+	);
+
+	glTexParameteri(
+		GL_TEXTURE_2D,
+		GL_TEXTURE_MAG_FILTER,
+		GL_LINEAR
+	);
 	
 	return iTexture;
 }
@@ -1566,6 +1588,15 @@ void _stdcall COBJModel::draw_TriVAO_OBJ(GLuint sh_programID)
 			UseMaterial_ShaderID(sh_programID, vMaterials[materialIndex]);
 		else
 			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
+		if (instanceTextureOverride != 0)
+		{
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, instanceTextureOverride);
+			glUniform1i(glGetUniformLocation(sh_programID, "texture0"), 0);
+			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_TRUE);
+		}
+		if (instanceShininessOverride >= 0.0f)
+			glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), instanceShininessOverride);
 		draw_TriVAO_Object_OBJ(i);
 	}
 }

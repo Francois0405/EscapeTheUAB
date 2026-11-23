@@ -25,5 +25,6 @@ namespace editor
 		std::filesystem::path rutaFuente;
 		std::string documentoOriginal;
 		bool cargado = false;
+		bool llamadaSinListaAnimados = false;
 	};
 }

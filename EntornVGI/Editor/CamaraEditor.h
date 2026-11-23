@@ -172,6 +172,28 @@ namespace editor
 		return usando || (!navegando && !alt && !escalaDePuerta);
 	}
 
+	// Una selección por clic consume ese gesto completo. El gizmo solo puede empezar con una
+	// pulsación nueva, después de que el botón izquierdo se haya soltado.
+	struct BloqueoGizmoTrasSeleccion
+	{
+		void Bloquear() { bloqueado = true; }
+		bool PermitirManipular(bool botonIzquierdoPulsado)
+		{
+			if (!bloqueado) return true;
+			if (!botonIzquierdoPulsado) bloqueado = false;
+			return false;
+		}
+		void Reiniciar() { bloqueado = false; }
+		bool Bloqueado() const { return bloqueado; }
+	private:
+		bool bloqueado = false;
+	};
+
+	inline void ConservarAlturaEnTop(glm::mat4& transformacion, const glm::mat4& original, bool vistaSuperior, bool herramientaMover)
+	{
+		if (vistaSuperior && herramientaMover) transformacion[3].z = original[3].z;
+	}
+
 	// ------------------------------------------------------------------ Mover objetos con las flechas
 	enum class Flecha { Arriba, Abajo, Izquierda, Derecha, Subir, Bajar };
 

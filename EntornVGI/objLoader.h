@@ -64,6 +64,25 @@ struct Material
   float fShininess;			 // Specular exponent
 };
 
+// Preserve an authored ambient reflectance. For legacy MTL assets with Ka=0,
+// provide a restrained diffuse-derived ambient term without editing the asset.
+inline bool AplicarFallbackAmbientalDesdeDifuso(Material& material, float factor = 0.18f)
+{
+	const float mayorKa = (material.fAmbient[0] > material.fAmbient[1]
+		? (material.fAmbient[0] > material.fAmbient[2] ? material.fAmbient[0] : material.fAmbient[2])
+		: (material.fAmbient[1] > material.fAmbient[2] ? material.fAmbient[1] : material.fAmbient[2]));
+	if (mayorKa > 1.0e-4f) return false;
+
+	factor = factor < 0.0f ? 0.0f : (factor > 0.25f ? 0.25f : factor);
+	for (int canal = 0; canal < 3; ++canal)
+	{
+		const float difuso = material.fDiffuse[canal] < 0.0f ? 0.0f :
+			(material.fDiffuse[canal] > 1.0f ? 1.0f : material.fDiffuse[canal]);
+		material.fAmbient[canal] = difuso * factor;
+	}
+	return true;
+}
+
 class OBJLOADER_CLASS_DECL COBJModel  
 {
   public:
@@ -77,6 +96,7 @@ class OBJLOADER_CLASS_DECL COBJModel
 	void _stdcall netejaVAOList_OBJ();
 	void _stdcall netejaTextures_OBJ();
 	void _stdcall draw_TriVAO_OBJ(GLuint sh_programID);
+	void SetInstanceMaterialOverride(GLuint textureId, float shininess) { instanceTextureOverride = textureId; instanceShininessOverride = shininess; }
 
 private:
 	bool _stdcall ReadNextString(char szString[], FILE *hStream);
@@ -105,6 +125,8 @@ private:
 	CVAO VAOList_OBJ[MAX_SIZE_VAOLIST];
 	Material vMaterials[MAX_SIZE_VAOLIST]{};
 	unsigned int materialCount = 0;
+	GLuint instanceTextureOverride = 0;
+	float instanceShininessOverride = -1.0f;
 
 // Funcions CVAO
 	void _stdcall initVAOList_OBJ();

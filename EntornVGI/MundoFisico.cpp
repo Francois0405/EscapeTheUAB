@@ -8,6 +8,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace fisica
 {
@@ -300,6 +301,73 @@ namespace fisica
 			float alturaMinimaContacto;
 			bool hayObstaculo = false;
 		};
+
+		class ComprobarSolapeSpawn : public btCollisionWorld::ContactResultCallback
+		{
+		public:
+			ComprobarSolapeSpawn()
+			{
+				m_collisionFilterGroup = btBroadphaseProxy::CharacterFilter;
+				m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
+			}
+			btScalar addSingleResult(btManifoldPoint& contacto,
+				const btCollisionObjectWrapper*, int, int, const btCollisionObjectWrapper*, int, int) override
+			{
+				if (contacto.getDistance() < btScalar(-0.025)) haySolape = true;
+				return btScalar(0.0);
+			}
+			bool HaySolape() const { return haySolape; }
+		private:
+			bool haySolape = false;
+		};
+	}
+
+	bool MundoFisico::ValidarSpawnJugador(const glm::vec3& posicionPies, glm::vec3& piesAjustados,
+		glm::vec3& normalSuelo, std::string& error) const
+	{
+		if (!std::isfinite(posicionPies.x) || !std::isfinite(posicionPies.y) || !std::isfinite(posicionPies.z))
+		{
+			error = "La posición inicial del jugador contiene coordenadas no finitas.";
+			return false;
+		}
+
+		const btVector3 desde = ABullet(posicionPies + glm::vec3(0.0f, 0.0f, 0.25f));
+		const btVector3 hasta = ABullet(posicionPies - glm::vec3(0.0f, 0.0f, 0.45f));
+		btCollisionWorld::ClosestRayResultCallback suelo(desde, hasta);
+		suelo.m_collisionFilterGroup = btBroadphaseProxy::CharacterFilter;
+		suelo.m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
+		impl->mundo.rayTest(desde, hasta, suelo);
+		if (!suelo.hasHit() || suelo.m_hitNormalWorld.z() < btScalar(0.70))
+		{
+			error = "No hay una superficie de suelo física horizontal bajo el spawn (radio de comprobación 45 cm).";
+			return false;
+		}
+
+		const float zSuelo = static_cast<float>(suelo.m_hitPointWorld.z());
+		if (std::abs(posicionPies.z - zSuelo) > 0.20f)
+		{
+			error = "La altura de pies del spawn difiere más de 20 cm del suelo físico.";
+			return false;
+		}
+		piesAjustados = glm::vec3(posicionPies.x, posicionPies.y, zSuelo);
+		normalSuelo = glm::normalize(AGlm(suelo.m_hitNormalWorld));
+
+		btCapsuleShapeZ capsula(MedidasJugador::Radio, AlturaCilindroDePie);
+		btCollisionObject prueba;
+		prueba.setCollisionShape(&capsula);
+		btTransform transformacion;
+		transformacion.setIdentity();
+		transformacion.setOrigin(CentroDesdePies(piesAjustados + glm::vec3(0.0f, 0.0f, 0.035f), MedidasJugador::Altura));
+		prueba.setWorldTransform(transformacion);
+		ComprobarSolapeSpawn contacto;
+		impl->mundo.contactTest(&prueba, contacto);
+		if (contacto.HaySolape())
+		{
+			error = "El spawn tiene la cápsula del jugador solapada con una pared, mueble u otro collider.";
+			return false;
+		}
+		error.clear();
+		return true;
 	}
 
 	bool MundoFisico::CrearJugador(const glm::vec3& posicionPies)
@@ -424,8 +492,10 @@ namespace fisica
 
 	// ---- Agarre --------------------------------------------------------------
 
-	IdCuerpo MundoFisico::CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance) const
+	IdCuerpo MundoFisico::CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
+		float* distanciaImpacto) const
 	{
+		if (distanciaImpacto != nullptr) *distanciaImpacto = std::numeric_limits<float>::infinity();
 		if (glm::length(direccion) < 1.0e-6f) return CuerpoInvalido;
 		const glm::vec3 fin = origen + glm::normalize(direccion) * alcance;
 		btCollisionWorld::ClosestRayResultCallback resultado(ABullet(origen), ABullet(fin));
@@ -433,6 +503,8 @@ namespace fisica
 		resultado.m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
 		impl->mundo.rayTest(ABullet(origen), ABullet(fin), resultado);
 		if (!resultado.hasHit()) return CuerpoInvalido;
+		if (distanciaImpacto != nullptr)
+			*distanciaImpacto = alcance * static_cast<float>(resultado.m_closestHitFraction);
 
 		for (std::size_t i = 0; i < impl->cuerpos.size(); ++i)
 			if (impl->cuerpos[i].cuerpo.get() == resultado.m_collisionObject) return static_cast<IdCuerpo>(i);

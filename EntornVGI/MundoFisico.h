@@ -23,6 +23,7 @@
 #include <glm/gtc/quaternion.hpp>
 
 #include <memory>
+#include <string>
 #include <vector>
 
 namespace fisica
@@ -135,6 +136,10 @@ namespace fisica
 
 		// Crea la cápsula con los pies en 'posicionPies'. Falso si ya existía.
 		bool CrearJugador(const glm::vec3& posicionPies);
+		// Comprueba suelo cercano y espacio libre para la cápsula del jugador. Si el
+		// pavimento difiere unos centímetros, devuelve los pies ajustados a su superficie.
+		bool ValidarSpawnJugador(const glm::vec3& posicionPies, glm::vec3& piesAjustados, glm::vec3& normalSuelo,
+			std::string& error) const;
 		void EliminarJugador();
 		bool HayJugador() const;
 
@@ -169,7 +174,8 @@ namespace fisica
 
 		// Primer cuerpo (estático, cinemático o dinámico; el jugador no) que toca el rayo dentro de
 		// 'alcance' metros, o CuerpoInvalido. Sirve para saber qué se está mirando.
-		IdCuerpo CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance) const;
+		IdCuerpo CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
+			float* distanciaImpacto = nullptr) const;
 
 		bool EsDinamico(IdCuerpo id) const;
 		// Empieza a sujetar un cuerpo dinámico (suelta el anterior). Falso si no se puede.

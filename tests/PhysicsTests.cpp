@@ -17,6 +17,7 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 
 using namespace fisica;
 namespace fs = std::filesystem;
@@ -35,6 +36,30 @@ namespace
 	}
 
 	bool casi(float a, float b, float tolerancia) { return std::fabs(a - b) <= tolerancia; }
+
+	void PruebaRecursoIconoInteraccion()
+	{
+		const fs::path fuente = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "res/ui/hand.png";
+		const fs::path runtime = fs::path(ESCAPETHEUAB_RUNTIME_ASSET_ROOT) / "res/ui/hand.png";
+		comprobar(fs::is_regular_file(fuente), "hand.png existe en recursos fuente");
+		comprobar(fs::is_regular_file(runtime), "hand.png se copia junto al ejecutable independientemente del cwd de CTest");
+		if (!fs::is_regular_file(fuente) || !fs::is_regular_file(runtime)) return;
+		std::ifstream a(fuente, std::ios::binary), b(runtime, std::ios::binary);
+		const std::vector<unsigned char> bytesA((std::istreambuf_iterator<char>(a)), {});
+		const std::vector<unsigned char> bytesB((std::istreambuf_iterator<char>(b)), {});
+		comprobar(bytesA == bytesB, "la textura runtime es la misma que el icono hand.png original");
+		const bool pngValido = bytesA.size() > 26 && bytesA[0] == 0x89 && bytesA[1] == 'P' &&
+			bytesA[2] == 'N' && bytesA[3] == 'G' && bytesA[25] == 6 && bytesA[24] == 8;
+		comprobar(pngValido, "hand.png es PNG RGBA de 8 bits con transparencia");
+		if (pngValido)
+		{
+			const unsigned ancho = (static_cast<unsigned>(bytesA[16]) << 24) | (static_cast<unsigned>(bytesA[17]) << 16) |
+				(static_cast<unsigned>(bytesA[18]) << 8) | bytesA[19];
+			const unsigned alto = (static_cast<unsigned>(bytesA[20]) << 24) | (static_cast<unsigned>(bytesA[21]) << 16) |
+				(static_cast<unsigned>(bytesA[22]) << 8) | bytesA[23];
+			comprobar(ancho == 512 && alto == 512, "el icono conserva su resolución original de 512x512; el HUD lo escala a 34 px");
+		}
+	}
 
 	// Simula 'segundos' de tiempo real en fotogramas de duración fija 'deltaFotograma'.
 	template <typename Funcion>
@@ -379,11 +404,14 @@ namespace
 		comprobar(hojasCerradas.size() == 2, "una hoja cinematica por puerta");
 		const glm::vec3 ojosFrentePuerta(4.5f, 3.0f, -0.65f);
 		const glm::vec3 miradaPuerta(1.0f, 0.0f, 0.0f);
+		float distanciaPuerta = 0.0f;
 		const IdCuerpo impactoPuerta = mundo.CuerpoAlFinalDelRayo(
-			ojosFrentePuerta, miradaPuerta, glb::RADIO_INTERACCION);
+			ojosFrentePuerta, miradaPuerta, glb::RADIO_INTERACCION, &distanciaPuerta);
 		comprobar(habitacion.fisica->ObjetoAnimadoDeCuerpo(impactoPuerta) == 1 &&
 			glb::BuscarObjetoInteractuable(anim, ojosFrentePuerta, miradaPuerta) == &anim.objetos[1],
 			"el raycast visible y la consulta de puerta identifican el mismo objetivo");
+		comprobar(std::isfinite(distanciaPuerta) && distanciaPuerta > 0.0f && distanciaPuerta < glb::RADIO_INTERACCION,
+			"la consulta de interacción conserva la distancia real del primer impacto de Bullet");
 		// Hoja cerrada: centro a 1.0 m del suelo (-1.7), entre los dos postes del marco, sobre el eje de la puerta.
 		for (const CajaColision& h : hojasCerradas)
 			comprobar(casi(h.pose.posicion.z, -1.7f + 1.009f, 0.01f) && casi(h.pose.posicion.x, 6.0f, 0.05f),
@@ -418,6 +446,147 @@ namespace
 		for (std::size_t i = 0; marcoIgual && i < estaticasAntes.size(); ++i)
 			marcoIgual = Cerca(estaticasAntes[i], estaticasDespues[i], 1e-6f);
 		comprobar(marcoIgual, "el marco permanece estatico mientras la hoja gira");
+	}
+
+	void PruebaParedParametricaConPuerta()
+	{
+		MundoFisico mundo;
+		SceneObject pared;
+		pared.id = "wall"; pared.categoria = "architecture"; pared.posicion = glm::vec3(0.0f);
+		pared.rotacion = glm::vec3(0.0f); pared.escala = glm::vec3(5.0f, 0.15f, 1.5f);
+		pared.fisica.presente = true; pared.fisica.tipo = TipoCuerpo::Estatico;
+		pared.fisica.mitadTamano = glm::vec3(1.0f); pared.pared.presente = true;
+		pared.pared.aperturas.push_back({ "door", 0.0f, 1.04f, 2.1f, 0.0f, "door-opening" });
+		SceneObjetoAnimado door;
+		door.id = "door";
+		door.modelo = (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/animations/Puerta_Lab.glb").string();
+		door.posicion = glm::vec3(0.0f, 0.0f, -1.5f);
+		door.colisionadores = {
+			{"DoorFrame", TipoCuerpo::Estatico, {0.05f,1.05f,0.04f}, {-0.45f,1.05f,-0.013f}},
+			{"DoorFrame", TipoCuerpo::Estatico, {0.05f,1.05f,0.04f}, {0.45f,1.05f,-0.013f}},
+			{"DoorFrame", TipoCuerpo::Estatico, {0.4f,0.05f,0.04f}, {0.0f,2.05f,-0.013f}},
+			{"Door", TipoCuerpo::Cinematico, {0.418f,1.005f,0.017f}, {-0.418f,-0.041f,-0.017f}}
+		};
+		door.paredId = "wall"; door.aperturaId = "door-opening";
+		glb::EscenaAnimada animados;
+		std::string error;
+		comprobar(glb::AnadirObjeto(animados, door.id, door.modelo, door.posicion, 0.0f, error), "carga GLB para pared paramétrica");
+		fisica::EscenaFisica escena(mundo);
+		comprobar(escena.Crear({pared}, animados, {door}, error), "Bullet construye colliders segmentados para el vano");
+		comprobar(escena.NumeroDeCuerpos() == 7, "tres paños de pared sustituyen al collider completo y se suman cuatro colliders de puerta");
+		if (escena.NumeroDeCuerpos() != 7) return;
+		const glm::vec3 origen(0.0f, -1.0f, -0.5f);
+		const glm::vec3 direccion(0.0f, 1.0f, 0.0f);
+		comprobar(mundo.CuerpoAlFinalDelRayo(origen, direccion, 2.0f) != CuerpoInvalido,
+			"la hoja cerrada bloquea el cruce en el centro del vano");
+		glb::AlternarPuerta(animados.objetos[0]);
+		for (int i = 0; i < 240; ++i)
+		{
+			glb::ActualizarObjetos(animados, MundoFisico::PasoFijo);
+			escena.SincronizarCinematicos(animados);
+			mundo.Actualizar(MundoFisico::PasoFijo);
+		}
+		comprobar(mundo.CuerpoAlFinalDelRayo(origen, direccion, 2.0f) == CuerpoInvalido,
+			"con la hoja abierta el rayo atraviesa el vano sin chocar con la pared");
+	}
+
+	void PruebaSueloLaboratorioCalibrado()
+	{
+		MundoFisico mundo;
+		EscenaMontada laboratorio(mundo, RutaDeEscena("aula_informatica_calibrada.json"));
+		comprobar(laboratorio.ok, "el laboratorio calibrado monta con todos sus cuerpos Bullet");
+		if (!laboratorio.ok) { std::cerr << laboratorio.error << '\n'; return; }
+
+		int colisionables = static_cast<int>(std::count_if(laboratorio.datos.objetos.begin(), laboratorio.datos.objetos.end(),
+			[](const SceneObject& objeto) { return objeto.fisica.presente; }));
+		for (const SceneObjetoAnimado& animado : laboratorio.datos.animados)
+			colisionables += static_cast<int>(animado.colisionadores.size());
+		comprobar(laboratorio.fisica->NumeroDeCuerpos() == colisionables,
+			"suelo y arquitectura conservan colliders unicos; se cuentan tambien los marcos y hojas de puerta GLB");
+		const SceneObject* suelo = nullptr;
+		for (const SceneObject& objeto : laboratorio.datos.objetos)
+			if (objeto.id == "suelo") suelo = &objeto;
+		comprobar(suelo != nullptr && suelo->fisica.presente && suelo->fisica.tipo == TipoCuerpo::Estatico,
+			"el suelo principal conserva un unico cuerpo estatico");
+		if (suelo == nullptr) return;
+
+		const float alturaPavimento = suelo->posicion.z + suelo->escala.z * suelo->fisica.mitadTamano.z;
+		comprobar(mundo.CrearJugador({ 0.0f, 0.0f, alturaPavimento + 0.02f }),
+			"se crea el jugador sobre el pavimento modular");
+		Simular(2.0f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		const float pies = mundo.PosicionPiesJugador().z;
+		comprobar(mundo.JugadorEnSuelo() && pies > alturaPavimento - 0.08f && pies < alturaPavimento + 0.08f,
+			"el jugador permanece apoyado sobre la altura del suelo calibrado");
+
+		// Integración geométrica: abrir la hoja GLB permite cruzar el vano rotado
+		// entre recepción y laboratorio, sin atravesar los dos tramos de pared.
+		glb::ObjetoAnimado* puerta = glb::BuscarObjeto(laboratorio.animados, "puerta_acceso_laboratorio");
+		comprobar(puerta != nullptr, "la escena compacta incluye la puerta recepción/laboratorio");
+		if (puerta == nullptr) return;
+		glb::IniciarAnimacion(*puerta);
+		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
+		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
+		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
+		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
+		Simular(1.2f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
+		comprobar(mundo.PosicionPiesJugador().x > -2.2f,
+			"el vano de la puerta abierta deja pasar al jugador y la pared maciza contigua lo sigue bloqueando");
+		glb::AlternarPuerta(*puerta);
+		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
+		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
+		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
+		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
+		Simular(1.2f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
+		comprobar(mundo.PosicionPiesJugador().x < -2.7f,
+			"la hoja cinemática cerrada bloquea el vano y no permite atravesar la pared");
+	}
+
+	void PruebaArranqueEnSpawnDelLaboratorio()
+	{
+		MundoFisico mundo;
+		EscenaMontada laboratorio(mundo, RutaDeEscena("aula_informatica_calibrada.json"));
+		comprobar(laboratorio.ok, "se monta la misma escena que carga el inicio del juego");
+		if (!laboratorio.ok) { std::cerr << laboratorio.error << '\n'; return; }
+		comprobar(laboratorio.datos.spawn.presente, "la escena proporciona spawn explícito para PLAY");
+		if (!laboratorio.datos.spawn.presente) return;
+
+		const glm::vec3 spawn = laboratorio.datos.spawn.pies;
+		comprobar(spawn.x > -7.25f && spawn.x < -2.75f && spawn.y > 1.75f && spawn.y < 7.25f,
+			"el spawn está dentro de la recepción y separado de sus paredes");
+		glm::vec3 pies, normal;
+		std::string error;
+		const bool valido = mundo.ValidarSpawnJugador(spawn, pies, normal, error);
+		comprobar(valido, "Bullet confirma suelo bajo los pies y espacio para la cápsula");
+		if (!valido) { std::cerr << "Spawn laboratorio: " << error << '\n'; return; }
+		comprobar(normal.z > 0.95f && std::abs(pies.z - spawn.z) < 0.02f,
+			"el ajuste de spawn coincide con la cara superior del pavimento");
+		comprobar(mundo.CrearJugador(pies), "se crea el controlador Bullet desde el spawn validado");
+		const glm::vec3 ojos = mundo.PosicionPiesJugador() + glm::vec3(0, 0, mundo.AlturaOjosJugador());
+		comprobar(casi(ojos.z, pies.z + 1.70f, 0.001f), "la altura de ojos se deriva de los pies y la altura FPS");
+		Simular(2.0f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		const glm::vec3 trasDosSegundos = mundo.PosicionPiesJugador();
+		std::cout << "[inicio laboratorio] spawn feet=" << pies.x << ',' << pies.y << ',' << pies.z
+			<< " eyes=" << ojos.x << ',' << ojos.y << ',' << ojos.z << " feet+2s="
+			<< trasDosSegundos.x << ',' << trasDosSegundos.y << ',' << trasDosSegundos.z << '\n';
+		comprobar(mundo.JugadorEnSuelo() && casi(trasDosSegundos.z, pies.z, 0.06f),
+			"tras dos segundos el jugador sigue apoyado sobre el suelo del laboratorio");
+		comprobar(glm::length(glm::vec2(trasDosSegundos.x - pies.x, trasDosSegundos.y - pies.y)) < 0.01f,
+			"el jugador de inicio no deriva hacia fuera de la recepción sin entrada");
+
+		const fs::path runtimeRoot = ESCAPETHEUAB_RUNTIME_ASSET_ROOT;
+		const fs::path runtimeScene = runtimeRoot / "assets/scenes/aula_informatica_calibrada.json";
+		comprobar(fs::is_regular_file(runtimeScene), "la copia de ejecución incluye el JSON de laboratorio actualizado");
+		if (fs::is_regular_file(runtimeScene))
+		{
+			DatosEscena runtimeData;
+			comprobar(CargarDatosEscenaJSON(runtimeScene, runtimeData, error) && runtimeData.spawn.presente &&
+				runtimeData.spawn.pies == spawn,
+				"la aplicación y CTest encuentran la misma configuración de spawn en el directorio de ejecución");
+		}
+		for (const char* recurso : { "assets/models/escape_pack/arquitectura/suelo_base.obj", "assets/animations/Puerta_Lab.glb" })
+			comprobar(fs::is_regular_file(runtimeRoot / recurso), "los recursos actualizados de la escena están copiados junto al ejecutable");
 	}
 
 	// Cambio de habitacion: sin residuos y sin tocar la demo; carga fallida sin efectos.
@@ -1113,6 +1282,7 @@ namespace
 
 int main()
 {
+	PruebaRecursoIconoInteraccion();
 	PruebaGravedad();
 	PruebaCaidaLibre();
 	PruebaPasoFijo();
@@ -1125,6 +1295,9 @@ int main()
 	PruebaEstaticoNoCae();
 	PruebaDinamicoCaeYChoca();
 	PruebaPuertasDesdeJson();
+	PruebaParedParametricaConPuerta();
+	PruebaSueloLaboratorioCalibrado();
+	PruebaArranqueEnSpawnDelLaboratorio();
 	PruebaCambioDeHabitacion();
 	PruebaJugadorSueloYGravedad();
 	PruebaJugadorAndaLibre();

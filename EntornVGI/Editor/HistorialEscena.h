@@ -32,13 +32,30 @@ namespace editor
 	inline bool Iguales(const SceneObject& a, const SceneObject& b)
 	{
 		return a.id == b.id && a.categoria == b.categoria && a.modelo == b.modelo && a.posicion == b.posicion &&
-			a.rotacion == b.rotacion && a.escala == b.escala && Iguales(a.fisica, b.fisica);
+			a.rotacion == b.rotacion && a.escala == b.escala && Iguales(a.fisica, b.fisica) &&
+			a.luz.presente == b.luz.presente && a.luz.encendida == b.luz.encendida &&
+			a.luz.desplazamiento == b.luz.desplazamiento && a.luz.color == b.luz.color &&
+			a.luz.intensidad == b.luz.intensidad && a.luz.areaSize == b.luz.areaSize &&
+			a.material.presente == b.material.presente && a.material.textura == b.material.textura &&
+			a.material.tileSize == b.material.tileSize && a.material.roughness == b.material.roughness &&
+			a.material.dirtStrength == b.material.dirtStrength && a.material.dirtScale == b.material.dirtScale &&
+			a.material.dirtSeed == b.material.dirtSeed &&
+			a.permitirPenetracionArquitectura == b.permitirPenetracionArquitectura;
 	}
 
 	inline bool Iguales(const SceneObjetoAnimado& a, const SceneObjetoAnimado& b)
 	{
-		return a.id == b.id && a.modelo == b.modelo && a.posicion == b.posicion && a.giroZGrados == b.giroZGrados &&
-			a.escala == b.escala && a.animacion == b.animacion && a.colisionadores.size() == b.colisionadores.size();
+		if (a.id != b.id || a.modelo != b.modelo || a.posicion != b.posicion || a.giroZGrados != b.giroZGrados ||
+			a.escala != b.escala || a.animacion != b.animacion ||
+			a.permitirPenetracionArquitectura != b.permitirPenetracionArquitectura ||
+			a.colisionadores.size() != b.colisionadores.size()) return false;
+		for (std::size_t i = 0; i < a.colisionadores.size(); ++i)
+		{
+			const auto& ca = a.colisionadores[i];
+			const auto& cb = b.colisionadores[i];
+			if (ca.nodo != cb.nodo || ca.tipo != cb.tipo || ca.mitadTamano != cb.mitadTamano || ca.desplazamiento != cb.desplazamiento) return false;
+		}
+		return true;
 	}
 
 	inline bool Iguales(const EstadoEscena& a, const EstadoEscena& b)

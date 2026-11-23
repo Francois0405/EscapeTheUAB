@@ -63,8 +63,9 @@
 
 
 // -------------- VGI: Definició dels valors del pla near i far del Volum de Visualització en Perspectiva
-const double p_near=0.01;
-const double p_far=50000.0;
+// The project scenes use metric rooms; keep useful depth precision.
+const double p_near = 0.05;
+const double p_far = 1000.0;
 
 //-------------- VGI: Tipus d'Objectes Picking
 #define PICKCAP 0
@@ -199,7 +200,13 @@ struct LLUM
 	bool restringida;		// Booleana que indica si la font de llum és restringida [TRUE] i per tant són vàlids els coeficients posteriors o no [FALSE].
 	CPunt3D spotdirection;	// Vector de direció de la font de llum restringida (x,y,z).
 	GLfloat spotcoscutoff;	// Coseno de l'angle d'obertura de la font de llum restringida.
-	GLfloat spotexponent;	// Exponent que indica l'atenuació de la font del centre de l'eix a l'exterior, segons model de Warn.
+	GLfloat spotInnerCosCutoff;	// Inner cosine for a smooth spotlight transition.
+	GLfloat spotexponent;
+	bool areaSource = false;
+	CPunt3D areaAxisU{};
+	CPunt3D areaAxisV{};
+	GLfloat areaHalfSizeU = 0.0f;
+	GLfloat areaHalfSizeV = 0.0f;
 };
 
 #endif

@@ -3,6 +3,7 @@
 #include "../third_party/nlohmann/json.hpp"
 
 #include <atomic>
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <fstream>
@@ -138,12 +139,15 @@ namespace editor
 
 	bool SerializadorEscenas::Guardar(const std::vector<SceneObject>& objetos, std::string& error)
 	{
+		llamadaSinListaAnimados = true;
 		return Guardar(objetos, {}, error);
 	}
 
 	bool SerializadorEscenas::Guardar(const std::vector<SceneObject>& objetos, const std::vector<SceneObjetoAnimado>& animados,
 		std::string& error)
 	{
+		const bool preservarAnimated = llamadaSinListaAnimados;
+		llamadaSinListaAnimados = false;
 		if (!cargado)
 		{
 			error = "No hay una escena cargada para guardar.";
@@ -158,6 +162,33 @@ namespace editor
 			{
 				error = "La escena contiene un ID duplicado o una transformacion no finita/invalida.";
 				return false;
+			}
+			if (objeto.luz.presente && (!VectorValido(objeto.luz.desplazamiento, false) ||
+				!VectorValido(objeto.luz.color, false) || objeto.luz.color.x < 0.0f || objeto.luz.color.y < 0.0f || objeto.luz.color.z < 0.0f ||
+				objeto.luz.color.x > 1.0f || objeto.luz.color.y > 1.0f || objeto.luz.color.z > 1.0f ||
+				!std::isfinite(objeto.luz.intensidad) || objeto.luz.intensidad <= 0.0f || objeto.luz.intensidad > 16.0f ||
+				!std::isfinite(objeto.luz.areaSize.x) || !std::isfinite(objeto.luz.areaSize.y) ||
+				objeto.luz.areaSize.x < 0.0f || objeto.luz.areaSize.y < 0.0f ||
+				objeto.luz.areaSize.x > 10.0f || objeto.luz.areaSize.y > 10.0f ||
+				((objeto.luz.areaSize.x == 0.0f) != (objeto.luz.areaSize.y == 0.0f))))
+			{
+				error = "La instancia '" + objeto.id + "' tiene parametros de luz invalidos.";
+				return false;
+			}
+			if (objeto.material.presente)
+			{
+				const auto& m = objeto.material;
+				const std::filesystem::path textura(m.textura);
+				if (!std::isfinite(m.tileSize.x) || !std::isfinite(m.tileSize.y) ||
+					m.tileSize.x < 0.1f || m.tileSize.x > 20.0f || m.tileSize.y < 0.1f || m.tileSize.y > 20.0f ||
+					!std::isfinite(m.roughness) || m.roughness < 0.0f || m.roughness > 1.0f ||
+					!std::isfinite(m.dirtStrength) || m.dirtStrength < 0.0f || m.dirtStrength > 0.5f ||
+					!std::isfinite(m.dirtScale) || m.dirtScale < 0.05f || m.dirtScale > 4.0f || !std::isfinite(m.dirtSeed) || textura.is_absolute() ||
+					(!m.textura.empty() && !std::filesystem::is_regular_file(ruta.parent_path() / textura)))
+				{
+					error = "La instancia '" + objeto.id + "' tiene una textura o parametros de material invalidos.";
+					return false;
+				}
 			}
 		}
 
@@ -178,30 +209,94 @@ namespace editor
 					(*entrada)["position"] = VectorJSON(objeto.posicion);
 					(*entrada)["rotation"] = VectorJSON(objeto.rotacion);
 					(*entrada)["scale"] = VectorJSON(objeto.escala);
+					if (objeto.permitirPenetracionArquitectura) (*entrada)["allowArchitecturePenetration"] = true;
+					else entrada->erase("allowArchitecturePenetration");
+					if (objeto.luz.presente)
+					{
+						json luz = { {"enabled", objeto.luz.encendida}, {"offset", VectorJSON(objeto.luz.desplazamiento)},
+							{"color", VectorJSON(objeto.luz.color)}, {"intensity", objeto.luz.intensidad} };
+						if (objeto.luz.areaSize.x > 0.0f)
+							luz["areaSize"] = { objeto.luz.areaSize.x, objeto.luz.areaSize.y };
+						(*entrada)["light"] = std::move(luz);
+					}
+					else entrada->erase("light");
+					if (objeto.material.presente)
+					{
+						json material = { {"tileSize", {objeto.material.tileSize.x, objeto.material.tileSize.y}},
+							{"roughness", objeto.material.roughness}, {"dirtStrength", objeto.material.dirtStrength},
+							{"dirtScale", objeto.material.dirtScale}, {"dirtSeed", objeto.material.dirtSeed} };
+						if (!objeto.material.textura.empty()) material["texture"] = objeto.material.textura;
+						(*entrada)["material"] = std::move(material);
+					}
+					else entrada->erase("material");
+					if (objeto.pared.presente)
+					{
+						json aperturas = json::array();
+						for (const auto& apertura : objeto.pared.aperturas)
+			aperturas.push_back({ {"id", apertura.id}, {"doorId", apertura.idPuerta}, {"centerU", apertura.centerU},
+								{"width", apertura.ancho}, {"height", apertura.alto}, {"base", apertura.base} });
+						(*entrada)["wall"] = {{"apertures", std::move(aperturas)}};
+					}
+					else entrada->erase("wall");
 					escritos.insert(id);
 					++entrada;
 				}
 			}
-			if (!animados.empty() && documento.contains("animated") && documento["animated"].is_array())
+			if (!preservarAnimated)
 			{
-				for (auto& entrada : documento["animated"])
+				json reconciliados = json::array();
+				std::unordered_set<std::string> animadosEscritos;
+				if (documento.contains("animated") && documento["animated"].is_array())
+				for (auto entrada : documento["animated"])
 				{
 					const std::string id = entrada.at("id").get<std::string>();
-					for (const SceneObjetoAnimado& animado : animados)
+					const auto actual = std::find_if(animados.begin(), animados.end(),
+						[&](const SceneObjetoAnimado& item) { return item.id == id; });
+					if (actual == animados.end()) continue; // deleted instance, even when this was the last GLB
+					const SceneObjetoAnimado& animado = *actual;
+					if (!VectorValido(animado.posicion, false) || !std::isfinite(animado.giroZGrados) ||
+						!std::isfinite(animado.escala) || animado.escala <= 0.0f)
 					{
-						if (animado.id != id) continue;
-						if (!VectorValido(animado.posicion, false) || !std::isfinite(animado.giroZGrados) ||
-							!std::isfinite(animado.escala) || animado.escala <= 0.0f)
-						{
-							error = "La puerta '" + id + "' tiene una transformacion no finita/invalida.";
-							return false;
-						}
-						entrada["position"] = VectorJSON(animado.posicion);
-						entrada["rotation"] = VectorJSON(glm::vec3(0.0f, 0.0f, animado.giroZGrados));
-						if (entrada.contains("scale") || animado.escala != 1.0f) entrada["scale"] = animado.escala;
-						break;
+						error = "La puerta '" + id + "' tiene una transformacion no finita/invalida.";
+						return false;
 					}
+					entrada["position"] = VectorJSON(animado.posicion);
+					entrada["rotation"] = VectorJSON(glm::vec3(0.0f, 0.0f, animado.giroZGrados));
+					if (animado.permitirPenetracionArquitectura) entrada["allowArchitecturePenetration"] = true;
+					else entrada.erase("allowArchitecturePenetration");
+					if (entrada.contains("scale") || animado.escala != 1.0f) entrada["scale"] = animado.escala;
+					if (!animado.paredId.empty()) { entrada["wallId"] = animado.paredId; entrada["openingId"] = animado.aperturaId; }
+					else { entrada.erase("wallId"); entrada.erase("openingId"); }
+					animadosEscritos.insert(id);
+					reconciliados.push_back(std::move(entrada));
 				}
+				for (const SceneObjetoAnimado& animado : animados)
+				{
+					if (animadosEscritos.contains(animado.id)) continue;
+					if (animado.id.empty() || !VectorValido(animado.posicion, false) || !std::isfinite(animado.giroZGrados) ||
+						!std::isfinite(animado.escala) || animado.escala <= 0.0f)
+					{ error = "La puerta nueva contiene un ID o una transformacion invalida."; return false; }
+					std::error_code rutaError;
+					const std::filesystem::path modelo(animado.modelo);
+					const auto absoluta = std::filesystem::absolute(modelo.is_absolute() ? modelo : ruta.parent_path() / modelo, rutaError).lexically_normal();
+					if (rutaError || !std::filesystem::is_regular_file(absoluta, rutaError))
+					{ error = "El GLB de '" + animado.id + "' no existe."; return false; }
+					const auto relativa = absoluta.lexically_relative(ruta.parent_path());
+					if (relativa.empty() || relativa.is_absolute()) { error = "No se pudo crear una ruta relativa para el GLB."; return false; }
+					json nueva = {{"id", animado.id}, {"model", relativa.generic_string()},
+						{"position", VectorJSON(animado.posicion)}, {"rotation", VectorJSON(glm::vec3(0, 0, animado.giroZGrados))},
+						{"scale", animado.escala}};
+					if (!animado.animacion.empty()) nueva["animation"] = animado.animacion;
+					if (!animado.paredId.empty()) { nueva["wallId"] = animado.paredId; nueva["openingId"] = animado.aperturaId; }
+					if (animado.permitirPenetracionArquitectura) nueva["allowArchitecturePenetration"] = true;
+					json colisionadores = json::array();
+					for (const SceneColisionador& c : animado.colisionadores)
+						colisionadores.push_back({ {"node", c.nodo}, {"type", c.tipo == fisica::TipoCuerpo::Cinematico ? "kinematic" : "static"},
+							{"halfSize", VectorJSON(c.mitadTamano)}, {"offset", VectorJSON(c.desplazamiento)} });
+					if (!colisionadores.empty()) nueva["colliders"] = std::move(colisionadores);
+					reconciliados.push_back(std::move(nueva));
+				}
+				documento["animated"] = std::move(reconciliados);
 			}
 			for (const SceneObject& objeto : objetos)
 			{
@@ -227,6 +322,23 @@ namespace editor
 					{"position", VectorJSON(objeto.posicion)}, {"rotation", VectorJSON(objeto.rotacion)},
 					{"scale", VectorJSON(objeto.escala)}
 				};
+				if (objeto.permitirPenetracionArquitectura) nueva["allowArchitecturePenetration"] = true;
+				if (objeto.luz.presente)
+				{
+					json luz = { {"enabled", objeto.luz.encendida}, {"offset", VectorJSON(objeto.luz.desplazamiento)},
+						{"color", VectorJSON(objeto.luz.color)}, {"intensity", objeto.luz.intensidad} };
+					if (objeto.luz.areaSize.x > 0.0f)
+						luz["areaSize"] = { objeto.luz.areaSize.x, objeto.luz.areaSize.y };
+					nueva["light"] = std::move(luz);
+				}
+				if (objeto.material.presente)
+				{
+					json material = { {"tileSize", {objeto.material.tileSize.x, objeto.material.tileSize.y}},
+						{"roughness", objeto.material.roughness}, {"dirtStrength", objeto.material.dirtStrength},
+						{"dirtScale", objeto.material.dirtScale}, {"dirtSeed", objeto.material.dirtSeed} };
+					if (!objeto.material.textura.empty()) material["texture"] = objeto.material.textura;
+					nueva["material"] = std::move(material);
+				}
 				if (objeto.fisica.presente)
 				{
 					json fisica = {

@@ -1,0 +1,7 @@
+# Rejilla metalica discreta. Barra geometrica sobre el pavimento.
+newmtl rejilla_metal
+Ka 0.36 0.40 0.43
+Kd 0.47 0.53 0.56
+Ks 0.025 0.025 0.025
+Ns 6.0
+illum 2

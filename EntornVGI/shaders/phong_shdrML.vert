@@ -25,7 +25,12 @@ struct Light
 	vec3 attenuation;	// Atenuaci� de la font per dist�ncia: .x (quadr�tica), .y (lineal), .z (constant).
 	bool restricted;	// Booleana si font de llum restringida (TRUE) o no (FALSE).
 	vec3 spotDirection;	// Vector de direcci� de la font restringida (Coord. M�n).
-	float spotCosCutoff;	// Angle d'obertura de la font restringids (en graus). 
+	float spotCosCutoff;
+	float spotInnerCosCutoff;
+	bool areaSource;
+	vec3 areaAxisU;
+	vec3 areaAxisV;
+	vec2 areaHalfSize;
 	float spotExponent;	// Exponent per al c�lcul intenstitat font restringida segons model Warn.
 };
 
@@ -52,6 +57,9 @@ uniform mat4 modelMatrix;	// Model Matrix
 uniform sampler2D texture0;	// Imatge textura
 uniform bool textur;		// Booleana d�activaci� (TRUE) de textures o no (FALSE).
 uniform bool flag_invert_y;	// Booleana que activa la inversi� coordenada textura t (o Y) a 1.0-cty segons llibreria SOIL (TRUE) o no (FALSE).
+// Escala fisica de la textura para los cubos arquitectonicos.
+uniform bool uWorldTiling;
+uniform vec2 uWorldTileSize;
 uniform bool fixedLight;	// Booleana que defineix la font de llum fixe en Coordenades M�n (TRUE) o no (FALSE).
 uniform bool sw_material;	// Booleana que indica si el color del v�rtex ve del Material emission, ambient, diffuse, specular (TRUE) o del vector de color del v�rtex in_Color (FALSE)
 uniform bvec4 sw_intensity;	// Filtre per a cada tipus de reflexi�: Emissiva (sw_intensity[0]), Ambient (sw_intensity[1]), Difusa (sw_intensity[2]) o Especular (sw_intensity[2]).
@@ -64,34 +72,39 @@ out vec3 vertexPV;
 out vec3 vertexNormalPV;
 out vec2 vertexTexCoord;
 out vec4 vertexColor;
+out vec3 vertexWorldPosition;
 
 void main()	// --- L68-
 {
 // --- L70- Calcul variables out.
     vertexPV = vec3(viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
+    vertexWorldPosition = vec3(modelMatrix * vec4(in_Vertex, 1.0));
 
     //mat4 NormalMatrix = transpose(inverse(viewMatrix * modelMatrix));
-    vec3 N = vec3(normalMatrix * vec4(in_Normal,1.0));
-    vertexNormalPV = normalize(N);
+    mat3 normalMatrixLocal =
+        transpose(inverse(mat3(viewMatrix * modelMatrix)));
+
+    vertexNormalPV = normalize(normalMatrixLocal * in_Normal);
 
 // --- L77- Textura
-    if (flag_invert_y) vertexTexCoord = vec2(in_TexCoord.x,1.0-in_TexCoord.y); // SOIL_FLAG_INVERT_Y
-     else vertexTexCoord = vec2(in_TexCoord.x,in_TexCoord.y);
+// Proyeccion planar en coordenadas mundo: conserva metros por baldosa
+    // aunque se escale o rote la misma geometria para otra habitacion.
+    if (uWorldTiling) {
+        vec3 p = vec3(modelMatrix * vec4(in_Vertex, 1.0));
+        vec3 n = abs(normalize(mat3(modelMatrix) * in_Normal));
+        vec2 tile = max(uWorldTileSize, vec2(0.1));
+        if (n.z >= n.x && n.z >= n.y) vertexTexCoord = p.xy / tile;
+        else if (n.x >= n.y) vertexTexCoord = p.yz / tile;
+        else vertexTexCoord = p.xz / tile;
+    } else {
+        vertexTexCoord = flag_invert_y
+            ? vec2(in_TexCoord.x, 1.0 - in_TexCoord.y)
+            : in_TexCoord;
+    }
     
 // --- L81- Pas color del vertex al Fragent Shader
     vertexColor = in_Color;
 
 // --- L84- Transformacio de Visualitzacio amb Matriu Projeccio (PMatrix), Matriu Cmera (VMatrix) i Matriu TG (MMatrix)
     gl_Position = vec4(projectionMatrix * viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
-
-    // --- INICIO EFECTO PS1 VERTEX SNAPPING ---
-    float snapRes = 160.0; // Cuanto más bajo sea el número, más temblarán los vértices
-    
-    vec4 pos = gl_Position;
-    pos.xyz = pos.xyz / pos.w;
-    pos.xy = floor(pos.xy * snapRes) / snapRes;
-    pos.xyz *= pos.w;
-    
-    gl_Position = pos;
-    // --- FIN EFECTO PS1 ---
 }
