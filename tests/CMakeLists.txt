@@ -250,3 +250,33 @@ add_executable(MovimientoFPSTests
 target_include_directories(MovimientoFPSTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
 target_compile_features(MovimientoFPSTests PRIVATE cxx_std_20)
 add_test(NAME MovimientoFPSTests COMMAND MovimientoFPSTests)
+
+# Capa de red (protocolo, sesion, servicio thread-safe) con transporte en memoria: sin ENet ni sockets.
+add_executable(NetworkTests
+	NetworkTests.cpp
+)
+target_link_libraries(NetworkTests PRIVATE EntornVGI_network)
+add_test(NAME NetworkTests COMMAND NetworkTests)
+
+# Adaptador de red del juego (poses PC/OpenXR, interpolacion, puertas con autoridad del host, propiedad temporal):
+# transporte en memoria, sin ENet, sin OpenGL, sin Bullet y sin visor.
+add_executable(NetJuegoTests
+	NetJuegoTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/NetJuego.cpp
+)
+target_include_directories(NetJuegoTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_link_libraries(NetJuegoTests PRIVATE EntornVGI_network)
+if(TARGET glm::glm)
+	target_link_libraries(NetJuegoTests PRIVATE glm::glm)
+else()
+	target_link_libraries(NetJuegoTests PRIVATE glm)
+endif()
+target_compile_features(NetJuegoTests PRIVATE cxx_std_20)
+add_test(NAME NetJuegoTests COMMAND NetJuegoTests)
+
+# Bucle local con ENet REAL (127.0.0.1). Solo si la capa de red encontro ENet; sin ENet no se registra.
+if(TARGET EntornVGI_network AND ENTORNVGI_NETWORK_TIENE_ENET)
+	add_executable(ENetLoopbackTests ENetLoopbackTests.cpp)
+	target_link_libraries(ENetLoopbackTests PRIVATE EntornVGI_network)
+	add_test(NAME ENetLoopbackTests COMMAND ENetLoopbackTests)
+endif()

@@ -28,6 +28,9 @@
 #include "VistaEstereo.h"
 #include "OpenXRManager.h"
 #include "MovimientoFPS.h"
+#include "NetJuego.h"
+#include "NetAdaptadores.h"
+#include "NetAvatar.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include <iostream>
@@ -449,6 +452,15 @@ namespace
 		luz.areaSource = false;
 	}
 
+	// --- Multijugador (OFFLINE por defecto: no hay hilo, ni socket, ni ENet hasta pulsar Iniciar o usar --host/--connect) ---
+	netjuego::RedJuego redJuego;
+	std::unique_ptr<netjuego::PuertasGLB> puertasRed;       // adaptador de las puertas GLB (IDs de escena)
+	netjuego::ConfigRed configRedPendiente;                 // lo que editan el menu y la linea de comandos
+	vr::PoseXR ultimaCabezaVR;                              // pose real del visor, la rellena el render VR
+	bool hayCabezaVR = false;
+	void iniciarRed(const netjuego::ConfigRed& cfg);
+	void detenerRed();
+
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
 
 	bool modoJuegoFPS();
@@ -516,6 +528,13 @@ namespace
 	void interactuar()
 	{
 		const ObjetivoInteraccion objetivo = objetivoInteraccionActual;
+		// Objeto compartido de prueba (solo con red): si se apunta a el, pedirlo/soltarlo tiene prioridad.
+		if (redJuego.Activa())
+		{
+			glm::vec3 origenRed, direccionRed;
+			origenYDireccionDeLaMirada(origenRed, direccionRed);
+			if (redJuego.AlternarObjeto(origenRed, direccionRed, glfwGetTime())) return;
+		}
 		if (objetivo.accion == AccionInteraccion::Recoger)
 		{
 			glm::vec3 origen, direccion;
@@ -524,7 +543,12 @@ namespace
 		}
 		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
 			objetivo.objetoAnimado != nullptr)
+		{
+			// Cliente: la puerta la decide el host (se envia la solicitud y se espera su estado).
+			size_t indicePuerta = 0;
+			if (puertasRed && puertasRed->IndiceDe(objetivo.objetoAnimado, indicePuerta) && redJuego.InterceptarPuerta(indicePuerta)) return;
 			glb::AlternarPuerta(*objetivo.objetoAnimado);
+		}
 	}
 
 	// Cada fotograma de juego: la "mano" sigue a la mirada. Solo si se puede jugar (sin pausa, sin
@@ -704,6 +728,52 @@ namespace
 		return true;
 	}
 
+
+	// ---- Multijugador: adaptador de entrada. SOLO LEE la camara/mandos; nunca los modifica (la pose local manda). ----
+	bool poseLocalParaRed(net::PoseEntry& pose)
+	{
+		const glm::vec3 ojos(static_cast<float>(opvN.x), static_cast<float>(opvN.y), static_cast<float>(opvN.z));
+		const glm::vec3 frente(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+		if (gestorOpenXR.SesionEnMarcha() && hayCabezaVR)
+		{
+			const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+			const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frente,
+				gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+			vr::PoseXR izq, der;
+			const bool hayIzq = gestorOpenXR.PoseApuntadoMando(0, izq), hayDer = gestorOpenXR.PoseApuntadoMando(1, der);
+			if (netjuego::PoseDesdeVR(ultimaCabezaVR, hayIzq ? &izq : nullptr, hayDer ? &der : nullptr, anclaje, pose)) return true;
+		}
+		return netjuego::PoseDesdeEscritorio(ojos, frente, pose);
+	}
+
+	void iniciarRed(const netjuego::ConfigRed& cfg)
+	{
+		if (cfg.rol == net::Role::Offline) { redJuego.Detener(); return; }
+		if (redJuego.EnRed()) return;
+		puertasRed = std::make_unique<netjuego::PuertasGLB>(objetosAnimados);
+		const std::string escena = serializadorEscena.Cargado() ? serializadorEscena.Ruta().stem().string() : std::string();
+		const glm::vec3 ojos(static_cast<float>(opvN.x), static_cast<float>(opvN.y), static_cast<float>(opvN.z));
+		glm::vec3 frente(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), 0.0f);
+		frente = glm::length(frente) > 1e-4f ? glm::normalize(frente) : glm::vec3(0.0f, 1.0f, 0.0f);
+		redJuego.Iniciar(cfg, escena, puertasRed.get(), ojos + frente * 2.0f - glm::vec3(0.0f, 0.0f, 0.5f));
+	}
+
+	void detenerRed() { redJuego.Detener(); }
+
+	// Una vez por fotograma, en el hilo de juego. Offline: no hace nada (coste cero).
+	void actualizarRed(double ahora, bool jugando)
+	{
+		if (!redJuego.EnRed()) return;
+		net::PoseEntry pose;
+		const bool hayPose = poseLocalParaRed(pose);
+		redJuego.Actualizar(ahora, hayPose ? &pose : nullptr);
+		if (jugando && redJuego.Activa() && entradaFPSActiva())
+		{
+			glm::vec3 origen, direccion;
+			origenYDireccionDeLaMirada(origen, direccion);
+			redJuego.ActualizarAcarreo(origen, direccion, ahora);
+		}
+	}
 
 	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
 	// el suelo ya exista y el jugador no caiga al vacío.
@@ -1011,6 +1081,11 @@ namespace
 		std::cout << "Escena cargada desde " << (rutaEscenaError ? ruta.string() : rutaEscenaAbsoluta.string()) << ": "
 			<< nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
 			<< " animadas, " << escenaFisica->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
+		if (redJuego.EnRed())
+		{
+			std::cerr << "Red: la escena ha cambiado; se detiene la sesion (host y clientes deben usar la misma escena)." << std::endl;
+			detenerRed();
+		}
 		return true;
 	}
 
@@ -1578,10 +1653,13 @@ static bool dibujarEscenaVR()
 			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
 
 		glDisable(GL_SCISSOR_TEST);
+		glm::vec3 sumaOjos(0.0f); int ojosCabeza = 0; vr::PoseXR primerOjo;
 		for (int i = 0; i < gestorOpenXR.NumeroDeOjos(); ++i)
 		{
 			vr::OjoVR ojo;
 			if (!gestorOpenXR.AdquirirOjo(i, ojo)) continue;   // el fotograma se enviará vacío; AdquirirOjo no deja nada a medias
+			if (ojosCabeza++ == 0) primerOjo = ojo.pose;       // para la red: pose real de la cabeza (media de los ojos)
+			sumaOjos += ojo.pose.posicion;
 
 			glViewport(0, 0, ojo.ancho, ojo.alto);
 			ProjectionMatrix = vr::ProyeccionDesdeCampo(ojo.fov, vrPlanoCercano, vrPlanoLejano);
@@ -1602,6 +1680,12 @@ static bool dibujarEscenaVR()
 			if (i == 0) copiarOjoAVentana(ojo);   // espejo en el monitor: ojo izquierdo
 			gestorOpenXR.LiberarOjo(i);
 			dibujado = true;
+		}
+		if (ojosCabeza > 0)
+		{
+			ultimaCabezaVR = primerOjo;
+			ultimaCabezaVR.posicion = sumaOjos / static_cast<float>(ojosCabeza);
+			hayCabezaVR = true;
 		}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, w, h);
@@ -2118,6 +2202,14 @@ void dibuixa_Escena() {
 	else if (mostrarColisionadores && !editorEscenas.Activo())
 		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
 
+	// Multijugador: jugadores remotos (el local NUNCA se dibuja) y objeto compartido de prueba.
+	if (redJuego.Activa() && !editorEscenas.Activo())
+	{
+		netjuego::DibujarAvataresRemotos(eixos_programID, ProjectionMatrix, ViewMatrix, redJuego.RemotosParaDibujar(glfwGetTime()),
+			redJuego.Objeto().conocido, redJuego.PosicionVisualObjeto(), redJuego.SoyDuenoDelObjeto(),
+			redJuego.Objeto().dueno != netjuego::kSinDueno);
+	}
+
 	// Dibujar el rayo láser del mando derecho en VR.
 	dibujarRayoMandoVR();
 }
@@ -2422,6 +2514,67 @@ enum EstadoJuego {
 
 EstadoJuego estadoActual = ESTADO_MENU_PRINCIPAL;
 
+// Panel de multijugador: seleccion Offline/Host/Cliente, IP y puerto, y diagnostico. Offline es el valor por defecto.
+static void dibujarPanelRed()
+{
+	using netjuego::FaseRed;
+	const netjuego::Diagnostico d = redJuego.ObtenerDiagnostico();
+	ImGui::SetNextWindowPos(ImVec2(12.0f, 12.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(360.0f, 0.0f), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Multijugador");
+	ImGui::Text("Modo: %s | Estado: %s", d.modo.c_str(), d.estado.c_str());
+	if (!d.mensaje.empty()) ImGui::TextWrapped("%s", d.mensaje.c_str());
+	const bool libre = d.fase == FaseRed::Offline || d.fase == FaseRed::Error;
+	static int modo = -1; static char ip[64]; static int puerto = netjuego::kPuertoPorDefecto; static char nombre[33];
+	if (modo < 0)
+	{
+		modo = configRedPendiente.rol == net::Role::Host ? 1 : (configRedPendiente.rol == net::Role::Client ? 2 : 0);
+		std::snprintf(ip, sizeof ip, "%s", configRedPendiente.host.c_str());
+		std::snprintf(nombre, sizeof nombre, "%s", configRedPendiente.nombre.c_str());
+		puerto = configRedPendiente.puerto;
+	}
+	if (libre)
+	{
+		ImGui::RadioButton("Offline", &modo, 0); ImGui::SameLine();
+		ImGui::RadioButton("Host", &modo, 1); ImGui::SameLine();
+		ImGui::RadioButton("Cliente", &modo, 2);
+		if (modo == 2) ImGui::InputText("IP del host", ip, sizeof ip);
+		if (modo != 0)
+		{
+			ImGui::InputInt("Puerto", &puerto);
+			ImGui::InputText("Nombre", nombre, sizeof nombre);
+			static int enet = -1;
+			if (enet < 0) enet = netjuego::RedJuego::EnetDisponible() ? 1 : 0;   // solo al elegir red; no inicializa ENet
+			if (!enet) ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "ENet no incluido en esta compilacion.");
+			if (ImGui::Button("Iniciar"))
+			{
+				netjuego::ConfigRed cfg;
+				cfg.rol = modo == 1 ? net::Role::Host : net::Role::Client;
+				cfg.nombre = nombre[0] ? nombre : "jugador";
+				std::string error;
+				if (!netjuego::PuertoValido(puerto)) std::cerr << "Red: puerto fuera de rango (1-65535)." << std::endl;
+				else if (cfg.rol == net::Role::Client && !netjuego::ParsearEndpoint(std::string(ip) + ":" + std::to_string(puerto), cfg.host, cfg.puerto, error))
+					std::cerr << "Red: " << error << std::endl;
+				else { cfg.puerto = static_cast<uint16_t>(puerto); configRedPendiente = cfg; iniciarRed(cfg); }
+			}
+		}
+	}
+	else if (ImGui::Button(d.fase == FaseRed::Arrancando ? "Cancelar" : "Desconectar")) detenerRed();
+	if (d.fase == FaseRed::Activa)
+	{
+		ImGui::Separator();
+		ImGui::Text("Escena: %s | peer local: %u", d.escena.c_str(), static_cast<unsigned>(d.peerLocal));
+		ImGui::Text("Remotos: %zu | puertas en red: %zu", d.remotos, d.puertasEnRed);
+		ImGui::Text("Eventos ignorados: %zu | descartados: %zu", d.eventosIgnorados, d.eventosDescartados);
+		const auto& obj = redJuego.Objeto();
+		if (obj.conocido)
+			ImGui::Text("Objeto compartido: %s", obj.dueno == netjuego::kSinDueno ? "libre"
+				: (redJuego.SoyDuenoDelObjeto() ? "lo tengo yo" : "en manos de otro jugador"));
+		ImGui::TextUnformatted("E / gatillo apuntando al cubo amarillo: coger o soltar.");
+	}
+	ImGui::End();
+}
+
 void draw_Menu_ImGui()
 {
 	// Start the Dear ImGui frame
@@ -2553,6 +2706,8 @@ void draw_Menu_ImGui()
 		ImGui::PopStyleColor(2);
 		ImGui::PopStyleVar(2);
 	}
+
+	if (estadoActual != ESTADO_JUGANDO || mostrarPanelesDebug) dibujarPanelRed();
 
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
@@ -2781,7 +2936,7 @@ void draw_Menu_ImGui()
 			ImGui::PushID(objeto.id.c_str());   // cada fila necesita un ID distinto para sus botones
 			if (ImGui::Button("Abrir")) glb::IniciarAnimacion(objeto);     // depuración: reinicia la apertura
 			ImGui::SameLine();
-			if (ImGui::Button("Alternar")) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
+			if (ImGui::Button("Alternar") && !redJuego.EsCliente()) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
 			ImGui::SameLine();
 			ImGui::Text("%s  %s  %.2f / %.2f s", objeto.id.c_str(), glb::NombreDelEstado(objeto.estado),
 				objeto.reproductor.tiempo, objeto.reproductor.duracion);
@@ -8216,6 +8371,14 @@ void APIENTRY glDebugOutput(GLenum source, GLenum type, GLuint id, GLenum severi
 int main(int argc, char** argv)
 {
 	SetWorkingDirectoryToAssetRoot(argc > 0 ? argv[0] : nullptr);
+	{	// Red: --host [--port N] | --connect HOST[:PUERTO] [--name N]. Sin argumentos: OFFLINE.
+		std::string errorRed;
+		if (!netjuego::ParsearArgumentos(argc, argv, configRedPendiente, errorRed))
+		{
+			std::cerr << "Argumentos de red ignorados: " << errorRed << std::endl;
+			configRedPendiente = netjuego::ConfigRed{};
+		}
+	}
 
 // Entorn VGI. Timer: Variables
 	float time = elapsedTime;
@@ -8411,6 +8574,8 @@ int main(int argc, char** argv)
 		glfwTerminate();
 		return EXIT_FAILURE;
 	}
+	// Red solo si se pidio por linea de comandos (--host / --connect); por defecto sigue OFFLINE.
+	if (configRedPendiente.rol != net::Role::Offline) iniciarRed(configRedPendiente);
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
 	OnFramebufferSize(window, w, h);
@@ -8545,6 +8710,9 @@ int main(int argc, char** argv)
 			sincronizarJugadorYCamara();
 			actualizarBalanceoVisual(static_cast<float>(delta));
 		}
+
+		// Red: los mensajes se aplican aqui (hilo de juego). Offline: no hace nada.
+		actualizarRed(glfwGetTime(), estadoActual == ESTADO_JUGANDO);
 
 		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
 		actualizarObjetivoInteraccion(estadoActual == ESTADO_JUGANDO);
@@ -8692,6 +8860,7 @@ int main(int argc, char** argv)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+	redJuego.Detener();           // cierra la red (si la hay) antes que la ventana
 	gestorOpenXR.Desactivar();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
 	NFD_QuitCompat();
 
@@ -8704,6 +8873,7 @@ int main(int argc, char** argv)
 	mundoFisico.EliminarJugador();
 	escenaFisica.reset();                       // quita las colisiones de la habitacion antes de cerrar
 	fisica::LiberarDibujoColisionadores();
+	netjuego::LiberarDibujoAvatares();
 
 	if (phoneOBJ != nullptr)
 	{

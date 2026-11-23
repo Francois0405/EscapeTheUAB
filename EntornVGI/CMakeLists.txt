@@ -42,6 +42,9 @@ endif()
 
 add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_party/SOIL2")
 
+option(ENTORNVGI_ENABLE_NETWORK "Compilar la capa de red (ENet opcional)" ON)
+add_subdirectory(Network)
+
 set(ENTORNVGI_SOURCES
 	AudioManager.cpp
 	DibujoColisionadores.cpp
@@ -60,6 +63,8 @@ set(ENTORNVGI_SOURCES
 	material.cpp
 	ModeloGLB.cpp
 	MundoFisico.cpp
+	NetAvatar.cpp
+	NetJuego.cpp
 	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
 	OpenXRManager.cpp
@@ -160,6 +165,7 @@ target_link_libraries(EntornVGI PRIVATE
 	soil2
 	EntornVGI_bullet
 	EntornVGI_openxr
+	EntornVGI_network
 	Threads::Threads
 	${CMAKE_DL_LIBS}
 )

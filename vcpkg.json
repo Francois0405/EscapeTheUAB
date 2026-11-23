@@ -8,6 +8,7 @@
     "glm",
     "bullet3",
     "nativefiledialog-extended",
+    "enet",
     {
       "name": "openxr-loader",
       "platform": "windows"
