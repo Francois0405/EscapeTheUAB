@@ -407,26 +407,33 @@ int main()
 			"buffer fisico reconstruye intervalos de host y wraparound sin usar jitter de llegada");
 		enVuelo.transform.pos[0] = 5.0f; enVuelo.flags = 0; enVuelo.owner = kSinDueno;
 		ok(host->red->PublicarEstadoFisicoFinal(enVuelo), "host publica estado final fiable del objeto");
-		Esperar(hostYC1, [&] { return false; }, 0.1);
 		std::vector<net::DynamicStateEntry> finales;
-		c1->red->TomarEstadosFisicosFiables(finales);
-		ok(finales.size() == 1 && finales[0].tick == 10 && finales[0].transform.pos[0] == 5.0f,
+		const bool finalRecibido = Esperar(hostYC1, [&] {
+			c1->red->TomarEstadosFisicosFiables(finales);
+			return !finales.empty();
+		});
+		ok(finalRecibido && finales.size() == 1 && finales[0].tick == 10 && finales[0].transform.pos[0] == 5.0f,
 			"evento fiable conserva tick y pose final");
 		const auto peerC1 = c1->red->PeerLocal();
 		ok(c1->red->SolicitarAgarreDinamico(enVuelo.objectId, { 0, 0, 1 }, { 0, 1, 0 }),
 			"cliente envia solicitud fiable de agarre con su rayo");
-		Esperar(hostYC1, [&] { return false; }, 0.1);
 		std::vector<SolicitudObjetoDinamico> solicitudes;
-		host->red->TomarSolicitudesFisicas(solicitudes);
-		ok(solicitudes.size() == 1 && solicitudes[0].id == enVuelo.objectId && solicitudes[0].peer == peerC1 && solicitudes[0].agarrar,
+		const bool agarreRecibido = Esperar(hostYC1, [&] {
+			host->red->TomarSolicitudesFisicas(solicitudes);
+			return !solicitudes.empty();
+		});
+		ok(agarreRecibido && solicitudes.size() == 1 && solicitudes[0].id == enVuelo.objectId && solicitudes[0].peer == peerC1 && solicitudes[0].agarrar,
 			"host recibe la solicitud con peer e ID asignados por el protocolo");
 		host->red->FijarPropietarioDinamico(enVuelo.objectId, peerC1);
 		ok(Esperar(hostYC1, [&] { return c1->red->PropietarioDinamico(enVuelo.objectId) == peerC1; }),
 			"el host confirma la propiedad al cliente");
 		ok(c1->red->SolicitarSoltarDinamico(enVuelo.objectId, { 0, 0, 5 }), "cliente envia velocidad de lanzamiento");
-		Esperar(hostYC1, [&] { return false; }, 0.1);
-		host->red->TomarSolicitudesFisicas(solicitudes);
-		ok(solicitudes.size() == 1 && !solicitudes[0].agarrar && solicitudes[0].peer == peerC1 && cerca(solicitudes[0].velocidad.z, 5.0f),
+		solicitudes.clear();
+		const bool lanzamientoRecibido = Esperar(hostYC1, [&] {
+			host->red->TomarSolicitudesFisicas(solicitudes);
+			return !solicitudes.empty();
+		});
+		ok(lanzamientoRecibido && solicitudes.size() == 1 && !solicitudes[0].agarrar && solicitudes[0].peer == peerC1 && cerca(solicitudes[0].velocidad.z, 5.0f),
 			"el host recibe solicitud de lanzamiento del propietario actual");
 		auto c2 = Crear(hub, Role::Client, "aula", glm::vec3(1, -0.5f, 1.7f), &fabricas);
 		std::vector<Nodo*> todos = { host.get(), c1.get(), c2.get() };
@@ -440,7 +447,21 @@ int main()
 		});
 		ok(tardioEscena,
 			"late join recibe el ultimo estado autoritativo");
-		const bool tardioFisica = Esperar(todos, [&] { c2->red->TomarEstadosFisicosFiables(finales); return !finales.empty(); });
+		// Reutiliza 'finales' del estado anterior: drenar no debe reencolar su contenido antiguo.
+		const bool tardioFisica = Esperar(todos, [&] {
+			c2->red->TomarEstadosFisicosFiables(finales);
+			return std::any_of(finales.begin(), finales.end(), [&](const auto& estado) {
+				return estado.objectId == enVuelo.objectId && estado.owner == peerC1;
+			});
+		});
+		if (!tardioFisica)
+		{
+			const auto diag = c2->red->ObtenerDiagnostico();
+			std::cerr << "late-join timeout: fase=" << static_cast<int>(diag.fase) << " peer=" << c2->red->PeerLocal()
+				<< " expected-owner=" << peerC1 << " dropped=" << diag.eventosDescartados << " ignorados=" << diag.eventosIgnorados << '\n';
+			for (const auto& estado : finales)
+				std::cerr << "late-join state: id=" << estado.objectId << " owner=" << estado.owner << " flags=" << int(estado.flags) << '\n';
+		}
 		ok(tardioFisica && finales.size() == 1 && finales[0].objectId == enVuelo.objectId && finales[0].owner == peerC1,
 			"late join recibe el estado y propietario físico vigente");
 		ok(Esperar(todos, [&] { return c1->red->Objeto().conocido && c2->red->Objeto().conocido; }), "recuperacion: los clientes conocen el objeto compartido");
