@@ -883,7 +883,9 @@ namespace
 				: "assets/audio/hirity/story/holahirity.ogg";
 			reproducirSonidoHiriti(saludo);
 
-			if (!escenaFisica->ImpulsarObjetoDinamico(indice, glm::vec3(0.0f, 0.0f, 0.75f)))
+			// La primera mirada y su sonido pueden ser locales, pero solo el host/offline impulsa el cuerpo.
+			if (puedeProcesarColisiones &&
+				!escenaFisica->ImpulsarObjetoDinamico(indice, glm::vec3(0.0f, 0.0f, 0.75f)))
 				std::cerr << "No se pudo dar el impulso inicial a Hiriti.\n";
 			std::cout << "Has descubierto a Hiriti.\n";
 		}
@@ -9552,7 +9554,8 @@ int main(int argc, char** argv)
 		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
 		actualizarHiriti(estadoActual == ESTADO_JUGANDO &&
 			entradaFPSActiva() && !gestorOpenXR.SesionEnMarcha(),
-			estadoActual == ESTADO_JUGANDO && !editorEscenas.Activo(), static_cast<float>(delta));
+			estadoActual == ESTADO_JUGANDO && !editorEscenas.Activo() && !redJuego.EsCliente(),
+			static_cast<float>(delta));
 		actualizarAudioAmbiente(estadoActual == ESTADO_JUGANDO && !editorEscenas.Activo(),
 			static_cast<float>(delta));
 		actualizarObjetivoInteraccion(estadoActual == ESTADO_JUGANDO);

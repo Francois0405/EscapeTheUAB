@@ -186,6 +186,7 @@ namespace juego
 			m_esperandoAgarrame = false;
 			m_agarrado = false;
 			m_tiempoDesdeDescubrimiento = 0.0f;
+			m_tiempoDesdeReaparicion = 0.0f;
 			m_sonidoDanioPendiente = false;
 			m_habiaContacto = false;
 			m_siguienteSonidoDanio = 0;

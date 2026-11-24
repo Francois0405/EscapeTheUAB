@@ -129,6 +129,10 @@ int main()
 	reaparicion.Reiniciar();
 	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(false, false, 30.0f),
 		"estar a 10 metros o menos impide reaparecer");
+	reaparicion.Reiniciar();
+	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, false, 29.0f) &&
+		reaparicion.ActualizarTemporizadorReaparicion(true, false, 1.0f),
+		"reiniciar Hiriti limpia el cooldown antes de cambiar o reinicializar la escena");
 
 	juego::TemporizadorAudioHiriti temporizadorAudio;
 	comprobar(temporizadorAudio.Actualizar(true, 29.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&

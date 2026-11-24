@@ -5,6 +5,14 @@
 
 namespace interfaz
 {
+	struct RectanguloVentanaUI
+	{
+		float x = 0.0f;
+		float y = 0.0f;
+		float ancho = 0.0f;
+		float alto = 0.0f;
+	};
+
 	inline float CalcularEscalaUI(float anchoLogico, float altoLogico,
 		float escalaDpiX, float escalaDpiY)
 	{
@@ -17,5 +25,18 @@ namespace interfaz
 			std::sqrt(std::max(0.01f, escalaDpiX * escalaDpiY)),
 			0.75f, 2.0f);
 		return std::clamp(std::sqrt(resolucionLogica * dpi), 0.75f, 1.75f);
+	}
+
+	inline RectanguloVentanaUI EscalarRectanguloUI(const RectanguloVentanaUI& actual,
+		float factor, float anchoDisplay, float altoDisplay)
+	{
+		const float ancho = std::clamp(actual.ancho * factor, 0.0f, anchoDisplay);
+		const float alto = std::clamp(actual.alto * factor, 0.0f, altoDisplay);
+		return {
+			std::clamp(actual.x * factor, 0.0f, std::max(0.0f, anchoDisplay - ancho)),
+			std::clamp(actual.y * factor, 0.0f, std::max(0.0f, altoDisplay - alto)),
+			ancho,
+			alto
+		};
 	}
 }

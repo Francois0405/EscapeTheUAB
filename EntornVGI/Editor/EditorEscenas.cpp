@@ -4,6 +4,7 @@
 #include "imgui.h"
 #include "../third_party/ImGuizmo.h"
 #include "../EscenaFisica.h"
+#include "../EscalaUI.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 
@@ -14,6 +15,8 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <string>
+#include <unordered_map>
 
 namespace editor
 {
@@ -23,6 +26,29 @@ namespace editor
 		constexpr float Pi = 3.14159265358979323846f;
 		constexpr float AlturaBarra = 46.0f;
 		constexpr float DimensionMinimaParaColisionador = 0.30f;   // por debajo es un objeto decorativo pequeño
+
+		void AjustarVentanaAlCambiarEscala(const char* nombre, float escala, const ImVec2& displaySize)
+		{
+			struct EstadoVentana
+			{
+				float escala = 0.0f;
+			};
+			static std::unordered_map<std::string, EstadoVentana> estados;
+
+			EstadoVentana& estado = estados[nombre];
+			const ImVec2 tamanoActual = ImGui::GetWindowSize();
+			const ImVec2 posicionActual = ImGui::GetWindowPos();
+			if (estado.escala > 0.0f && std::abs(escala - estado.escala) > 0.001f)
+			{
+				const float factor = escala / estado.escala;
+				const interfaz::RectanguloVentanaUI ajustada = interfaz::EscalarRectanguloUI(
+					{ posicionActual.x, posicionActual.y, tamanoActual.x, tamanoActual.y },
+					factor, displaySize.x, displaySize.y);
+				ImGui::SetWindowSize(ImVec2(ajustada.ancho, ajustada.alto), ImGuiCond_Always);
+				ImGui::SetWindowPos(ImVec2(ajustada.x, ajustada.y), ImGuiCond_Always);
+			}
+			estado.escala = escala;
+		}
 
 		bool VectorFinito(const glm::vec3& v)
 		{
@@ -1076,7 +1102,7 @@ namespace editor
     		return;
 
 		ImGui::SetNextWindowPos(ImVec2(0.0f, 0.0f), ImGuiCond_Always);
-		ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, AlturaBarra), ImGuiCond_Always);
+		ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, AlturaBarra * io.FontGlobalScale), ImGuiCond_Always);
 		ImGui::Begin("Editor Toolbar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_HorizontalScrollbar);
 		if (ImGui::Button(modificada ? "Save*" : "Save")) guardarSolicitado = true;
@@ -1128,10 +1154,15 @@ namespace editor
 	void EditorEscenas::DibujarJerarquia(ContextoEscena contexto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
-		ImGui::SetNextWindowPos(ImVec2(0.0f, AlturaBarra + 4.0f), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(270.0f, std::max(260.0f, io.DisplaySize.y * 0.45f)), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSizeConstraints(ImVec2(180.0f, 140.0f), ImVec2(io.DisplaySize.x, io.DisplaySize.y));
-		if (ImGui::Begin("Hierarchy"))
+		const float escalaUI = io.FontGlobalScale;
+		ImGui::SetNextWindowPos(ImVec2(0.0f, (AlturaBarra + 4.0f) * escalaUI), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(270.0f * escalaUI,
+			std::max(260.0f * escalaUI, io.DisplaySize.y * 0.45f)), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSizeConstraints(ImVec2(180.0f * escalaUI, 140.0f * escalaUI),
+			ImVec2(io.DisplaySize.x, io.DisplaySize.y));
+		const bool visible = ImGui::Begin("Hierarchy");
+		AjustarVentanaAlCambiarEscala("Hierarchy", escalaUI, io.DisplaySize);
+		if (visible)
 		{
 			if (ImGui::CollapsingHeader("Editor visibility (not saved)", ImGuiTreeNodeFlags_DefaultOpen))
 			{
@@ -1192,10 +1223,16 @@ namespace editor
 	void EditorEscenas::DibujarInspector(ContextoEscena contexto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
-		ImGui::SetNextWindowPos(ImVec2(std::max(280.0f, io.DisplaySize.x - 320.0f), AlturaBarra + 4.0f), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(310.0f, std::max(300.0f, io.DisplaySize.y * 0.6f)), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSizeConstraints(ImVec2(220.0f, 160.0f), ImVec2(io.DisplaySize.x, io.DisplaySize.y));
-		if (ImGui::Begin("Inspector"))
+		const float escalaUI = io.FontGlobalScale;
+		ImGui::SetNextWindowPos(ImVec2(std::max(280.0f * escalaUI, io.DisplaySize.x - 320.0f * escalaUI),
+			(AlturaBarra + 4.0f) * escalaUI), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(310.0f * escalaUI,
+			std::max(300.0f * escalaUI, io.DisplaySize.y * 0.6f)), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSizeConstraints(ImVec2(220.0f * escalaUI, 160.0f * escalaUI),
+			ImVec2(io.DisplaySize.x, io.DisplaySize.y));
+		const bool visible = ImGui::Begin("Inspector");
+		AjustarVentanaAlCambiarEscala("Inspector", escalaUI, io.DisplaySize);
+		if (visible)
 		{
 			if (!mensajeColocacion.empty())
 				ImGui::TextColored(ImVec4(1.0f, 0.28f, 0.22f, 1.0f), "%s", mensajeColocacion.c_str());
@@ -1491,10 +1528,16 @@ namespace editor
 	void EditorEscenas::DibujarAssetBrowser(ContextoEscena contexto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
-		ImGui::SetNextWindowPos(ImVec2(0.0f, AlturaBarra + 4.0f + std::max(260.0f, io.DisplaySize.y * 0.45f) + 6.0f), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSize(ImVec2(270.0f, std::max(220.0f, io.DisplaySize.y * 0.35f)), ImGuiCond_FirstUseEver);
-		ImGui::SetNextWindowSizeConstraints(ImVec2(200.0f, 160.0f), ImVec2(io.DisplaySize.x, io.DisplaySize.y));
-		if (ImGui::Begin("Asset Browser"))
+		const float escalaUI = io.FontGlobalScale;
+		ImGui::SetNextWindowPos(ImVec2(0.0f, (AlturaBarra + 4.0f) * escalaUI +
+			std::max(260.0f * escalaUI, io.DisplaySize.y * 0.45f) + 6.0f * escalaUI), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(270.0f * escalaUI,
+			std::max(220.0f * escalaUI, io.DisplaySize.y * 0.35f)), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSizeConstraints(ImVec2(200.0f * escalaUI, 160.0f * escalaUI),
+			ImVec2(io.DisplaySize.x, io.DisplaySize.y));
+		const bool visible = ImGui::Begin("Asset Browser");
+		AjustarVentanaAlCambiarEscala("Asset Browser", escalaUI, io.DisplaySize);
+		if (visible)
 		{
 			if (ImGui::Button("Refresh")) { inventarioCargado = false; inventarioPuertasCargado = false; }
 			ImGui::SameLine();
