@@ -267,10 +267,11 @@ add_test(NAME AnimacionHiritiTests COMMAND AnimacionHiritiTests)
 # Comprueba que miniaudio puede decodificar los sonidos OGG de Hirity.
 add_executable(AudioDecoderTests
 	AudioDecoderTests.cpp
-	"${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c"
+	"${ENTORNVGI_STB_IMPLEMENTATION_SOURCE}"
 )
 target_include_directories(AudioDecoderTests PRIVATE
 	"${ENTORNVGI_STB_INCLUDE_DIR}"
+	"${PROJECT_SOURCE_DIR}/EntornVGI/third_party"
 	"${PROJECT_SOURCE_DIR}/third_party/miniaudio"
 )
 target_compile_definitions(AudioDecoderTests PRIVATE

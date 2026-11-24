@@ -80,7 +80,7 @@ set(IMGUI_SOURCES
 )
 
 add_executable(EntornVGI ${ENTORNVGI_SOURCES} ${IMGUI_SOURCES})
-target_sources(EntornVGI PRIVATE "${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c")
+target_sources(EntornVGI PRIVATE "${ENTORNVGI_STB_IMPLEMENTATION_SOURCE}")
 
 target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}

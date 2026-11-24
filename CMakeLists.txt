@@ -3,7 +3,16 @@ cmake_minimum_required(VERSION 3.25)
 project(EntornVGI LANGUAGES C CXX)
 
 include(CTest)
-find_path(ENTORNVGI_STB_INCLUDE_DIR stb_vorbis.c PATH_SUFFIXES stb REQUIRED)
+find_path(ENTORNVGI_STB_INCLUDE_DIR
+    NAMES stb_vorbis.c stb_vorbis.h
+    PATH_SUFFIXES stb
+    REQUIRED
+)
+if(EXISTS "${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c")
+    set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c")
+else()
+    set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${PROJECT_SOURCE_DIR}/EntornVGI/third_party/stb_vorbis_impl.c")
+endif()
 
 # Bullet Physics (fisica). vcpkg (Windows/macOS) y libbullet-dev (Linux) instalan el
 # mismo BulletConfig.cmake, que define BULLET_INCLUDE_DIRS y BULLET_LIBRARIES.

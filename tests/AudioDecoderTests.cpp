@@ -1,5 +1,5 @@
 #define STB_VORBIS_HEADER_ONLY
-#include <stb_vorbis.c>
+#include <stb_vorbis_compat.h>
 #undef STB_VORBIS_HEADER_ONLY
 #define STB_VORBIS_INCLUDE_STB_VORBIS_H
 #define MINIAUDIO_IMPLEMENTATION
