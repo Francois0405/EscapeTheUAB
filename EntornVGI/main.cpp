@@ -189,6 +189,33 @@ namespace
 		return std::max({ std::abs(objeto.escala.x), std::abs(objeto.escala.y), std::abs(objeto.escala.z) });
 	}
 
+	void reproducirSonidoAparicionHiriti()
+	{
+		static const std::vector<std::string> sonidos = []
+		{
+			std::vector<std::string> encontrados;
+			const std::filesystem::path carpeta("assets/audio/hirity/appear");
+			std::error_code error;
+			for (std::filesystem::directory_iterator entrada(carpeta, error), fin;
+				!error && entrada != fin; entrada.increment(error))
+			{
+				if (entrada->is_regular_file(error) && entrada->path().extension() == ".ogg")
+					encontrados.push_back(entrada->path().string());
+			}
+			if (error)
+				std::cerr << "No se pudieron enumerar los sonidos de aparicion de Hiriti: "
+					<< error.message() << '\n';
+			if (encontrados.empty())
+				encontrados.push_back("assets/audio/hirity/appear/anotopat.ogg");
+			std::sort(encontrados.begin(), encontrados.end());
+			return encontrados;
+		}();
+
+		static std::mt19937 generador(std::random_device{}());
+		std::uniform_int_distribution<std::size_t> elegir(0, sonidos.size() - 1);
+		audioManager.playOneShot(sonidos[elegir(generador)]);
+	}
+
 	// --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
 	fps::MovimientoJugador movimientoJugador;
 	fps::BalanceoCamara balanceoCamara;
@@ -231,6 +258,9 @@ namespace
 	std::unique_ptr<fisica::EscenaFisica> escenaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
 	fisica::DemoCuboCaida demoFisica(mundoFisico);
 	bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
+	bool hiritiFollowPlayerEnabled = false;
+	float hiritiFollowStopDistance = 1.8f;
+	float hiritiFollowMaxSpeed = 2.4f;
 	bool objetosAnimadosListos = false;   // true cuando los modelos ya están en la GPU
 	GLuint texturaManoInteraccion = 0;
 	bool cargaLanzamientoActiva = false;
@@ -555,6 +585,41 @@ namespace
 		escenaFisica->ActualizarAgarre(origen, direccion);
 	}
 
+	bool reaparecerHiritiDetrasDelJugador(int indice, const SceneObject& objeto,
+		const glm::vec3& piesJugador, glm::vec3& centroAparicion)
+	{
+		const glm::vec2 frenteSinNormalizar(
+			static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y));
+		const float longitudFrente = glm::length(frenteSinNormalizar);
+		if (longitudFrente < 1.0e-4f) return false;
+		const glm::vec2 atras = -frenteSinNormalizar / longitudFrente;
+		const float radio = std::max(0.15f, radioHiriti(objeto));
+		constexpr float angulos[] = { 0.0f, 0.5235987756f, -0.5235987756f,
+			1.0471975512f, -1.0471975512f };
+		constexpr float distancias[] = { 2.4f, 2.9f, 3.4f };
+
+		for (float distancia : distancias)
+		{
+			for (float angulo : angulos)
+			{
+				const glm::vec2 direccion(
+					atras.x * std::cos(angulo) - atras.y * std::sin(angulo),
+					atras.x * std::sin(angulo) + atras.y * std::cos(angulo));
+				const glm::vec3 candidato = piesJugador + glm::vec3(
+					direccion.x * distancia, direccion.y * distancia, radio + 0.04f);
+				const float distanciaObstaculo = escenaFisica->DistanciaObstaculoEnRayoObjetoDinamico(
+					indice, piesJugador + glm::vec3(0.0f, 0.0f, radio + 0.04f),
+					glm::vec3(direccion.x, direccion.y, 0.0f), distancia);
+				if (distanciaObstaculo < distancia - radio * 0.5f ||
+					!escenaFisica->PuedeColocarObjetoDinamico(indice, candidato))
+					continue;
+				centroAparicion = candidato;
+				return escenaFisica->TeletransportarObjetoDinamico(indice, centroAparicion);
+			}
+		}
+		return false;
+	}
+
 	void actualizarHiriti(bool puedeDescubrir, bool puedeProcesarColisiones, float delta)
 	{
 		const auto hiriti = std::find_if(objetosEscena.begin(), objetosEscena.end(),
@@ -571,6 +636,11 @@ namespace
 		glm::vec3 origen(0.0f), direccion(0.0f);
 		if (puedeDescubrir) origenYDireccionDeLaMirada(origen, direccion);
 		const int indice = static_cast<int>(std::distance(objetosEscena.begin(), hiriti));
+		glm::vec3 velocidadHiriti(0.0f);
+		escenaFisica->VelocidadObjetoDinamico(indice, velocidadHiriti);
+		const bool jugadorManipulaHiriti = escenaFisica->ObjetoAgarrado() == indice;
+		const bool puedeSeguir = animacionHiriti.ActualizarSuspensionSeguimiento(
+			jugadorManipulaHiriti, velocidadHiriti, puedeProcesarColisiones ? delta : 0.0f);
 		const int varianteDanio = animacionHiriti.ActualizarContacto(
 			puedeProcesarColisiones && escenaFisica->HayContactoObjetoDinamico(indice));
 		if (varianteDanio >= 0)
@@ -580,6 +650,56 @@ namespace
 
 		glm::vec3 centro = hiriti->posicion;
 		escenaFisica->PosicionObjetoDinamico(indice, centro);
+		bool reaparecio = false;
+		if (puedeProcesarColisiones && mundoFisico.HayJugador())
+		{
+			const glm::vec3 piesJugador = mundoFisico.PosicionPiesJugador();
+			const float distanciaAlJugador = glm::length(glm::vec2(
+				piesJugador.x - centro.x, piesJugador.y - centro.y));
+			const bool interaccionJugador = jugadorManipulaHiriti || !puedeSeguir;
+			if (animacionHiriti.ActualizarTemporizadorReaparicion(
+				distanciaAlJugador >= juego::AnimacionHiriti::DistanciaParaReaparecer,
+				interaccionJugador, delta))
+			{
+				glm::vec3 centroAparicion(0.0f);
+				if (reaparecerHiritiDetrasDelJugador(indice, *hiriti, piesJugador, centroAparicion))
+				{
+					centro = centroAparicion;
+					reaparecio = true;
+					reproducirSonidoAparicionHiriti();
+				}
+			}
+		}
+		if (!reaparecio && hiritiFollowPlayerEnabled && puedeProcesarColisiones && mundoFisico.HayJugador() &&
+			puedeSeguir && delta > 0.0f)
+		{
+			const glm::vec3 piesJugador = mundoFisico.PosicionPiesJugador();
+			const glm::vec2 haciaJugador(piesJugador.x - centro.x, piesJugador.y - centro.y);
+			const float distanciaJugador = glm::length(haciaJugador);
+			const glm::vec2 direccionObjetivo = distanciaJugador > 1.0e-4f
+				? haciaJugador / distanciaJugador : glm::vec2(0.0f);
+			constexpr float angulosSonda[] = { 0.0f, 0.7853981634f, -0.7853981634f,
+				1.5707963268f, -1.5707963268f };
+			std::array<float, 5> distanciasObstaculos{};
+			for (std::size_t i = 0; i < distanciasObstaculos.size(); ++i)
+			{
+				const float coseno = std::cos(angulosSonda[i]);
+				const float seno = std::sin(angulosSonda[i]);
+				const glm::vec3 direccion(
+					direccionObjetivo.x * coseno - direccionObjetivo.y * seno,
+					direccionObjetivo.x * seno + direccionObjetivo.y * coseno,
+					0.0f);
+				distanciasObstaculos[i] = escenaFisica->DistanciaObstaculoEnRayoObjetoDinamico(
+					indice, centro, direccion, juego::AnimacionHiriti::AlcanceAnticipacionObstaculos);
+			}
+			const glm::vec3 direccionSeguimiento = juego::AnimacionHiriti::CalcularDireccionSeguimiento(
+				centro, piesJugador, distanciasObstaculos);
+			const glm::vec3 aceleracion = juego::AnimacionHiriti::CalcularAceleracionSeguimiento(
+				centro, piesJugador, velocidadHiriti, direccionSeguimiento,
+				hiritiFollowStopDistance, hiritiFollowMaxSpeed, 3.2f);
+			escenaFisica->AplicarAceleracionHorizontalObjetoDinamico(
+				indice, aceleracion, std::min(delta, 0.05f));
+		}
 		// La primera mirada dispara el saludo y el impulso inicial.
 		if (animacionHiriti.Actualizar(puedeDescubrir, origen, direccion, centro, radioHiriti(*hiriti)))
 		{
@@ -601,14 +721,17 @@ namespace
 		static std::mt19937 generador(std::random_device{}());
 		static std::uniform_int_distribution<int> tipoAmbiente(0, 1);
 		static std::uniform_int_distribution<int> tipoBuscando(0, 1);
+		if (!activo) hiritiFollowPlayerEnabled = false;
 		switch (temporizadorAudioHiriti.Actualizar(activo, delta))
 		{
 		case juego::TemporizadorAudioHiriti::Evento::Ambiente:
+			hiritiFollowPlayerEnabled = false;
 			audioManager.playOneShot(tipoAmbiente(generador) == 0
 				? "assets/audio/hirity/ambient/cough.ogg"
 				: "assets/audio/hirity/ambient/pasosfuertes.ogg");
 			break;
 		case juego::TemporizadorAudioHiriti::Evento::Buscando:
+			hiritiFollowPlayerEnabled = true;
 			audioManager.playOneShot(tipoBuscando(generador) == 0
 				? "assets/audio/hirity/searching/heydondeestashirity.ogg"
 				: "assets/audio/hirity/searching/venaquihirity.ogg");
@@ -2813,6 +2936,9 @@ void draw_Menu_ImGui()
 
 		ImGui::Begin("Fisica (Bullet)");
 		ImGui::Checkbox("Mostrar colisionadores", &mostrarColisionadores);
+		ImGui::Text("Hiriti sigue al jugador: %s", hiritiFollowPlayerEnabled ? "BUSCANDO" : "inactivo");
+		ImGui::SliderFloat("Distancia de parada Hiriti (m)", &hiritiFollowStopDistance, 1.0f, 3.0f);
+		ImGui::SliderFloat("Velocidad maxima Hiriti (m/s)", &hiritiFollowMaxSpeed, 0.5f, 4.0f);
 		ImGui::TextUnformatted("azul: estatico  verde: dinamico  naranja: cinematico");
 		ImGui::Text("cuerpos en el mundo: %d (habitacion: %d, dinamicos: %d)", mundoFisico.NumeroDeCuerpos(),
 			escenaFisica->NumeroDeCuerpos(), escenaFisica->NumeroDeDinamicos());

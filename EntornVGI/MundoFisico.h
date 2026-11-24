@@ -108,6 +108,9 @@ namespace fisica
 			const glm::vec3& mitadTamano, float masaKg);
 		IdCuerpo CrearEsfera(TipoCuerpo tipo, const glm::vec3& centro, float radio, float masaKg);
 		bool AplicarImpulso(IdCuerpo id, const glm::vec3& impulso);
+		bool AplicarAceleracionHorizontal(IdCuerpo id, const glm::vec3& aceleracion, float deltaSegundos);
+		bool TeletransportarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro);
+		bool PuedeColocarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro) const;
 
 		// Mueve un cuerpo cinemático a una pose nueva (llamar antes de Actualizar).
 		void MoverCinematico(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion);
@@ -187,6 +190,8 @@ namespace fisica
 		// 'alcance' metros, o CuerpoInvalido. Sirve para saber qué se está mirando.
 		IdCuerpo CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
 			float* distanciaImpacto = nullptr) const;
+		float DistanciaObstaculoEnRayo(const glm::vec3& origen, const glm::vec3& direccion,
+			float alcance, IdCuerpo ignorar = CuerpoInvalido) const;
 
 		bool EsDinamico(IdCuerpo id) const;
 		// Empieza a sujetar un cuerpo dinámico (suelta el anterior). Falso si no se puede.

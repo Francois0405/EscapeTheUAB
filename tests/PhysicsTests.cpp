@@ -88,6 +88,40 @@ namespace
 			"la gravedad es (0, 0, -9.81): Z es el eje vertical");
 	}
 
+	void PruebaAceleracionHorizontal()
+	{
+		MundoFisico mundo;
+		const IdCuerpo esfera = mundo.CrearEsfera(TipoCuerpo::Dinamico, glm::vec3(0.0f, 0.0f, 2.0f), 0.25f, 1.0f);
+		comprobar(esfera != CuerpoInvalido, "se crea la esfera dinamica para probar aceleracion");
+		if (esfera == CuerpoInvalido) return;
+
+		comprobar(mundo.AplicarAceleracionHorizontal(esfera, glm::vec3(1.0f, 0.0f, 0.0f), 0.1f),
+			"la aceleracion horizontal se aplica al rigid body dinamico");
+		mundo.Actualizar(0.1f);
+		const glm::vec3 velocidad = mundo.VelocidadDe(esfera);
+		comprobar(velocidad.x > 0.05f && velocidad.z < 0.0f,
+			"la aceleracion mueve la esfera horizontalmente y conserva la gravedad vertical");
+
+		const IdCuerpo obstaculo = mundo.CrearCajaEstatica(
+			glm::vec3(2.0f, 0.0f, 2.0f), glm::vec3(0.25f));
+		comprobar(obstaculo != CuerpoInvalido, "se crea un obstaculo estatico para el raycast");
+		const float distanciaObstaculo = mundo.DistanciaObstaculoEnRayo(
+			glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(1.0f, 0.0f, 0.0f), 3.0f, esfera);
+		comprobar(distanciaObstaculo > 1.0f && distanciaObstaculo < 2.0f,
+			"el raycast de navegacion detecta hitboxes e ignora el cuerpo de Hiriti");
+		const float caminoLibre = mundo.DistanciaObstaculoEnRayo(
+			glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 1.0f, 0.0f), 3.0f, esfera);
+		comprobar(casi(caminoLibre, 3.0f, 1.0e-5f),
+			"el raycast devuelve el alcance completo cuando no hay hitboxes en la ruta");
+		comprobar(!mundo.PuedeColocarCuerpoDinamico(esfera, glm::vec3(2.0f, 0.0f, 2.0f)) &&
+			mundo.PuedeColocarCuerpoDinamico(esfera, glm::vec3(0.0f, 2.0f, 2.0f)),
+			"la reaparicion comprueba solapamientos con hitboxes existentes");
+		comprobar(mundo.TeletransportarCuerpoDinamico(esfera, glm::vec3(0.0f, 2.0f, 2.0f)) &&
+			casi(mundo.PoseDe(esfera).posicion.y, 2.0f, 1.0e-5f) &&
+			glm::length(mundo.VelocidadDe(esfera)) < 1.0e-5f,
+			"la reaparicion actualiza Bullet y limpia la velocidad previa");
+	}
+
 	void PruebaCaidaLibre()
 	{
 		MundoFisico mundo;
@@ -1338,6 +1372,7 @@ int main()
 {
 	PruebaRecursoIconoInteraccion();
 	PruebaGravedad();
+	PruebaAceleracionHorizontal();
 	PruebaCaidaLibre();
 	PruebaPasoFijo();
 	PruebaIndependenciaDeLosFps();

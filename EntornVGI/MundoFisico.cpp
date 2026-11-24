@@ -262,6 +262,85 @@ namespace fisica
 		return true;
 	}
 
+	bool MundoFisico::AplicarAceleracionHorizontal(IdCuerpo id, const glm::vec3& aceleracion, float deltaSegundos)
+	{
+		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
+		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
+			!std::isfinite(aceleracion.x) || !std::isfinite(aceleracion.y) ||
+			!std::isfinite(deltaSegundos) || deltaSegundos <= 0.0f)
+			return false;
+
+		const btScalar masaInversa = cuerpo->getInvMass();
+		if (masaInversa <= btScalar(0.0)) return false;
+		const btScalar masa = btScalar(1.0) / masaInversa;
+		cuerpo->activate(true);
+		cuerpo->applyCentralImpulse(btVector3(aceleracion.x, aceleracion.y, 0.0f) * masa * deltaSegundos);
+		return true;
+	}
+
+	bool MundoFisico::TeletransportarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro)
+	{
+		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
+		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
+			!std::isfinite(centro.x) || !std::isfinite(centro.y) || !std::isfinite(centro.z))
+			return false;
+
+		btTransform transformacion = cuerpo->getWorldTransform();
+		transformacion.setOrigin(ABullet(centro));
+		cuerpo->setWorldTransform(transformacion);
+		cuerpo->setInterpolationWorldTransform(transformacion);
+		cuerpo->getMotionState()->setWorldTransform(transformacion);
+		cuerpo->setLinearVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		cuerpo->setAngularVelocity(btVector3(0.0f, 0.0f, 0.0f));
+		cuerpo->clearForces();
+		cuerpo->activate(true);
+		if (cuerpo->getBroadphaseHandle() != nullptr)
+		{
+			impl->mundo.getBroadphase()->getOverlappingPairCache()->cleanProxyFromPairs(
+				cuerpo->getBroadphaseHandle(), &impl->despachador);
+			impl->mundo.updateSingleAabb(cuerpo);
+		}
+		return true;
+	}
+
+	bool MundoFisico::PuedeColocarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro) const
+	{
+		const btRigidBody* cuerpo = impl->Buscar(id);
+		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
+			!std::isfinite(centro.x) || !std::isfinite(centro.y) || !std::isfinite(centro.z))
+			return false;
+
+		btCollisionObject consulta;
+		consulta.setCollisionShape(const_cast<btCollisionShape*>(cuerpo->getCollisionShape()));
+		btTransform transformacion = cuerpo->getWorldTransform();
+		transformacion.setOrigin(ABullet(centro));
+		consulta.setWorldTransform(transformacion);
+
+		struct ResultadoSolapamiento : btCollisionWorld::ContactResultCallback
+		{
+			const btCollisionObject* ignorado;
+			bool bloqueado = false;
+
+			explicit ResultadoSolapamiento(const btCollisionObject* objetoIgnorado) : ignorado(objetoIgnorado) {}
+
+			bool needsCollision(btBroadphaseProxy* proxy) const override
+			{
+				return proxy->m_clientObject != ignorado &&
+					btCollisionWorld::ContactResultCallback::needsCollision(proxy);
+			}
+
+			btScalar addSingleResult(btManifoldPoint& contacto,
+				const btCollisionObjectWrapper*, int, int,
+				const btCollisionObjectWrapper*, int, int) override
+			{
+				if (contacto.getDistance() < btScalar(-0.02)) bloqueado = true;
+				return btScalar(0.0);
+			}
+		} resultado(cuerpo);
+		impl->mundo.contactTest(&consulta, resultado);
+		return !resultado.bloqueado;
+	}
+
 	void MundoFisico::MoverCinematico(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion)
 	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
@@ -629,6 +708,38 @@ namespace fisica
 		for (std::size_t i = 0; i < impl->cuerpos.size(); ++i)
 			if (impl->cuerpos[i].cuerpo.get() == resultado.m_collisionObject) return static_cast<IdCuerpo>(i);
 		return CuerpoInvalido;
+	}
+
+	float MundoFisico::DistanciaObstaculoEnRayo(const glm::vec3& origen, const glm::vec3& direccion,
+		float alcance, IdCuerpo ignorar) const
+	{
+		if (!std::isfinite(alcance) || alcance <= 0.0f || glm::length(direccion) < 1.0e-6f)
+			return 0.0f;
+		const glm::vec3 fin = origen + glm::normalize(direccion) * alcance;
+		struct ResultadoRayoSinCuerpo : btCollisionWorld::ClosestRayResultCallback
+		{
+			const btCollisionObject* ignorado;
+
+			ResultadoRayoSinCuerpo(const btVector3& desde, const btVector3& hasta,
+				const btCollisionObject* objetoIgnorado)
+				: ClosestRayResultCallback(desde, hasta), ignorado(objetoIgnorado)
+			{
+				m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
+			}
+
+			bool needsCollision(btBroadphaseProxy* proxy) const override
+			{
+				return proxy->m_clientObject != ignorado &&
+					btCollisionWorld::ClosestRayResultCallback::needsCollision(proxy);
+			}
+		};
+
+		const btCollisionObject* objetoIgnorado = impl->Buscar(ignorar);
+		ResultadoRayoSinCuerpo resultado(ABullet(origen), ABullet(fin), objetoIgnorado);
+		impl->mundo.rayTest(ABullet(origen), ABullet(fin), resultado);
+		return resultado.hasHit()
+			? alcance * static_cast<float>(resultado.m_closestHitFraction)
+			: alcance;
 	}
 
 	bool MundoFisico::EsDinamico(IdCuerpo id) const

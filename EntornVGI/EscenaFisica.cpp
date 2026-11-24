@@ -177,6 +177,51 @@ namespace fisica
 		return false;
 	}
 
+	bool EscenaFisica::VelocidadObjetoDinamico(int indiceObjeto, glm::vec3& velocidad) const
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto)
+			{
+				velocidad = mundo.VelocidadDe(dinamico.cuerpo);
+				return true;
+			}
+		return false;
+	}
+
+	bool EscenaFisica::AplicarAceleracionHorizontalObjetoDinamico(int indiceObjeto,
+		const glm::vec3& aceleracion, float deltaSegundos)
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto)
+				return mundo.AplicarAceleracionHorizontal(dinamico.cuerpo, aceleracion, deltaSegundos);
+		return false;
+	}
+
+	bool EscenaFisica::TeletransportarObjetoDinamico(int indiceObjeto, const glm::vec3& centro)
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto)
+				return mundo.TeletransportarCuerpoDinamico(dinamico.cuerpo, centro);
+		return false;
+	}
+
+	bool EscenaFisica::PuedeColocarObjetoDinamico(int indiceObjeto, const glm::vec3& centro) const
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto)
+				return mundo.PuedeColocarCuerpoDinamico(dinamico.cuerpo, centro);
+		return false;
+	}
+
+	float EscenaFisica::DistanciaObstaculoEnRayoObjetoDinamico(int indiceObjeto,
+		const glm::vec3& origen, const glm::vec3& direccion, float alcance) const
+	{
+		for (const Dinamico& dinamico : dinamicos)
+			if (dinamico.indiceObjeto == indiceObjeto)
+				return mundo.DistanciaObstaculoEnRayo(origen, direccion, alcance, dinamico.cuerpo);
+		return 0.0f;
+	}
+
 	bool EscenaFisica::HayContactoObjetoDinamico(int indiceObjeto) const
 	{
 		for (const Dinamico& dinamico : dinamicos)
