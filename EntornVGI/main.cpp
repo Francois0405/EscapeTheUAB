@@ -429,6 +429,9 @@ namespace
 		const auto inicio = std::chrono::steady_clock::now();
 		static std::size_t firmaAnterior = 0;
 		static GLuint programaAnterior = 0;
+		static GLuint programaBloqueAnterior = 0;
+		static GLuint indiceBloqueOclusores = GL_INVALID_INDEX;
+		static GLuint bufferOclusores = 0;
 		size_t firma = 1469598103934665603ull;
 		auto mezclar = [&firma](size_t valor) { firma ^= valor; firma *= 1099511628211ull; };
 		for (const SceneObject& objeto : objetosEscena)
@@ -442,17 +445,49 @@ namespace
 			}
 			mezclar(std::hash<std::string>{}(objeto.categoria));
 		}
+		constexpr GLuint bindingOclusores = 0;
+		constexpr int maxOclusores = 12;
+		constexpr int maxOclusoresIndirectos = 24;
+		struct alignas(16) OclusorGpu
+		{
+			GLfloat mundoALocal[16]{};
+			GLfloat mitad[4]{};
+		};
+		struct alignas(16) BloqueOclusoresGpu
+		{
+			std::array<OclusorGpu, maxOclusores> directos{};
+			std::array<OclusorGpu, maxOclusoresIndirectos> indirectos{};
+		};
+		static_assert(sizeof(OclusorGpu) == 80, "std140: mat4 + vec4 ocupan 80 bytes");
+		static_assert(sizeof(BloqueOclusoresGpu) == 2880, "12+24 oclusores std140 ocupan 2880 bytes");
+		// GL 3.3 garantiza 16 KiB por UBO: quedan 13504 bytes.
+		// En uniforms default activos del fragment shader: 17*32 + (16 view + 17 material + 4 ambient +
+		// 21 escalares/bool/int + 6 colores) = 608; sampler/matrices no usadas no cuentan; margen 416/1024.
+		// El GLuint static vive con el contexto principal, que OpenGL libera al destruirse.
+		if (bufferOclusores == 0)
+		{
+			glGenBuffers(1, &bufferOclusores);
+			if (bufferOclusores != 0)
+			{
+				glBindBuffer(GL_UNIFORM_BUFFER, bufferOclusores);
+				glBufferData(GL_UNIFORM_BUFFER, sizeof(BloqueOclusoresGpu), nullptr, GL_DYNAMIC_DRAW);
+			}
+		}
+		if (bufferOclusores == 0)
+		{
+			static bool avisoBuffer = false;
+			if (!avisoBuffer) { std::cerr << "No se pudo crear el UBO de oclusores Phong.\n"; avisoBuffer = true; }
+			if (renderMetrics::enabled) renderMetrics::oclusoresMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicio).count();
+			return;
+		}
+		// El binding point pertenece al contexto y se reafirma incluso si la firma de escena no cambió.
+		glBindBufferBase(GL_UNIFORM_BUFFER, bindingOclusores, bufferOclusores);
 		if (renderizadoOptimizado && !oclusoresPhongInvalidos && firma == firmaAnterior && programaAnterior == shader_programID)
 		{
 			if (renderMetrics::enabled) renderMetrics::oclusoresMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicio).count();
 			return;
 		}
-		constexpr int maxOclusores = 12;
-		constexpr int maxOclusoresIndirectos = 24;
-		std::array<glm::mat4, maxOclusores> mundoALocal{};
-		std::array<GLfloat, maxOclusores * 3> mitades{};
-		std::array<glm::mat4, maxOclusoresIndirectos> mundoALocalIndirectos{};
-		std::array<GLfloat, maxOclusoresIndirectos * 3> mitadesIndirectas{};
+		BloqueOclusoresGpu bloque{};
 		int cantidad = 0;
 		int cantidadIndirecta = 0;
 		for (const SceneObject& objeto : objetosEscena)
@@ -469,38 +504,39 @@ namespace
 			const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
 			if (cantidad < maxOclusores)
 			{
-				mundoALocal[static_cast<std::size_t>(cantidad)] = glm::inverse(mundoCollider);
-				for (int eje = 0; eje < 3; ++eje)
-					mitades[static_cast<std::size_t>(cantidad) * 3 + static_cast<std::size_t>(eje)] = mitad[eje];
+				const auto indice = static_cast<std::size_t>(cantidad);
+				const auto matriz = glm::inverse(mundoCollider);
+				std::copy_n(glm::value_ptr(matriz), 16, bloque.directos[indice].mundoALocal);
+				for (int eje = 0; eje < 3; ++eje) bloque.directos[indice].mitad[eje] = mitad[eje];
 				++cantidad;
 			}
 			// El rebote se bloquea por arquitectura, no por mesas/sillas: así una silla bajo
 			// una mesa recibe relleno local sin que la luz pueda saltar a otra habitación.
 			if (objeto.categoria == "architecture" && cantidadIndirecta < maxOclusoresIndirectos)
 			{
-				mundoALocalIndirectos[static_cast<std::size_t>(cantidadIndirecta)] = glm::inverse(mundoCollider);
+				const auto matriz = glm::inverse(mundoCollider);
+				std::copy_n(glm::value_ptr(matriz), 16,
+					bloque.indirectos[static_cast<std::size_t>(cantidadIndirecta)].mundoALocal);
 				for (int eje = 0; eje < 3; ++eje)
-					mitadesIndirectas[static_cast<std::size_t>(cantidadIndirecta) * 3 + static_cast<std::size_t>(eje)] = mitad[eje];
+					bloque.indirectos[static_cast<std::size_t>(cantidadIndirecta)].mitad[eje] = mitad[eje];
 				++cantidadIndirecta;
 			}
 		}
 
 		glUseProgram(shader_programID);
-		glUniform1i(glcache::UniformLocation(shader_programID, "uOccluderCount"), cantidad);
-		if (cantidad > 0)
+		if (shader_programID != 0 && (programaBloqueAnterior != shader_programID || oclusoresPhongInvalidos))
 		{
-			const GLint matrices = glcache::UniformLocation(shader_programID, "uOccluderWorldToLocal[0]");
-			const GLint tamanos = glcache::UniformLocation(shader_programID, "uOccluderHalfSize[0]");
-			if (matrices >= 0) glUniformMatrix4fv(matrices, cantidad, GL_FALSE, glm::value_ptr(mundoALocal[0]));
-			if (tamanos >= 0) glUniform3fv(tamanos, cantidad, mitades.data());
+			indiceBloqueOclusores = glGetUniformBlockIndex(shader_programID, "PhongOccludersBlock");
+			if (indiceBloqueOclusores != GL_INVALID_INDEX)
+				glUniformBlockBinding(shader_programID, indiceBloqueOclusores, bindingOclusores);
+			programaBloqueAnterior = shader_programID;
 		}
+		glUniform1i(glcache::UniformLocation(shader_programID, "uOccluderCount"), cantidad);
 		glUniform1i(glcache::UniformLocation(shader_programID, "uIndirectOccluderCount"), cantidadIndirecta);
-		if (cantidadIndirecta > 0)
+		if ((cantidad > 0 || cantidadIndirecta > 0) && indiceBloqueOclusores != GL_INVALID_INDEX)
 		{
-			const GLint matrices = glcache::UniformLocation(shader_programID, "uIndirectOccluderWorldToLocal[0]");
-			const GLint tamanos = glcache::UniformLocation(shader_programID, "uIndirectOccluderHalfSize[0]");
-			if (matrices >= 0) glUniformMatrix4fv(matrices, cantidadIndirecta, GL_FALSE, glm::value_ptr(mundoALocalIndirectos[0]));
-			if (tamanos >= 0) glUniform3fv(tamanos, cantidadIndirecta, mitadesIndirectas.data());
+			glBindBuffer(GL_UNIFORM_BUFFER, bufferOclusores);
+			glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(BloqueOclusoresGpu), &bloque);
 		}
 		firmaAnterior = firma; programaAnterior = shader_programID; oclusoresPhongInvalidos = false;
 		if (renderMetrics::enabled) renderMetrics::oclusoresMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicio).count();

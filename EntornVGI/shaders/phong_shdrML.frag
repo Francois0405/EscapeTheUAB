@@ -18,11 +18,17 @@ uniform bool uMaterialEmission;
 #define MaxOccluders 12
 #define MaxIndirectOccluders 24
 uniform int uOccluderCount;
-uniform mat4 uOccluderWorldToLocal[MaxOccluders];
-uniform vec3 uOccluderHalfSize[MaxOccluders];
 uniform int uIndirectOccluderCount;
-uniform mat4 uIndirectOccluderWorldToLocal[MaxIndirectOccluders];
-uniform vec3 uIndirectOccluderHalfSize[MaxIndirectOccluders];
+struct PhongOccluderData
+{
+	mat4 worldToLocal;
+	vec4 halfSize;
+};
+layout(std140) uniform PhongOccludersBlock
+{
+	PhongOccluderData directOccluders[MaxOccluders];
+	PhongOccluderData indirectOccluders[MaxIndirectOccluders];
+};
 uniform float uLampEmissionScale;
 
 // ---- L14- Estructures Font de LLum i Material (coeficients reflectivitat).
@@ -99,8 +105,8 @@ bool segmentoBloqueadoPorArquitectura(vec3 origenMundo, vec3 destinoMundo)
  for (int indice = 0; indice < MaxOccluders; ++indice)
 	{
 		if (indice >= uOccluderCount) break;
-		vec3 origen = (uOccluderWorldToLocal[indice] * vec4(origenMundo, 1.0)).xyz;
-		vec3 destino = (uOccluderWorldToLocal[indice] * vec4(destinoMundo, 1.0)).xyz;
+		vec3 origen = (directOccluders[indice].worldToLocal * vec4(origenMundo, 1.0)).xyz;
+		vec3 destino = (directOccluders[indice].worldToLocal * vec4(destinoMundo, 1.0)).xyz;
 		vec3 direccion = destino - origen;
 		float entrada = 0.0;
 		float salida = 1.0;
@@ -109,13 +115,13 @@ bool segmentoBloqueadoPorArquitectura(vec3 origenMundo, vec3 destinoMundo)
 		{
 			if (abs(direccion[eje]) < 1.0e-7)
 			{
-				if (origen[eje] < -uOccluderHalfSize[indice][eje] || origen[eje] > uOccluderHalfSize[indice][eje])
+				if (origen[eje] < -directOccluders[indice].halfSize[eje] || origen[eje] > directOccluders[indice].halfSize[eje])
 					interseca = false;
 			}
 			else
 			{
-				float t0 = (-uOccluderHalfSize[indice][eje] - origen[eje]) / direccion[eje];
-				float t1 = ( uOccluderHalfSize[indice][eje] - origen[eje]) / direccion[eje];
+				float t0 = (-directOccluders[indice].halfSize[eje] - origen[eje]) / direccion[eje];
+				float t1 = ( directOccluders[indice].halfSize[eje] - origen[eje]) / direccion[eje];
 				entrada = max(entrada, min(t0, t1));
 				salida = min(salida, max(t0, t1));
 			}
@@ -136,8 +142,8 @@ bool segmentoBloqueadoParaRebote(vec3 origenMundo, vec3 destinoMundo)
 	for (int indice = 0; indice < MaxIndirectOccluders; ++indice)
 	{
 		if (indice >= uIndirectOccluderCount) break;
-		vec3 origen = (uIndirectOccluderWorldToLocal[indice] * vec4(origenMundo, 1.0)).xyz;
-		vec3 destino = (uIndirectOccluderWorldToLocal[indice] * vec4(destinoMundo, 1.0)).xyz;
+		vec3 origen = (indirectOccluders[indice].worldToLocal * vec4(origenMundo, 1.0)).xyz;
+		vec3 destino = (indirectOccluders[indice].worldToLocal * vec4(destinoMundo, 1.0)).xyz;
 		vec3 direccion = destino - origen;
 		float entrada = 0.0;
 		float salida = 1.0;
@@ -146,13 +152,13 @@ bool segmentoBloqueadoParaRebote(vec3 origenMundo, vec3 destinoMundo)
 		{
 			if (abs(direccion[eje]) < 1.0e-7)
 			{
-				if (origen[eje] < -uIndirectOccluderHalfSize[indice][eje] ||
-					origen[eje] > uIndirectOccluderHalfSize[indice][eje]) interseca = false;
+				if (origen[eje] < -indirectOccluders[indice].halfSize[eje] ||
+					origen[eje] > indirectOccluders[indice].halfSize[eje]) interseca = false;
 			}
 			else
 			{
-				float t0 = (-uIndirectOccluderHalfSize[indice][eje] - origen[eje]) / direccion[eje];
-				float t1 = ( uIndirectOccluderHalfSize[indice][eje] - origen[eje]) / direccion[eje];
+				float t0 = (-indirectOccluders[indice].halfSize[eje] - origen[eje]) / direccion[eje];
+				float t1 = ( indirectOccluders[indice].halfSize[eje] - origen[eje]) / direccion[eje];
 				entrada = max(entrada, min(t0, t1));
 				salida = min(salida, max(t0, t1));
 			}

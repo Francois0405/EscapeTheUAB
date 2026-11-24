@@ -392,17 +392,64 @@ int main()
             const int ultimoSlotLuz = NUM_MAX_LLUMS - 1;
             const std::string prefijoUltimaLuz = "LightSource[" + std::to_string(ultimoSlotLuz) + "].";
             const GLint lastLightLocation = glGetUniformLocation(phong, (prefijoUltimaLuz + "sw_light").c_str());
+            constexpr int maxOclusores = 12;
+            constexpr int maxOclusoresIndirectos = 24;
+            struct alignas(16) OclusorGpuTest
+            {
+                GLfloat mundoALocal[16]{};
+                GLfloat mitad[4]{};
+            };
+            struct alignas(16) BloqueOclusoresGpuTest
+            {
+                std::array<OclusorGpuTest, maxOclusores> directos{};
+                std::array<OclusorGpuTest, maxOclusoresIndirectos> indirectos{};
+            };
+            static_assert(sizeof(OclusorGpuTest) == 80, "mat4 + vec4 std140");
+            static_assert(sizeof(BloqueOclusoresGpuTest) == 2880, "12 OBB directos + 24 indirectos");
+            constexpr GLuint bindingOclusores = 0;
+            constexpr GLint tamanoBloqueEsperado = sizeof(BloqueOclusoresGpuTest);
+            const GLuint bloqueOclusores = glGetUniformBlockIndex(phong, "PhongOccludersBlock");
+            GLint tamanoBloqueOclusores = 0;
+            if (bloqueOclusores != GL_INVALID_INDEX)
+                glGetActiveUniformBlockiv(phong, bloqueOclusores, GL_UNIFORM_BLOCK_DATA_SIZE, &tamanoBloqueOclusores);
             if (!linked || intensityLocation < 0 || emissionLocation < 0 || tileLocation < 0 ||
                 dirtStrengthLocation < 0 || dirtScaleLocation < 0 || dirtSeedLocation < 0 ||
                 textureEmissionLocation < 0 || mobileSurfaceLocation < 0 || lightingDebugLocation < 0 ||
-                lastLightLocation < 0)
+                lastLightLocation < 0 || bloqueOclusores == GL_INVALID_INDEX ||
+                tamanoBloqueOclusores != tamanoBloqueEsperado)
             {
-                std::cerr << "FALLO: GLSL Phong no enlaza materiales o su ultimo slot de iluminacion.\n";
+                std::cerr << "FALLO: GLSL Phong no enlaza el slot 16 o el bloque std140 de 2880 bytes (real="
+                    << tamanoBloqueOclusores << ").\n";
                 ++failures;
             }
             else
             {
                 glUseProgram(phong);
+                glUniformBlockBinding(phong, bloqueOclusores, bindingOclusores);
+                GLuint oclusoresBuffer = 0;
+                BloqueOclusoresGpuTest oclusoresData{};
+                glGenBuffers(1, &oclusoresBuffer);
+                glBindBuffer(GL_UNIFORM_BUFFER, oclusoresBuffer);
+                glBufferData(GL_UNIFORM_BUFFER, tamanoBloqueEsperado, &oclusoresData, GL_DYNAMIC_DRAW);
+                glBindBufferBase(GL_UNIFORM_BUFFER, bindingOclusores, oclusoresBuffer);
+                auto subirOclusorDirectoTest = [&](const glm::mat4& mundoALocal, const glm::vec3& mitad)
+                {
+                    auto& oclusor = oclusoresData.directos[0];
+                    std::copy_n(glm::value_ptr(mundoALocal), 16, oclusor.mundoALocal);
+                    oclusor.mitad[0] = mitad.x; oclusor.mitad[1] = mitad.y; oclusor.mitad[2] = mitad.z;
+                    glBindBuffer(GL_UNIFORM_BUFFER, oclusoresBuffer);
+                    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(oclusoresData), &oclusoresData);
+                    glBindBufferBase(GL_UNIFORM_BUFFER, bindingOclusores, oclusoresBuffer);
+                };
+                auto subirOclusorIndirectoTest = [&](const glm::mat4& mundoALocal, const glm::vec3& mitad)
+                {
+                    auto& oclusor = oclusoresData.indirectos[0];
+                    std::copy_n(glm::value_ptr(mundoALocal), 16, oclusor.mundoALocal);
+                    oclusor.mitad[0] = mitad.x; oclusor.mitad[1] = mitad.y; oclusor.mitad[2] = mitad.z;
+                    glBindBuffer(GL_UNIFORM_BUFFER, oclusoresBuffer);
+                    glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(oclusoresData), &oclusoresData);
+                    glBindBufferBase(GL_UNIFORM_BUFFER, bindingOclusores, oclusoresBuffer);
+                };
                 glUniform4i(intensityLocation, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE);
                 const GLenum intensidadError = glGetError();
                 // La llamada anterior del cargador usaba 3 componentes para este vec4.
@@ -513,8 +560,7 @@ int main()
                 const glm::mat4 paredMundo = glm::translate(glm::mat4(1.0f), glm::vec3(0.35f, 0.0f, 1.0f))
                     * glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(0, 0, 1));
                 const glm::mat4 mundoALocal = glm::inverse(paredMundo);
-                glUniformMatrix4fv(loc("uOccluderWorldToLocal[0]"), 1, GL_FALSE, glm::value_ptr(mundoALocal));
-                glUniform3f(loc("uOccluderHalfSize[0]"), 1.0f, 0.18f, 1.2f);
+                subirOclusorDirectoTest(mundoALocal, glm::vec3(1.0f, 0.18f, 1.2f));
                 glUniform1i(loc("LightSource[4].sw_light"), GL_TRUE);
                 glUniform4f(loc("LightSource[4].position"), 0, 0, 2, 1);
                 glUniform4f(loc("LightSource[4].diffuse"), 1, 1, 1, 1);
@@ -619,8 +665,7 @@ int main()
                 glReadPixels(10, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, reboteVisible);
                 glReadPixels(54, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, reboteSinPared);
                 glUniform1i(loc("uIndirectOccluderCount"), 1);
-                glUniformMatrix4fv(loc("uIndirectOccluderWorldToLocal[0]"), 1, GL_FALSE, glm::value_ptr(mundoALocal));
-                glUniform3f(loc("uIndirectOccluderHalfSize[0]"), 1.0f, 0.18f, 1.2f);
+                subirOclusorIndirectoTest(mundoALocal, glm::vec3(1.0f, 0.18f, 1.2f));
                 glClear(GL_COLOR_BUFFER_BIT);
                 for (float x : { -0.7f, 0.7f })
                 {
@@ -721,6 +766,8 @@ int main()
 
 				if (!renderizarPreviewCuadro(phong, cuadroBotanico)) ++failures;
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);
+                glBindBufferBase(GL_UNIFORM_BUFFER, bindingOclusores, 0);
+                glDeleteBuffers(1, &oclusoresBuffer);
                 glDeleteBuffers(1, &vbo); glDeleteVertexArrays(1, &vao);
                 glDeleteTextures(1, &colorTexture); glDeleteFramebuffers(1, &framebuffer);
             }
