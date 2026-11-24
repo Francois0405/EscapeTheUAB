@@ -156,6 +156,7 @@ namespace netjuego
 
 	void RedJuego::TomarEstadosEscena(std::vector<EstadoObjetoEscena>& salida)
 	{
+		salida.clear();
 		salida.swap(estadosRecibidos_);
 	}
 
@@ -178,6 +179,7 @@ namespace netjuego
 
 	void RedJuego::TomarEstadosFisicosFiables(std::vector<net::DynamicStateEntry>& salida)
 	{
+		salida.clear();
 		salida.swap(estadosFisicosFiables_);
 	}
 
