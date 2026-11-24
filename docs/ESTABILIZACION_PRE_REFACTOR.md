@@ -44,6 +44,10 @@ El commit `d2e55e8` incorpora nuevos sonidos OGG de aparición, elimina los Opus
 
 La validación automatizada de audio, el copiado efectivo de los archivos al build, la regresión de reset del cooldown y la interacción multijugador con Hiriti quedan pendientes en el commit conjunto por el gate de seguridad.
 
+## Auditoría de ramas remotas restantes
+
+`MENU_RENDER`, `PUZZLE`, `Puzle2`, `VR`, `feat/linterna-texturas-ps1`, `feat/multijugador-lan-vr`, `feat/optimizacion-rendimiento-opengl` y `master` son antecesores de esta integración. `Issue#5` queda clasificada como `REDUNDANT`: su único commit exclusivo añade un indicador de mano basado en `getInteractuable()` y `assets/mano.png`, pero la integración ya tiene `dibujarHUDInteraccion()` con selección de objetivo más avanzada. La implementación antigua carga una textura por frame sin liberarla y no aporta funcionalidad exclusiva necesaria; no se importó su código ni el PNG. No quedan ramas remotas `PENDING` o `BLOCKED` según `git branch -r --no-merged HEAD` y la revisión de ese commit.
+
 ## Validación automatizada de Windows
 
 Las compilaciones de referencia se ejecutaron desde la raíz con los lanzadores oficiales antes de incorporar `d2e55e8` y registrar `EscalaUITests`:
@@ -86,4 +90,4 @@ No se realizaron pruebas gráficas de 1080p/4K, dos equipos, Tailscale, hardware
 
 ## Incidencia de Kaspersky
 
-Kaspersky informó que terminó el proceso de la detección anterior, guardó una copia de seguridad y eliminó el `SceneLoaderTests.exe` generado manualmente en `build/lighting-validation`. No se restauró ese archivo, no se añadió una exclusión y no se concluyó que fuera un falso positivo. La interfaz de Kaspersky muestra el análisis rápido completado sin amenazas (17.754 archivos) y el análisis completo todavía en curso: 5 %, 417.026 archivos analizados y aproximadamente 13 horas restantes en la última consulta de solo lectura. No se debe interpretar ese estado como un análisis completo limpio ni iniciar nuevas compilaciones o pruebas hasta que termine y no muestre acciones pendientes.
+Kaspersky informó que terminó el proceso de la detección anterior, guardó una copia de seguridad y eliminó el `SceneLoaderTests.exe` generado manualmente en `build/lighting-validation`. No se restauró ese archivo, no se añadió una exclusión y no se concluyó que fuera un falso positivo. La interfaz de Kaspersky muestra el análisis rápido completado sin amenazas (17.754 archivos) y el análisis completo todavía en curso: 9 %, 1.241.186 archivos analizados y aproximadamente 9 horas restantes en la última consulta de solo lectura. No se debe interpretar ese estado como un análisis completo limpio ni iniciar nuevas compilaciones o pruebas hasta que termine y no muestre acciones pendientes.
