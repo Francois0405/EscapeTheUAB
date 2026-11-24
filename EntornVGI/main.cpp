@@ -3197,8 +3197,8 @@ static void dibujarPanelRed()
 {
 	using netjuego::FaseRed;
 	const netjuego::Diagnostico d = redJuego.ObtenerDiagnostico();
-	ImGui::SetNextWindowPos(ImVec2(12.0f * escalaUIActual, 12.0f * escalaUIActual), ImGuiCond_Always);
-	ImGui::SetNextWindowSize(ImVec2(360.0f * escalaUIActual, 0.0f), ImGuiCond_Always);
+	ImGui::SetNextWindowPos(ImVec2(12.0f * escalaUIActual, 12.0f * escalaUIActual), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(360.0f * escalaUIActual, 0.0f), ImGuiCond_FirstUseEver);
 	ImGui::Begin("Multijugador", &mostrarPanelRed);
 	ImGui::Text("Modo: %s | Estado: %s", d.modo.c_str(), d.estado.c_str());
 	if (d.fase != FaseRed::Offline)
