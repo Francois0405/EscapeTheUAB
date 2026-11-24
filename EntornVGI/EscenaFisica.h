@@ -105,6 +105,8 @@ namespace fisica
 			IdCuerpo cuerpo = CuerpoInvalido;
 			glm::vec3 desplazamientoEscalado{ 0.0f };   // escala * offset (en espacio del modelo)
 			glm::vec3 escala{ 1.0f };
+			FormaCuerpo forma = FormaCuerpo::Caja;
+			glm::quat rotacionInicial{ 1.0f, 0.0f, 0.0f, 0.0f };
 		};
 		// Una caja unida a un nodo de un modelo animado.
 		struct Colision

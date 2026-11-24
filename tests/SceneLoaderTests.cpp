@@ -313,8 +313,8 @@ int main()
         hiriti->posicion == glm::vec3(-5.5f, -5.65f, -3.0f) &&
         hiriti->fisica.tipo == fisica::TipoCuerpo::Rebotador &&
         hiriti->fisica.forma == fisica::FormaCuerpo::Esfera &&
-        hiriti->fisica.desplazamiento == glm::vec3(0.0f, 0.0f, 0.75f),
-        "Hiriti tiene esfera rebotadora en el punto de apoyo solicitado");
+        hiriti->fisica.desplazamiento == glm::vec3(0.0f),
+        "Hiriti tiene la esfera rebotadora centrada en la malla");
     const SceneObject* frasco = dinamico("frasco_muestras_sur");
     const SceneObject* vaso = dinamico("vaso_investigacion_norte");
     const SceneObject* escritorio = dinamico("mesa_control_sur");

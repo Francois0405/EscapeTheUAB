@@ -1311,6 +1311,27 @@ namespace
 		comprobar(mundoConJugador.PoseDe(empujable).posicion.x > 0.1f,
 			"caminar hacia Hiriti lo empuja y lo desplaza");
 	}
+
+	void PruebaEsferaDinamicaConOffsetYRotacion()
+	{
+		MundoFisico mundo;
+		EscenaFisica escena(mundo);
+		SceneObject esfera = ObjetoCaja("esfera", { 1.0f, 2.0f, 3.0f }, { 20.0f, 35.0f, 10.0f },
+			{ 0.2f, 0.2f, 0.2f }, TipoCuerpo::Rebotador, glm::vec3(1.0f), { 0.0f, 0.0f, 0.75f }, 0.25f);
+		esfera.fisica.forma = FormaCuerpo::Esfera;
+		std::string error;
+		const bool creada = Crear(escena, { esfera }, error);
+		comprobar(creada, "se crea una esfera dinámica rotada con offset");
+		if (!creada) return;
+
+		const glm::mat4 modelo = escena.MatrizVisualDe(0, esfera);
+		const glm::mat4 esperado = MatrizDeObjeto(esfera);
+		comprobar(glm::length(glm::vec3(modelo[0]) - glm::vec3(esperado[0])) < 1e-5f &&
+			glm::length(glm::vec3(modelo[1]) - glm::vec3(esperado[1])) < 1e-5f &&
+			glm::length(glm::vec3(modelo[2]) - glm::vec3(esperado[2])) < 1e-5f &&
+			glm::length(glm::vec3(modelo[3]) - glm::vec3(esperado[3])) < 1e-5f,
+			"la esfera conserva la orientación y posición inicial del modelo");
+	}
 }
 
 int main()
@@ -1351,6 +1372,7 @@ int main()
 	PruebaSeleccionInteraccionConObstruccion();
 	PruebaCambioDeHabitacionConObjetoAgarrado();
 	PruebaRebotadorYEmpujeDelJugador();
+	PruebaEsferaDinamicaConOffsetYRotacion();
 
 	if (fallos == 0) std::cout << "PhysicsTests: todas las pruebas pasan\n";
 	else std::cerr << "PhysicsTests: " << fallos << " fallo(s)\n";

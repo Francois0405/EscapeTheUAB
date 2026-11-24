@@ -180,8 +180,9 @@ namespace
 	float tiempoFPS = 0.0f;
 	float deltaFPS = 0.0f;
 	AudioManager audioManager;
+	float volumenGeneralPorcentaje = 100.0f;
 	juego::AnimacionHiriti animacionHiriti;
-	juego::TemporizadorAmbiente temporizadorAmbiente;
+	juego::TemporizadorAudioHiriti temporizadorAudioHiriti;
 
 	float radioHiriti(const SceneObject& objeto)
 	{
@@ -597,13 +598,24 @@ namespace
 
 	void actualizarAudioAmbiente(bool activo, float delta)
 	{
-		if (!temporizadorAmbiente.Actualizar(activo, delta)) return;
-
 		static std::mt19937 generador(std::random_device{}());
 		static std::uniform_int_distribution<int> tipoAmbiente(0, 1);
-		audioManager.playOneShot(tipoAmbiente(generador) == 0
-			? "assets/audio/hirity/ambient/cough.ogg"
-			: "assets/audio/hirity/ambient/pasosfuertes.ogg");
+		static std::uniform_int_distribution<int> tipoBuscando(0, 1);
+		switch (temporizadorAudioHiriti.Actualizar(activo, delta))
+		{
+		case juego::TemporizadorAudioHiriti::Evento::Ambiente:
+			audioManager.playOneShot(tipoAmbiente(generador) == 0
+				? "assets/audio/hirity/ambient/cough.ogg"
+				: "assets/audio/hirity/ambient/pasosfuertes.ogg");
+			break;
+		case juego::TemporizadorAudioHiriti::Evento::Buscando:
+			audioManager.playOneShot(tipoBuscando(generador) == 0
+				? "assets/audio/hirity/searching/heydondeestashirity.ogg"
+				: "assets/audio/hirity/searching/venaquihirity.ogg");
+			break;
+		case juego::TemporizadorAudioHiriti::Evento::Ninguno:
+			break;
+		}
 	}
 
 	void liberarObjetosAnimados()
@@ -899,7 +911,7 @@ namespace
 		if (escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez) &&
 			objetoLanzado >= 0 && objetoLanzado < static_cast<int>(objetosEscena.size()) &&
 			objetosEscena[objetoLanzado].id == "hiriti")
-			animacionHiriti.MarcarLanzadoPorJugador();
+			animacionHiriti.MarcarLanzadoPorJugador(carga);
 	}
 
 	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
@@ -2487,6 +2499,13 @@ static void dibujarHUDInteraccion()
 
 GLuint texturaFondoMenu = 0;
 
+void dibujarControlVolumen()
+{
+	ImGui::SetNextItemWidth(240.0f);
+	if (ImGui::SliderFloat("Volumen", &volumenGeneralPorcentaje, 0.0f, 100.0f, "%.0f%%"))
+		audioManager.setMasterVolume(volumenGeneralPorcentaje / 100.0f);
+}
+
 enum EstadoJuego {
 	ESTADO_MENU_PRINCIPAL,
 	ESTADO_JUGANDO,
@@ -2568,6 +2587,9 @@ void draw_Menu_ImGui()
 			glfwSetWindowShouldClose(window, true);
 		}
 
+		ImGui::SetCursorPos(ImVec2(centroX - 120.0f, inicioY + altoBoton * 2.0f + 45.0f));
+		dibujarControlVolumen();
+
 		ImGui::End();
 		ImGui::PopStyleColor(3);
 		ImGui::PopStyleVar(4);
@@ -2579,7 +2601,7 @@ void draw_Menu_ImGui()
 	{
 		ImVec2 centro = ImGui::GetMainViewport()->GetCenter();
 		float ancho = 300.0f;
-		float alto  = 230.0f;
+		float alto  = 275.0f;
 
 		ImGui::SetNextWindowPos(centro, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 		ImGui::SetNextWindowSize(ImVec2(ancho, alto));
@@ -2621,6 +2643,10 @@ void draw_Menu_ImGui()
 		{
 			estadoActual = ESTADO_MENU_PRINCIPAL;
 		}
+
+		ImGui::Dummy(ImVec2(0.0f, 12.0f));
+		ImGui::SetCursorPosX((ancho - 240.0f) * 0.5f);
+		dibujarControlVolumen();
 
 		ImGui::End();
 		ImGui::PopStyleColor(2);

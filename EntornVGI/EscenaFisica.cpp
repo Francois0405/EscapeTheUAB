@@ -122,7 +122,8 @@ namespace fisica
 				return fallar("no se pudo crear la caja fisica de '" + objeto.id + "' (tamano o masa no validos)");
 			todos.push_back(id);
 			if (EsCuerpoDinamico(objeto.fisica.tipo))
-				dinamicos.push_back({ i, id, desplazamiento, objeto.escala });
+				dinamicos.push_back({ i, id, desplazamiento, objeto.escala, objeto.fisica.forma,
+					glm::quat_cast(glm::mat3(giro)) });
 		}
 
 		// 2) Colisionadores de los objetos animados.
@@ -200,10 +201,12 @@ namespace fisica
 		for (const Dinamico& d : dinamicos)
 		{
 			if (d.indiceObjeto != indice) continue;
-			// Bullet mueve el CENTRO de la caja; el modelo tiene su origen en otro punto, así
+			// Bullet mueve el centro del colisionador; el modelo tiene su origen en otro punto, así
 			// que se deshace el desplazamiento: M = trasladar(centro) * giro * trasladar(-offset) * escalar.
 			const PoseCuerpo pose = mundo.PoseDe(d.cuerpo);
-			return glm::translate(glm::mat4(1.0f), pose.posicion) * glm::mat4_cast(pose.rotacion) *
+			// La rotación de una esfera no cambia su hitbox y no debe desplazar el modelo respecto al offset.
+			const glm::quat rotacion = d.forma == FormaCuerpo::Esfera ? d.rotacionInicial : pose.rotacion;
+			return glm::translate(glm::mat4(1.0f), pose.posicion) * glm::mat4_cast(rotacion) *
 				glm::translate(glm::mat4(1.0f), -d.desplazamientoEscalado) * glm::scale(glm::mat4(1.0f), d.escala);
 		}
 		return MatrizDeObjeto(objeto);

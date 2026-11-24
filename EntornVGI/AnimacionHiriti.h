@@ -13,6 +13,7 @@ namespace juego
 		static constexpr int NumeroBotes = 7;
 		static constexpr float AlcanceDescubrimiento = 10.0f;
 		static constexpr float TiempoHastaAgarrame = 5.0f;
+		static constexpr float PotenciaMinimaSonidoDanio = 0.5f;
 
 		bool Actualizar(bool puedeDescubrir, const glm::vec3& origen,
 			const glm::vec3& direccion, const glm::vec3& centro, float radio)
@@ -46,14 +47,16 @@ namespace juego
 			return true;
 		}
 
-		void MarcarLanzadoPorJugador()
+		void MarcarLanzadoPorJugador(float potencia)
 		{
 			m_lanzadoPorJugador = true;
+			m_sonidoDanioHabilitado = std::isfinite(potencia) && potencia >= PotenciaMinimaSonidoDanio;
 		}
 
 		int ActualizarContacto(bool hayContacto)
 		{
-			const bool nuevoImpacto = m_lanzadoPorJugador && hayContacto && !m_habiaContacto;
+			const bool nuevoImpacto = m_lanzadoPorJugador && m_sonidoDanioHabilitado &&
+				hayContacto && !m_habiaContacto;
 			m_habiaContacto = hayContacto;
 			if (!nuevoImpacto) return -1;
 
@@ -69,6 +72,7 @@ namespace juego
 			m_agarrado = false;
 			m_tiempoDesdeDescubrimiento = 0.0f;
 			m_lanzadoPorJugador = false;
+			m_sonidoDanioHabilitado = false;
 			m_habiaContacto = false;
 			m_siguienteSonidoDanio = 0;
 		}
@@ -95,6 +99,7 @@ namespace juego
 		bool m_agarrado = false;
 		float m_tiempoDesdeDescubrimiento = 0.0f;
 		bool m_lanzadoPorJugador = false;
+		bool m_sonidoDanioHabilitado = false;
 		bool m_habiaContacto = false;
 		int m_siguienteSonidoDanio = 0;
 	};

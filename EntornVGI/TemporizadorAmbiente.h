@@ -5,29 +5,45 @@
 
 namespace juego
 {
-	class TemporizadorAmbiente
+	class TemporizadorAudioHiriti
 	{
 	public:
-		static constexpr float Intervalo = 30.0f;
+		enum class Evento
+		{
+			Ninguno,
+			Ambiente,
+			Buscando
+		};
 
-		bool Actualizar(bool activo, float delta)
+		static constexpr float IntervaloAmbiente = 30.0f;
+		static constexpr float IntervaloEntreEventos = 15.0f;
+
+		Evento Actualizar(bool activo, float delta)
 		{
 			if (!activo)
 			{
 				m_tiempo = 0.0f;
-				return false;
+				m_siguienteEvento = Evento::Ambiente;
+				m_esPrimerEvento = true;
+				return Evento::Ninguno;
 			}
-			if (!std::isfinite(delta) || delta <= 0.0f) return false;
+			if (!std::isfinite(delta) || delta <= 0.0f) return Evento::Ninguno;
 
 			m_tiempo += delta;
-			if (m_tiempo < Intervalo) return false;
+			const float intervalo = m_esPrimerEvento ? IntervaloAmbiente : IntervaloEntreEventos;
+			if (m_tiempo < intervalo) return Evento::Ninguno;
 
-			m_tiempo = std::fmod(m_tiempo, Intervalo);
-			return true;
+			m_tiempo = std::fmod(m_tiempo, intervalo);
+			const Evento evento = m_siguienteEvento;
+			m_siguienteEvento = evento == Evento::Ambiente ? Evento::Buscando : Evento::Ambiente;
+			m_esPrimerEvento = false;
+			return evento;
 		}
 
 	private:
 		float m_tiempo = 0.0f;
+		Evento m_siguienteEvento = Evento::Ambiente;
+		bool m_esPrimerEvento = true;
 	};
 }
 

@@ -53,7 +53,7 @@ int main()
 	hiriti.Reiniciar();
 	comprobar(!hiriti.MarcarAgarrado(),
 		"no se registra el agarre antes de descubrir a Hiriti");
-	hiriti.MarcarLanzadoPorJugador();
+	hiriti.MarcarLanzadoPorJugador(0.5f);
 	comprobar(hiriti.ActualizarContacto(false) == -1,
 		"sin contacto no se reproduce sonido de daño");
 	comprobar(hiriti.ActualizarContacto(true) == 0,
@@ -63,12 +63,29 @@ int main()
 	comprobar(hiriti.ActualizarContacto(false) == -1 &&
 		hiriti.ActualizarContacto(true) == 1,
 		"el siguiente impacto tras separarse alterna a la otra variante");
+	hiriti.Reiniciar();
+	hiriti.MarcarLanzadoPorJugador(0.49f);
+	comprobar(hiriti.ActualizarContacto(true) == -1,
+		"un lanzamiento con menos del 50% de potencia no reproduce audio de impacto");
+	hiriti.Reiniciar();
+	hiriti.MarcarLanzadoPorJugador(0.5f);
+	comprobar(hiriti.ActualizarContacto(true) == 0,
+		"un lanzamiento con exactamente el 50% de potencia reproduce audio de impacto");
 
-	juego::TemporizadorAmbiente ambiente;
-	comprobar(!ambiente.Actualizar(true, 29.0f) && ambiente.Actualizar(true, 1.0f),
+	juego::TemporizadorAudioHiriti temporizadorAudio;
+	comprobar(temporizadorAudio.Actualizar(true, 29.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 1.0f) == juego::TemporizadorAudioHiriti::Evento::Ambiente,
 		"el sonido ambiente se activa al cumplirse treinta segundos de PLAY");
-	comprobar(!ambiente.Actualizar(false, 30.0f) && !ambiente.Actualizar(true, 29.0f),
-		"salir de PLAY reinicia el temporizador ambiente");
+	comprobar(temporizadorAudio.Actualizar(true, 14.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 1.0f) == juego::TemporizadorAudioHiriti::Evento::Buscando,
+		"el sonido searching alterna quince segundos despues del ambiente");
+	comprobar(temporizadorAudio.Actualizar(true, 15.0f) == juego::TemporizadorAudioHiriti::Evento::Ambiente &&
+		temporizadorAudio.Actualizar(true, 15.0f) == juego::TemporizadorAudioHiriti::Evento::Buscando,
+		"cada categoria de sonido se repite con treinta segundos de diferencia");
+	comprobar(temporizadorAudio.Actualizar(false, 30.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 29.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 1.0f) == juego::TemporizadorAudioHiriti::Evento::Ambiente,
+		"salir de PLAY reinicia la secuencia empezando por ambiente");
 
 	comprobar(!hiriti.Actualizar(true, origen, haciaHiriti,
 		glm::vec3(0.0f, juego::AnimacionHiriti::AlcanceDescubrimiento + 1.0f, 0.0f), 0.2f),
