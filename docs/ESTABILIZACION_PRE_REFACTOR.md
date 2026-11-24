@@ -36,9 +36,17 @@ Cada frame se restaura el estilo base de ImGui antes de aplicar `ScaleAllSizes(S
 
 En modo PLAY la escena 3D se renderiza al FBO PS1 de 960×540 y luego se escala al framebuffer nativo; ImGui se dibuja sobre la salida nativa. El editor usa el framebuffer normal. HUD, controles y geometría visible usan la misma escala lógica que sus zonas interactivas. El panel multijugador recibe posición y tamaño iniciales con `ImGuiCond_FirstUseEver`, por lo que el usuario puede moverlo y redimensionarlo.
 
+La fórmula vive en `EscalaUI.h` y `EscalaUITests` cubre resolución de referencia, límites de ventana, DPI y combinación máxima. Esta prueba nueva aún no se ha ejecutado.
+
+### Sonidos y reaparición de Hiriti desde `origin/master`
+
+El commit `d2e55e8` incorpora nuevos sonidos OGG de aparición, elimina los Opus sustituidos, permite controlar el volumen de cada one-shot y libera sonidos terminados o al apagar AudioManager. La búsqueda de OGG en `assets/audio/hirity/appear/` incluye los nuevos archivos; CMake copia recursivamente `assets` al directorio de ejecución. La reaparición usa un cooldown de 30 segundos, y las condiciones de distancia e interacción se mantienen bajo `puedeProcesarColisiones`, que limita estas acciones al host/offline autorizado. Los sonidos de interacción host y cliente usan el helper atenuado según la distancia local.
+
+La validación automatizada de audio, el copiado efectivo de los archivos al build y la interacción multijugador con Hiriti quedan pendientes en el commit conjunto por el gate de seguridad.
+
 ## Validación automatizada de Windows
 
-Las compilaciones se ejecutaron desde la raíz con los lanzadores oficiales:
+Las compilaciones de referencia se ejecutaron desde la raíz con los lanzadores oficiales antes de incorporar `d2e55e8` y registrar `EscalaUITests`:
 
 ```powershell
 .\run-windows.cmd -NoRun
@@ -55,9 +63,12 @@ CMake informó `ENet: encontrado; transporte real habilitado`, `OpenXR: ON` y `m
 | CTest Release | PASS, 19/19 |
 | `NetJuegoTests`, Debug/Release | PASS, 20/20 en cada configuración |
 | `ENetLoopbackTests`, Debug/Release | PASS, 10/10 en cada configuración |
+| `EscalaUITests` | NOT RUN; prueba añadida después de la validación de referencia |
 | `git diff --check` después de integrar las ramas | PASS |
 
 Los conjuntos completos incluyen `SceneLoaderTests`, `ObjLoaderTests`, tests del editor, `PhysicsTests`, `AnimacionHiritiTests`, `AudioDecoderTests`, `OpenXRTests`, `NetworkTests` y ENet loopback.
+
+Estos PASS son evidencia del commit anterior, no de la integración actual. La validación final de Debug/Release, CTest, recursos de audio y prueba nueva DPI debe repetirse cuando Kaspersky finalice el análisis completo sin acciones pendientes.
 
 ## Validación manual pendiente
 
@@ -75,4 +86,4 @@ No se realizaron pruebas gráficas de 1080p/4K, dos equipos, Tailscale, hardware
 
 ## Incidencia de Kaspersky
 
-Kaspersky informó que terminó el proceso de la detección anterior, guardó una copia de seguridad y eliminó el `SceneLoaderTests.exe` generado manualmente en `build/lighting-validation`. No se restauró ese archivo, no se añadió una exclusión y no se concluyó que fuera un falso positivo. Después de las pruebas integradas, la interfaz de Kaspersky mostró un análisis rápido completado sin amenazas (17.754 archivos) y un análisis completo en curso al 1 %. No se debe interpretar ese estado como un análisis completo limpio ni iniciar nuevas compilaciones o pruebas hasta que termine y no muestre acciones pendientes.
+Kaspersky informó que terminó el proceso de la detección anterior, guardó una copia de seguridad y eliminó el `SceneLoaderTests.exe` generado manualmente en `build/lighting-validation`. No se restauró ese archivo, no se añadió una exclusión y no se concluyó que fuera un falso positivo. La interfaz de Kaspersky muestra el análisis rápido completado sin amenazas (17.754 archivos) y el análisis completo todavía en curso: 5 %, 417.026 archivos analizados y aproximadamente 13 horas restantes en la última consulta de solo lectura. No se debe interpretar ese estado como un análisis completo limpio ni iniciar nuevas compilaciones o pruebas hasta que termine y no muestre acciones pendientes.

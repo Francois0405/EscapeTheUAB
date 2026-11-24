@@ -37,6 +37,7 @@
 #include "Network/PreferenciasRed.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
+#include "EscalaUI.h"
 #include <iostream>
 #include <algorithm>
 #include <array>
@@ -224,6 +225,9 @@ namespace
 		return std::max({ std::abs(objeto.escala.x), std::abs(objeto.escala.y), std::abs(objeto.escala.z) });
 	}
 
+	float volumenSonidoHiriti(float volumenBase = 1.0f);
+	void reproducirSonidoHiriti(const std::string& ruta, float volumenBase = 1.0f);
+
 	void reproducirSonidoAparicionHiriti()
 	{
 		static const std::vector<std::string> sonidos = []
@@ -248,7 +252,7 @@ namespace
 
 		static std::mt19937 generador(std::random_device{}());
 		std::uniform_int_distribution<std::size_t> elegir(0, sonidos.size() - 1);
-		audioManager.playOneShot(sonidos[elegir(generador)]);
+		reproducirSonidoHiriti(sonidos[elegir(generador)], 1.6f);
 	}
 
 	// --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
@@ -301,6 +305,35 @@ namespace
 	bool cargaLanzamientoActiva = false;
 	float tiempoCargaLanzamiento = 0.0f;
 	constexpr float TiempoMaximoCargaLanzamiento = 1.25f;
+
+	float volumenSonidoHiriti(float volumenBase)
+	{
+		if (!mundoFisico.HayJugador() || !escenaFisica) return volumenBase;
+
+		glm::vec3 posicionHiriti(0.0f);
+		const auto hiriti = std::find_if(objetosEscena.begin(), objetosEscena.end(),
+			[](const SceneObject& objeto) { return objeto.id == "hiriti"; });
+		if (hiriti == objetosEscena.end()) return volumenBase;
+
+		posicionHiriti = hiriti->posicion;
+		const int indice = static_cast<int>(std::distance(objetosEscena.begin(), hiriti));
+		escenaFisica->PosicionObjetoDinamico(indice, posicionHiriti);
+
+		const glm::vec3 posicionJugador = mundoFisico.PosicionPiesJugador() +
+			glm::vec3(0.0f, 0.0f, mundoFisico.AlturaOjosJugador());
+		const float distancia = glm::length(posicionHiriti - posicionJugador);
+		constexpr float distanciaCompleta = 2.0f;
+		constexpr float distanciaMaxima = 20.0f;
+		constexpr float volumenMinimo = 0.15f;
+		const float atenuacion = 1.0f - (1.0f - volumenMinimo) *
+			std::clamp((distancia - distanciaCompleta) / (distanciaMaxima - distanciaCompleta), 0.0f, 1.0f);
+		return volumenBase * atenuacion;
+	}
+
+	void reproducirSonidoHiriti(const std::string& ruta, float volumenBase)
+	{
+		audioManager.playOneShot(ruta, volumenSonidoHiriti(volumenBase));
+	}
 
 	void cargarTexturaManoInteraccion()
 	{
@@ -702,7 +735,7 @@ namespace
 			else agarrado = escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
 			if (agarrado && objetosEscena[objetivo.indiceDinamico].id == "hiriti" &&
 				animacionHiriti.MarcarAgarrado())
-				audioManager.playOneShot("assets/audio/hirity/story/lohashechobien.ogg");
+				reproducirSonidoHiriti("assets/audio/hirity/story/lohashechobien.ogg");
 		}
 		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
 			objetivo.objetoAnimado != nullptr)
@@ -770,7 +803,7 @@ namespace
 		}
 
 		if (puedeDescubrir && animacionHiriti.ActualizarAgarrame(delta))
-			audioManager.playOneShot("assets/audio/hirity/story/agarrame.ogg");
+			reproducirSonidoHiriti("assets/audio/hirity/story/agarrame.ogg");
 
 		glm::vec3 origen(0.0f), direccion(0.0f);
 		if (puedeDescubrir) origenYDireccionDeLaMirada(origen, direccion);
@@ -783,7 +816,7 @@ namespace
 		const int varianteDanio = animacionHiriti.ActualizarContacto(
 			puedeProcesarColisiones && escenaFisica->HayContactoObjetoDinamico(indice));
 		if (varianteDanio >= 0)
-			audioManager.playOneShot(varianteDanio == 0
+			reproducirSonidoHiriti(varianteDanio == 0
 				? "assets/audio/hirity/damage/damagehirity.ogg"
 				: "assets/audio/hirity/damage/damegehiritylong.ogg");
 
@@ -797,7 +830,7 @@ namespace
 				piesJugador.x - centro.x, piesJugador.y - centro.y));
 			const bool interaccionJugador = jugadorManipulaHiriti || !puedeSeguir;
 			if (animacionHiriti.ActualizarTemporizadorReaparicion(
-				distanciaAlJugador >= juego::AnimacionHiriti::DistanciaParaReaparecer,
+				distanciaAlJugador > juego::AnimacionHiriti::DistanciaParaReaparecer,
 				interaccionJugador, delta))
 			{
 				glm::vec3 centroAparicion(0.0f);
@@ -805,6 +838,7 @@ namespace
 				{
 					centro = centroAparicion;
 					reaparecio = true;
+					animacionHiriti.RegistrarReaparicion();
 					reproducirSonidoAparicionHiriti();
 				}
 			}
@@ -847,7 +881,7 @@ namespace
 			const char* saludo = probabilidadGallego(generador) == 1
 				? "assets/audio/hirity/story/holahiritygallego.ogg"
 				: "assets/audio/hirity/story/holahirity.ogg";
-			audioManager.playOneShot(saludo);
+			reproducirSonidoHiriti(saludo);
 
 			if (!escenaFisica->ImpulsarObjetoDinamico(indice, glm::vec3(0.0f, 0.0f, 0.75f)))
 				std::cerr << "No se pudo dar el impulso inicial a Hiriti.\n";
@@ -865,13 +899,13 @@ namespace
 		{
 		case juego::TemporizadorAudioHiriti::Evento::Ambiente:
 			hiritiFollowPlayerEnabled = false;
-			audioManager.playOneShot(tipoAmbiente(generador) == 0
+			reproducirSonidoHiriti(tipoAmbiente(generador) == 0
 				? "assets/audio/hirity/ambient/cough.ogg"
 				: "assets/audio/hirity/ambient/pasosfuertes.ogg");
 			break;
 		case juego::TemporizadorAudioHiriti::Evento::Buscando:
 			hiritiFollowPlayerEnabled = true;
-			audioManager.playOneShot(tipoBuscando(generador) == 0
+			reproducirSonidoHiriti(tipoBuscando(generador) == 0
 				? "assets/audio/hirity/searching/heydondeestashirity.ogg"
 				: "assets/audio/hirity/searching/venaquihirity.ogg");
 			break;
@@ -1273,7 +1307,7 @@ namespace
 						!escenaFisica->SujetarDinamicoRemoto(static_cast<int>(indice), solicitud.origen, solicitud.direccion)) continue;
 					redJuego.FijarPropietarioDinamico(solicitud.id, solicitud.peer);
 					if (objetosEscena[indice].id == "hiriti" && animacionHiriti.MarcarAgarrado())
-						audioManager.playOneShot("assets/audio/hirity/story/lohashechobien.ogg");
+						reproducirSonidoHiriti("assets/audio/hirity/story/lohashechobien.ogg");
 				}
 				else if (propietario == solicitud.peer)
 				{
@@ -1351,7 +1385,7 @@ namespace
 			const auto hiritiPropio = std::find_if(objetosEscena.begin(), objetosEscena.end(), [objetoPropio](const SceneObject& objeto)
 				{ return objetoPropio != 0 && netjuego::HashId(objeto.id) == objetoPropio && objeto.id == "hiriti"; });
 			if (hiritiPropio != objetosEscena.end() && animacionHiriti.MarcarAgarrado())
-				audioManager.playOneShot("assets/audio/hirity/story/lohashechobien.ogg");
+				reproducirSonidoHiriti("assets/audio/hirity/story/lohashechobien.ogg");
 
 			std::vector<netjuego::EstadoObjetoEscena> estados;
 			redJuego.TomarEstadosEscena(estados);
@@ -3194,17 +3228,14 @@ static bool estiloUIBaseCapturado = false;
 
 static float actualizarEscalaUI(GLFWwindow* ventana)
 {
-	constexpr float anchoReferencia = 1280.0f;
-	constexpr float altoReferencia = 720.0f;
 	int anchoLogico = 0, altoLogico = 0;
 	float escalaDpiX = 1.0f, escalaDpiY = 1.0f;
 	glfwGetWindowSize(ventana, &anchoLogico, &altoLogico);
 	glfwGetWindowContentScale(ventana, &escalaDpiX, &escalaDpiY);
 
-	const float resolucionLogica = std::clamp(std::min(anchoLogico / anchoReferencia, altoLogico / altoReferencia), 0.75f, 1.5f);
-	const float dpi = std::clamp(std::sqrt(std::max(0.01f, escalaDpiX * escalaDpiY)), 0.75f, 2.0f);
 	// Media geométrica: combina densidad y espacio lógico sin duplicar el factor de framebuffer.
-	escalaUIActual = std::clamp(std::sqrt(resolucionLogica * dpi), 0.75f, 1.75f);
+	escalaUIActual = interfaz::CalcularEscalaUI(
+		static_cast<float>(anchoLogico), static_cast<float>(altoLogico), escalaDpiX, escalaDpiY);
 
 	// ImGui GLFW conserva DisplaySize en unidades lógicas y calcula DisplayFramebufferScale
 	// desde el framebuffer nativo; ninguno de esos valores se sustituye por el FBO PS1 de la escena.

@@ -268,6 +268,12 @@ target_include_directories(MovimientoFPSTests PRIVATE ${PROJECT_SOURCE_DIR}/Ento
 target_compile_features(MovimientoFPSTests PRIVATE cxx_std_20)
 add_test(NAME MovimientoFPSTests COMMAND MovimientoFPSTests)
 
+# Formula de escala logica y DPI de la interfaz, sin ventana ni contexto OpenGL.
+add_executable(EscalaUITests EscalaUITests.cpp)
+target_include_directories(EscalaUITests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_compile_features(EscalaUITests PRIVATE cxx_std_20)
+add_test(NAME EscalaUITests COMMAND EscalaUITests)
+
 # Descubrimiento por mirada y animacion de Hiriti (sin ventana ni fisica).
 add_executable(AnimacionHiritiTests
 	AnimacionHiritiTests.cpp

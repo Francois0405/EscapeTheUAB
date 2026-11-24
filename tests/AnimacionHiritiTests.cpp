@@ -116,15 +116,19 @@ int main()
 		"el seguimiento escoge una trayectoria lateral cuando el camino directo esta bloqueado");
 
 	juego::AnimacionHiriti reaparicion;
-	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, false, 59.0f),
-		"Hiriti no reaparece antes de llevar un minuto lejos");
+	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, false, 29.0f),
+		"Hiriti no reaparece antes de que venza el cooldown de 30 segundos");
 	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, true, 1.0f),
-		"la interaccion del jugador reinicia el temporizador de reaparicion");
-	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(false, false, 59.0f),
-		"estar cerca del jugador reinicia el temporizador de reaparicion");
-	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, false, 59.0f) &&
+		"la interaccion del jugador bloquea la reaparicion aunque venza el cooldown");
+	comprobar(reaparicion.ActualizarTemporizadorReaparicion(true, false, 0.0f),
+		"si ya esta lejos, reaparece en cuanto vence el cooldown sin esperar 30 segundos lejos");
+	reaparicion.RegistrarReaparicion();
+	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, false, 29.0f) &&
 		reaparicion.ActualizarTemporizadorReaparicion(true, false, 1.0f),
-		"Hiriti reaparece al completar un minuto lejos y sin interaccion activa");
+		"cada reaparicion inicia un nuevo cooldown de 30 segundos");
+	reaparicion.Reiniciar();
+	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(false, false, 30.0f),
+		"estar a 10 metros o menos impide reaparecer");
 
 	juego::TemporizadorAudioHiriti temporizadorAudio;
 	comprobar(temporizadorAudio.Actualizar(true, 29.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
