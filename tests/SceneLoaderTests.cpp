@@ -296,6 +296,8 @@ int main()
     const fs::path escenaLaboratorio = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/scenes/aula_informatica_calibrada.json";
     comprobar(CargarDatosEscenaJSON(escenaLaboratorio, laboratorio, error),
         "la escena calibrada y sus nuevas rutas de materiales se cargan");
+    comprobar(laboratorio.objetos.size() == 83,
+        "la union calibrada conserva sus 22 instancias de arquitectura y 61 objetos");
     comprobar(std::abs(laboratorio.indirectIntensity - 0.20f) < 1e-6f &&
         std::abs(laboratorio.indirectAmbientBase - 0.035f) < 1e-6f &&
         std::abs(laboratorio.directSceneLightScale - 0.45f) < 1e-6f &&
@@ -326,9 +328,14 @@ int main()
         "mobiliario grande permanece estático");
     std::size_t suelos = 0;
     std::size_t lucesEscena = 0;
+    std::size_t luminariasEncendidas = 0;
     for (const auto& objeto : laboratorio.objetos)
     {
-        if (objeto.luz.presente && objeto.luz.encendida) ++lucesEscena;
+        if (objeto.luz.presente)
+        {
+            ++lucesEscena;
+            if (objeto.luz.encendida) ++luminariasEncendidas;
+        }
         if (objeto.modelo.find("suelo_base.obj") != std::string::npos)
         {
             ++suelos;
@@ -339,7 +346,9 @@ int main()
         }
     }
     comprobar(suelos == 1, "la escena contiene una sola superficie visual de suelo");
-    comprobar(lucesEscena == 4, "las cuatro luminarias quedan dentro de los slots de escena 4-7");
+    comprobar(lucesEscena == 13, "la escena integrada conserva sus trece luminarias declaradas");
+    comprobar(luminariasEncendidas == 13,
+        "las trece luminarias integradas quedan encendidas y disponibles para el renderer");
     for (const auto& objeto : laboratorio.objetos)
         if (objeto.luz.presente)
             comprobar(std::abs(objeto.luz.intensidad - 6.0f) < 1e-6f,

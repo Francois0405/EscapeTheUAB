@@ -90,7 +90,8 @@ const double p_far = 1000.0;
 #define TEXTURA_FITXERIMA 'I'
 
 // --------------  VGI: NOMBRE DE LLUMS: Nombre de Llums de l'aplicació, les d'OpenGL
-const int NUM_MAX_LLUMS = 8;
+// Slots 0-3 are reserved for global lights and the flashlight; scene lights use 4-16.
+const int NUM_MAX_LLUMS = 17;
 
 // -------------- VGI: SHADERS --> Tipus de Shaders
 #define CAP_SHADER ' '
