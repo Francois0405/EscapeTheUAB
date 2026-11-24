@@ -1,6 +1,7 @@
 #pragma once
 #include <string>
 #include <unordered_map>
+#include <vector>
 #include "MovimientoFPS.h"
 
 struct ma_engine;
@@ -35,4 +36,5 @@ private:
     float m_ambientVolume = 1.0f;
     
     std::unordered_map<std::string, ma_sound*> m_sounds;
+    std::vector<ma_sound*> m_oneShotSounds;
 };

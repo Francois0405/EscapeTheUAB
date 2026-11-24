@@ -19,22 +19,20 @@ namespace juego
 		static constexpr float TiempoEstableParaReanudarSeguimiento = 0.75f;
 		static constexpr float VelocidadEstableParaReanudarSeguimiento = 0.15f;
 		static constexpr float AlcanceAnticipacionObstaculos = 2.2f;
-		static constexpr float TiempoParaReaparecerLejos = 60.0f;
+		static constexpr float CooldownReaparicion = 30.0f;
 		static constexpr float DistanciaParaReaparecer = 10.0f;
 
 		bool ActualizarTemporizadorReaparicion(bool estaLejos, bool interaccionJugador, float delta)
 		{
-			if (!estaLejos || interaccionJugador)
-			{
-				m_tiempoLejos = 0.0f;
-				return false;
-			}
-			if (!std::isfinite(delta) || delta <= 0.0f) return false;
+			if (std::isfinite(delta) && delta > 0.0f)
+				m_tiempoDesdeReaparicion += delta;
+			return estaLejos && !interaccionJugador &&
+				m_tiempoDesdeReaparicion >= CooldownReaparicion;
+		}
 
-			m_tiempoLejos += delta;
-			if (m_tiempoLejos < TiempoParaReaparecerLejos) return false;
-			m_tiempoLejos = 0.0f;
-			return true;
+		void RegistrarReaparicion()
+		{
+			m_tiempoDesdeReaparicion = 0.0f;
 		}
 
 		static glm::vec3 CalcularDireccionSeguimiento(const glm::vec3& posicionHiriti,
@@ -142,7 +140,7 @@ namespace juego
 				{
 					m_seguimientoSuspendido = false;
 					m_tiempoEstable = 0.0f;
-					m_tiempoLejos = 0.0f;
+					m_tiempoDesdeReaparicion = 0.0f;
 					return true;
 				}
 			}
@@ -221,7 +219,7 @@ namespace juego
 		int m_siguienteSonidoDanio = 0;
 		bool m_seguimientoSuspendido = false;
 		float m_tiempoEstable = 0.0f;
-		float m_tiempoLejos = 0.0f;
+		float m_tiempoDesdeReaparicion = 0.0f;
 	};
 }
 
