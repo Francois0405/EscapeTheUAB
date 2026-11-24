@@ -167,6 +167,7 @@ endif()
 add_executable(ObjLoaderTests
 	ObjLoaderTests.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/objLoader.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/ObjMeshOptimization.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/glut_geometry.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/material.cpp
 )
@@ -186,6 +187,22 @@ target_link_libraries(ObjLoaderTests PRIVATE
 	soil2
 )
 target_compile_features(ObjLoaderTests PRIVATE cxx_std_20)
+if(ENTORNVGI_MESHOPT_TARGET)
+    target_link_libraries(ObjLoaderTests PRIVATE ${ENTORNVGI_MESHOPT_TARGET})
+    target_compile_definitions(ObjLoaderTests PRIVATE ENTORNVGI_HAS_MESHOPTIMIZER=1)
+endif()
+
+add_executable(ObjMeshOptimizationTests
+    ObjMeshOptimizationTests.cpp
+    ${PROJECT_SOURCE_DIR}/EntornVGI/ObjMeshOptimization.cpp
+)
+target_include_directories(ObjMeshOptimizationTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_compile_features(ObjMeshOptimizationTests PRIVATE cxx_std_20)
+if(ENTORNVGI_MESHOPT_TARGET)
+    target_link_libraries(ObjMeshOptimizationTests PRIVATE ${ENTORNVGI_MESHOPT_TARGET})
+    target_compile_definitions(ObjMeshOptimizationTests PRIVATE ENTORNVGI_HAS_MESHOPTIMIZER=1)
+endif()
+add_test(NAME ObjMeshOptimizationTests COMMAND ObjMeshOptimizationTests)
 
 if(WIN32)
 	add_custom_command(TARGET ObjLoaderTests POST_BUILD

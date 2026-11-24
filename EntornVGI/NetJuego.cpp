@@ -193,6 +193,7 @@ namespace netjuego
 	void RedJuego::TomarSolicitudesFisicas(std::vector<SolicitudObjetoDinamico>& salida)
 	{
 		salida.swap(solicitudesFisicas_);
+		solicitudesFisicas_.clear();
 	}
 
 	bool RedJuego::SolicitarAgarreDinamico(uint32_t id, const glm::vec3& origen, const glm::vec3& direccion)

@@ -43,6 +43,7 @@
  */
 
 #include "framework.h"
+#include "RenderMetrics.h"
 #include "material.h"
 #include "glut_geometry.h"
 
@@ -232,7 +233,7 @@ void draw_TriVAO_Object(GLint k)
 	if (VAOList[k].vaoId != 0) {
 		glBindVertexArray(VAOList[k].vaoId);
 		//glBindBuffer(GL_ARRAY_BUFFER, vboId);
-		glDrawArrays(GL_TRIANGLES, 0, VAOList[k].nVertexs);
+		renderMetrics::DrawArrays(GL_TRIANGLES, 0, VAOList[k].nVertexs);
 		glBindVertexArray(0);
 	}
 }
@@ -242,7 +243,7 @@ void draw_LinVAO_Object(GLint k)
 // Recuperar identificador VAO a vector VAOId
 	if (VAOList[k].vaoId != 0) {
 		glBindVertexArray(VAOList[k].vaoId);
-		glDrawArrays(GL_LINES, 0, VAOList[k].nVertexs);
+		renderMetrics::DrawArrays(GL_LINES, 0, VAOList[k].nVertexs);
 		glBindVertexArray(0);
 	}
 }
@@ -254,8 +255,8 @@ void draw_TriEBO_Object(GLint k)
 		glBindVertexArray(VAOList[k].vaoId);
 		//glBindBuffer(GL_ARRAY_BUFFER, vboId);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VAOList[k].eboId);
-		//glDrawElements(GL_TRIANGLES, VAOList[k].nVertexs, GL_UNSIGNED_INT, nullptr);
-		glDrawElements(GL_TRIANGLES, VAOList[k].nIndices, GL_UNSIGNED_INT, nullptr);
+		//renderMetrics::DrawElements(GL_TRIANGLES, VAOList[k].nVertexs, GL_UNSIGNED_INT, nullptr);
+		renderMetrics::DrawElements(GL_TRIANGLES, VAOList[k].nIndices, GL_UNSIGNED_INT, nullptr);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 		glBindVertexArray(0);
 	}
@@ -268,7 +269,7 @@ void draw_LinEBO_Object(GLint k)
 		glBindVertexArray(VAOList[k].vaoId);
 		//glBindBuffer(GL_ARRAY_BUFFER, vboId);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VAOList[k].eboId);
-		glDrawElements(GL_LINES, VAOList[k].nIndices, GL_UNSIGNED_INT, 0);
+		renderMetrics::DrawElements(GL_LINES, VAOList[k].nIndices, GL_UNSIGNED_INT, 0);
 		glBindVertexArray(0);
 	}
 }
@@ -304,7 +305,7 @@ CVAO loadglutSolidCube_VAO(GLdouble dSize)
 //	GLdouble cColor[4];
 //	glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-// Vertex coords array for glDrawArrays() =====================================
+// Vertex coords array for renderMetrics::DrawArrays() =====================================
 // A cube has 6 sides and each side has 1 square, therefore, a cube consists
 // of 24 vertices (6 sides * 1 square * 4 vertices = 24 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -400,7 +401,7 @@ CVAO loadglutSolidCube_EBO(GLdouble dSize)
 //	GLdouble cColor[4];
 //	glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-// Vertex coords array for glDrawArrays() =====================================
+// Vertex coords array for renderMetrics::DrawArrays() =====================================
 // A cube has 6 sides and each side has 1 square, therefore, a cube consists
 // of 24 vertices (6 sides * 1 square * 4 vertices = 24 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -509,7 +510,7 @@ CVAO loadglutSolidCubeRGB_VAO(GLdouble dSize)
 //  |/      |/
 //  v2------v3
 
-// vertex coords array for glDrawArrays() =====================================
+// vertex coords array for renderMetrics::DrawArrays() =====================================
 // A cube has 6 sides and each side has 2 triangles, therefore, a cube consists
 // of 36 vertices (6 sides * 2 tris * 3 vertices = 36 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -602,7 +603,7 @@ CVAO loadglutSolidCubeRGB_EBO(GLdouble dSize)
 //  |/      |/
 //  v2------v3
 
-// vertex coords array for glDrawElements() =====================================
+// vertex coords array for renderMetrics::DrawElements() =====================================
 // A cube has 6 sides and each side has 2 triangles, therefore, a cube consists
 // of 24 vertices (6 sides * 4 vertices = 24 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -742,7 +743,7 @@ void drawCubeSkybox()
 // Recuperar identificadors VAO, VBO dels vector VAOList
 	if (VAOList[CUBE_SKYBOX].vaoId != 0) 
 		{	glBindVertexArray(VAOList[CUBE_SKYBOX].vaoId);
-			glDrawArrays(GL_TRIANGLES, 0, VAOList[CUBE_SKYBOX].nVertexs);
+			renderMetrics::DrawArrays(GL_TRIANGLES, 0, VAOList[CUBE_SKYBOX].nVertexs);
 			glBindVertexArray(0);
 		}
 }
@@ -3584,7 +3585,7 @@ CVAO loadglutSolidOctahedron_VAO(void)
 	//glGetDoublev(GL_CURRENT_COLOR, cColor);
 
 #define RADIUS    1.0f
-// vertex coords array for glDrawArrays() =====================================
+// vertex coords array for renderMetrics::DrawArrays() =====================================
 // A octahedron has 8 sides and each side has 1 triangle, therefore, a octahedron consists
 // of 24 vertices (8 sides * 1 triangle * 3 vertices = 24 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -3670,7 +3671,7 @@ CVAO loadglutSolidOctahedron_EBO(void)
 		//glGetDoublev(GL_CURRENT_COLOR, cColor);
 
 #define RADIUS    1.0f
-// vertex coords array for glDrawArrays() =====================================
+// vertex coords array for renderMetrics::DrawArrays() =====================================
 // A octahedron has 8 sides and each side has 1 triangle, therefore, a octahedron consists
 // of 24 vertices (8 sides * 1 triangle * 3 vertices = 24 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -3774,7 +3775,7 @@ CVAO loadglutSolidTetrahedron_VAO( void )
   glEnd() ;
 */
 
-// vertex coords array for glDrawArrays() =====================================
+// vertex coords array for renderMetrics::DrawArrays() =====================================
 // A tetrahedron has 4 sides and each side has 1 triangle, therefore, a tetraahedron consists
 // of 12 vertices (4 sides * 1 triangle * 3 vertices = 12 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -3830,7 +3831,7 @@ CVAO loadglutSolidTetrahedron_EBO(void)
 		//GLfloat cColor[4];
 		//glGetFloatv(GL_CURRENT_COLOR, cColor);
 
-// vertex coords array for glDrawArrays() =====================================
+// vertex coords array for renderMetrics::DrawArrays() =====================================
 // A tetrahedron has 4 sides and each side has 1 triangle, therefore, a tetraahedron consists
 // of 12 vertices (4 sides * 1 triangle * 3 vertices = 12 vertices). And, each
 // vertex is 3 components (x,y,z) of floats, therefore, the size of vertex
@@ -6224,7 +6225,7 @@ CVAO loadglutSolidSquare_VAO(GLdouble dSize)
 //	GLdouble cColor[4];
 //	glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-// Vertex coords array for glDrawArrays() =====================================
+// Vertex coords array for renderMetrics::DrawArrays() =====================================
 // A square has 1 sides that consists of 4 vertices. And, each
 // vertex has 3 components (x,y,z) of floats, therefore, the size of vertex
 // array is 72 floats (4 * 3 = 12). The size of each double is 8 bytes (12 * 8 = 96 bytes)
@@ -6278,7 +6279,7 @@ CVAO loadglutSolidSquare_EBO(GLdouble dSize)
 	//GLdouble cColor[4];
 	//glGetDoublev(GL_CURRENT_COLOR, cColor);
 
-// Vertex coords array for glDrawArrays() =====================================
+// Vertex coords array for renderMetrics::DrawArrays() =====================================
 // A square has 1 sides that consists of 4 vertices. And, each
 // vertex has 3 components (x,y,z) of floats, therefore, the size of vertex
 // array is 72 floats (4 * 3 = 12). The size of each double is 8 bytes (12 * 8 = 96 bytes)
@@ -8937,7 +8938,7 @@ void draw_LINES_VAO(GLint vaoList_indx)
 // Dibuixar VAO 
 	if (vaoId != 0) {
 		glBindVertexArray(vaoId);
-		glDrawArrays(GL_LINES, 0, nvert);
+		renderMetrics::DrawArrays(GL_LINES, 0, nvert);
 		glBindVertexArray(0);
 	}
 }
@@ -9011,14 +9012,14 @@ void draw_LINES_EBO(GLint vaoList_indx)
 	// Dibuixar VAO 
 	if (VAOList[vaoList_indx].vaoId != 0) {
 		glBindVertexArray(VAOList[vaoList_indx].vaoId);
-		//glDrawArrays(GL_LINES, 0, nvert);
+		//renderMetrics::DrawArrays(GL_LINES, 0, nvert);
 
 		// Activar EBO
 		glBindVertexArray(VAOList[vaoList_indx].eboId);
 		// Dibuixar EBO
 		//glBindBuffer(GL_ARRAY_BUFFER, vboId);
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VAOList[vaoList_indx].eboId);
-		glDrawElements(GL_LINES, VAOList[vaoList_indx].nVertexs, GL_UNSIGNED_INT, 0);
+		renderMetrics::DrawElements(GL_LINES, VAOList[vaoList_indx].nVertexs, GL_UNSIGNED_INT, 0);
 
 		glBindVertexArray(0);
 	}
@@ -9094,7 +9095,7 @@ void draw_TRIANGLES_VAO(GLint vaoList_indx)
 // Dibuixar VAO
 	if (VAOList[vaoList_indx].vaoId != 0) 
 	{	glBindVertexArray(VAOList[vaoList_indx].vaoId);					//glBindVertexArray(vaoId);
-		glDrawArrays(GL_TRIANGLES, 0, VAOList[vaoList_indx].nVertexs);	//glDrawArrays(GL_TRIANGLES, 0, nvert);
+		renderMetrics::DrawArrays(GL_TRIANGLES, 0, VAOList[vaoList_indx].nVertexs);	//renderMetrics::DrawArrays(GL_TRIANGLES, 0, nvert);
 		glBindVertexArray(0);
 	}
 }
@@ -9191,7 +9192,7 @@ void draw_TRIANGLES_EBO(GLint vaoList_indx)
 			// Dibuixar EBO
 			//glBindBuffer(GL_ARRAY_BUFFER, vboId);
 			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VAOList[vaoList_indx].eboId);
-			glDrawElements(GL_TRIANGLES, VAOList[vaoList_indx].nIndices, GL_UNSIGNED_INT, 0);
+			renderMetrics::DrawElements(GL_TRIANGLES, VAOList[vaoList_indx].nIndices, GL_UNSIGNED_INT, 0);
 
 			glBindVertexArray(0);
 		}
@@ -9235,7 +9236,7 @@ void draw_GL_LINES_VAO(std::vector <double> vertices, std::vector <double> color
 	glBindBuffer(GL_ARRAY_BUFFER, 0);
 
 // Draw Primitive
-	glDrawArrays(GL_LINES, 0, (GLint) nv /3);
+	renderMetrics::DrawArrays(GL_LINES, 0, (GLint) nv /3);
 
 // Dissable Attrib arrays
 	glDisableVertexAttribArray(0);		// Disable attribute index 0 as being used (Position)
@@ -9298,7 +9299,7 @@ void draw_GL_TRIANGLES_VAO(std::vector <double> vertices, std::vector <double> n
 	glVertexAttribPointer(3, 2, GL_DOUBLE, GL_FALSE, 2 * sizeof(double), (GLvoid*)((vertices.size() + colors.size() + normals.size()) * sizeof(double)));						// Specify that our color data is going into attribute index 0 and contains 3 double
 
 // Draw Primitive
-	glDrawArrays(GL_TRIANGLES, 0, (GLint) nv/3);
+	renderMetrics::DrawArrays(GL_TRIANGLES, 0, (GLint) nv/3);
 
 // Dissable Attrib arrays
 	glDisableVertexAttribArray(0);		// Disable attribute index 0 as being used (Position)
@@ -9363,7 +9364,7 @@ void draw_GL_TRIANGLE_FAN_VAO(std::vector <double> vertices, std::vector <double
 	glVertexAttribPointer(3, 2, GL_DOUBLE, GL_FALSE, 2 * sizeof(double), (GLvoid*)((vertices.size() + colors.size() + normals.size()) * sizeof(double)));						// Specify that our color data is going into attribute index 0 and contains 3 double
 
 // Draw Primitive
-	glDrawArrays(GL_TRIANGLE_FAN, 0, (GLint) nv/3);
+	renderMetrics::DrawArrays(GL_TRIANGLE_FAN, 0, (GLint) nv/3);
 
 // Dissable Attrib arrays
 	glDisableVertexAttribArray(0);		// Disable attribute index 0 as being used (Position)
@@ -9428,7 +9429,7 @@ void draw_GL_TRIANGLE_STRIP_VAO(std::vector <double> vertices, std::vector <doub
 	glVertexAttribPointer(3, 2, GL_DOUBLE, GL_FALSE, 2 * sizeof(double), (GLvoid*)((vertices.size() + colors.size() + normals.size()) * sizeof(double)));						// Specify that our color data is going into attribute index 0 and contains 3 double
 
 // Draw Primitive
-	glDrawArrays(GL_TRIANGLE_STRIP, 0, (GLint) nv/3);
+	renderMetrics::DrawArrays(GL_TRIANGLE_STRIP, 0, (GLint) nv/3);
 
 // Dissable Attrib arrays
 	glDisableVertexAttribArray(0);		// Disable attribute index 0 as being used (Position)

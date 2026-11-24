@@ -54,6 +54,21 @@ if(ENTORNVGI_ENABLE_OPENXR)
 endif()
 message(STATUS "OpenXR: ${ENTORNVGI_OPENXR_ACTIVO}")
 
+# OBJ indexed geometry optimization. Build is optional if dependency is unavailable.
+option(ENTORNVGI_ENABLE_OBJ_MESHOPT "Optimize indexed OBJ geometry with meshoptimizer" ON)
+set(ENTORNVGI_MESHOPT_TARGET "")
+if(ENTORNVGI_ENABLE_OBJ_MESHOPT)
+    find_package(meshoptimizer CONFIG QUIET)
+    if(TARGET meshoptimizer::meshoptimizer)
+        set(ENTORNVGI_MESHOPT_TARGET meshoptimizer::meshoptimizer)
+    elseif(TARGET meshoptimizer)
+        set(ENTORNVGI_MESHOPT_TARGET meshoptimizer)
+    else()
+        message(WARNING "meshoptimizer not found: OBJ loader retains the legacy glDrawArrays path")
+    endif()
+endif()
+message(STATUS "OBJ meshoptimizer target: ${ENTORNVGI_MESHOPT_TARGET}")
+
 add_subdirectory(EntornVGI)
 
 if(BUILD_TESTING)

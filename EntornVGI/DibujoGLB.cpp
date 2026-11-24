@@ -5,7 +5,11 @@
 // -----------------------------------------------------------------------------
 #include "framework.h"
 #include "DibujoGLB.h"
+#include "UniformCache.h"
+#include "FrustumCulling.h"
+#include "RenderMetrics.h"
 #include <vector>
+#include <limits>
 
 namespace glb
 {
@@ -30,6 +34,17 @@ namespace glb
 
 		void SubirPrimitiva(PrimitivaGLB& primitiva)
 		{
+			if (!primitiva.tieneBounds && !primitiva.posiciones.empty())
+			{
+				primitiva.boundsMin = glm::vec3(std::numeric_limits<float>::max());
+				primitiva.boundsMax = glm::vec3(std::numeric_limits<float>::lowest());
+				for (const glm::vec3& posicion : primitiva.posiciones)
+				{
+					primitiva.boundsMin = glm::min(primitiva.boundsMin, posicion);
+					primitiva.boundsMax = glm::max(primitiva.boundsMax, posicion);
+				}
+				primitiva.tieneBounds = true;
+			}
 			const std::vector<float> vertices = IntercalarPosicionesYNormales(primitiva);
 
 			glGenVertexArrays(1, &primitiva.vao);
@@ -58,11 +73,11 @@ namespace glb
 		// Envía el color del material al shader (igual que hace COBJModel con sus materiales).
 		void ActivarMaterial(unsigned int programa, const glm::vec4& color)
 		{
-			glUniform1i(glGetUniformLocation(programa, "textur"), GL_FALSE);
-			glUniform4f(glGetUniformLocation(programa, "material.ambient"), color.r, color.g, color.b, color.a);
-			glUniform4f(glGetUniformLocation(programa, "material.diffuse"), color.r, color.g, color.b, color.a);
-			glUniform4f(glGetUniformLocation(programa, "material.specular"), 0.1f, 0.1f, 0.1f, 1.0f);
-			glUniform1f(glGetUniformLocation(programa, "material.shininess"), 20.0f);
+			glUniform1i(glcache::UniformLocation(programa, "textur"), GL_FALSE);
+			glUniform4f(glcache::UniformLocation(programa, "material.ambient"), color.r, color.g, color.b, color.a);
+			glUniform4f(glcache::UniformLocation(programa, "material.diffuse"), color.r, color.g, color.b, color.a);
+			glUniform4f(glcache::UniformLocation(programa, "material.specular"), 0.1f, 0.1f, 0.1f, 1.0f);
+			glUniform1f(glcache::UniformLocation(programa, "material.shininess"), 20.0f);
 			// El shader lee el color del vértice solo si no usa el material; damos uno por si acaso.
 			glVertexAttrib4f(1, color.r, color.g, color.b, color.a);
 			glVertexAttrib2f(3, 0.0f, 0.0f);
@@ -89,7 +104,8 @@ namespace glb
 			}
 	}
 
-	void DibujarModeloGLB(const ModeloGLB& modelo, const PoseGLB& pose, unsigned int programa, const glm::mat4& matrizBase)
+	void DibujarModeloGLB(const ModeloGLB& modelo, const PoseGLB& pose, unsigned int programa, const glm::mat4& matrizBase,
+		const glm::mat4& viewProjection, bool aplicarCulling)
 	{
 		// Matriz final de cada nodo (se lee de derecha a izquierda):
 		//   1. mundo del nodo : su posición dentro de la jerarquía del archivo (Y arriba)
@@ -103,14 +119,31 @@ namespace glb
 			if (indiceMalla < 0) continue;
 
 			const glm::mat4 matriz = cambioDeEjes * MatrizMundoDelNodo(modelo, pose, static_cast<int>(i));
-			glUniformMatrix4fv(glGetUniformLocation(programa, "modelMatrix"), 1, GL_FALSE, &matriz[0][0]);
+			bool nodoVisible = !aplicarCulling;
+			if (aplicarCulling)
+			{
+				// Compute bounds from the actual primitive vertices in its current node pose.
+				// Empty or malformed geometry is kept visible to preserve correctness.
+				bool tieneBounds = false;
+				for (const PrimitivaGLB& primitiva : modelo.mallas[indiceMalla].primitivas)
+				{
+					if (!primitiva.tieneBounds) continue;
+					tieneBounds = true;
+					if (!CajaFueraDeFrustum(viewProjection, matriz, primitiva.boundsMin, primitiva.boundsMax))
+					{ nodoVisible = true; break; }
+				}
+				if (!tieneBounds) nodoVisible = true;
+			}
+			if (renderMetrics::enabled) { if (nodoVisible) ++renderMetrics::visibles; else ++renderMetrics::descartados; }
+			if (!nodoVisible) continue;
+			glUniformMatrix4fv(glcache::UniformLocation(programa, "modelMatrix"), 1, GL_FALSE, &matriz[0][0]);
 
 			for (const PrimitivaGLB& primitiva : modelo.mallas[indiceMalla].primitivas)
 			{
 				if (primitiva.vao == 0) continue;   // no se subió a la GPU
 				ActivarMaterial(programa, primitiva.colorBase);
 				glBindVertexArray(primitiva.vao);
-				glDrawElements(GL_TRIANGLES, static_cast<GLsizei>(primitiva.indices.size()), GL_UNSIGNED_INT, (void*)0);
+						renderMetrics::DrawElements(GL_TRIANGLES, static_cast<GLsizei>(primitiva.indices.size()), GL_UNSIGNED_INT, (void*)0);
 			}
 		}
 		glBindVertexArray(0);
@@ -126,9 +159,10 @@ namespace glb
 		for (auto& entrada : escena.modelos) LiberarModeloDeGPU(entrada.second);
 	}
 
-	void DibujarObjetosAnimados(const EscenaAnimada& escena, unsigned int programa)
+	void DibujarObjetosAnimados(const EscenaAnimada& escena, unsigned int programa,
+		const glm::mat4& viewProjection, bool aplicarCulling)
 	{
 		for (const ObjetoAnimado& objeto : escena.objetos)
-			DibujarModeloGLB(*objeto.modelo, objeto.pose, programa, MatrizBaseDelObjeto(objeto));
+			DibujarModeloGLB(*objeto.modelo, objeto.pose, programa, MatrizBaseDelObjeto(objeto), viewProjection, aplicarCulling);
 	}
 }

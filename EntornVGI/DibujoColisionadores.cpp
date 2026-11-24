@@ -1,5 +1,6 @@
 // DibujoColisionadores.cpp
 #include "framework.h"
+#include "RenderMetrics.h"
 #include "DibujoColisionadores.h"
 
 namespace fisica
@@ -64,7 +65,7 @@ namespace fisica
 
 		const GLboolean teniaProfundidad = glIsEnabled(GL_DEPTH_TEST);
 		glDisable(GL_DEPTH_TEST);   // se ven también a través de las paredes
-		glDrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertices.size() / 7));
+		renderMetrics::DrawArrays(GL_LINES, 0, static_cast<GLsizei>(vertices.size() / 7));
 		if (teniaProfundidad) glEnable(GL_DEPTH_TEST);
 		glBindVertexArray(0);
 	}

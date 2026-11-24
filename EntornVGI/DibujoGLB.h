@@ -23,13 +23,15 @@ namespace glb
 	// Dibuja el modelo con una pose dada.
 	//   programa    : shader ya activo (glUseProgram) con la cámara ya enviada.
 	//   matrizBase  : dónde se coloca el modelo en el mundo del juego (ya en Z arriba).
-	void DibujarModeloGLB(const ModeloGLB& modelo, const PoseGLB& pose, unsigned int programa, const glm::mat4& matrizBase);
+	void DibujarModeloGLB(const ModeloGLB& modelo, const PoseGLB& pose, unsigned int programa, const glm::mat4& matrizBase,
+		const glm::mat4& viewProjection, bool aplicarCulling = true);
 
 	// Lo mismo para toda la lista de objetos animados: sube cada modelo una sola vez,
 	// y dibuja cada instancia con su propia pose y su propia colocación.
 	void SubirEscenaAnimadaAGPU(EscenaAnimada& escena);
 	void LiberarEscenaAnimadaDeGPU(EscenaAnimada& escena);
-	void DibujarObjetosAnimados(const EscenaAnimada& escena, unsigned int programa);
+	void DibujarObjetosAnimados(const EscenaAnimada& escena, unsigned int programa,
+		const glm::mat4& viewProjection, bool aplicarCulling = true);
 }
 
 #endif

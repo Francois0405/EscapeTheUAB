@@ -116,7 +116,7 @@ namespace fisica
 
 			const TipoCuerpo tipoFisico = objeto.fisica.tipo == TipoCuerpo::Dinamico && !autoridadFisica
 				? TipoCuerpo::Cinematico : objeto.fisica.tipo;
-			const float masaFisica = tipoFisico == TipoCuerpo::Dinamico ? objeto.fisica.masa : 0.0f;
+			const float masaFisica = EsCuerpoDinamico(tipoFisico) ? objeto.fisica.masa : 0.0f;
 			const IdCuerpo id = objeto.fisica.forma == FormaCuerpo::Esfera
 				? mundo.CrearEsfera(tipoFisico, centro, std::max({ mitad.x, mitad.y, mitad.z }), masaFisica)
 				: mundo.CrearCaja(tipoFisico, centro, glm::quat_cast(glm::mat3(giro)), mitad, masaFisica);

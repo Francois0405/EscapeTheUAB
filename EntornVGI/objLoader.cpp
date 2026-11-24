@@ -13,6 +13,11 @@
 
 #include "framework.h"
 #include "objLoader.h"
+#include "UniformCache.h"
+#include "RenderMetrics.h"
+#include "ObjMeshOptimization.h"
+#include <utility>
+#include <algorithm>
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
@@ -145,6 +150,7 @@ _stdcall COBJModel::COBJModel()
 {
 // Inicialitzar la llista de VAO's.
 	initVAOList_OBJ();
+	hasBounds = false;
 }
 
 _stdcall COBJModel::~COBJModel()
@@ -264,6 +270,12 @@ int _stdcall COBJModel::LoadModel(char* szFileName)
 				&pVertices[CurrentIndex.iVertexCount].fZ);
 			if (nScanReturn != 3)
 				return failLoad(EINVAL);
+			const Vector3D& vertex = pVertices[CurrentIndex.iVertexCount];
+			if (!hasBounds) { boundsMin = boundsMax = vertex; hasBounds = true; }
+			else {
+				boundsMin.fX = std::min(boundsMin.fX, vertex.fX); boundsMin.fY = std::min(boundsMin.fY, vertex.fY); boundsMin.fZ = std::min(boundsMin.fZ, vertex.fZ);
+				boundsMax.fX = std::max(boundsMax.fX, vertex.fX); boundsMax.fY = std::max(boundsMax.fY, vertex.fY); boundsMax.fZ = std::max(boundsMax.fZ, vertex.fZ);
+			}
 			// Next vertex
 			CurrentIndex.iVertexCount++;
 		}
@@ -863,6 +875,22 @@ const GLfloat cColor[4] = { 1.0f, 1.0f, 1.0f, 1.0f };
 }
 
 
+// Generate an indexed VAO separately for each OBJ material group.
+// If the optional dependency is disabled, keep the exact legacy upload.
+static CVAO LoadOptimizedObjVAO(const std::vector<double>& positions,
+                                const std::vector<double>& normals,
+                                const std::vector<double>& colors,
+                                const std::vector<double>& texcoords)
+{
+    objmeshopt::IndexedGeometry indexed;
+    if (objmeshopt::Build(positions, normals, colors, texcoords, indexed)) {
+        return load_TRIANGLES_EBO(std::move(indexed.positions), std::move(indexed.normals),
+                                  std::move(indexed.colors), std::move(indexed.texcoords),
+                                  std::move(indexed.indices));
+    }
+    return load_TRIANGLES_VAO(positions, normals, colors, texcoords);
+}
+
 void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 	const unsigned int iFaceCount,
 	const Material* pMaterials)
@@ -908,7 +936,7 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 				{	// Canvi de material per a les cares del fitxer OBJ
 					if (nv > 0) {
 						// Creaci� d'un VAO i un VBO i c�rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
-						objVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
+						objVAO = LoadOptimizedObjVAO(vertices, normals, colors, textures);
 						Set_VAOList_OBJ(index_VAO, objVAO);
 						index_VAO = index_VAO + 1;
 						vertices.resize(0);		colors.resize(0);	normals.resize(0);		textures.resize(0);// Reinicialitzar vectors
@@ -1102,7 +1130,7 @@ void _stdcall COBJModel::loadToVAOList(const Face* pFaces,
 
 	if (nv != 0) 
 	{	// Creaci� del darrer VAO i un VBO i c�rrega de la geometria. Guardar identificador VAO identificador VBO a struct CVAO.
-		objVAO = load_TRIANGLES_VAO(vertices, normals, colors, textures);
+		objVAO = LoadOptimizedObjVAO(vertices, normals, colors, textures);
 		Set_VAOList_OBJ(index_VAO, objVAO);
 	}
 
@@ -1134,31 +1162,31 @@ void _stdcall COBJModel::UseMaterial_ShaderID(GLuint sh_programID, Material pMat
 		// diffuse/specular values and appeared incorrectly tinted or shiny.
 		const bool emissive = pMaterial.fEmmissive[0] > 0.0f ||
 			pMaterial.fEmmissive[1] > 0.0f || pMaterial.fEmmissive[2] > 0.0f;
-		glUniform4f(glGetUniformLocation(sh_programID, "material.emission"),
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.emission"),
 			pMaterial.fEmmissive[0], pMaterial.fEmmissive[1], pMaterial.fEmmissive[2], 1.0f);
-		glUniform1i(glGetUniformLocation(sh_programID, "uMaterialEmission"), emissive ? GL_TRUE : GL_FALSE);
+		glUniform1i(glcache::UniformLocation(sh_programID, "uMaterialEmission"), emissive ? GL_TRUE : GL_FALSE);
 
 		color[0] = pMaterial.fAmbient[0]; color[1] = pMaterial.fAmbient[1]; color[2] = pMaterial.fAmbient[2];
-		glUniform4f(glGetUniformLocation(sh_programID, "material.ambient"), color[0], color[1], color[2], color[3]);
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.ambient"), color[0], color[1], color[2], color[3]);
 		color[0] = pMaterial.fDiffuse[0]; color[1] = pMaterial.fDiffuse[1]; color[2] = pMaterial.fDiffuse[2];
-		glUniform4f(glGetUniformLocation(sh_programID, "material.diffuse"), color[0], color[1], color[2], color[3]);
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.diffuse"), color[0], color[1], color[2], color[3]);
 		color[0] = pMaterial.fSpecular[0]; color[1] = pMaterial.fSpecular[1]; color[2] = pMaterial.fSpecular[2];
-		glUniform4f(glGetUniformLocation(sh_programID, "material.specular"), color[0], color[1], color[2], color[3]);
-		glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), pMaterial.fShininess);
+		glUniform4f(glcache::UniformLocation(sh_programID, "material.specular"), color[0], color[1], color[2], color[3]);
+		glUniform1f(glcache::UniformLocation(sh_programID, "material.shininess"), pMaterial.fShininess);
 
 		if (pMaterial.iTextureID)
 		{
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, pMaterial.iTextureID);
-			glUniform1i(glGetUniformLocation(sh_programID, "texture0"), GLint(0));
-			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_TRUE);
+			glUniform1i(glcache::UniformLocation(sh_programID, "texture0"), GLint(0));
+			glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_TRUE);
 		}
-		else glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
+		else glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_FALSE);
 	}
 	else
 	{
-		glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
-		glUniform1i(glGetUniformLocation(sh_programID, "uMaterialEmission"), GL_FALSE);
+		glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_FALSE);
+		glUniform1i(glcache::UniformLocation(sh_programID, "uMaterialEmission"), GL_FALSE);
 	}
 }
 
@@ -1571,7 +1599,14 @@ void _stdcall COBJModel::draw_TriVAO_Object_OBJ(GLint k)
 	if (VAOList_OBJ[k].vaoId != 0) {
 		glBindVertexArray(VAOList_OBJ[k].vaoId);
 		//glBindBuffer(GL_ARRAY_BUFFER, vboId);
-		glDrawArrays(GL_TRIANGLES, 0, VAOList_OBJ[k].nVertexs);
+		if (VAOList_OBJ[k].eboId != 0 && VAOList_OBJ[k].nIndices > 0) {
+            // load_TRIANGLES_EBO unbinds the EBO during creation: rebind it on
+            // the correct VAO before issuing indexed draw in core OpenGL.
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, VAOList_OBJ[k].eboId);
+            renderMetrics::DrawElements(GL_TRIANGLES, VAOList_OBJ[k].nIndices, GL_UNSIGNED_INT, nullptr);
+        } else {
+            renderMetrics::DrawArrays(GL_TRIANGLES, 0, VAOList_OBJ[k].nVertexs);
+        }
 		glBindVertexArray(0);
 	}
 }
@@ -1587,16 +1622,16 @@ void _stdcall COBJModel::draw_TriVAO_OBJ(GLuint sh_programID)
 		if (materialIndex >= 0 && static_cast<unsigned int>(materialIndex) < materialCount)
 			UseMaterial_ShaderID(sh_programID, vMaterials[materialIndex]);
 		else
-			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_FALSE);
+			glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_FALSE);
 		if (instanceTextureOverride != 0)
 		{
 			glActiveTexture(GL_TEXTURE0);
 			glBindTexture(GL_TEXTURE_2D, instanceTextureOverride);
-			glUniform1i(glGetUniformLocation(sh_programID, "texture0"), 0);
-			glUniform1i(glGetUniformLocation(sh_programID, "textur"), GL_TRUE);
+			glUniform1i(glcache::UniformLocation(sh_programID, "texture0"), 0);
+			glUniform1i(glcache::UniformLocation(sh_programID, "textur"), GL_TRUE);
 		}
 		if (instanceShininessOverride >= 0.0f)
-			glUniform1f(glGetUniformLocation(sh_programID, "material.shininess"), instanceShininessOverride);
+			glUniform1f(glcache::UniformLocation(sh_programID, "material.shininess"), instanceShininessOverride);
 		draw_TriVAO_Object_OBJ(i);
 	}
 }
