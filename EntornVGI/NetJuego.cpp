@@ -68,7 +68,7 @@ namespace netjuego
 
 		net::SessionConfig sc;
 		sc.role = cfg_.rol; sc.playerName = cfg_.nombre; sc.sceneId = escena_;
-		sc.maxPeers = 4; sc.poseRateHz = 20.0;   // snapshots del host a 20 Hz
+		sc.maxPeers = 4; sc.poseRateHz = 25.0;   // poses y dinámica a 25 Hz en canales independientes
 		const ConfigRed c = cfg_; const Fabrica fab = fabrica_;
 		sinTransporte_ = false; arranqueOk_ = false;
 		servicio_ = std::make_unique<net::NetService>(sc, [this, c, fab]() -> std::unique_ptr<net::ITransport>
@@ -86,7 +86,8 @@ namespace netjuego
 	void RedJuego::ReiniciarEstadoRemoto()
 	{
 		interp_.Limpiar(); vista_.Reiniciar(); hayPoseLocal_ = false; ignorados_ = 0;
-		recuperacionEnviada_.clear(); recuperacionSucia_ = true; ultimaSubida_ = -1e9; ultimoAcarreo_ = -1e9;
+		recuperacionEnviada_.clear(); estadosRecibidos_.clear(); recuperacionSucia_ = true; ultimaSubida_ = -1e9; ultimoAcarreo_ = -1e9;
+		estadosFisicosHost_.clear(); estadosFisicosFiables_.clear(); solicitudesFisicas_.clear(); propietariosDinamicos_.clear();
 		estadoConexion_ = net::ConnectionState::Idle;
 	}
 
@@ -103,7 +104,7 @@ namespace netjuego
 	{
 		if (arranque_.joinable()) arranque_.join();
 		if (servicio_) { servicio_->Stop(); servicio_.reset(); }
-		interp_.Limpiar(); vista_.Reiniciar();
+		ReiniciarEstadoRemoto();
 		fase_ = FaseRed::Error; mensaje_ = msg;
 		std::fprintf(stderr, "Red: %s\n", msg.c_str());
 	}
@@ -116,9 +117,129 @@ namespace netjuego
 		recuperacionSucia_ = true;
 	}
 
-	bool RedJuego::Encolar(const EventoSalida& e)
+	bool RedJuego::Encolar(const EventoSalida& e, net::PeerId soloPara)
 	{
-		return servicio_ && servicio_->QueueEvent(e.tipo, e.objetivo, e.payload);
+		return servicio_ && servicio_->QueueEvent(e.tipo, e.objetivo, e.payload, soloPara);
+	}
+
+	bool RedJuego::FijarEstadoEscena(const std::vector<EstadoObjetoEscena>& estado, bool difundir)
+	{
+		if (difundir && (cfg_.rol != net::Role::Host || fase_ != FaseRed::Activa || estado.size() != estadoEscena_.size())) return false;
+		std::map<uint32_t, EstadoObjetoEscena> validados;
+		for (const auto& objeto : estado)
+			if (!EstadoObjetoEscenaValido(objeto) || !validados.emplace(objeto.id, objeto).second) return false;
+		if (difundir)
+			for (const auto& objeto : estado)
+				if (std::none_of(estadoEscena_.begin(), estadoEscena_.end(), [&](const EstadoObjetoEscena& x) { return x.id == objeto.id; })) return false;
+
+		std::vector<EstadoObjetoEscena> cambios;
+		for (const auto& objeto : estado)
+		{
+			auto anterior = std::find_if(estadoEscena_.begin(), estadoEscena_.end(), [&](const EstadoObjetoEscena& x) { return x.id == objeto.id; });
+			if (anterior == estadoEscena_.end() || !IgualEstadoObjetoEscena(*anterior, objeto)) cambios.push_back(objeto);
+		}
+		std::vector<net::EventMsg> eventos;
+		if (difundir)
+		{
+			for (const auto& objeto : cambios)
+			{
+				net::EventMsg ev; ev.eventType = kEvEstadoObjetoEscena; ev.targetId = objeto.id;
+				ev.payload = CodificarEstadoObjetoEscena(objeto);
+				if (ev.payload.empty()) return false;
+				eventos.push_back(std::move(ev));
+			}
+			if (!eventos.empty() && (!servicio_ || !servicio_->QueueEvents(eventos))) { ++ignorados_; return false; }
+		}
+		estadoEscena_ = estado;
+		return true;
+	}
+
+	void RedJuego::TomarEstadosEscena(std::vector<EstadoObjetoEscena>& salida)
+	{
+		salida.swap(estadosRecibidos_);
+	}
+
+	void RedJuego::EnviarEstadosFisicos(const std::vector<net::DynamicStateEntry>& estados)
+	{
+		if (!servicio_ || cfg_.rol != net::Role::Host) return;
+		std::vector<net::DynamicStateEntry> activos;
+		for (const auto& e : estados)
+		{
+			estadosFisicosHost_[e.objectId] = e;
+			if ((e.flags & 3) != 0) activos.push_back(e);
+		}
+		servicio_->SubmitLocalDynamics(activos);
+	}
+
+	std::map<uint32_t, net::DynamicStateEntry> RedJuego::EstadosFisicosRemotos() const
+	{
+		return servicio_ && cfg_.rol == net::Role::Client ? servicio_->DynamicStates() : std::map<uint32_t, net::DynamicStateEntry>{};
+	}
+
+	void RedJuego::TomarEstadosFisicosFiables(std::vector<net::DynamicStateEntry>& salida)
+	{
+		salida.swap(estadosFisicosFiables_);
+	}
+
+	bool RedJuego::PublicarEstadoFisicoFinal(const net::DynamicStateEntry& estado, net::PeerId soloPara)
+	{
+		if (!EstadoFisicoValido(estado) || cfg_.rol != net::Role::Host || !servicio_) return false;
+		EventoSalida evento{ kEvEstadoFisicoFinal, estado.objectId, CodificarEstadoFisico(estado) };
+		if (evento.payload.empty() || !Encolar(evento, soloPara)) return false;
+		estadosFisicosHost_[estado.objectId] = estado;
+		return true;
+	}
+
+	void RedJuego::TomarSolicitudesFisicas(std::vector<SolicitudObjetoDinamico>& salida)
+	{
+		salida.swap(solicitudesFisicas_);
+	}
+
+	bool RedJuego::SolicitarAgarreDinamico(uint32_t id, const glm::vec3& origen, const glm::vec3& direccion)
+	{
+		if (cfg_.rol != net::Role::Client || !Activa() || id == 0) return false;
+		auto payload = CodificarRayoInteraccion(origen, direccion);
+		return !payload.empty() && Encolar({ kEvSolicitarAgarreDinamico, id, std::move(payload) });
+	}
+
+	bool RedJuego::SolicitarSoltarDinamico(uint32_t id, const glm::vec3& velocidad)
+	{
+		if (cfg_.rol != net::Role::Client || !Activa() || id == 0 || !CoordenadaValida(velocidad)) return false;
+		EventoSalida evento{ kEvSolicitarSoltarDinamico, id, CodificarVec3(velocidad) };
+		return Encolar(evento);
+	}
+
+	void RedJuego::FijarPropietarioDinamico(uint32_t id, net::PeerId propietario)
+	{
+		if (id == 0 || (propietario != kSinDueno && propietario > net::kMaxPeerId)) return;
+		propietariosDinamicos_[id] = propietario;
+		auto estado = estadosFisicosHost_.find(id);
+		if (estado != estadosFisicosHost_.end())	{ estado->second.owner = propietario; if (propietario == kSinDueno) estado->second.flags &= ~uint8_t(2); else estado->second.flags |= 2; }
+		if (cfg_.rol != net::Role::Host || !servicio_) return;
+		std::vector<uint8_t> payload; payload.push_back(static_cast<uint8_t>(propietario & 0xFF));
+		payload.push_back(static_cast<uint8_t>(propietario >> 8));
+		Encolar({ kEvPropiedadDinamica, id, std::move(payload) });
+	}
+
+	net::PeerId RedJuego::PropietarioDinamico(uint32_t id) const
+	{
+		auto it = propietariosDinamicos_.find(id);
+		return it == propietariosDinamicos_.end() ? kSinDueno : it->second;
+	}
+
+	uint32_t RedJuego::ObjetoDinamicoDePeer(net::PeerId peer) const
+	{
+		for (const auto& par : propietariosDinamicos_) if (par.second == peer) return par.first;
+		return 0;
+	}
+
+	bool RedJuego::PoseDePeer(net::PeerId peer, net::PoseEntry& salida) const
+	{
+		if (!servicio_) return false;
+		auto poses = servicio_->RemotePoses();
+		auto it = poses.find(peer);
+		if (it == poses.end()) return false;
+		salida = it->second; return true;
 	}
 
 	bool RedJuego::Cabeza(net::PeerId p, const std::map<net::PeerId, net::PoseEntry>& poses, glm::vec3& out) const
@@ -193,10 +314,36 @@ namespace netjuego
 	{
 		switch (e.kind)
 		{
-		case net::NetEvent::PeerJoined: break;   // el cliente pide la recuperacion al recibir el Welcome
+		case net::NetEvent::PeerJoined:
+			if (cfg_.rol == net::Role::Host)
+			{
+				std::vector<net::EventMsg> eventos;
+				for (const auto& objeto : estadoEscena_)
+				{
+					net::EventMsg ev; ev.eventType = kEvEstadoObjetoEscena; ev.targetId = objeto.id;
+					ev.payload = CodificarEstadoObjetoEscena(objeto);
+					if (ev.payload.empty()) { ++ignorados_; continue; }
+					eventos.push_back(std::move(ev));
+				}
+				if (!eventos.empty() && (!servicio_ || !servicio_->QueueEvents(eventos, e.peer))) ++ignorados_;
+				std::vector<net::EventMsg> fisicos;
+				for (auto par : estadosFisicosHost_)
+				{
+					net::EventMsg ev; ev.eventType = kEvEstadoFisicoFinal; ev.targetId = par.first;
+					ev.payload = CodificarEstadoFisico(par.second);
+					if (!ev.payload.empty()) fisicos.push_back(std::move(ev));
+				}
+				if (!fisicos.empty() && (!servicio_ || !servicio_->QueueEvents(fisicos, e.peer))) ++ignorados_;
+			}
+			break;
 		case net::NetEvent::PeerLeft:
 			interp_.Quitar(e.peer);
-			if (cfg_.rol == net::Role::Host) arbitro_.PeerDesconectado(e.peer);   // libera la propiedad (se difunde en DifundirHost)
+			if (cfg_.rol == net::Role::Host)
+			{
+				arbitro_.PeerDesconectado(e.peer);
+				for (const auto& par : propietariosDinamicos_)
+					if (par.second == e.peer) solicitudesFisicas_.push_back({ par.first, e.peer, false, glm::vec3(0.0f) });
+			}
 			break;
 		case net::NetEvent::StateChanged: estadoConexion_ = e.state; break;
 		case net::NetEvent::Rejected: mensaje_ = TextoRechazo(e.rejectReason); break;
@@ -234,6 +381,22 @@ namespace netjuego
 			if (DecodificarVec3(ev.payload, p)) r = arbitro_.Mover(ev.targetId, e.peer, p, hay ? &cabeza : nullptr, ahora);
 			break;
 		}
+		case kEvSolicitarAgarreDinamico:
+		{
+			glm::vec3 origen, direccion;
+			if (ev.targetId != 0 && DecodificarRayoInteraccion(ev.payload, origen, direccion))
+				solicitudesFisicas_.push_back({ ev.targetId, e.peer, true, glm::vec3(0.0f), origen, glm::normalize(direccion) });
+			else ++ignorados_;
+			break;
+		}
+		case kEvSolicitarSoltarDinamico:
+		{
+			glm::vec3 velocidad;
+			if (DecodificarVec3(ev.payload, velocidad) && glm::length(velocidad) <= 15.0f)
+				solicitudesFisicas_.push_back({ ev.targetId, e.peer, false, velocidad });
+			else ++ignorados_;
+			break;
+		}
 		default: break;   // los clientes no dictan estados
 		}
 		if (r != ResultadoSolicitud::Aplicada) ++ignorados_;
@@ -245,6 +408,28 @@ namespace netjuego
 		bool ok = false;
 		if (ev.eventType == kEvPuertaEstado) ok = puertas_ && sincroPuertas_.AplicarEstado(*puertas_, ev.targetId, ev.payload);
 		else if (ev.eventType == kEvPropEstado && ev.targetId == kObjetoPrueba) ok = vista_.AplicarEstado(ev.payload);
+		else if (ev.eventType == kEvEstadoObjetoEscena)
+		{
+			EstadoObjetoEscena estado;
+			ok = DecodificarEstadoObjetoEscena(ev.targetId, ev.payload, estado);
+			if (ok) estadosRecibidos_.push_back(estado);
+		}
+		else if (ev.eventType == kEvPropiedadDinamica && ev.payload.size() == 2)
+		{
+			const auto propietario = static_cast<net::PeerId>(ev.payload[0] | (uint16_t(ev.payload[1]) << 8));
+			if (propietario == kSinDueno || propietario <= net::kMaxPeerId)
+			{ propietariosDinamicos_[ev.targetId] = propietario; ok = true; }
+		}
+		else if (ev.eventType == kEvEstadoFisicoFinal)
+		{
+			net::DynamicStateEntry estado;
+			ok = DecodificarEstadoFisico(ev.targetId, ev.payload, estado);
+			if (ok)
+			{
+				estadosFisicosFiables_.push_back(estado);
+				propietariosDinamicos_[estado.objectId] = estado.owner;
+			}
+		}
 		if (!ok) ++ignorados_;
 	}
 
@@ -335,6 +520,8 @@ namespace netjuego
 	{
 		Diagnostico d; d.fase = fase_; d.escena = escena_; d.mensaje = mensaje_;
 		d.modo = cfg_.rol == net::Role::Host ? "Host" : (cfg_.rol == net::Role::Client ? "Cliente" : "Offline");
+		d.endpoint = cfg_.rol == net::Role::Host ? "0.0.0.0" : cfg_.host;
+		d.puerto = cfg_.puerto;
 		if (fase_ == FaseRed::Offline) { d.modo = "Offline"; d.estado = "Sin red"; return d; }
 		switch (fase_)
 		{

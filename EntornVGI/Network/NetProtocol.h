@@ -14,10 +14,11 @@ namespace net
 {
 	// ---- Constantes y limites estrictos ----
 	constexpr uint16_t kMagic = 0x5445;            // "ET" en little-endian: bytes 45 54
-	constexpr uint8_t  kProtocolVersion = 1;
+	constexpr uint8_t  kProtocolVersion = 2;
 	constexpr size_t   kHeaderSize = 10;
 	constexpr size_t   kMaxPacketSize = 1200;      // < MTU tipico; se rechaza todo lo mayor
 	constexpr size_t   kMaxPoseEntries = 8;
+	constexpr size_t   kMaxDynamicEntries = 16;
 	constexpr size_t   kMaxEventPayload = 256;
 	constexpr size_t   kMaxNameLength = 32;
 	constexpr size_t   kMaxSceneIdLength = 64;
@@ -30,8 +31,8 @@ namespace net
 	constexpr PeerId kUnassignedPeerId = 0xFFFF;   // solo valido en Hello (aun sin ID)
 	constexpr PeerId kMaxPeerId = 254;
 
-	// Canales ENet: pose no fiable y eventos fiables separados.
-	enum Channel : uint8_t { kChannelPose = 0, kChannelEvents = 1, kChannelCount = 2 };
+	// Streams independientes: evita que snapshots físicos desplacen poses por secuenciación ENet.
+	enum Channel : uint8_t { kChannelPose = 0, kChannelEvents = 1, kChannelDynamics = 2, kChannelCount = 3 };
 
 	enum class MessageType : uint8_t
 	{
@@ -43,7 +44,8 @@ namespace net
 		Event = 20,           // ambos (fiable)
 		PeerDisconnected = 30,// host -> clientes (fiable)
 		RecoveryRequest = 31, // cliente -> host (fiable)
-		RecoverySnapshot = 32 // host -> cliente (fiable)
+		RecoverySnapshot = 32, // host -> cliente (fiable)
+		DynamicSnapshot = 12   // host -> clientes (no fiable, estados físicos)
 	};
 
 	enum class RejectReason : uint8_t { BadVersion = 1, SceneMismatch = 2, ServerFull = 3, BadRequest = 4 };
@@ -58,6 +60,17 @@ namespace net
 	struct RejectMsg { RejectReason reason = RejectReason::BadRequest; };
 	struct PoseUpdateMsg { PoseEntry pose; };
 	struct PoseSnapshotMsg { std::vector<PoseEntry> poses; };
+	struct DynamicStateEntry
+	{
+		uint32_t objectId = 0;
+		uint32_t tick = 0; // reloj monotónico del host en milisegundos (wrap-safe)
+		Transform7 transform;
+		float linearVelocity[3] = { 0, 0, 0 };
+		float angularVelocity[3] = { 0, 0, 0 };
+		uint8_t flags = 0; // bit 0 despierto, bit 1 agarrado; sin bit 0 = en reposo
+		PeerId owner = kUnassignedPeerId;
+	};
+	struct DynamicSnapshotMsg { std::vector<DynamicStateEntry> objects; };
 	struct EventMsg { uint16_t eventType = 0; uint32_t targetId = 0; std::vector<uint8_t> payload; };
 	struct PeerDisconnectedMsg { PeerId peer = 0; DisconnectReason reason = DisconnectReason::Left; };
 	struct RecoveryRequestMsg {};
@@ -65,7 +78,7 @@ namespace net
 	struct RecoverySnapshotMsg { std::vector<StateEntry> entries; };
 
 	using Message = std::variant<HelloMsg, WelcomeMsg, RejectMsg, PoseUpdateMsg, PoseSnapshotMsg,
-		EventMsg, PeerDisconnectedMsg, RecoveryRequestMsg, RecoverySnapshotMsg>;
+		EventMsg, PeerDisconnectedMsg, RecoveryRequestMsg, RecoverySnapshotMsg, DynamicSnapshotMsg>;
 
 	struct Header
 	{

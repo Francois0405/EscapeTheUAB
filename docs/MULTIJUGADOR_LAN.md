@@ -55,6 +55,8 @@ La guía con instrucciones y comprobaciones por plataforma está en [`VALIDACION
 `ctest --test-dir build/<preset> --output-on-failure` incluye `NetworkTests` (protocolo/sesion, transporte en memoria), `NetJuegoTests` (adaptador, poses PC/OpenXR,
 puertas, propiedad) y `ENetLoopbackTests` (ENet real por 127.0.0.1). Con los presets normales, la ausencia de ENet detiene CMake en vez de omitir silenciosamente esta prueba.
 
+El estado actual de la replicación de edición y sus límites está en [`MULTIPLAYER_SYNC.md`](MULTIPLAYER_SYNC.md).
+
 ## Limitaciones
 * El juego no cifra ni autentica por sí mismo; úsalo en una LAN o tailnet cuyos miembros y permisos sean de confianza. Máximo 4 clientes. Solo IPv4 (ENet 1.3.x).
 * Sin NAT traversal ni descubrimiento automatico: hay que teclear la IP.

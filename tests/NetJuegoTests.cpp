@@ -179,6 +179,26 @@ int main()
 		ok(!ParsearEndpoint("", host, puerto, err) && !ParsearEndpoint("a:0", host, puerto, err) && !ParsearEndpoint("a:x", host, puerto, err), "endpoint vacio/puerto 0/no numerico");
 	}
 
+	// ---------------- estado replicable de objetos JSON ----------------
+	{
+		EstadoObjetoEscena original;
+		original.id = HashId("caja_sobre_mesa");
+		original.posicion = glm::vec3(1.25f, -2.0f, 3.5f);
+		original.rotacion = glm::vec3(0.0f, 15.0f, 90.0f);
+		original.escala = glm::vec3(0.5f, 0.75f, 1.0f);
+		original.colisionPresente = true; original.tipoColision = 2;
+		original.mitadTamano = glm::vec3(0.4f, 0.5f, 0.6f);
+		original.desplazamiento = glm::vec3(0.1f, 0.0f, -0.2f); original.masa = 4.0f;
+		const auto payload = CodificarEstadoObjetoEscena(original);
+		EstadoObjetoEscena recibido;
+		ok(payload.size() == 66 && DecodificarEstadoObjetoEscena(original.id, payload, recibido) &&
+			IgualEstadoObjetoEscena(original, recibido), "estado de objeto JSON ida y vuelta");
+		auto truncado = payload; truncado.pop_back();
+		ok(!DecodificarEstadoObjetoEscena(original.id, truncado, recibido), "estado de objeto truncado rechazado");
+		original.escala.x = 0.0f;
+		ok(CodificarEstadoObjetoEscena(original).empty(), "estado de objeto con escala cero rechazado");
+	}
+
 	// ---------------- offline: nada se crea ----------------
 	{
 		int llamadas = 0;
@@ -348,11 +368,81 @@ int main()
 		auto hub = std::make_shared<Hub>();
 		int fabricas = 0;
 		auto host = Crear(hub, Role::Host, "aula", glm::vec3(0, 0, 1.7f), &fabricas);
+		EstadoObjetoEscena caja;
+		caja.id = HashId("caja_sobre_mesa"); caja.posicion = glm::vec3(2, 1, 0.5f);
+		caja.colisionPresente = true; caja.tipoColision = 2; caja.masa = 2.0f;
+		ok(host->red->FijarEstadoEscena({ caja }, false), "host registra el estado inicial de la escena");
 		auto c1 = Crear(hub, Role::Client, "aula", glm::vec3(0, -0.5f, 1.7f), &fabricas);
+		std::vector<Nodo*> hostYC1 = { host.get(), c1.get() };
+		ok(Esperar(hostYC1, [&] { return host->red->Activa() && c1->red->Activa() && host->red->ObtenerDiagnostico().remotos == 1; }), "host y primer cliente conectan");
+		std::vector<EstadoObjetoEscena> estadosEscena;
+		const bool inicialRecibido = Esperar(hostYC1, [&] {
+			c1->red->TomarEstadosEscena(estadosEscena);
+			return std::any_of(estadosEscena.begin(), estadosEscena.end(), [&](const auto& e) { return e.id == caja.id && cerca(e.posicion, caja.posicion); });
+		});
+		ok(inicialRecibido, "cliente recibe el estado inicial del objeto por ID");
+		caja.posicion = glm::vec3(3, 2, 1); caja.tipoColision = 1; caja.masa = 2.0f;
+		ok(host->red->FijarEstadoEscena({ caja }, true), "host publica un cambio discreto de objeto");
+		const bool cambioRecibido = Esperar(hostYC1, [&] {
+			c1->red->TomarEstadosEscena(estadosEscena);
+			return std::any_of(estadosEscena.begin(), estadosEscena.end(), [&](const auto& e) {
+				return e.id == caja.id && cerca(e.posicion, caja.posicion) && e.tipoColision == 1;
+			});
+		});
+		ok(cambioRecibido,
+			"el cliente recibe transformacion y cambio dinamico a estatico");
+		net::DynamicStateEntry enVuelo; enVuelo.objectId = HashId("caja_en_vuelo"); enVuelo.tick = 10;
+		ok(PuedeCargarLanzamiento(false, net::Role::Client, enVuelo.objectId) &&
+			!PuedeCargarLanzamiento(false, net::Role::Client, 0) &&
+			PuedeCargarLanzamiento(true, net::Role::Offline, 0),
+			"lanzamiento cliente usa propiedad confirmada y offline conserva el agarre local");
+		ok(EstadoFisicoMasNuevo(12, true, 10) && !EstadoFisicoMasNuevo(9, true, 10) &&
+			EstadoFisicoMasNuevo(0, true, 0xFFFFFFFFu),
+			"estado fiable no revierte snapshot nuevo y tick admite wraparound");
+		ok(PuedeAdquirirDinamico(kSinDueno, 1, 0) && !PuedeAdquirirDinamico(1, 2, 0) &&
+			!PuedeAdquirirDinamico(kSinDueno, 1, 501),
+			"solo un solicitante adquiere el objeto y cada jugador mantiene un agarre activo");
+		ok(std::fabs(TiempoSnapshotSiguiente(4.0, 1000, 1040) - 4.04) < 1e-9 &&
+			std::fabs(TiempoSnapshotSiguiente(4.0, 0xFFFFFFF0u, 0x18u) - 4.04) < 1e-9,
+			"buffer fisico reconstruye intervalos de host y wraparound sin usar jitter de llegada");
+		enVuelo.transform.pos[0] = 5.0f; enVuelo.flags = 0; enVuelo.owner = kSinDueno;
+		ok(host->red->PublicarEstadoFisicoFinal(enVuelo), "host publica estado final fiable del objeto");
+		Esperar(hostYC1, [&] { return false; }, 0.1);
+		std::vector<net::DynamicStateEntry> finales;
+		c1->red->TomarEstadosFisicosFiables(finales);
+		ok(finales.size() == 1 && finales[0].tick == 10 && finales[0].transform.pos[0] == 5.0f,
+			"evento fiable conserva tick y pose final");
+		const auto peerC1 = c1->red->PeerLocal();
+		ok(c1->red->SolicitarAgarreDinamico(enVuelo.objectId, { 0, 0, 1 }, { 0, 1, 0 }),
+			"cliente envia solicitud fiable de agarre con su rayo");
+		Esperar(hostYC1, [&] { return false; }, 0.1);
+		std::vector<SolicitudObjetoDinamico> solicitudes;
+		host->red->TomarSolicitudesFisicas(solicitudes);
+		ok(solicitudes.size() == 1 && solicitudes[0].id == enVuelo.objectId && solicitudes[0].peer == peerC1 && solicitudes[0].agarrar,
+			"host recibe la solicitud con peer e ID asignados por el protocolo");
+		host->red->FijarPropietarioDinamico(enVuelo.objectId, peerC1);
+		ok(Esperar(hostYC1, [&] { return c1->red->PropietarioDinamico(enVuelo.objectId) == peerC1; }),
+			"el host confirma la propiedad al cliente");
+		ok(c1->red->SolicitarSoltarDinamico(enVuelo.objectId, { 0, 0, 5 }), "cliente envia velocidad de lanzamiento");
+		Esperar(hostYC1, [&] { return false; }, 0.1);
+		host->red->TomarSolicitudesFisicas(solicitudes);
+		ok(solicitudes.size() == 1 && !solicitudes[0].agarrar && solicitudes[0].peer == peerC1 && cerca(solicitudes[0].velocidad.z, 5.0f),
+			"el host recibe solicitud de lanzamiento del propietario actual");
 		auto c2 = Crear(hub, Role::Client, "aula", glm::vec3(1, -0.5f, 1.7f), &fabricas);
 		std::vector<Nodo*> todos = { host.get(), c1.get(), c2.get() };
 		ok(Esperar(todos, [&] { return host->red->Activa() && c1->red->Activa() && c2->red->Activa() && host->red->ObtenerDiagnostico().remotos == 2 && c1->red->ObtenerDiagnostico().remotos >= 1; }), "los tres se conectan y se ven");
 		ok(fabricas == 3, "una fabrica de transporte por participante, solo al iniciar");
+		const bool tardioEscena = Esperar(todos, [&] {
+			c2->red->TomarEstadosEscena(estadosEscena);
+			return std::any_of(estadosEscena.begin(), estadosEscena.end(), [&](const auto& e) {
+				return e.id == caja.id && cerca(e.posicion, caja.posicion) && e.tipoColision == 1;
+			});
+		});
+		ok(tardioEscena,
+			"late join recibe el ultimo estado autoritativo");
+		const bool tardioFisica = Esperar(todos, [&] { c2->red->TomarEstadosFisicosFiables(finales); return !finales.empty(); });
+		ok(tardioFisica && finales.size() == 1 && finales[0].objectId == enVuelo.objectId && finales[0].owner == peerC1,
+			"late join recibe el estado y propietario físico vigente");
 		ok(Esperar(todos, [&] { return c1->red->Objeto().conocido && c2->red->Objeto().conocido; }), "recuperacion: los clientes conocen el objeto compartido");
 
 		// jugadores remotos: nunca el propio

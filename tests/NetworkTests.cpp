@@ -101,6 +101,27 @@ namespace
 		auto& r = std::get<PoseSnapshotMsg>(p.body);
 		ok(r.poses.size() == 2 && r.poses[1].head.pos[0] == -3.25f && p.header.sequence == 42 && p.header.sender == 3, "snapshot ida y vuelta");
 
+		h.type = MessageType::DynamicSnapshot;
+		DynamicStateEntry fisico; fisico.objectId = 0x1234; fisico.tick = 77;
+		fisico.transform.pos[0] = 2.5f; fisico.linearVelocity[1] = -3.0f; fisico.angularVelocity[2] = 1.25f;
+		fisico.flags = 1; fisico.owner = kUnassignedPeerId;
+		DynamicSnapshotMsg dinamicos; dinamicos.objects.push_back(fisico);
+		ok(Encode(h, dinamicos, b) && Decode(b.data(), b.size(), p) == DecodeStatus::Ok, "snapshot fisico ida y vuelta");
+		const auto& d = std::get<DynamicSnapshotMsg>(p.body).objects[0];
+		ok(d.objectId == fisico.objectId && d.tick == 77 && d.transform.pos[0] == 2.5f &&
+			d.linearVelocity[1] == -3.0f && d.angularVelocity[2] == 1.25f, "snapshot conserva ID, tick, pose y velocidades");
+		dinamicos.objects.clear();
+		for (size_t i = 0; i < kMaxDynamicEntries; ++i) { auto item = fisico; item.objectId = static_cast<uint32_t>(i + 1); dinamicos.objects.push_back(item); }
+		ok(Encode(h, dinamicos, b) && b.size() <= kMaxPacketSize, "lote maximo de dinamica cabe en un datagrama MTU seguro");
+		auto extra = fisico; extra.objectId = static_cast<uint32_t>(kMaxDynamicEntries + 1); dinamicos.objects.push_back(extra);
+		ok(!Encode(h, dinamicos, b), "lote dinamico por encima del limite se rechaza");
+		dinamicos.objects.resize(1);
+		dinamicos.objects.push_back(dinamicos.objects.front());
+		ok(!Encode(h, dinamicos, b), "ID duplicado en snapshot dinamico se rechaza");
+		dinamicos.objects.resize(1);
+		dinamicos.objects[0].flags = 2;
+		ok(!Encode(h, dinamicos, b), "snapshot fisico rechaza propietario incoherente");
+
 		h.type = MessageType::Event; EventMsg ev; ev.eventType = 7; ev.targetId = 99; ev.payload = {1, 2, 3};
 		ok(Encode(h, ev, b) && Decode(b.data(), b.size(), p) == DecodeStatus::Ok, "evento ida y vuelta");
 		ok(std::get<EventMsg>(p.body).payload.size() == 3 && std::get<EventMsg>(p.body).targetId == 99, "evento campos");
@@ -247,6 +268,32 @@ namespace
 		ok(r.host->RemotePoses().at(1).head.pos[0] == 4.0f, "canal incorrecto descartado");
 	}
 
+	void TestDynamicSnapshotFlow()
+	{
+		ok(ChannelFor(MessageType::PoseSnapshot) == kChannelPose &&
+			ChannelFor(MessageType::DynamicSnapshot) == kChannelDynamics &&
+			ChannelFor(MessageType::Event) == kChannelEvents,
+			"poses, dinamica y eventos fiables usan streams ENet independientes");
+		Rig r; auto& c = r.Add(); r.Pump();
+		DynamicStateEntry estado; estado.objectId = 501; estado.tick = 40;
+		estado.transform.pos[0] = 1.0f; estado.flags = 1; estado.owner = kUnassignedPeerId;
+		r.host->SetLocalDynamics({ estado });
+		r.host->Tick(NetSession::Clock::now() + std::chrono::seconds(1)); r.Pump();
+		auto recibidos = c.s->DynamicStates();
+		ok(recibidos.count(501) == 1 && recibidos.at(501).tick == 40 && recibidos.at(501).transform.pos[0] == 1.0f,
+			"host transmite estado fisico al cliente por snapshot no fiable");
+
+		estado.tick = 39; estado.transform.pos[0] = -7.0f;
+		DynamicSnapshotMsg viejo; viejo.objects.push_back(estado);
+		Header h; h.type = MessageType::DynamicSnapshot; h.sender = kHostPeerId; h.sequence = 100;
+		std::vector<uint8_t> paquete; Encode(h, viejo, paquete);
+		TransportEvent entrada; entrada.kind = TransportEvent::Received; entrada.link = c.t->link;
+		entrada.channel = kChannelDynamics; entrada.data = paquete; c.s->OnTransportEvent(entrada);
+		recibidos = c.s->DynamicStates();
+		ok(recibidos.at(501).tick == 40 && recibidos.at(501).transform.pos[0] == 1.0f,
+			"tick obsoleto no reemplaza el estado fisico mas nuevo");
+	}
+
 	void TestEventsDisconnectRecovery()
 	{
 		Rig r; auto& a = r.Add(); auto& b = r.Add();
@@ -324,6 +371,7 @@ int main()
 	TestHandshake();
 	TestVersionMismatch();
 	TestPoseFlowAndSpoof();
+	TestDynamicSnapshotFlow();
 	TestEventsDisconnectRecovery();
 	TestOfflineNoSockets();
 	TestThreadedService();

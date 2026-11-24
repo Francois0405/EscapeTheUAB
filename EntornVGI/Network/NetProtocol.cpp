@@ -67,6 +67,29 @@ namespace net
 		{
 			return r.U16(e.peer) && ReadTransform(r, e.head) && ReadTransform(r, e.leftHand) && ReadTransform(r, e.rightHand);
 		}
+		void WriteDynamic(Writer& w, const DynamicStateEntry& e)
+		{
+			w.U32(e.objectId); w.U32(e.tick); WriteTransform(w, e.transform);
+			for (float v : e.linearVelocity) w.F32(v);
+			for (float v : e.angularVelocity) w.F32(v);
+			w.U8(e.flags); w.U16(e.owner);
+		}
+		bool ReadDynamic(Reader& r, DynamicStateEntry& e)
+		{
+			if (!r.U32(e.objectId) || !r.U32(e.tick) || !ReadTransform(r, e.transform)) return false;
+			for (float& v : e.linearVelocity) if (!r.F32(v)) return false;
+			for (float& v : e.angularVelocity) if (!r.F32(v)) return false;
+			return r.U8(e.flags) && r.U16(e.owner);
+		}
+		bool ValidDynamic(const DynamicStateEntry& e)
+		{
+			if (e.objectId == 0 || !ValidTransform(e.transform) || (e.flags & ~uint8_t(3)) != 0 ||
+				((e.owner != kUnassignedPeerId) && e.owner > kMaxPeerId) ||
+				((e.flags & 2) != 0) != (e.owner != kUnassignedPeerId)) return false;
+			for (float v : e.linearVelocity) if (!std::isfinite(v) || std::fabs(v) > 1000.0f) return false;
+			for (float v : e.angularVelocity) if (!std::isfinite(v) || std::fabs(v) > 1000.0f) return false;
+			return true;
+		}
 
 		bool ValidMessage(const Message& m)
 		{
@@ -78,6 +101,17 @@ namespace net
 			{
 				if (v->poses.size() > kMaxPoseEntries) return false;
 				for (const auto& e : v->poses) if (!ValidPose(e)) return false;
+				return true;
+			}
+			if (auto* v = std::get_if<DynamicSnapshotMsg>(&m))
+			{
+				if (v->objects.size() > kMaxDynamicEntries) return false;
+				for (size_t i = 0; i < v->objects.size(); ++i)
+				{
+					if (!ValidDynamic(v->objects[i])) return false;
+					for (size_t j = 0; j < i; ++j)
+						if (v->objects[j].objectId == v->objects[i].objectId) return false;
+				}
 				return true;
 			}
 			if (auto* v = std::get_if<EventMsg>(&m)) return v->payload.size() <= kMaxEventPayload;
@@ -112,6 +146,7 @@ namespace net
 		switch (t)
 		{
 		case MessageType::PoseUpdate: case MessageType::PoseSnapshot: return kChannelPose;
+		case MessageType::DynamicSnapshot: return kChannelDynamics;
 		case MessageType::Hello: case MessageType::Welcome: case MessageType::Reject: case MessageType::Event:
 		case MessageType::PeerDisconnected: case MessageType::RecoveryRequest: case MessageType::RecoverySnapshot:
 			return kChannelEvents;
@@ -123,7 +158,8 @@ namespace net
 	MessageType TypeOf(const Message& m)
 	{
 		static const MessageType map[] = { MessageType::Hello, MessageType::Welcome, MessageType::Reject, MessageType::PoseUpdate,
-			MessageType::PoseSnapshot, MessageType::Event, MessageType::PeerDisconnected, MessageType::RecoveryRequest, MessageType::RecoverySnapshot };
+			MessageType::PoseSnapshot, MessageType::Event, MessageType::PeerDisconnected, MessageType::RecoveryRequest, MessageType::RecoverySnapshot,
+			MessageType::DynamicSnapshot };
 		return map[m.index()];
 	}
 
@@ -139,6 +175,7 @@ namespace net
 		else if (auto* v = std::get_if<RejectMsg>(&m)) { w.U8(static_cast<uint8_t>(v->reason)); }
 		else if (auto* v = std::get_if<PoseUpdateMsg>(&m)) { WritePose(w, v->pose); }
 		else if (auto* v = std::get_if<PoseSnapshotMsg>(&m)) { w.U8(static_cast<uint8_t>(v->poses.size())); for (const auto& e : v->poses) WritePose(w, e); }
+		else if (auto* v = std::get_if<DynamicSnapshotMsg>(&m)) { w.U8(static_cast<uint8_t>(v->objects.size())); for (const auto& e : v->objects) WriteDynamic(w, e); }
 		else if (auto* v = std::get_if<EventMsg>(&m)) { w.U16(v->eventType); w.U32(v->targetId); w.U16(static_cast<uint16_t>(v->payload.size())); w.Bytes(v->payload.data(), v->payload.size()); }
 		else if (auto* v = std::get_if<PeerDisconnectedMsg>(&m)) { w.U16(v->peer); w.U8(static_cast<uint8_t>(v->reason)); }
 		else if (auto* v = std::get_if<RecoverySnapshotMsg>(&m)) { w.U8(static_cast<uint8_t>(v->entries.size())); for (const auto& e : v->entries) { w.U32(e.objectId); w.U32(static_cast<uint32_t>(e.value)); } }
@@ -173,6 +210,10 @@ namespace net
 			if (ok && n > kMaxPoseEntries) return DecodeStatus::FieldOutOfRange;
 			for (uint8_t i = 0; ok && i < n; ++i) { PoseEntry e; ok = ReadPose(r, e); if (ok) m.poses.push_back(e); }
 			h.type = MessageType::PoseSnapshot; body = std::move(m); break; }
+		case 12: { DynamicSnapshotMsg m; uint8_t n = 0; ok = r.U8(n);
+			if (ok && n > kMaxDynamicEntries) return DecodeStatus::FieldOutOfRange;
+			for (uint8_t i = 0; ok && i < n; ++i) { DynamicStateEntry e; ok = ReadDynamic(r, e); if (ok) m.objects.push_back(e); }
+			h.type = MessageType::DynamicSnapshot; body = std::move(m); break; }
 		case 20: { EventMsg m; uint16_t len; ok = r.U16(m.eventType) && r.U32(m.targetId) && r.U16(len);
 			if (ok && len > kMaxEventPayload) return DecodeStatus::FieldOutOfRange;
 			ok = ok && r.Bytes(m.payload, len); h.type = MessageType::Event; body = std::move(m); break; }

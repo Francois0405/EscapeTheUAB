@@ -35,13 +35,16 @@ namespace net
 		while (!stop_.load())
 		{
 			// 1) Ordenes del juego.
-			std::deque<std::function<void(NetSession&)>> cmds; bool hasPose; PoseEntry pose;
+			std::deque<std::function<void(NetSession&)>> cmds; bool hasPose, hasDynamics; PoseEntry pose;
+			std::vector<DynamicStateEntry> dynamics;
 			{
 				std::lock_guard<std::mutex> lk(mutex_);
 				cmds.swap(commands_); hasPose = hasPose_; pose = pendingPose_; hasPose_ = false;
+				hasDynamics = hasDynamics_; dynamics.swap(pendingDynamics_); hasDynamics_ = false;
 			}
 			for (auto& c : cmds) c(session);
 			if (hasPose) session.SetLocalPose(pose);
+			if (hasDynamics) session.SetLocalDynamics(dynamics);
 
 			// 2) Red.
 			tev.clear();
@@ -55,6 +58,7 @@ namespace net
 			{
 				std::lock_guard<std::mutex> lk(mutex_);
 				sharedPoses_ = session.RemotePoses();
+				sharedDynamics_ = session.DynamicStates();
 			}
 			if (!evs.empty()) PushEvents(std::move(evs));
 		}
@@ -77,12 +81,35 @@ namespace net
 		pendingPose_ = pose; hasPose_ = true;
 	}
 
+	void NetService::SubmitLocalDynamics(const std::vector<DynamicStateEntry>& state)
+	{
+		if (!running_.load()) return;
+		std::lock_guard<std::mutex> lk(mutex_);
+		pendingDynamics_ = state;
+		hasDynamics_ = true;
+	}
+
 	bool NetService::QueueEvent(uint16_t type, uint32_t target, const std::vector<uint8_t>& payload, PeerId onlyTo)
 	{
 		if (!running_.load() || payload.size() > kMaxEventPayload) return false;
 		std::lock_guard<std::mutex> lk(mutex_);
 		if (commands_.size() >= kMaxQueuedCommands) return false;
 		commands_.push_back([=](NetSession& s) { s.SendEvent(type, target, payload, onlyTo); });
+		return true;
+	}
+
+	bool NetService::QueueEvents(const std::vector<EventMsg>& events, PeerId onlyTo)
+	{
+		if (!running_.load() || events.size() > kMaxQueuedEvents) return false;
+		for (const EventMsg& event : events)
+			if (event.payload.size() > kMaxEventPayload) return false;
+		if (events.empty()) return true;
+		std::lock_guard<std::mutex> lk(mutex_);
+		if (commands_.size() >= kMaxQueuedCommands) return false;
+		commands_.push_back([events, onlyTo](NetSession& s)
+		{
+			for (const EventMsg& event : events) s.SendEvent(event.eventType, event.targetId, event.payload, onlyTo);
+		});
 		return true;
 	}
 
@@ -113,5 +140,11 @@ namespace net
 	{
 		std::lock_guard<std::mutex> lk(mutex_);
 		return sharedPoses_;
+	}
+
+	std::map<uint32_t, DynamicStateEntry> NetService::DynamicStates() const
+	{
+		std::lock_guard<std::mutex> lk(mutex_);
+		return sharedDynamics_;
 	}
 }

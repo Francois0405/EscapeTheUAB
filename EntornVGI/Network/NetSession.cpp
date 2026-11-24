@@ -81,7 +81,7 @@ namespace net
 			else
 			{
 				serverLink_ = ev.link; seq_.clear(); poses_.clear();
-				sendSeq_[0] = sendSeq_[1] = 0;
+				for (auto& seq : sendSeq_) seq = 0;
 				HelloMsg h; h.name = cfg_.playerName; h.sceneId = cfg_.sceneId;
 				SendTo(ev.link, MessageType::Hello, h);
 			}
@@ -214,6 +214,20 @@ namespace net
 			poses_.swap(fresh); ++stats_.accepted;
 			break;
 		}
+		case MessageType::DynamicSnapshot:
+		{
+			for (const auto& state : std::get<DynamicSnapshotMsg>(p.body).objects)
+			{
+				auto it = dynamicTicks_.find(state.objectId);
+				if (it == dynamicTicks_.end() || SeqNewer(state.tick, it->second))
+				{
+					dynamicTicks_[state.objectId] = state.tick;
+					dynamicStates_[state.objectId] = state;
+				}
+			}
+			++stats_.accepted;
+			break;
+		}
 		case MessageType::Event:
 		{
 			NetEvent e; e.kind = NetEvent::GameEvent; e.peer = kHostPeerId; e.event = std::get<EventMsg>(p.body);
@@ -249,6 +263,14 @@ namespace net
 		PoseSnapshotMsg m;
 		for (const auto& kv : poses_) { if (m.poses.size() >= kMaxPoseEntries) break; m.poses.push_back(kv.second); }
 		BroadcastMsg(MessageType::PoseSnapshot, m);
+		if (!localDynamics_.empty())
+		{
+			DynamicSnapshotMsg dynamics;
+			const size_t count = std::min(kMaxDynamicEntries, localDynamics_.size());
+			for (size_t i = 0; i < count; ++i) dynamics.objects.push_back(localDynamics_[(dynamicCursor_ + i) % localDynamics_.size()]);
+			dynamicCursor_ = (dynamicCursor_ + count) % localDynamics_.size();
+			BroadcastMsg(MessageType::DynamicSnapshot, dynamics);
+		}
 	}
 
 	void NetSession::SetLocalPose(const PoseEntry& pose)
@@ -259,6 +281,15 @@ namespace net
 			PoseUpdateMsg m; m.pose = pose; m.pose.peer = localPeer_;
 			SendTo(serverLink_, MessageType::PoseUpdate, m);
 		}
+	}
+
+	void NetSession::SetLocalDynamics(const std::vector<DynamicStateEntry>& state)
+	{
+		if (cfg_.role != Role::Host) return;
+		localDynamics_ = state;
+		if (localDynamics_.size() > 4096) localDynamics_.resize(4096);
+		if (!localDynamics_.empty()) dynamicCursor_ %= localDynamics_.size(); else dynamicCursor_ = 0;
+		for (const auto& entry : localDynamics_) dynamicStates_[entry.objectId] = entry;
 	}
 
 	void NetSession::SendEvent(uint16_t type, uint32_t target, const std::vector<uint8_t>& payload, PeerId onlyTo)

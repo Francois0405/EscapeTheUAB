@@ -299,6 +299,72 @@ namespace
 		comprobar(Cerca(mundo.CajasDeColision()[0].pose.posicion, { 1, 2, 5 }, 1e-6f), "un cuerpo estatico no cae");
 	}
 
+	void PruebaReconstruccionCambioEstaticoDinamico()
+	{
+		MundoFisico mundo;
+		std::string error;
+		SceneObject objeto = ObjetoCaja("replicable", { 0, 0, 3 }, { 0, 0, 0 }, { 1, 1, 1 },
+			TipoCuerpo::Estatico, { 0.5f, 0.5f, 0.5f }, { 0, 0, 0 }, 0.0f);
+		auto actual = std::make_unique<EscenaFisica>(mundo);
+		comprobar(Crear(*actual, { objeto }, error), "crear la caja estática original");
+		comprobar(actual->NumeroDeCuerpos() == 1 && actual->NumeroDeDinamicos() == 0, "estado inicial con un cuerpo estático");
+
+		objeto.fisica.tipo = TipoCuerpo::Dinamico; objeto.fisica.masa = 2.0f;
+		auto dinamica = std::make_unique<EscenaFisica>(mundo);
+		comprobar(Crear(*dinamica, { objeto }, error), "construir la versión dinámica antes de retirar la anterior");
+		actual->Vaciar(); actual = std::move(dinamica);
+		comprobar(mundo.NumeroDeCuerpos() == 1 && actual->NumeroDeCuerpos() == 1 && actual->NumeroDeDinamicos() == 1,
+			"estático a dinámico deja un solo cuerpo registrado");
+		const auto dinamicos = mundo.CajasDeColision();
+		comprobar(dinamicos.size() == 1 && dinamicos[0].tipo == TipoCuerpo::Dinamico,
+			"Bullet contiene el tipo dinámico solicitado");
+
+		objeto.fisica.tipo = TipoCuerpo::Estatico; objeto.fisica.masa = 0.0f;
+		auto estatica = std::make_unique<EscenaFisica>(mundo);
+		comprobar(Crear(*estatica, { objeto }, error), "construir la versión estática antes de retirar la anterior");
+		actual->Vaciar(); actual = std::move(estatica);
+		comprobar(mundo.NumeroDeCuerpos() == 1 && actual->NumeroDeCuerpos() == 1 && actual->NumeroDeDinamicos() == 0,
+			"dinámico a estático deja un solo cuerpo registrado");
+		const auto estaticos = mundo.CajasDeColision();
+		comprobar(estaticos.size() == 1 && estaticos[0].tipo == TipoCuerpo::Estatico,
+			"Bullet contiene el tipo estático solicitado");
+	}
+
+	void PruebaSujecionesMultiplesYReplicaCinematica()
+	{
+		MundoFisico mundo;
+		const auto cuerpoA = mundo.CrearCaja(TipoCuerpo::Dinamico, { 0, 0, 3 }, glm::quat(1, 0, 0, 0), { 0.2f, 0.2f, 0.2f }, 1.0f);
+		const auto cuerpoB = mundo.CrearCaja(TipoCuerpo::Dinamico, { 1, 0, 3 }, glm::quat(1, 0, 0, 0), { 0.2f, 0.2f, 0.2f }, 1.0f);
+		comprobar(mundo.SujetarCuerpoAutoritativo(cuerpoA) && mundo.SujetarCuerpoAutoritativo(cuerpoB),
+			"Bullet permite sujetar dos objetos a propietarios distintos");
+		mundo.FijarDestinoDeSujecion(cuerpoA, { 0, 1, 3 });
+		mundo.FijarDestinoDeSujecion(cuerpoB, { 1, 1, 3 });
+		Avanzar(mundo, 0.25f);
+		comprobar(mundo.EstaSujeto(cuerpoA) && mundo.EstaSujeto(cuerpoB) &&
+			mundo.PoseDe(cuerpoA).posicion.y > 0.5f && mundo.PoseDe(cuerpoB).posicion.y > 0.5f,
+			"cada sujecion aplica su propio destino durante los pasos Bullet");
+		comprobar(mundo.SoltarCuerpoAutoritativo(cuerpoA, { 0, 0, 4 }) && !mundo.EstaSujeto(cuerpoA) && mundo.EstaSujeto(cuerpoB),
+			"soltar un objeto no libera el objeto del otro jugador");
+		comprobar(Cerca(mundo.VelocidadDe(cuerpoA), { 0, 0, 4 }), "la velocidad de lanzamiento se aplica al cuerpo autoritativo");
+
+		MundoFisico cliente;
+		SceneObject objeto = ObjetoCaja("replica", { 0, 0, 2 }, { 0, 0, 0 }, { 1, 1, 1 }, TipoCuerpo::Dinamico,
+			{ 0.25f, 0.25f, 0.25f }, { 0, 0, 0 }, 1.0f);
+		EscenaFisica escena(cliente);
+		std::string error;
+		comprobar(escena.Crear({ objeto }, {}, {}, error, false), "el cliente crea las cajas dinamicas como cinemáticas");
+		auto cuerpos = cliente.CajasDeColision();
+		comprobar(cuerpos.size() == 1 && cuerpos[0].tipo == TipoCuerpo::Cinematico,
+			"el cliente no ejecuta una segunda simulacion dinamica del objeto compartido");
+		EscenaFisica::EstadoDinamico estado;
+		estado.indiceObjeto = 0; estado.pose.posicion = { 3, 2, 4 }; estado.pose.rotacion = glm::quat(1, 0, 0, 0);
+		comprobar(escena.AplicarEstadoReplicado(estado), "snapshot actualiza el cuerpo cinemático sin reconstruirlo");
+		const auto pose = cliente.CajasDeColision()[0].pose;
+		comprobar(Cerca(pose.posicion, { 3, 2, 4 }), "pose replicada actualiza el AABB de Bullet");
+		comprobar(Cerca(glm::vec3(escena.MatrizVisualDe(0, objeto)[3]), { 3, 2, 4 }),
+			"la representacion visual toma la misma pose del cuerpo replicado");
+	}
+
 	// Suelo + caja dinamica con offset y giro: cae, choca y se detiene.
 	void PruebaDinamicoCaeYChoca()
 	{
@@ -1293,6 +1359,8 @@ int main()
 	PruebaLanzamientoDeObjetoAgarrado();
 	PruebaColisionadorTransformado();
 	PruebaEstaticoNoCae();
+	PruebaReconstruccionCambioEstaticoDinamico();
+	PruebaSujecionesMultiplesYReplicaCinematica();
 	PruebaDinamicoCaeYChoca();
 	PruebaPuertasDesdeJson();
 	PruebaParedParametricaConPuerta();

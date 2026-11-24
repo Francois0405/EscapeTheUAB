@@ -34,6 +34,7 @@ namespace net
 		ConnectionState state = ConnectionState::Idle;
 		EventMsg event;                   // GameEvent
 		std::vector<StateEntry> recovery; // RecoveryReceived
+		DynamicSnapshotMsg dynamics;      // DynamicSnapshot
 	};
 
 	struct SessionStats { uint64_t dropped = 0, staleDropped = 0, accepted = 0; };
@@ -50,6 +51,7 @@ namespace net
 
 		// Entradas de la aplicacion (ya trasladadas al hilo de red):
 		void SetLocalPose(const PoseEntry& pose);                 // cliente: se envia; host: peer 0
+		void SetLocalDynamics(const std::vector<DynamicStateEntry>& state); // host: último estado de cuerpos dinámicos
 		void SendEvent(uint16_t type, uint32_t target, const std::vector<uint8_t>& payload, PeerId onlyTo = kUnassignedPeerId);
 		void SetRecoveryState(const std::vector<StateEntry>& s);  // host: base de la recuperacion
 		void RequestRecovery();                                   // cliente
@@ -57,12 +59,13 @@ namespace net
 		ConnectionState State() const { return state_; }
 		PeerId LocalPeer() const { return localPeer_; }
 		const std::map<PeerId, PoseEntry>& RemotePoses() const { return poses_; }
+		const std::map<uint32_t, DynamicStateEntry>& DynamicStates() const { return dynamicStates_; }
 		std::vector<NetEvent> TakeEvents() { std::vector<NetEvent> v; v.swap(events_); return v; }
 		const SessionStats& Stats() const { return stats_; }
 
 	private:
 		struct Link { PeerId peer = kUnassignedPeerId; bool joined = false; };
-		struct SeqTrack { bool seen[kChannelCount] = {false, false}; uint32_t last[kChannelCount] = {0, 0}; };
+		struct SeqTrack { bool seen[kChannelCount] = {}; uint32_t last[kChannelCount] = {}; };
 
 		void Handle(LinkId link, uint8_t channel, const Packet& p);
 		void HandleHost(LinkId link, const Packet& p);
@@ -79,15 +82,19 @@ namespace net
 		ITransport& tr_;
 		ConnectionState state_ = ConnectionState::Idle;
 		PeerId localPeer_ = kUnassignedPeerId;
-		uint32_t sendSeq_[kChannelCount] = {0, 0};
+		uint32_t sendSeq_[kChannelCount] = {};
 		std::map<LinkId, Link> links_;           // host
 		LinkId serverLink_ = 0;                  // cliente
 		std::map<PeerId, SeqTrack> seq_;
 		std::map<PeerId, PoseEntry> poses_;
 		std::vector<StateEntry> recoveryState_;
+		std::vector<DynamicStateEntry> localDynamics_;
+		std::map<uint32_t, DynamicStateEntry> dynamicStates_;
 		std::vector<NetEvent> events_;
 		SessionStats stats_;
 		Clock::time_point lastPose_{};
 		bool poseTimerInit_ = false;
+		std::map<uint32_t, uint32_t> dynamicTicks_;
+		size_t dynamicCursor_ = 0;
 	};
 }

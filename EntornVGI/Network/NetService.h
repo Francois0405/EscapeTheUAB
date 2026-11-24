@@ -34,11 +34,14 @@ namespace net
 
 		// ---- API del hilo principal (thread-safe) ----
 		void SubmitLocalPose(const PoseEntry& pose);   // ultimo valor gana
+		void SubmitLocalDynamics(const std::vector<DynamicStateEntry>& state); // último lote gana
 		bool QueueEvent(uint16_t type, uint32_t target, const std::vector<uint8_t>& payload, PeerId onlyTo = kUnassignedPeerId);
+		bool QueueEvents(const std::vector<EventMsg>& events, PeerId onlyTo = kUnassignedPeerId);
 		void SetRecoveryState(const std::vector<StateEntry>& state);
 		void RequestRecovery();
 		size_t PollEvents(std::vector<NetEvent>& out);  // vacia la cola de salida
 		std::map<PeerId, PoseEntry> RemotePoses() const;
+		std::map<uint32_t, DynamicStateEntry> DynamicStates() const;
 		ConnectionState State() const { return state_.load(); }
 		PeerId LocalPeer() const { return localPeer_.load(); }
 		size_t DroppedEvents() const { return droppedEvents_.load(); }
@@ -59,7 +62,9 @@ namespace net
 		mutable std::mutex mutex_;
 		std::deque<std::function<void(NetSession&)>> commands_;
 		bool hasPose_ = false; PoseEntry pendingPose_;
+		bool hasDynamics_ = false; std::vector<DynamicStateEntry> pendingDynamics_;
 		std::deque<NetEvent> outEvents_;
 		std::map<PeerId, PoseEntry> sharedPoses_;
+		std::map<uint32_t, DynamicStateEntry> sharedDynamics_;
 	};
 }

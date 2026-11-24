@@ -75,9 +75,10 @@ namespace fisica
 	}
 
 	bool EscenaFisica::Crear(const std::vector<SceneObject>& objetos, const glb::EscenaAnimada& animados,
-		const std::vector<SceneObjetoAnimado>& datosAnimados, std::string& error)
+		const std::vector<SceneObjetoAnimado>& datosAnimados, std::string& error, bool autoridadFisica)
 	{
 		Vaciar();   // esta EscenaFisica solo gestiona SU escena
+		this->autoridadFisica = autoridadFisica;
 		auto fallar = [this, &error](const std::string& mensaje)
 		{
 			error = mensaje;
@@ -113,8 +114,10 @@ namespace fisica
 			const glm::vec3 centro = objeto.posicion + glm::vec3(giro * glm::vec4(desplazamiento, 0.0f));
 			const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
 
-			const IdCuerpo id = mundo.CrearCaja(objeto.fisica.tipo, centro, glm::quat_cast(glm::mat3(giro)),
-				mitad, objeto.fisica.masa);
+			const TipoCuerpo tipoFisico = objeto.fisica.tipo == TipoCuerpo::Dinamico && !autoridadFisica
+				? TipoCuerpo::Cinematico : objeto.fisica.tipo;
+			const IdCuerpo id = mundo.CrearCaja(tipoFisico, centro, glm::quat_cast(glm::mat3(giro)),
+				mitad, tipoFisico == TipoCuerpo::Dinamico ? objeto.fisica.masa : 0.0f);
 			if (id == CuerpoInvalido)
 				return fallar("no se pudo crear la caja fisica de '" + objeto.id + "' (tamano o masa no validos)");
 			todos.push_back(id);
@@ -152,6 +155,51 @@ namespace fisica
 		}
 		error.clear();
 		return true;
+	}
+
+	bool EscenaFisica::SujetarDinamicoRemoto(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion)
+	{
+		for (const Dinamico& d : dinamicos)
+		{
+			if (d.indiceObjeto != indiceObjeto || !mundo.EsDinamico(d.cuerpo) || mundo.EstaSujeto(d.cuerpo)) continue;
+			if (mundo.CuerpoAlFinalDelRayo(origen, direccion, AlcanceDeAgarre) != d.cuerpo) return false;
+			return mundo.SujetarCuerpoAutoritativo(d.cuerpo);
+		}
+		return false;
+	}
+
+	void EscenaFisica::ActualizarAgarreRemoto(int indiceObjeto, const glm::vec3& destino)
+	{
+		for (const Dinamico& d : dinamicos)
+			if (d.indiceObjeto == indiceObjeto && mundo.EstaSujeto(d.cuerpo))
+				mundo.FijarDestinoDeSujecion(d.cuerpo, destino);
+	}
+
+	bool EscenaFisica::SoltarDinamicoRemoto(int indiceObjeto, const glm::vec3& velocidad)
+	{
+		for (const Dinamico& d : dinamicos)
+			if (d.indiceObjeto == indiceObjeto) return mundo.SoltarCuerpoAutoritativo(d.cuerpo, velocidad);
+		return false;
+	}
+
+	bool EscenaFisica::AplicarEstadoReplicado(const EstadoDinamico& estado)
+	{
+		for (const Dinamico& d : dinamicos)
+			if (d.indiceObjeto == estado.indiceObjeto)
+				return mundo.FijarPoseCinematica(d.cuerpo, estado.pose.posicion, estado.pose.rotacion);
+		return false;
+	}
+
+	void EscenaFisica::CapturarEstadosDinamicos(std::vector<EstadoDinamico>& salida) const
+	{
+		salida.clear(); salida.reserve(dinamicos.size());
+		for (const Dinamico& d : dinamicos)
+		{
+			EstadoDinamico e; e.indiceObjeto = d.indiceObjeto; e.pose = mundo.PoseDe(d.cuerpo);
+			e.velocidad = mundo.VelocidadDe(d.cuerpo); e.velocidadAngular = mundo.VelocidadAngularDe(d.cuerpo);
+			e.activo = mundo.EstaActivo(d.cuerpo); e.agarrado = mundo.EstaSujeto(d.cuerpo);
+			salida.push_back(e);
+		}
 	}
 
 	void EscenaFisica::SincronizarCinematicos(const glb::EscenaAnimada& animados)

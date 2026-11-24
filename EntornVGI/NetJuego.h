@@ -31,6 +31,8 @@ namespace netjuego
 		std::string estado = "Sin red";
 		std::string mensaje;
 		std::string escena;
+		std::string endpoint;
+		uint16_t puerto = kPuertoPorDefecto;
 		net::PeerId peerLocal = net::kUnassignedPeerId;
 		size_t remotos = 0;
 		size_t eventosDescartados = 0;   // cola de eventos llena
@@ -56,6 +58,21 @@ namespace netjuego
 
 		// Una vez por fotograma. 'poseLocal' = pose del jugador local (nullptr si no hay): solo se LEE.
 		void Actualizar(double ahora, const net::PoseEntry* poseLocal);
+		// Registro de estado de escena: se llama al iniciar red y al confirmar una edicion del host.
+		bool FijarEstadoEscena(const std::vector<EstadoObjetoEscena>& estado, bool difundir);
+		void TomarEstadosEscena(std::vector<EstadoObjetoEscena>& salida);
+		void EnviarEstadosFisicos(const std::vector<net::DynamicStateEntry>& estados);
+		std::map<uint32_t, net::DynamicStateEntry> EstadosFisicosRemotos() const;
+		void TomarEstadosFisicosFiables(std::vector<net::DynamicStateEntry>& salida);
+		bool PublicarEstadoFisicoFinal(const net::DynamicStateEntry& estado, net::PeerId soloPara = net::kUnassignedPeerId);
+		void TomarSolicitudesFisicas(std::vector<SolicitudObjetoDinamico>& salida);
+		bool SolicitarAgarreDinamico(uint32_t id, const glm::vec3& origen, const glm::vec3& direccion);
+		bool SolicitarSoltarDinamico(uint32_t id, const glm::vec3& velocidad);
+		void FijarPropietarioDinamico(uint32_t id, net::PeerId propietario);
+		net::PeerId PropietarioDinamico(uint32_t id) const;
+		std::map<uint32_t, net::PeerId> PropietariosDinamicos() const { return propietariosDinamicos_; }
+		uint32_t ObjetoDinamicoDePeer(net::PeerId peer) const;
+		bool PoseDePeer(net::PeerId peer, net::PoseEntry& salida) const;
 
 		bool Activa() const { return fase_ == FaseRed::Activa; }
 		bool Conectando() const { return fase_ == FaseRed::Arrancando; }
@@ -89,7 +106,7 @@ namespace netjuego
 		void DifundirHost(double ahora);
 		void ReiniciarEstadoRemoto();
 		void Fallar(const std::string& msg);
-		bool Encolar(const EventoSalida& e);
+		bool Encolar(const EventoSalida& e, net::PeerId soloPara = net::kUnassignedPeerId);
 		bool Cabeza(net::PeerId p, const std::map<net::PeerId, net::PoseEntry>& poses, glm::vec3& out) const;
 
 		Fabrica fabrica_;
@@ -113,6 +130,12 @@ namespace netjuego
 		double ultimaSubida_ = -1e9, ultimoAhora_ = 0, ultimoAcarreo_ = -1e9;
 		glm::vec3 ultimoPosAcarreo_{ 0 }, destinoAcarreo_{ 0 };
 		std::vector<net::StateEntry> recuperacionEnviada_;
+		std::vector<EstadoObjetoEscena> estadoEscena_;
+		std::vector<EstadoObjetoEscena> estadosRecibidos_;
+		std::map<uint32_t, net::DynamicStateEntry> estadosFisicosHost_;
+		std::vector<net::DynamicStateEntry> estadosFisicosFiables_;
+		std::vector<SolicitudObjetoDinamico> solicitudesFisicas_;
+		std::map<uint32_t, net::PeerId> propietariosDinamicos_;
 		bool recuperacionSucia_ = true;
 		net::ConnectionState estadoConexion_ = net::ConnectionState::Idle;
 		size_t ignorados_ = 0;

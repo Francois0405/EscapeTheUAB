@@ -133,10 +133,168 @@ namespace netjuego
 		kEvPropSolicitar   = 0x0110,   // cliente -> host
 		kEvPropLiberar     = 0x0111,   // cliente -> host
 		kEvPropMover       = 0x0112,   // dueno -> host: 3 x f32
-		kEvPropEstado      = 0x0113    // host -> todos: u16 dueno (0xFFFF = nadie) + 3 x f32
+		kEvPropEstado      = 0x0113,   // host -> todos: u16 dueno (0xFFFF = nadie) + 3 x f32
+		kEvEstadoObjetoEscena = 0x0120, // host -> cliente(s): estado fiable de un objeto JSON existente
+		kEvSolicitarAgarreDinamico = 0x0130, // cliente -> host: solicita agarrar targetId
+		kEvSolicitarSoltarDinamico = 0x0131, // cliente -> host: velocidad lineal (3 x f32)
+		kEvPropiedadDinamica = 0x0132, // host -> todos: u16 propietario, 0xFFFF = libre
+		kEvEstadoFisicoFinal = 0x0133 // host -> todos/cliente tardío: estado fiable y vigente
 	};
 
+	struct SolicitudObjetoDinamico
+	{
+		uint32_t id = 0;
+		net::PeerId peer = net::kUnassignedPeerId;
+		bool agarrar = false;
+		glm::vec3 velocidad{ 0.0f }, origen{ 0.0f }, direccion{ 0.0f };
+	};
+
+	inline bool PuedeCargarLanzamiento(bool agarreFisicoLocal, net::Role rol, uint32_t objetoPropio)
+	{
+		return agarreFisicoLocal || (rol == net::Role::Client && objetoPropio != 0);
+	}
+
+	inline bool EstadoFisicoMasNuevo(uint32_t tickCandidato, bool hayEstado, uint32_t tickActual)
+	{
+		return !hayEstado || net::SeqNewer(tickCandidato, tickActual);
+	}
+
+	inline bool PuedeAdquirirDinamico(net::PeerId propietarioActual, net::PeerId solicitante, uint32_t objetoYaSujeto)
+	{
+		return propietarioActual == net::kUnassignedPeerId && solicitante <= net::kMaxPeerId && objetoYaSujeto == 0;
+	}
+
+	inline double TiempoSnapshotSiguiente(double tiempoAnterior, uint32_t tickAnterior, uint32_t tickNuevo)
+	{
+		return tiempoAnterior + static_cast<double>(static_cast<uint32_t>(tickNuevo - tickAnterior)) / 1000.0;
+	}
+
+	inline bool TransformValido(const net::Transform7& t);
+	inline bool CoordenadaValida(const glm::vec3& v);
+	namespace detalle { inline void PonF32(std::vector<uint8_t>& b, float f); inline float LeeF32(const uint8_t* p); }
+
+	inline bool EstadoFisicoValido(const net::DynamicStateEntry& e)
+	{
+		if (e.objectId == 0 || !TransformValido(e.transform) || (e.flags & ~uint8_t(3)) != 0 ||
+			(e.owner != net::kUnassignedPeerId && e.owner > net::kMaxPeerId) ||
+			((e.flags & 2) != 0) != (e.owner != net::kUnassignedPeerId)) return false;
+		for (float v : e.linearVelocity) if (!std::isfinite(v) || std::fabs(v) > 1000.0f) return false;
+		for (float v : e.angularVelocity) if (!std::isfinite(v) || std::fabs(v) > 1000.0f) return false;
+		return true;
+	}
+
+	inline std::vector<uint8_t> CodificarEstadoFisico(const net::DynamicStateEntry& e)
+	{
+		std::vector<uint8_t> b;
+		if (!EstadoFisicoValido(e)) return b;
+		b.reserve(59);
+		for (float f : e.transform.pos) detalle::PonF32(b, f);
+		for (float f : e.transform.rot) detalle::PonF32(b, f);
+		for (float f : e.linearVelocity) detalle::PonF32(b, f);
+		for (float f : e.angularVelocity) detalle::PonF32(b, f);
+		for (int i = 0; i < 4; ++i) b.push_back(static_cast<uint8_t>(e.tick >> (8 * i)));
+		b.push_back(e.flags);
+		b.push_back(static_cast<uint8_t>(e.owner & 0xFF)); b.push_back(static_cast<uint8_t>(e.owner >> 8));
+		return b;
+	}
+
+	inline bool DecodificarEstadoFisico(uint32_t id, const std::vector<uint8_t>& b, net::DynamicStateEntry& out)
+	{
+		if (b.size() != 59) return false;
+		net::DynamicStateEntry e; e.objectId = id;
+		std::size_t at = 0;
+		for (float& f : e.transform.pos) { f = detalle::LeeF32(&b[at]); at += 4; }
+		for (float& f : e.transform.rot) { f = detalle::LeeF32(&b[at]); at += 4; }
+		for (float& f : e.linearVelocity) { f = detalle::LeeF32(&b[at]); at += 4; }
+		for (float& f : e.angularVelocity) { f = detalle::LeeF32(&b[at]); at += 4; }
+		for (int i = 0; i < 4; ++i) e.tick |= uint32_t(b[at++]) << (8 * i);
+		e.flags = b[at++]; e.owner = static_cast<net::PeerId>(b[at] | (uint16_t(b[at + 1]) << 8));
+		if (!EstadoFisicoValido(e)) return false;
+		out = e; return true;
+	}
+
+	inline std::vector<uint8_t> CodificarRayoInteraccion(const glm::vec3& origen, const glm::vec3& direccion)
+	{
+		if (!CoordenadaValida(origen) || !CoordenadaValida(direccion) || glm::length(direccion) < 0.5f || glm::length(direccion) > 1.5f) return {};
+		std::vector<uint8_t> b; b.reserve(24);
+		for (float f : { origen.x, origen.y, origen.z, direccion.x, direccion.y, direccion.z }) detalle::PonF32(b, f);
+		return b;
+	}
+
+	inline bool DecodificarRayoInteraccion(const std::vector<uint8_t>& b, glm::vec3& origen, glm::vec3& direccion)
+	{
+		if (b.size() != 24) return false;
+		origen = glm::vec3(detalle::LeeF32(&b[0]), detalle::LeeF32(&b[4]), detalle::LeeF32(&b[8]));
+		direccion = glm::vec3(detalle::LeeF32(&b[12]), detalle::LeeF32(&b[16]), detalle::LeeF32(&b[20]));
+		return CoordenadaValida(origen) && CoordenadaValida(direccion) && glm::length(direccion) >= 0.5f && glm::length(direccion) <= 1.5f;
+	}
+
 	struct EventoSalida { uint16_t tipo = 0; uint32_t objetivo = 0; std::vector<uint8_t> payload; };
+
+	// Estado replicable de un objeto OBJ existente. El identificador se deriva del id
+	// persistente del JSON; no depende del orden de las listas ni de punteros de Bullet.
+	struct EstadoObjetoEscena
+	{
+		uint32_t id = 0;
+		glm::vec3 posicion{ 0.0f }, rotacion{ 0.0f }, escala{ 1.0f };
+		bool colisionPresente = false;
+		uint8_t tipoColision = 0; // 0 = none, 1 = static, 2 = dynamic
+		glm::vec3 mitadTamano{ 0.5f }, desplazamiento{ 0.0f };
+		float masa = 0.0f;
+	};
+
+	inline bool EstadoObjetoEscenaValido(const EstadoObjetoEscena& e)
+	{
+		if (e.id == 0 || IdReservado(e.id)) return false;
+		auto vectorValido = [](const glm::vec3& v, float maximo)
+		{
+			return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z) &&
+				std::fabs(v.x) <= maximo && std::fabs(v.y) <= maximo && std::fabs(v.z) <= maximo;
+		};
+		if (!vectorValido(e.posicion, net::kMaxCoordinate) || !vectorValido(e.rotacion, 360000.0f) ||
+			!vectorValido(e.escala, 10000.0f) || e.escala.x == 0.0f || e.escala.y == 0.0f || e.escala.z == 0.0f ||
+			!std::isfinite(e.masa) || e.masa < 0.0f || e.masa > 1000000.0f) return false;
+		if (!e.colisionPresente) return e.tipoColision == 0;
+		return (e.tipoColision == 1 || e.tipoColision == 2) &&
+			vectorValido(e.mitadTamano, 10000.0f) && e.mitadTamano.x > 0.0f && e.mitadTamano.y > 0.0f && e.mitadTamano.z > 0.0f &&
+			vectorValido(e.desplazamiento, net::kMaxCoordinate) &&
+			(e.tipoColision != 2 || e.masa > 0.0f);
+	}
+
+	inline bool IgualEstadoObjetoEscena(const EstadoObjetoEscena& a, const EstadoObjetoEscena& b)
+	{
+		return a.id == b.id && a.posicion == b.posicion && a.rotacion == b.rotacion && a.escala == b.escala &&
+			a.colisionPresente == b.colisionPresente && a.tipoColision == b.tipoColision &&
+			a.mitadTamano == b.mitadTamano && a.desplazamiento == b.desplazamiento && a.masa == b.masa;
+	}
+
+	inline std::vector<uint8_t> CodificarEstadoObjetoEscena(const EstadoObjetoEscena& e)
+	{
+		std::vector<uint8_t> b;
+		if (!EstadoObjetoEscenaValido(e)) return b;
+		b.reserve(66);
+		for (float f : { e.posicion.x, e.posicion.y, e.posicion.z, e.rotacion.x, e.rotacion.y, e.rotacion.z,
+			e.escala.x, e.escala.y, e.escala.z, e.mitadTamano.x, e.mitadTamano.y, e.mitadTamano.z,
+			e.desplazamiento.x, e.desplazamiento.y, e.desplazamiento.z, e.masa }) detalle::PonF32(b, f);
+		b.push_back(e.colisionPresente ? 1 : 0);
+		b.push_back(e.tipoColision);
+		return b;
+	}
+
+	inline bool DecodificarEstadoObjetoEscena(uint32_t id, const std::vector<uint8_t>& b, EstadoObjetoEscena& out)
+	{
+		if (b.size() != 66) return false;
+		EstadoObjetoEscena e; e.id = id;
+		float* valores[] = { &e.posicion.x, &e.posicion.y, &e.posicion.z, &e.rotacion.x, &e.rotacion.y, &e.rotacion.z,
+			&e.escala.x, &e.escala.y, &e.escala.z, &e.mitadTamano.x, &e.mitadTamano.y, &e.mitadTamano.z,
+			&e.desplazamiento.x, &e.desplazamiento.y, &e.desplazamiento.z, &e.masa };
+		for (std::size_t i = 0; i < 16; ++i) *valores[i] = detalle::LeeF32(&b[i * 4]);
+		if (b[64] > 1) return false;
+		e.colisionPresente = b[64] != 0; e.tipoColision = b[65];
+		if (!EstadoObjetoEscenaValido(e)) return false;
+		out = e;
+		return true;
+	}
 
 	inline bool CoordenadaValida(const glm::vec3& v)
 	{
