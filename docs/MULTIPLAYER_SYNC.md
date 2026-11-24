@@ -12,6 +12,8 @@ Los cuerpos dinámicos despiertos o agarrados se transmiten en `DynamicSnapshot`
 
 Pose, física y eventos tienen canales ENet independientes. Así, un snapshot físico secuenciado no puede desplazar un snapshot de avatares. El orden solo se garantiza dentro de cada canal; los ticks de entidad y la comprobación de antigüedad del estado final resuelven el cruce entre el canal fiable y el canal dinámico no fiable.
 
+Las funciones `TomarEstadosEscena()` y `TomarEstadosFisicosFiables()` consumen las colas: limpian el vector de salida reutilizado y lo intercambian con la cola interna. Así, una salida de la iteración anterior no vuelve a la cola ni se entrega dos veces. Los bucles de prueba esperan el evento concreto en vez de asumir que una pausa fija basta para que llegue.
+
 Los cuerpos dinámicos de escena que se replican hoy son OBJ configurados como dinámicos en el JSON. Los GLB animados actuales se sincronizan como puertas mediante su sistema de eventos y colisionadores; no hay GLB agarrables en el flujo `EscenaFisica::dinamicos`. Agregar un GLB físico jugable requiere integrarlo deliberadamente en ese registro, no solo asignarle una malla GLB.
 
 ## Comparación técnica de referencias
@@ -82,7 +84,7 @@ En el cliente:
 
 Durante PLAY, tomar, transportar, lanzar y dejar rebotar un objeto OBJ dinámico; comprobar trayectoria, colisiones y reposo en ambas ventanas. Repetir con el cliente como actor, una solicitud simultánea, desconexión del propietario y reconexión. Conectar tarde después de mover un objeto. Comprobar puertas, poses, menú F4, offline y guardado del host. Para dos equipos LAN, usar como endpoint la IP LAN del host y permitir UDP 7777 en firewall; para Tailscale, usar la IP de la tailnet del host y permitir UDP 7777. Quest 3 debe validar posteriormente pose de controlador/cabeza y agarre con hardware real.
 
-## Resultados de esta revisión
+## Validación integrada de Windows (2026-11-25)
 
 | Escenario | Estado | Evidencia |
 |---|---|---|
@@ -90,10 +92,13 @@ Durante PLAY, tomar, transportar, lanzar y dejar rebotar un objeto OBJ dinámico
 | Canales de pose/física/eventos separados | PASS | `NetworkTests` |
 | Solicitud y liberación de cliente, propiedad, final fiable y late join | PASS | `NetJuegoTests` con transporte en memoria |
 | Representación cinemática Bullet, actualización de AABB y collider/visual | PASS | `PhysicsTests` |
-| Suite automatizada restante salvo las dos excepciones indicadas | PASS | `ctest -E '^(ObjLoaderTests|ENetLoopbackTests)$'`: 13/13 |
-| ENet por loopback real | FAIL | `ENetLoopbackTests` falla en «host arranca» porque CMake reporta ENet no disponible en esta compilación. |
-| Dos ventanas gráficas, agarre/lanzamiento y rebotes durante la partida | NOT RUN | El ejecutable de esta configuración no tiene transporte ENet. |
-| LAN entre equipos, Tailscale, PC + Quest y sesión prolongada | NOT RUN | Requiere transporte ENet habilitado y hardware/equipos reales. |
-| `ObjLoaderTests` dentro de CTest completo | BLOCKED | CTest quedó detenido en ese test durante más de 60 s; se interrumpió la suite completa. |
+| CTest completo Debug y Release | PASS | 19/19 en cada configuración. |
+| `NetworkTests`, `NetJuegoTests`, `PhysicsTests` y tests del editor | PASS | Incluidos en los dos conjuntos completos. |
+| `ObjLoaderTests` y `SceneLoaderTests` | PASS | Incluidos en los dos conjuntos completos; valida el bloque std140 y el slot 16. |
+| `NetJuegoTests` repetido | PASS | 20/20 Debug y 20/20 Release, secuencialmente. |
+| `ENetLoopbackTests` repetido | PASS | 10/10 Debug y 10/10 Release, secuencialmente. |
+| Host/cliente gráfico por loopback | PARTIAL | Los dos procesos arrancaron; el host enlazó UDP `0.0.0.0:7777` y el cliente abrió un socket UDP. El handshake y la interacción dentro del juego no se verificaron. |
+| LAN entre equipos y Tailscale | NOT RUN | Requiere dos equipos y comprobación manual del firewall/red. |
+| PC + Quest con OpenXR | NOT RUN | `OpenXRTests` pasó, pero no había sesión de runtime/visor que validar. |
 
 No marcar como PASS una validación gráfica, LAN, Tailscale o Quest si no se ejecutó realmente. Los tests en memoria no reemplazan evidencia de red real.
