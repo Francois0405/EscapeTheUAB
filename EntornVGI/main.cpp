@@ -2351,10 +2351,6 @@ void OnPaint(GLFWwindow* window)
 	}
 
 // Entorn VGI.ImGui: Menú ImGui condicionat al color de fons
-	if ((c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5))
-		ImGui::StyleColorsLight();
-	else ImGui::StyleColorsDark();
-
 	// Entorn VGI: Cridem a les funcions de l'escena i la projecció segons s'hagi 
 	// seleccionat una projecció o un altra
 	switch (projeccio)
@@ -3084,25 +3080,27 @@ void Barra_Estat()
 //		- menú propi de l'aplicació EntornVGI [show_EntornVGI_window()]
 // Barra de estamina: se dibuja en la lista de primer plano de ImGui (no es una ventana: no recibe raton ni toma el foco).
 // Aparece al correr o mientras no esta llena y se desvanece sola. Solo se ve en la ventana, nunca dentro del visor VR.
+static float escalaUIActual = 1.0f;
 static void dibujarBarraEstamina()
 {
 	if (!modoJuegoFPS() || editorEscenas.Activo() || barraEstamina.visible < 0.01f) return;
 	const ImGuiIO& io = ImGui::GetIO();
-	const float ancho = std::min(260.0f, io.DisplaySize.x * 0.4f), alto = 8.0f;
-	const float x0 = (io.DisplaySize.x - ancho) * 0.5f, y0 = io.DisplaySize.y - 48.0f;
+	const float escala = escalaUIActual;
+	const float ancho = std::min(260.0f * escala, io.DisplaySize.x * 0.4f), alto = 8.0f * escala;
+	const float x0 = (io.DisplaySize.x - ancho) * 0.5f, y0 = io.DisplaySize.y - 48.0f * escala;
 	const float a = barraEstamina.visible;
 	const bool agotada = movimientoJugador.Agotada();
 	const ImU32 fondo = IM_COL32(10, 10, 10, static_cast<int>(150 * a));
 	const ImU32 relleno = agotada ? IM_COL32(200, 60, 50, static_cast<int>(230 * a))
 		: IM_COL32(220, 220, 205, static_cast<int>(210 * a));
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
-	dl->AddRectFilled(ImVec2(x0 - 2, y0 - 2), ImVec2(x0 + ancho + 2, y0 + alto + 2), fondo, 3.0f);
-	dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ancho * std::clamp(barraEstamina.mostrada, 0.0f, 1.0f), y0 + alto), relleno, 2.0f);
+	dl->AddRectFilled(ImVec2(x0 - 2 * escala, y0 - 2 * escala), ImVec2(x0 + ancho + 2 * escala, y0 + alto + 2 * escala), fondo, 3.0f * escala);
+	dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ancho * std::clamp(barraEstamina.mostrada, 0.0f, 1.0f), y0 + alto), relleno, 2.0f * escala);
 	if (mostrarPorcentajeEstamina)
 	{
 		char texto[16];
 		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(movimientoJugador.FraccionEstamina() * 100.0f + 0.5f));
-		dl->AddText(ImVec2(x0 + ancho + 8, y0 - 4), IM_COL32(230, 230, 220, static_cast<int>(200 * a)), texto);
+		dl->AddText(ImVec2(x0 + ancho + 8 * escala, y0 - 4 * escala), IM_COL32(230, 230, 220, static_cast<int>(200 * a)), texto);
 	}
 }
 
@@ -3113,14 +3111,15 @@ static void dibujarHUDInteraccion()
 		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
 		return;
 
+	const float escala = escalaUIActual;
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
 	if (cargaLanzamientoActiva)
 	{
-		const float ancho = 140.0f, alto = 8.0f;
+		const float ancho = 140.0f * escala, alto = 8.0f * escala;
 		const float x = (io.DisplaySize.x - ancho) * 0.5f;
-		const float y = io.DisplaySize.y * 0.5f + 36.0f;
-		dl->AddRectFilled(ImVec2(x - 2.0f, y - 2.0f), ImVec2(x + ancho + 2.0f, y + alto + 2.0f),
-			IM_COL32(0, 0, 0, 190), 3.0f);
+		const float y = io.DisplaySize.y * 0.5f + 36.0f * escala;
+		dl->AddRectFilled(ImVec2(x - 2.0f * escala, y - 2.0f * escala), ImVec2(x + ancho + 2.0f * escala, y + alto + 2.0f * escala),
+			IM_COL32(0, 0, 0, 210), 3.0f * escala);
 		dl->AddRectFilled(ImVec2(x, y), ImVec2(x + ancho * std::clamp(
 			tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f), y + alto),
 			IM_COL32(235, 220, 150, 245), 2.0f);
@@ -3130,30 +3129,57 @@ static void dibujarHUDInteraccion()
 		return;
 	if (escenaFisica->HayAgarre())
 	{
-		dl->AddText(ImVec2(io.DisplaySize.x * 0.5f + 16.0f, io.DisplaySize.y * 0.5f + 31.0f),
-			IM_COL32(230, 235, 225, 230), "Mantener E carga el lanzamiento; soltar E lanza");
+		const ImVec2 pos(io.DisplaySize.x * 0.5f + 16.0f * escala, io.DisplaySize.y * 0.5f + 31.0f * escala);
+		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), "Mantener E carga el lanzamiento; soltar E lanza");
+		dl->AddText(pos, IM_COL32(245, 248, 240, 255), "Mantener E carga el lanzamiento; soltar E lanza");
 		return;
 	}
 	const ObjetivoInteraccion objetivo = objetivoInteraccionActual;
 	if (objetivo.accion == AccionInteraccion::Ninguna) return;
 
-	const float tamanoIcono = 34.0f;
+	const float tamanoIcono = 34.0f * escala;
 	const float x = (io.DisplaySize.x - tamanoIcono) * 0.5f;
-	const float y = std::min(io.DisplaySize.y * 0.5f + 24.0f, io.DisplaySize.y - tamanoIcono - 12.0f);
+	const float y = std::min(io.DisplaySize.y * 0.5f + 24.0f * escala, io.DisplaySize.y - tamanoIcono - 12.0f * escala);
 	if (texturaManoInteraccion != 0)
 	{
 		const ImTextureID textura = reinterpret_cast<ImTextureID>(static_cast<intptr_t>(texturaManoInteraccion));
 		dl->AddImage(textura, ImVec2(x, y), ImVec2(x + tamanoIcono, y + tamanoIcono),
 			ImVec2(1.0f, 0.0f), ImVec2(0.0f, 1.0f));
 	}
-	dl->AddText(ImVec2(x + tamanoIcono + 6.0f, y + 10.0f), IM_COL32(230, 235, 225, 235), objetivo.texto);
+	const ImU32 sombra = IM_COL32(0, 0, 0, 220);
+	dl->AddText(ImVec2(x + tamanoIcono + 7.0f * escala, y + 11.0f * escala), sombra, objetivo.texto);
+	dl->AddText(ImVec2(x + tamanoIcono + 6.0f * escala, y + 10.0f * escala), IM_COL32(245, 248, 240, 255), objetivo.texto);
+}
+
+// Escala UI en unidades lógicas de GLFW. La resolución lógica y el DPI determinan el diseño;
+// el framebuffer nativo solo aporta densidad de píxel a ImGui y el FBO PS1 solo dibuja la escena.
+static ImGuiStyle estiloUIBase;
+static bool estiloUIBaseCapturado = false;
+
+static float actualizarEscalaUI(GLFWwindow* ventana)
+{
+	constexpr float anchoReferencia = 1280.0f;
+	constexpr float altoReferencia = 720.0f;
+	int anchoLogico = 0, altoLogico = 0;
+	float escalaDpiX = 1.0f, escalaDpiY = 1.0f;
+	glfwGetWindowSize(ventana, &anchoLogico, &altoLogico);
+	glfwGetWindowContentScale(ventana, &escalaDpiX, &escalaDpiY);
+
+	const float resolucionLogica = std::clamp(std::min(anchoLogico / anchoReferencia, altoLogico / altoReferencia), 0.75f, 1.5f);
+	const float dpi = std::clamp(std::sqrt(std::max(0.01f, escalaDpiX * escalaDpiY)), 0.75f, 2.0f);
+	// Media geométrica: combina densidad y espacio lógico sin duplicar el factor de framebuffer.
+	escalaUIActual = std::clamp(std::sqrt(resolucionLogica * dpi), 0.75f, 1.75f);
+
+	// ImGui GLFW conserva DisplaySize en unidades lógicas y calcula DisplayFramebufferScale
+	// desde el framebuffer nativo; ninguno de esos valores se sustituye por el FBO PS1 de la escena.
+	return escalaUIActual;
 }
 
 GLuint texturaFondoMenu = 0;
 
 void dibujarControlVolumen()
 {
-	ImGui::SetNextItemWidth(240.0f);
+	ImGui::SetNextItemWidth(240.0f * escalaUIActual);
 	if (ImGui::SliderFloat("Volumen", &volumenGeneralPorcentaje, 0.0f, 100.0f, "%.0f%%"))
 		audioManager.setMasterVolume(volumenGeneralPorcentaje / 100.0f);
 }
@@ -3171,8 +3197,8 @@ static void dibujarPanelRed()
 {
 	using netjuego::FaseRed;
 	const netjuego::Diagnostico d = redJuego.ObtenerDiagnostico();
-	ImGui::SetNextWindowPos(ImVec2(12.0f, 12.0f), ImGuiCond_FirstUseEver);
-	ImGui::SetNextWindowSize(ImVec2(360.0f, 0.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowPos(ImVec2(12.0f * escalaUIActual, 12.0f * escalaUIActual), ImGuiCond_Always);
+	ImGui::SetNextWindowSize(ImVec2(360.0f * escalaUIActual, 0.0f), ImGuiCond_Always);
 	ImGui::Begin("Multijugador", &mostrarPanelRed);
 	ImGui::Text("Modo: %s | Estado: %s", d.modo.c_str(), d.estado.c_str());
 	if (d.fase != FaseRed::Offline)
@@ -3251,6 +3277,21 @@ static void dibujarPanelRed()
 
 void draw_Menu_ImGui()
 {
+	actualizarEscalaUI(window);
+	if (!estiloUIBaseCapturado)
+	{
+		estiloUIBase = ImGui::GetStyle();
+		estiloUIBaseCapturado = true;
+	}
+	// Restaurar desde el estilo sin escalar impide acumular el factor al redimensionar o cambiar de monitor.
+	ImGui::GetStyle() = estiloUIBase;
+	if ((c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5))
+		ImGui::StyleColorsLight();
+	else
+		ImGui::StyleColorsDark();
+	ImGui::GetStyle().ScaleAllSizes(escalaUIActual);
+	ImGui::GetIO().FontGlobalScale = escalaUIActual;
+
 	// Start the Dear ImGui frame
 	ImGui_ImplOpenGL3_NewFrame();
 	ImGui_ImplGlfw_NewFrame();
@@ -3289,6 +3330,7 @@ void draw_Menu_ImGui()
 		ImGui::PushStyleColor(ImGuiCol_WindowBg,      ImVec4(0.05f, 0.05f, 0.08f, 1.00f));
 		ImGui::PushStyleColor(ImGuiCol_Button,        ImVec4(0.12f, 0.14f, 0.20f, 0.85f));
 		ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.25f, 0.30f, 0.42f, 0.95f));
+		ImGui::PushStyleColor(ImGuiCol_Text,          ImVec4(0.96f, 0.97f, 1.00f, 1.00f));
 
 		ImGui::Begin("MenuPrincipal", nullptr, flags);
 
@@ -3299,13 +3341,13 @@ void draw_Menu_ImGui()
 		}
 
 		// 4. Posicionar título y botones ENCIMA de la foto
-		float anchoBoton = 220.0f;
-		float altoBoton  = 45.0f;
+		float anchoBoton = 220.0f * escalaUIActual;
+		float altoBoton  = 45.0f * escalaUIActual;
 		float centroX    = viewport->Size.x * 0.5f;
 		float inicioY    = viewport->Size.y * 0.50f; // 0.50f = mitad vertical de la pantalla
 
 		const char* titulo = "ESCAPE THE UAB";
-		ImGui::SetCursorPos(ImVec2(centroX - ImGui::CalcTextSize(titulo).x * 0.5f, inicioY - 60.0f));
+		ImGui::SetCursorPos(ImVec2(centroX - ImGui::CalcTextSize(titulo).x * 0.5f, inicioY - 60.0f * escalaUIActual));
 		ImGui::Text("%s", titulo);
 
 		ImGui::SetCursorPos(ImVec2(centroX - anchoBoton * 0.5f, inicioY));
@@ -3316,17 +3358,17 @@ void draw_Menu_ImGui()
 			mouseDeltaX = mouseDeltaY = 0.0;
 		}
 
-		ImGui::SetCursorPos(ImVec2(centroX - anchoBoton * 0.5f, inicioY + altoBoton + 15.0f));
+		ImGui::SetCursorPos(ImVec2(centroX - anchoBoton * 0.5f, inicioY + altoBoton + 15.0f * escalaUIActual));
 		if (ImGui::Button("SALIR", ImVec2(anchoBoton, altoBoton)))
 		{
 			glfwSetWindowShouldClose(window, true);
 		}
 
-		ImGui::SetCursorPos(ImVec2(centroX - 120.0f, inicioY + altoBoton * 2.0f + 45.0f));
+		ImGui::SetCursorPos(ImVec2(centroX - 120.0f * escalaUIActual, inicioY + altoBoton * 2.0f + 45.0f * escalaUIActual));
 		dibujarControlVolumen();
 
 		ImGui::End();
-		ImGui::PopStyleColor(3);
+		ImGui::PopStyleColor(4);
 		ImGui::PopStyleVar(4);
 	}
 	// =========================================================================
@@ -3335,8 +3377,8 @@ void draw_Menu_ImGui()
 	else if (estadoActual == ESTADO_PAUSA)
 	{
 		ImVec2 centro = ImGui::GetMainViewport()->GetCenter();
-		float ancho = 300.0f;
-		float alto  = 275.0f;
+		float ancho = 300.0f * escalaUIActual;
+		float alto  = 275.0f * escalaUIActual;
 
 		ImGui::SetNextWindowPos(centro, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 		ImGui::SetNextWindowSize(ImVec2(ancho, alto));
@@ -3350,6 +3392,7 @@ void draw_Menu_ImGui()
 		ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 0.0f);
 		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(0.05f, 0.05f, 0.08f, 0.88f));
 		ImGui::PushStyleColor(ImGuiCol_Button,   ImVec4(0.20f, 0.24f, 0.32f, 1.00f));
+		ImGui::PushStyleColor(ImGuiCol_Text,     ImVec4(0.96f, 0.97f, 1.00f, 1.00f));
 
 		ImGui::Begin("MenuPausa", nullptr, flags);
 
@@ -3357,10 +3400,10 @@ void draw_Menu_ImGui()
 		ImGui::SetCursorPosX((ancho - ImGui::CalcTextSize(titulo).x) * 0.5f);
 		ImGui::Text("%s", titulo);
 
-		ImGui::Dummy(ImVec2(0.0f, 25.0f));
+		ImGui::Dummy(ImVec2(0.0f, 25.0f * escalaUIActual));
 
-		float anchoBoton = 200.0f;
-		float altoBoton  = 40.0f;
+		float anchoBoton = 200.0f * escalaUIActual;
+		float altoBoton  = 40.0f * escalaUIActual;
 
 		ImGui::SetCursorPosX((ancho - anchoBoton) * 0.5f);
 		// ---> AQUÍ VA EL AJUSTE DEL BOTÓN REANUDAR <---
@@ -3371,7 +3414,7 @@ void draw_Menu_ImGui()
 			mouseDeltaX = mouseDeltaY = 0.0;
 		}
 
-		ImGui::Dummy(ImVec2(0.0f, 12.0f));
+		ImGui::Dummy(ImVec2(0.0f, 12.0f * escalaUIActual));
 
 		ImGui::SetCursorPosX((ancho - anchoBoton) * 0.5f);
 		if (ImGui::Button("MENU PRINCIPAL", ImVec2(anchoBoton, altoBoton)))
@@ -3379,12 +3422,12 @@ void draw_Menu_ImGui()
 			estadoActual = ESTADO_MENU_PRINCIPAL;
 		}
 
-		ImGui::Dummy(ImVec2(0.0f, 12.0f));
-		ImGui::SetCursorPosX((ancho - 240.0f) * 0.5f);
+		ImGui::Dummy(ImVec2(0.0f, 12.0f * escalaUIActual));
+		ImGui::SetCursorPosX((ancho - 240.0f * escalaUIActual) * 0.5f);
 		dibujarControlVolumen();
 
 		ImGui::End();
-		ImGui::PopStyleColor(2);
+		ImGui::PopStyleColor(3);
 		ImGui::PopStyleVar(2);
 	}
 
