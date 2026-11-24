@@ -13,7 +13,7 @@
 //#version 330 core
 #version 330 core
 
-#define MaxLights 8
+#define MaxLights 17
 uniform bool uMaterialEmission;
 #define MaxOccluders 12
 #define MaxIndirectOccluders 24

@@ -364,8 +364,8 @@ namespace
 	bool linternaMovilActiva = true;
 	bool lamparasLaboratorioActivas = true;
 
-	// Slots 4-7 pertenecen a luces declaradas en JSON. El 3 sigue reservado
-	// para la linterna móvil, cuya posición se actualiza desde la cámara FPS.
+	// Slots 4-16 pertenecen a las luces declaradas en JSON. Los slots 0-3 siguen
+	// reservados para las fuentes generales y la linterna móvil.
 	void actualizarLucesDeEscena()
 	{
 		constexpr int primerSlot = 4;

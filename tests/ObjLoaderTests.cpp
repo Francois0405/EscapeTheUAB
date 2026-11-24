@@ -224,6 +224,12 @@ bool renderizarPreviewCuadro(GLuint programa, const fs::path& rutaModelo)
 
 int main()
 {
+    if (NUM_MAX_LLUMS != 17)
+    {
+        std::cerr << "FALLO: 13 luminarias y cuatro slots reservados requieren 17 slots de motor.\n";
+        return 1;
+    }
+
     const fs::path cuadroBotanico = fs::path(ESCAPETHEUAB_SOURCE_DIR) /
         "EntornVGI/assets/models/escape_pack/lab/clue_botanical_frame.obj";
     if (!validarGeometriaCuadroBotanico(cuadroBotanico))
@@ -383,11 +389,15 @@ int main()
             const GLint textureEmissionLocation = glGetUniformLocation(phong, "uTextureEmission");
             const GLint mobileSurfaceLocation = glGetUniformLocation(phong, "uMobileSurface");
             const GLint lightingDebugLocation = glGetUniformLocation(phong, "uLightingDebugMode");
+            const int ultimoSlotLuz = NUM_MAX_LLUMS - 1;
+            const std::string prefijoUltimaLuz = "LightSource[" + std::to_string(ultimoSlotLuz) + "].";
+            const GLint lastLightLocation = glGetUniformLocation(phong, (prefijoUltimaLuz + "sw_light").c_str());
             if (!linked || intensityLocation < 0 || emissionLocation < 0 || tileLocation < 0 ||
                 dirtStrengthLocation < 0 || dirtScaleLocation < 0 || dirtSeedLocation < 0 ||
-                textureEmissionLocation < 0 || mobileSurfaceLocation < 0 || lightingDebugLocation < 0)
+                textureEmissionLocation < 0 || mobileSurfaceLocation < 0 || lightingDebugLocation < 0 ||
+                lastLightLocation < 0)
             {
-                std::cerr << "FALLO: GLSL Phong no enlaza o pierde uniforms de material/tiling.\n";
+                std::cerr << "FALLO: GLSL Phong no enlaza materiales o su ultimo slot de iluminacion.\n";
                 ++failures;
             }
             else
@@ -472,6 +482,32 @@ int main()
                 glUniform3f(loc("uIndirectFloorColor"), 0.42f, 0.46f, 0.43f);
                 glUniform3f(loc("uIndirectSkyColor"), 0.24f, 0.28f, 0.34f);
                 glUniform1i(loc("uIndirectOccluderCount"), 0);
+
+                // El ultimo slot es la ultima luminaria de escena admitida; debe
+                // estar activo en el shader y aportar luz directa al receptor.
+                glViewport(0, 0, 64, 32);
+                glUniform1i(loc("uOccluderCount"), 0);
+                glUniform1i(lastLightLocation, GL_TRUE);
+                glUniform4f(loc((prefijoUltimaLuz + "position").c_str()), 0, 0, 2, 1);
+                glUniform4f(loc((prefijoUltimaLuz + "diffuse").c_str()), 1, 1, 1, 1);
+                glUniform4f(loc((prefijoUltimaLuz + "specular").c_str()), 0, 0, 0, 1);
+                glUniform3f(loc((prefijoUltimaLuz + "attenuation").c_str()), 0, 0, 1);
+                glUniform1i(loc((prefijoUltimaLuz + "restricted").c_str()), GL_FALSE);
+                glUniform1i(loc((prefijoUltimaLuz + "areaSource").c_str()), GL_FALSE);
+                glClear(GL_COLOR_BUFFER_BIT);
+                glUniformMatrix4fv(loc("modelMatrix"), 1, GL_FALSE, glm::value_ptr(identidad));
+                glDrawArrays(GL_TRIANGLES, 0, 6);
+                unsigned char slotFinalIluminado[4] = {};
+                glReadPixels(32, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, slotFinalIluminado);
+                const GLenum slotFinalError = glGetError();
+                if (slotFinalError != GL_NO_ERROR || slotFinalIluminado[0] < 80)
+                {
+                    std::cerr << "FALLO: la luz del slot " << ultimoSlotLuz << " no ilumina el receptor: rojo="
+                        << static_cast<int>(slotFinalIluminado[0]) << ", GL=" << slotFinalError << ".\n";
+                    ++failures;
+                }
+                glUniform1i(lastLightLocation, GL_FALSE);
+
                 glUniform1i(loc("uOccluderCount"), 1);
                 // La pared esta girada 90 grados: su eje fino local pasa a ser el normal mundial.
                 const glm::mat4 paredMundo = glm::translate(glm::mat4(1.0f), glm::vec3(0.35f, 0.0f, 1.0f))

@@ -42,270 +42,31 @@ void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool
 
 // Passar llum fixe a Coordenades M�n o llum lligada a c�mera
 	glUniform1i(glGetUniformLocation(sh_programID, "fixedLight"), ifix);
-	// Compatibilidad con los focos antiguos: si no se define borde interior,
-	// se deriva uno suave a partir del borde exterior antes de subirlo al shader.
+	// Subir todas las fuentes con un bucle: el rango debe coincidir con MaxLights en los shaders.
 	for (int i = 0; i < NUM_MAX_LLUMS; ++i)
 	{
-		const GLfloat exterior = std::clamp(lumin[i].spotcoscutoff, -0.999f, 0.999f);
-		const GLfloat interior = lumin[i].spotInnerCosCutoff > exterior
-			? std::min(lumin[i].spotInnerCosCutoff, 0.9999f)
-			: std::cos(std::acos(exterior) * 0.72f);
-		glUniform1f(glGetUniformLocation(sh_programID, ("LightSource[" + std::to_string(i) + "].spotInnerCosCutoff").c_str()), interior);
+		const LLUM& luz = lumin[i];
 		const std::string prefijo = "LightSource[" + std::to_string(i) + "].";
-		glUniform1i(glGetUniformLocation(sh_programID, (prefijo + "areaSource").c_str()), lumin[i].areaSource ? GL_TRUE : GL_FALSE);
-		glUniform3f(glGetUniformLocation(sh_programID, (prefijo + "areaAxisU").c_str()), lumin[i].areaAxisU.x, lumin[i].areaAxisU.y, lumin[i].areaAxisU.z);
-		glUniform3f(glGetUniformLocation(sh_programID, (prefijo + "areaAxisV").c_str()), lumin[i].areaAxisV.x, lumin[i].areaAxisV.y, lumin[i].areaAxisV.z);
-		glUniform2f(glGetUniformLocation(sh_programID, (prefijo + "areaHalfSize").c_str()), lumin[i].areaHalfSizeU, lumin[i].areaHalfSizeV);
+		auto ubicacion = [&](const char* campo) { return glGetUniformLocation(sh_programID, (prefijo + campo).c_str()); };
+		const GLfloat exterior = std::clamp(luz.spotcoscutoff, -0.999f, 0.999f);
+		const GLfloat interior = luz.spotInnerCosCutoff > exterior
+			? std::min(luz.spotInnerCosCutoff, 0.9999f)
+			: std::cos(std::acos(exterior) * 0.72f);
+		glUniform4f(ubicacion("position"), luz.posicio.x, luz.posicio.y, luz.posicio.z, luz.posicio.w);
+		glUniform4f(ubicacion("diffuse"), luz.difusa.r, luz.difusa.g, luz.difusa.b, luz.difusa.a);
+		glUniform4f(ubicacion("specular"), luz.especular.r, luz.especular.g, luz.especular.b, luz.especular.a);
+		glUniform3f(ubicacion("attenuation"), luz.atenuacio.a, luz.atenuacio.b, luz.atenuacio.c);
+		glUniform1i(ubicacion("restricted"), luz.restringida ? GL_TRUE : GL_FALSE);
+		glUniform3f(ubicacion("spotDirection"), luz.spotdirection.x, luz.spotdirection.y, luz.spotdirection.z);
+		glUniform1f(ubicacion("spotCosCutoff"), exterior);
+		glUniform1f(ubicacion("spotInnerCosCutoff"), interior);
+		glUniform1f(ubicacion("spotExponent"), luz.spotexponent);
+		glUniform1i(ubicacion("sw_light"), luz.encesa ? GL_TRUE : GL_FALSE);
+		glUniform1i(ubicacion("areaSource"), luz.areaSource ? GL_TRUE : GL_FALSE);
+		glUniform3f(ubicacion("areaAxisU"), luz.areaAxisU.x, luz.areaAxisU.y, luz.areaAxisU.z);
+		glUniform3f(ubicacion("areaAxisV"), luz.areaAxisV.x, luz.areaAxisV.y, luz.areaAxisV.z);
+		glUniform2f(ubicacion("areaHalfSize"), luz.areaHalfSizeU, luz.areaHalfSizeV);
 	}
-
-// ---------------- LLUM #0 - (+Z)
-// Posici� de la font de llum:
-	//	glLightfv(GL_LIGHT0, GL_POSITION, position);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[0].position"), lumin[0].posicio.x, lumin[0].posicio.y, lumin[0].posicio.z, lumin[0].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT0, GL_DIFFUSE, lumin[0].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[0].diffuse"), lumin[0].difusa.r, lumin[0].difusa.g, lumin[0].difusa.b, lumin[0].difusa.a);
-	//	glLightfv(GL_LIGHT0, GL_SPECULAR, lumin[0].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[0].specular"), lumin[0].especular.r, lumin[0].especular.g, lumin[0].especular.b, lumin[0].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c):
-	//	glLightf(GL_LIGHT0, GL_CONSTANT_ATTENUATION, lumin[0].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT0, GL_LINEAR_ATTENUATION, lumin[0].atenuacio.b);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT0, GL_QUADRATIC_ATTENUATION, lumin[0].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[0].attenuation"), lumin[0].atenuacio.a, lumin[0].atenuacio.b, lumin[0].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[0].restringida) {	glLightfv(GL_LIGHT0, GL_SPOT_DIRECTION, lumin[0].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT0, GL_SPOT_CUTOFF, lumin[0].spotcutoff);			// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT0, GL_SPOT_EXPONENT, lumin[0].spotexponent);		// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[0].restricted"), lumin[0].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[0].spotDirection"), lumin[0].spotdirection.x, lumin[0].spotdirection.y, lumin[0].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[0].spotCosCutoff"), lumin[0].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[0].spotExponent"), lumin[0].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	//	glEnable(GL_LIGHT0);	//	else glDisable(GL_LIGHT0);	// Codi OpenGL 1.1
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[0].sw_light"), lumin[0].encesa);
-
-// ---------------- LLUM #1 (+X)
-// Posici� de la font de llum:
-	//glLightfv(GL_LIGHT1, GL_POSITION, position);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[1].position"), lumin[1].posicio.x, lumin[1].posicio.y, lumin[1].posicio.z, lumin[1].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT1, GL_DIFFUSE, lumin[1].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[1].diffuse"), lumin[1].difusa.r, lumin[1].difusa.g, lumin[1].difusa.b, lumin[1].difusa.a);
-	//	glLightfv(GL_LIGHT1, GL_SPECULAR, lumin[1].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[1].specular"), lumin[1].especular.r, lumin[1].especular.g, lumin[1].especular.b, lumin[1].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c):
-	//	glLightf(GL_LIGHT1, GL_CONSTANT_ATTENUATION, lumin[1].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT1, GL_LINEAR_ATTENUATION, lumin[1].atenuacio.b);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT1, GL_QUADRATIC_ATTENUATION, lumin[1].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[1].attenuation"), lumin[1].atenuacio.a, lumin[1].atenuacio.b, lumin[1].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[1].restringida) {	glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, lumin[1].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, lumin[1].spotcutoff);			// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, lumin[1].spotexponent);		// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[1].restricted"), lumin[1].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[1].spotDirection"), lumin[1].spotdirection.x, lumin[1].spotdirection.y, lumin[1].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[1].spotCosCutoff"), lumin[1].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[1].spotExponent"), lumin[1].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	//	glEnable(GL_LIGHT1);	//	glDisable(GL_LIGHT1);	// Codi OpenGL 1.1
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[1].sw_light"), lumin[1].encesa);
-
-// ---------------- LLUM #2 (+Y)
-// Posici� de la font de llum:
-	//	glLightfv(GL_LIGHT2, GL_POSITION, position);
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[2].position"), lumin[2].posicio.x, lumin[2].posicio.y, lumin[2].posicio.z, lumin[2].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT2, GL_DIFFUSE, lumin[2].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[2].diffuse"), lumin[2].difusa.r, lumin[2].difusa.g, lumin[2].difusa.b, lumin[2].difusa.a);
-	//	glLightfv(GL_LIGHT2, GL_SPECULAR, lumin[2].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[2].specular"), lumin[2].especular.r, lumin[2].especular.g, lumin[2].especular.b, lumin[2].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c):
-	//	glLightf(GL_LIGHT2, GL_CONSTANT_ATTENUATION, lumin[2].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT2, GL_LINEAR_ATTENUATION, lumin[2].atenuacio.b);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT2, GL_QUADRATIC_ATTENUATION, lumin[2].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[2].attenuation"), lumin[2].atenuacio.a, lumin[2].atenuacio.b, lumin[2].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[2].restringida) {	glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, lumin[2].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, lumin[2].spotcutoff);			// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, lumin[2].spotexponent);		// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[2].restricted"), lumin[2].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[2].spotDirection"), lumin[2].spotdirection.x, lumin[2].spotdirection.y, lumin[2].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[2].spotCosCutoff"), lumin[2].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[2].spotExponent"), lumin[2].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	//	glEnable(GL_LIGHT2);	//	glDisable(GL_LIGHT2);	// Codi OpenGL 1.1
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[2].sw_light"), lumin[2].encesa);
-
-// ---------------- Llum #3 (Z=Y=X)
-// Posici� de la font de llum:
-	//glLightfv(GL_LIGHT3, GL_POSITION, position);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[3].position"), lumin[3].posicio.x, lumin[3].posicio.y, lumin[3].posicio.z, lumin[3].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT3, GL_DIFFUSE, lumin[3].difusa);		// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[3].diffuse"), lumin[3].difusa.r, lumin[3].difusa.g, lumin[3].difusa.b, lumin[3].difusa.a);
-	//	glLightfv(GL_LIGHT3, GL_SPECULAR, lumin[3].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[3].specular"), lumin[3].especular.r, lumin[3].especular.g, lumin[3].especular.b, lumin[3].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c):
-	//	glLightf(GL_LIGHT3, GL_CONSTANT_ATTENUATION, lumin[3].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT3, GL_LINEAR_ATTENUATION, lumin[3].atenuacio.b);		// Codi OpenGL 1.1	
-	//	glLightf(GL_LIGHT3, GL_QUADRATIC_ATTENUATION, lumin[3].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[3].attenuation"), lumin[3].atenuacio.a, lumin[3].atenuacio.b, lumin[3].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[3].restringida) {	glLightfv(GL_LIGHT3, GL_SPOT_DIRECTION, lumin[3].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT3, GL_SPOT_CUTOFF, lumin[3].spotcutoff);			// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT3, GL_SPOT_EXPONENT, lumin[3].spotexponent);		// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[3].restricted"), lumin[3].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[3].spotDirection"), lumin[3].spotdirection.x, lumin[3].spotdirection.y, lumin[3].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[3].spotCosCutoff"), lumin[3].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[3].spotExponent"), lumin[3].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	//	glEnable(GL_LIGHT3);	// glDisable(GL_LIGHT3);	// Codi OpenGL 1.1
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[3].sw_light"), lumin[3].encesa);
-
-// ---------------- LLUM #4 (-Z)
-// Posici� de la font de llum:
-	//glLightfv(GL_LIGHT4, GL_POSITION, position);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[4].position"), lumin[4].posicio.x, lumin[4].posicio.y, lumin[4].posicio.z, lumin[4].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT4, GL_DIFFUSE, lumin[4].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[4].diffuse"), lumin[4].difusa.r, lumin[4].difusa.g, lumin[4].difusa.b, lumin[4].difusa.a);
-	//	glLightfv(GL_LIGHT4, GL_SPECULAR, lumin[4].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[4].specular"), lumin[4].especular.r, lumin[4].especular.g, lumin[4].especular.b, lumin[4].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c):
-	//	glLightf(GL_LIGHT4, GL_CONSTANT_ATTENUATION, lumin[4].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT4, GL_LINEAR_ATTENUATION, lumin[4].atenuacio.b);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT4, GL_QUADRATIC_ATTENUATION, lumin[4].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[4].attenuation"), lumin[4].atenuacio.a, lumin[4].atenuacio.b, lumin[4].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[4].restringida) {	glLightfv(GL_LIGHT4, GL_SPOT_DIRECTION, lumin[4].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT4, GL_SPOT_CUTOFF, lumin[4].spotcutoff);			// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT4, GL_SPOT_EXPONENT, lumin[4].spotexponent);		// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[4].restricted"), lumin[4].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[4].spotDirection"), lumin[4].spotdirection.x, lumin[4].spotdirection.y, lumin[4].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[4].spotCosCutoff"), lumin[4].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[4].spotExponent"), lumin[4].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	//	glEnable(GL_LIGHT4);	//	else glDisable(GL_LIGHT4);	// Codi OpenGL 1.1
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[4].sw_light"), lumin[4].encesa);
-
-// ---------------- LLUM #5
-// Posici� de la font de llum :
-	//glLightfv(GL_LIGHT5, GL_POSITION, position);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[5].position"), lumin[5].posicio.x, lumin[5].posicio.y, lumin[5].posicio.z, lumin[5].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT5, GL_DIFFUSE, lumin[5].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[5].diffuse"), lumin[5].difusa.r, lumin[5].difusa.g, lumin[5].difusa.b, lumin[5].difusa.a);
-	//	glLightfv(GL_LIGHT5, GL_SPECULAR, lumin[5].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[5].specular"), lumin[5].especular.r, lumin[5].especular.g, lumin[5].especular.b, lumin[5].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c)
-	//	glLightf(GL_LIGHT5, GL_CONSTANT_ATTENUATION, lumin[5].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT5, GL_LINEAR_ATTENUATION, lumin[5].atenuacio.b);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT5, GL_QUADRATIC_ATTENUATION, lumin[5].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[5].attenuation"), lumin[5].atenuacio.a, lumin[5].atenuacio.b, lumin[5].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[5].restringida) {	glLightfv(GL_LIGHT5, GL_SPOT_DIRECTION, lumin[5].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT5, GL_SPOT_CUTOFF, lumin[5].spotcoscutoff);		// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT5, GL_SPOT_EXPONENT, lumin[5].spotexponent);		// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[5].restricted"), lumin[5].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[5].spotDirection"), lumin[5].spotdirection.x, lumin[5].spotdirection.y, lumin[5].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[5].spotCosCutoff"), lumin[5].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[5].spotExponent"), lumin[5].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	//	glEnable(GL_LIGHT5);	//	else glDisable(GL_LIGHT5);	// Codi OpenGL 1.1
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[5].sw_light"), lumin[5].encesa);
-
-// ---------------- LLUM #6 
-// Posici� de la font de llum:
-	//	glLightfv(GL_LIGHT6, GL_POSITION, position);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[6].position"), lumin[6].posicio.x, lumin[6].posicio.y, lumin[6].posicio.z, lumin[6].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT6, GL_DIFFUSE, lumin[6].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[6].diffuse"), lumin[6].difusa.r, lumin[6].difusa.g, lumin[6].difusa.b, lumin[6].difusa.a);
-	//	glLightfv(GL_LIGHT6, GL_SPECULAR, lumin[6].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[6].specular"), lumin[6].especular.r, lumin[6].especular.g, lumin[6].especular.b, lumin[6].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c):
-	//	glLightf(GL_LIGHT6, GL_CONSTANT_ATTENUATION, lumin[6].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT6, GL_LINEAR_ATTENUATION, lumin[6].atenuacio.b);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT6, GL_QUADRATIC_ATTENUATION, lumin[6].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[6].attenuation"), lumin[6].atenuacio.a, lumin[6].atenuacio.b, lumin[6].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[6].restringida) {	glLightfv(GL_LIGHT6, GL_SPOT_DIRECTION, lumin[6].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT6, GL_SPOT_CUTOFF, lumin[6].cutoff);				// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT6, GL_SPOT_EXPONENT, lumin[6].exponent);			// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[6].restricted"), lumin[6].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[6].spotDirection"), lumin[6].spotdirection.x, lumin[6].spotdirection.y, lumin[6].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[6].spotCosCutoff"), lumin[6].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[6].spotExponent"), lumin[6].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	// glEnable(GL_LIGHT6)	//	glDisable(GL_LIGHT6);
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[6].sw_light"), lumin[6].encesa);
-
-// ---------------- LLUM #7 
-// Posici� de la font de llum:
-	//glLightfv(GL_LIGHT7, GL_POSITION, position);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[7].position"), lumin[7].posicio.x, lumin[7].posicio.y, lumin[7].posicio.z, lumin[7].posicio.w);
-
-// Intensitats difusa i especular de la font de llum:
-	//	glLightfv(GL_LIGHT7, GL_DIFFUSE, lumin[7].difusa);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[7].diffuse"), lumin[7].difusa.r, lumin[7].difusa.g, lumin[7].difusa.b, lumin[7].difusa.a);
-	//	glLightfv(GL_LIGHT7, GL_SPECULAR, lumin[7].especular);	// Codi OpenGL 1.1
-	glUniform4f(glGetUniformLocation(sh_programID, "LightSource[7].specular"), lumin[7].especular.r, lumin[7].especular.g, lumin[7].especular.b, lumin[7].especular.a);
-
-// Coeficients factor atenuaci� f_att=1/(ad2+bd+c):
-	//	glLightf(GL_LIGHT7, GL_CONSTANT_ATTENUATION, lumin[7].atenuacio.c);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT7, GL_LINEAR_ATTENUATION, lumin[7].atenuacio.b);		// Codi OpenGL 1.1
-	//	glLightf(GL_LIGHT7, GL_QUADRATIC_ATTENUATION, lumin[7].atenuacio.a);	// Codi OpenGL 1.1
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[7].attenuation"), lumin[7].atenuacio.a, lumin[7].atenuacio.b, lumin[7].atenuacio.c);
-
-// Par�metres font de llum restringida:
-	//	if (lumin[7].restringida) {	glLightfv(GL_LIGHT7, GL_SPOT_DIRECTION, lumin[7].spotdirection);	// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHT7, GL_SPOT_CUTOFF, lumin[7].cutoff);				// Codi OpenGL 1.1
-	//								glLightf(GL_LIGHt7, GL_SPOT_EXPONENT, lumin[7].exponent);			// Codi OpenGL 1.1
-	//							}
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[7].restricted"), lumin[7].restringida);
-	glUniform3f(glGetUniformLocation(sh_programID, "LightSource[7].spotDirection"), lumin[7].spotdirection.x, lumin[7].spotdirection.y, lumin[7].spotdirection.z);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[7].spotCosCutoff"), lumin[7].spotcoscutoff);
-	glUniform1f(glGetUniformLocation(sh_programID, "LightSource[7].spotExponent"), lumin[7].spotexponent);
-
-// Activaci� - Desactivaci� font de llum:
-	//	glEnable(GL_LIGHT7);	//	glDisable(GL_LIGHT7);	// Codi OpenGL 1.1
-	glUniform1i(glGetUniformLocation(sh_programID, "LightSource[7].sw_light"), lumin[7].encesa);
-
 // Selecci� del model d'iluminaci� segons variable ilumin
 	switch(ilumin)
 	{
