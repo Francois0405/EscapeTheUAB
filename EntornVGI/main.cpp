@@ -31,6 +31,10 @@
 #include "AudioManager.h"
 #include "AnimacionHiriti.h"
 #include "TemporizadorAmbiente.h"
+#include "NetJuego.h"
+#include "NetAdaptadores.h"
+#include "NetAvatar.h"
+#include "Network/PreferenciasRed.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include <iostream>
@@ -492,6 +496,21 @@ namespace
 		luz.areaSource = false;
 	}
 
+	// --- Multijugador (OFFLINE por defecto: no hay hilo, ni socket, ni ENet hasta pulsar Iniciar o usar --host/--connect) ---
+	netjuego::RedJuego redJuego;
+	// El panel puede cerrarse y recuperarse con F4, sin depender de los paneles F1.
+	bool mostrarPanelRed = true;
+	std::unique_ptr<netjuego::PuertasGLB> puertasRed;       // adaptador de las puertas GLB (IDs de escena)
+	netjuego::ConfigRed configRedPendiente;                 // lo que editan el menu y la linea de comandos
+	bool fisicaRedEnModoReplica = false;
+	std::map<uint32_t, bool> objetosDormidosAntes;
+	struct MuestraFisicaRemota { double tiempo = 0.0; net::DynamicStateEntry estado; };
+	std::map<uint32_t, std::deque<MuestraFisicaRemota>> bufferFisicaRemota;
+	vr::PoseXR ultimaCabezaVR;                              // pose real del visor, la rellena el render VR
+	bool hayCabezaVR = false;
+	void iniciarRed(const netjuego::ConfigRed& cfg);
+	void detenerRed();
+
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
 
 	bool modoJuegoFPS();
@@ -508,9 +527,15 @@ namespace
 
 	ObjetivoInteraccion objetivoInteraccionActual;
 
+	bool jugadorTieneAgarre()
+	{
+		return escenaFisica->HayAgarre() ||
+			(redJuego.EsCliente() && redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal()) != 0);
+	}
+
 	ObjetivoInteraccion buscarObjetivoInteraccion()
 	{
-		if (escenaFisica->HayAgarre()) return {};
+		if (jugadorTieneAgarre()) return {};
 
 		glm::vec3 origen, direccion;
 		origenYDireccionDeLaMirada(origen, direccion);
@@ -541,13 +566,13 @@ namespace
 	{
 		objetivoInteraccionActual = {};
 		if (!permitido || !entradaFPSActiva() || editorEscenas.Activo() ||
-			mostrarPanelesDebug || gestorOpenXR.SesionEnMarcha() || escenaFisica->HayAgarre()) return;
+			mostrarPanelesDebug || gestorOpenXR.SesionEnMarcha() || jugadorTieneAgarre()) return;
 		objetivoInteraccionActual = buscarObjetivoInteraccion();
 	}
 
 	void iniciarCargaLanzamiento()
 	{
-		if (!escenaFisica->HayAgarre()) return;
+		if (!jugadorTieneAgarre()) return;
 		cargaLanzamientoActiva = true;
 		tiempoCargaLanzamiento = 0.0f;
 	}
@@ -559,20 +584,44 @@ namespace
 	void interactuar()
 	{
 		const ObjetivoInteraccion objetivo = objetivoInteraccionActual;
+		// Objeto compartido de prueba (solo con red): si se apunta a el, pedirlo/soltarlo tiene prioridad.
+		if (redJuego.Activa())
+		{
+			glm::vec3 origenRed, direccionRed;
+			origenYDireccionDeLaMirada(origenRed, direccionRed);
+			if (redJuego.AlternarObjeto(origenRed, direccionRed, glfwGetTime())) return;
+		}
 		if (objetivo.accion == AccionInteraccion::Recoger)
 		{
+			if (objetivo.indiceDinamico < 0 || objetivo.indiceDinamico >= static_cast<int>(objetosEscena.size())) return;
 			glm::vec3 origen, direccion;
 			origenYDireccionDeLaMirada(origen, direccion);
-			if (escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion) &&
-				objetivo.indiceDinamico >= 0 &&
-				objetivo.indiceDinamico < static_cast<int>(objetosEscena.size()) &&
-				objetosEscena[objetivo.indiceDinamico].id == "hiriti" &&
+			const uint32_t id = netjuego::HashId(objetosEscena[objetivo.indiceDinamico].id);
+			bool agarrado = false;
+			if (redJuego.Activa() && redJuego.EsCliente())
+				redJuego.SolicitarAgarreDinamico(id, origen, direccion);
+			else if (redJuego.Activa() && redJuego.EsHost())
+			{
+				if (redJuego.PropietarioDinamico(id) == netjuego::kSinDueno &&
+					escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion))
+				{
+					agarrado = true;
+					redJuego.FijarPropietarioDinamico(id, net::kHostPeerId);
+				}
+			}
+			else agarrado = escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
+			if (agarrado && objetosEscena[objetivo.indiceDinamico].id == "hiriti" &&
 				animacionHiriti.MarcarAgarrado())
 				audioManager.playOneShot("assets/audio/hirity/story/lohashechobien.ogg");
 		}
 		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
 			objetivo.objetoAnimado != nullptr)
+		{
+			// Cliente: la puerta la decide el host (se envia la solicitud y se espera su estado).
+			size_t indicePuerta = 0;
+			if (puertasRed && puertasRed->IndiceDe(objetivo.objetoAnimado, indicePuerta) && redJuego.InterceptarPuerta(indicePuerta)) return;
 			glb::AlternarPuerta(*objetivo.objetoAnimado);
+		}
 	}
 
 	// Cada fotograma de juego: la "mano" sigue a la mirada. Solo si se puede jugar (sin pausa, sin
@@ -909,6 +958,366 @@ namespace
 	}
 
 
+	// ---- Multijugador: adaptador de entrada. SOLO LEE la camara/mandos; nunca los modifica (la pose local manda). ----
+	bool poseLocalParaRed(net::PoseEntry& pose)
+	{
+		const glm::vec3 ojos(static_cast<float>(opvN.x), static_cast<float>(opvN.y), static_cast<float>(opvN.z));
+		const glm::vec3 frente(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
+		if (gestorOpenXR.SesionEnMarcha() && hayCabezaVR)
+		{
+			const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+			const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frente,
+				gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+			vr::PoseXR izq, der;
+			const bool hayIzq = gestorOpenXR.PoseApuntadoMando(0, izq), hayDer = gestorOpenXR.PoseApuntadoMando(1, der);
+			if (netjuego::PoseDesdeVR(ultimaCabezaVR, hayIzq ? &izq : nullptr, hayDer ? &der : nullptr, anclaje, pose)) return true;
+		}
+		return netjuego::PoseDesdeEscritorio(ojos, frente, pose);
+	}
+
+	bool reconstruirFisicaTrasEdicion(std::string& error, bool autoridadFisica = true);
+
+	bool capturarEstadoEscenaRed(std::vector<netjuego::EstadoObjetoEscena>& salida)
+	{
+		std::map<uint32_t, std::string> ids;
+		salida.clear();
+		salida.reserve(objetosEscena.size());
+		for (const SceneObject& objeto : objetosEscena)
+		{
+			netjuego::EstadoObjetoEscena e;
+			e.id = netjuego::HashId(objeto.id);
+			if (e.id == 0 || !ids.emplace(e.id, objeto.id).second) return false;
+			e.posicion = objeto.posicion; e.rotacion = objeto.rotacion; e.escala = objeto.escala;
+			e.colisionPresente = objeto.fisica.presente;
+			e.tipoColision = !objeto.fisica.presente ? 0 : (objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico ? 2 : 1);
+			e.mitadTamano = objeto.fisica.mitadTamano; e.desplazamiento = objeto.fisica.desplazamiento; e.masa = objeto.fisica.masa;
+			if (!netjuego::EstadoObjetoEscenaValido(e)) return false;
+			salida.push_back(e);
+		}
+		return true;
+	}
+
+	bool indiceUnicoObjetoRed(uint32_t id, std::size_t& indice)
+	{
+		std::size_t encontrados = 0;
+		for (std::size_t i = 0; i < objetosEscena.size(); ++i)
+			if (netjuego::HashId(objetosEscena[i].id) == id) { indice = i; ++encontrados; }
+		return encontrados == 1 && indice < objetosEscena.size() && objetosEscena[indice].fisica.presente &&
+			objetosEscena[indice].fisica.tipo == fisica::TipoCuerpo::Dinamico;
+	}
+
+	void guardarMuestraFisicaRemota(const net::DynamicStateEntry& estado, double ahora)
+	{
+		if (!netjuego::EstadoFisicoValido(estado)) return;
+		auto& buffer = bufferFisicaRemota[estado.objectId];
+		if (!buffer.empty() && !net::SeqNewer(estado.tick, buffer.back().estado.tick)) return;
+		const double tiempoMuestra = buffer.empty() ? ahora : netjuego::TiempoSnapshotSiguiente(
+			buffer.back().tiempo, buffer.back().estado.tick, estado.tick);
+		buffer.push_back({ tiempoMuestra, estado });
+		while (buffer.size() > 8) buffer.pop_front();
+	}
+
+	net::DynamicStateEntry interpolarEstadoFisico(uint32_t id, double ahora)
+	{
+		auto& buffer = bufferFisicaRemota[id];
+		net::DynamicStateEntry resultado = buffer.back().estado;
+		const double tiempoObjetivo = ahora - 0.12;
+		if (buffer.size() > 1)
+		{
+			for (std::size_t i = 1; i < buffer.size(); ++i)
+			{
+				if (tiempoObjetivo > buffer[i].tiempo) continue;
+				const auto& a = buffer[i - 1]; const auto& b = buffer[i];
+				const float t = b.tiempo > a.tiempo ? std::clamp(static_cast<float>((tiempoObjetivo - a.tiempo) / (b.tiempo - a.tiempo)), 0.0f, 1.0f) : 1.0f;
+				const glm::vec3 p = glm::mix(netjuego::PosDe(a.estado.transform), netjuego::PosDe(b.estado.transform), t);
+				const glm::quat q = glm::slerp(netjuego::RotDe(a.estado.transform), netjuego::RotDe(b.estado.transform), t);
+				resultado.transform = netjuego::ATransform(p, q);
+				return resultado;
+			}
+		}
+		// No extrapolar una simulación rígida: una predicción lineal puede atravesar una pared
+		// justo después de un rebote. Si falta el siguiente snapshot, se mantiene el último.
+		return resultado;
+	}
+
+	std::string identificadorEscenaRed(const std::string& nombre, const std::vector<netjuego::EstadoObjetoEscena>& estado)
+	{
+		// El saludo ENet solo admite 64 bytes. Un fingerprint compacto del nombre de
+		// escena y del conjunto de IDs persistentes detecta JSON incompatibles al entrar.
+		uint32_t hash = 2166136261u;
+		auto mezclar = [&hash](uint8_t byte) { hash = (hash ^ byte) * 16777619u; };
+		for (unsigned char c : nombre) mezclar(c);
+		std::vector<uint32_t> ids;
+		ids.reserve(estado.size());
+		for (const auto& objeto : estado) ids.push_back(objeto.id);
+		std::sort(ids.begin(), ids.end());
+		for (uint32_t id : ids)
+			for (unsigned int desplazamiento = 0; desplazamiento < 32; desplazamiento += 8)
+				mezclar(static_cast<uint8_t>((id >> desplazamiento) & 0xFFu));
+		char resultado[16];
+		std::snprintf(resultado, sizeof(resultado), "ET2-%08X", hash);
+		return resultado;
+	}
+
+	bool aplicarEstadosEscenaRed(const std::vector<netjuego::EstadoObjetoEscena>& estados)
+	{
+		std::vector<std::pair<std::size_t, const netjuego::EstadoObjetoEscena*>> aplicaciones;
+		std::map<uint32_t, bool> idsRecibidos;
+		for (const auto& e : estados)
+		{
+			if (!netjuego::EstadoObjetoEscenaValido(e)) return false;
+			idsRecibidos[e.id] = true; // varios cambios fiables del mismo objeto se aplican en orden
+		}
+		for (const auto& par : idsRecibidos)
+		{
+			const auto it = std::find_if(estados.rbegin(), estados.rend(), [&](const auto& e) { return e.id == par.first; });
+			if (it == estados.rend()) return false;
+			std::size_t indice = objetosEscena.size(), coincidencias = 0;
+			for (std::size_t i = 0; i < objetosEscena.size(); ++i)
+				if (netjuego::HashId(objetosEscena[i].id) == par.first) { indice = i; ++coincidencias; }
+			if (coincidencias != 1) return false; // desconocido o ID de escena ambiguo
+			aplicaciones.push_back({ indice, &*it });
+		}
+		std::vector<std::pair<std::size_t, SceneObject>> anteriores;
+		for (const auto& aplicacion : aplicaciones)
+		{
+			SceneObject& objeto = objetosEscena[aplicacion.first];
+			anteriores.push_back({ aplicacion.first, objeto });
+			const auto& e = *aplicacion.second;
+			objeto.posicion = e.posicion; objeto.rotacion = e.rotacion; objeto.escala = e.escala;
+			objeto.fisica.presente = e.colisionPresente;
+			objeto.fisica.tipo = e.tipoColision == 2 ? fisica::TipoCuerpo::Dinamico : fisica::TipoCuerpo::Estatico;
+			objeto.fisica.mitadTamano = e.mitadTamano; objeto.fisica.desplazamiento = e.desplazamiento; objeto.fisica.masa = e.masa;
+		}
+		std::string error;
+		if (!aplicaciones.empty() && !reconstruirFisicaTrasEdicion(error, !redJuego.EsCliente()))
+		{
+			for (const auto& anterior : anteriores) objetosEscena[anterior.first] = anterior.second;
+			std::cerr << "Red: se rechazo un cambio de escena porque Bullet no pudo reconstruirlo: " << error << '\n';
+			return false;
+		}
+		return true;
+	}
+
+	void iniciarRed(const netjuego::ConfigRed& cfg)
+	{
+		if (cfg.rol == net::Role::Offline)
+		{
+			const bool eraCliente = redJuego.EsCliente();
+			redJuego.Detener();
+			if (eraCliente || fisicaRedEnModoReplica) { std::string error; reconstruirFisicaTrasEdicion(error, true); fisicaRedEnModoReplica = false; }
+			return;
+		}
+		if (redJuego.EnRed()) return;
+		bufferFisicaRemota.clear(); objetosDormidosAntes.clear();
+		puertasRed = std::make_unique<netjuego::PuertasGLB>(objetosAnimados);
+		const std::string nombreEscena = serializadorEscena.Cargado() ? serializadorEscena.Ruta().stem().string() : std::string();
+		std::vector<netjuego::EstadoObjetoEscena> estadoEscena;
+		if (!capturarEstadoEscenaRed(estadoEscena) || !redJuego.FijarEstadoEscena(estadoEscena, false))
+		{
+			std::cerr << "Red: la escena tiene IDs duplicados o propiedades no validas; no se inicia la sesion.\n";
+			return;
+		}
+		const std::string escena = identificadorEscenaRed(nombreEscena, estadoEscena);
+		const glm::vec3 ojos(static_cast<float>(opvN.x), static_cast<float>(opvN.y), static_cast<float>(opvN.z));
+		glm::vec3 frente(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), 0.0f);
+		frente = glm::length(frente) > 1e-4f ? glm::normalize(frente) : glm::vec3(0.0f, 1.0f, 0.0f);
+		if (!redJuego.Iniciar(cfg, escena, puertasRed.get(), ojos + frente * 2.0f - glm::vec3(0.0f, 0.0f, 0.5f))) return;
+		std::string errorFisica;
+		if (!reconstruirFisicaTrasEdicion(errorFisica, cfg.rol != net::Role::Client))
+		{
+			std::cerr << "Red: no se pudo preparar la autoridad fisica de la escena: " << errorFisica << '\n';
+			redJuego.Detener();
+		}
+		else fisicaRedEnModoReplica = cfg.rol == net::Role::Client;
+	}
+
+	void detenerRed()
+	{
+		const bool eraCliente = redJuego.EsCliente();
+		redJuego.Detener();
+		bufferFisicaRemota.clear(); objetosDormidosAntes.clear();
+		if (eraCliente || fisicaRedEnModoReplica)
+		{
+			std::string error;
+			if (!reconstruirFisicaTrasEdicion(error, true)) std::cerr << "Offline: no se pudo restaurar la simulacion local: " << error << '\n';
+			fisicaRedEnModoReplica = false;
+		}
+	}
+
+	// Una vez por fotograma, en el hilo de juego. Offline: no hace nada (coste cero).
+	void actualizarRed(double ahora, bool jugando)
+	{
+		if (!redJuego.EnRed())
+		{
+			if (fisicaRedEnModoReplica)
+			{
+				std::string error;
+				if (!reconstruirFisicaTrasEdicion(error, true)) std::cerr << "Red: no se pudo restaurar Bullet local: " << error << '\n';
+				fisicaRedEnModoReplica = false;
+			}
+			return;
+		}
+		net::PoseEntry pose;
+		const bool hayPose = poseLocalParaRed(pose);
+		redJuego.Actualizar(ahora, hayPose ? &pose : nullptr);
+		if (redJuego.EsHost())
+		{
+			std::vector<netjuego::SolicitudObjetoDinamico> solicitudes;
+			redJuego.TomarSolicitudesFisicas(solicitudes);
+			for (const auto& solicitud : solicitudes)
+			{
+				const net::PeerId propietario = redJuego.PropietarioDinamico(solicitud.id);
+				std::size_t indice = 0;
+				if (solicitud.agarrar)
+				{
+					if (!netjuego::PuedeAdquirirDinamico(propietario, solicitud.peer,
+						redJuego.ObjetoDinamicoDePeer(solicitud.peer)) || !indiceUnicoObjetoRed(solicitud.id, indice)) continue;
+					net::PoseEntry poseRemota;
+					if (!redJuego.PoseDePeer(solicitud.peer, poseRemota)) continue;
+					const glm::vec3 mano = netjuego::PosDe(poseRemota.rightHand);
+					const glm::vec3 cabeza = netjuego::PosDe(poseRemota.head);
+					const bool origenValido = glm::distance(solicitud.origen, mano) <= 0.85f || glm::distance(solicitud.origen, cabeza) <= 0.85f;
+					const glm::vec3 adelante = netjuego::RotDe(poseRemota.rightHand) * glm::vec3(0, 1, 0);
+					if (!origenValido || glm::dot(glm::normalize(adelante), solicitud.direccion) < 0.60f ||
+						!escenaFisica->SujetarDinamicoRemoto(static_cast<int>(indice), solicitud.origen, solicitud.direccion)) continue;
+					redJuego.FijarPropietarioDinamico(solicitud.id, solicitud.peer);
+					if (objetosEscena[indice].id == "hiriti" && animacionHiriti.MarcarAgarrado())
+						audioManager.playOneShot("assets/audio/hirity/story/lohashechobien.ogg");
+				}
+				else if (propietario == solicitud.peer)
+				{
+					if (indiceUnicoObjetoRed(solicitud.id, indice) &&
+						escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), solicitud.velocidad) &&
+						objetosEscena[indice].id == "hiriti")
+						animacionHiriti.MarcarLanzadoPorJugador(std::clamp((glm::length(solicitud.velocidad) - 3.0f) / 12.0f, 0.0f, 1.0f));
+					// La propiedad también se limpia si el cuerpo ya no existe/reconstruyó.
+					redJuego.FijarPropietarioDinamico(solicitud.id, netjuego::kSinDueno);
+				}
+			}
+
+			for (const auto& par : redJuego.PropietariosDinamicos())
+			{
+				if (par.second == netjuego::kSinDueno) continue;
+				std::size_t indice = 0; net::PoseEntry poseRemota;
+				if (!indiceUnicoObjetoRed(par.first, indice)) continue;
+				if (par.second == net::kHostPeerId)
+				{
+					if (escenaFisica->ObjetoAgarrado() != static_cast<int>(indice))
+						redJuego.FijarPropietarioDinamico(par.first, netjuego::kSinDueno);
+					continue;
+				}
+				if (!redJuego.PoseDePeer(par.second, poseRemota)) continue;
+				glm::vec3 destino = netjuego::PosDe(poseRemota.rightHand);
+				const glm::vec3 cabeza = netjuego::PosDe(poseRemota.head);
+				if (glm::distance(destino, cabeza) > 1.5f)
+					destino = cabeza + (netjuego::RotDe(poseRemota.head) * glm::vec3(0, 1, 0)) * fisica::EscenaFisica::DistanciaDeLaMano;
+				std::vector<fisica::EscenaFisica::EstadoDinamico> actuales;
+				escenaFisica->CapturarEstadosDinamicos(actuales);
+				auto actual = std::find_if(actuales.begin(), actuales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
+				if (actual == actuales.end())
+					redJuego.FijarPropietarioDinamico(par.first, netjuego::kSinDueno);
+				else if (glm::distance(actual->pose.posicion, destino) > fisica::EscenaFisica::SoltarSiSeAleja)
+				{
+					escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
+					redJuego.FijarPropietarioDinamico(par.first, netjuego::kSinDueno);
+				}
+				else escenaFisica->ActualizarAgarreRemoto(static_cast<int>(indice), destino);
+			}
+
+			if (jugando)
+			{
+				std::vector<fisica::EscenaFisica::EstadoDinamico> fisicos;
+				escenaFisica->CapturarEstadosDinamicos(fisicos);
+				std::vector<net::DynamicStateEntry> estados;
+				estados.reserve(fisicos.size());
+				for (const auto& fisico : fisicos)
+				{
+					if (fisico.indiceObjeto < 0 || fisico.indiceObjeto >= static_cast<int>(objetosEscena.size())) continue;
+					net::DynamicStateEntry estado;
+					estado.objectId = netjuego::HashId(objetosEscena[fisico.indiceObjeto].id);
+					estado.tick = static_cast<uint32_t>(static_cast<uint64_t>(ahora * 1000.0));
+					estado.transform = netjuego::ATransform(fisico.pose.posicion, fisico.pose.rotacion);
+					for (int i = 0; i < 3; ++i)
+					{
+						estado.linearVelocity[i] = fisico.velocidad[i];
+						estado.angularVelocity[i] = fisico.velocidadAngular[i];
+					}
+					estado.owner = redJuego.PropietarioDinamico(estado.objectId);
+					estado.flags = static_cast<uint8_t>((fisico.activo ? 1 : 0) | (estado.owner != netjuego::kSinDueno ? 2 : 0));
+					estados.push_back(estado);
+					const bool dormido = !fisico.activo;
+					auto previo = objetosDormidosAntes.find(estado.objectId);
+					if (dormido && previo != objetosDormidosAntes.end() && !previo->second)
+						redJuego.PublicarEstadoFisicoFinal(estado);
+					objetosDormidosAntes[estado.objectId] = dormido;
+				}
+				redJuego.EnviarEstadosFisicos(estados);
+			}
+		}
+		if (redJuego.EsCliente())
+		{
+			const uint32_t objetoPropio = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
+			const auto hiritiPropio = std::find_if(objetosEscena.begin(), objetosEscena.end(), [objetoPropio](const SceneObject& objeto)
+				{ return objetoPropio != 0 && netjuego::HashId(objeto.id) == objetoPropio && objeto.id == "hiriti"; });
+			if (hiritiPropio != objetosEscena.end() && animacionHiriti.MarcarAgarrado())
+				audioManager.playOneShot("assets/audio/hirity/story/lohashechobien.ogg");
+
+			std::vector<netjuego::EstadoObjetoEscena> estados;
+			redJuego.TomarEstadosEscena(estados);
+			if (!estados.empty() && !aplicarEstadosEscenaRed(estados))
+				std::cerr << "Red: actualizacion de objeto desconocido, ambiguo o incompatible descartada.\n";
+
+			std::vector<net::DynamicStateEntry> finales;
+			redJuego.TomarEstadosFisicosFiables(finales);
+			for (const auto& estado : finales)
+			{
+				auto existente = bufferFisicaRemota.find(estado.objectId);
+				const bool hayMuestra = existente != bufferFisicaRemota.end() && !existente->second.empty();
+				const uint32_t tickActual = hayMuestra ? existente->second.back().estado.tick : 0;
+				if (netjuego::EstadoFisicoMasNuevo(estado.tick, hayMuestra, tickActual))
+				{
+					bufferFisicaRemota.erase(estado.objectId);
+					guardarMuestraFisicaRemota(estado, ahora);
+				}
+			}
+			for (const auto& par : redJuego.EstadosFisicosRemotos()) guardarMuestraFisicaRemota(par.second, ahora);
+
+			static double ultimoTiempoFisica = ahora;
+			const float delta = std::clamp(static_cast<float>(ahora - ultimoTiempoFisica), 0.0f, 0.1f);
+			ultimoTiempoFisica = ahora;
+			for (auto& par : bufferFisicaRemota)
+			{
+				std::size_t indice = 0;
+				if (!indiceUnicoObjetoRed(par.first, indice) || par.second.empty()) continue;
+				auto objetivo = interpolarEstadoFisico(par.first, ahora);
+				fisica::EscenaFisica::EstadoDinamico aplicado;
+				aplicado.indiceObjeto = static_cast<int>(indice);
+				aplicado.pose.posicion = netjuego::PosDe(objetivo.transform);
+				aplicado.pose.rotacion = netjuego::RotDe(objetivo.transform);
+				if ((objetivo.flags & 1) != 0)
+				{
+					std::vector<fisica::EscenaFisica::EstadoDinamico> locales;
+					escenaFisica->CapturarEstadosDinamicos(locales);
+					auto actual = std::find_if(locales.begin(), locales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
+					if (actual != locales.end())
+					{
+						const float mezcla = 1.0f - std::exp(-18.0f * delta);
+					aplicado.pose.posicion = glm::mix(actual->pose.posicion, aplicado.pose.posicion, mezcla);
+					aplicado.pose.rotacion = glm::slerp(actual->pose.rotacion, aplicado.pose.rotacion, mezcla);
+					}
+				}
+				escenaFisica->AplicarEstadoReplicado(aplicado);
+			}
+		}
+		if (jugando && redJuego.Activa() && entradaFPSActiva())
+		{
+			glm::vec3 origen, direccion;
+			origenYDireccionDeLaMirada(origen, direccion);
+			redJuego.ActualizarAcarreo(origen, direccion, ahora);
+		}
+	}
+
 	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
 	// el suelo ya exista y el jugador no caiga al vacío.
 	bool crearJugadorFisico()
@@ -1025,22 +1434,42 @@ namespace
 		if (!cargaLanzamientoActiva) return;
 		const float carga = std::clamp(tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f);
 		cancelarCargaLanzamiento();
-		if (!escenaFisica->HayAgarre()) return;
-		const int objetoLanzado = escenaFisica->ObjetoAgarrado();
+		if (!jugadorTieneAgarre()) return;
 
 		glm::vec3 origen, direccion;
 		origenYDireccionDeLaMirada(origen, direccion);
 		const float rapidez = 3.0f + 12.0f * carga;
-		if (escenaFisica->LanzarAgarre(glm::normalize(direccion) * rapidez) &&
-			objetoLanzado >= 0 && objetoLanzado < static_cast<int>(objetosEscena.size()) &&
-			objetosEscena[objetoLanzado].id == "hiriti")
-			animacionHiriti.MarcarLanzadoPorJugador(carga);
+		const glm::vec3 velocidad = glm::normalize(direccion) * rapidez;
+		if (redJuego.Activa() && redJuego.EsCliente())
+		{
+			const uint32_t id = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
+			const auto it = std::find_if(objetosEscena.begin(), objetosEscena.end(), [id](const SceneObject& objeto)
+				{ return id != 0 && netjuego::HashId(objeto.id) == id; });
+			if (id != 0 && redJuego.SolicitarSoltarDinamico(id, velocidad) && it != objetosEscena.end() && it->id == "hiriti")
+				animacionHiriti.MarcarLanzadoPorJugador(carga);
+		}
+		else if (escenaFisica->HayAgarre())
+		{
+			const int indice = escenaFisica->ObjetoAgarrado();
+			const uint32_t id = indice >= 0 && indice < static_cast<int>(objetosEscena.size())
+				? netjuego::HashId(objetosEscena[indice].id) : 0;
+			if (escenaFisica->LanzarAgarre(velocidad))
+			{
+				if (redJuego.Activa() && redJuego.EsHost() && id != 0)
+					redJuego.FijarPropietarioDinamico(id, netjuego::kSinDueno);
+				if (indice >= 0 && indice < static_cast<int>(objetosEscena.size()) && objetosEscena[indice].id == "hiriti")
+					animacionHiriti.MarcarLanzadoPorJugador(carga);
+			}
+		}
 	}
 
 	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
 	{
 		if (!cargaLanzamientoActiva) return;
-		if (!entradaFPSActiva() || !escenaFisica->HayAgarre())
+		const uint32_t objetoPropio = redJuego.Activa() && redJuego.EsCliente()
+			? redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal()) : 0;
+		if (!entradaFPSActiva() || !netjuego::PuedeCargarLanzamiento(escenaFisica->HayAgarre(),
+			redJuego.EsCliente() ? net::Role::Client : net::Role::Offline, objetoPropio))
 		{
 			cancelarCargaLanzamiento();
 			return;
@@ -1220,13 +1649,18 @@ namespace
 		std::cout << "Escena cargada desde " << (rutaEscenaError ? ruta.string() : rutaEscenaAbsoluta.string()) << ": "
 			<< nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
 			<< " animadas, " << escenaFisica->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
+		if (redJuego.EnRed())
+		{
+			std::cerr << "Red: la escena ha cambiado; se detiene la sesion (host y clientes deben usar la misma escena)." << std::endl;
+			detenerRed();
+		}
 		return true;
 	}
 
-	bool reconstruirFisicaTrasEdicion(std::string& error)
+	bool reconstruirFisicaTrasEdicion(std::string& error, bool autoridadFisica)
 	{
 		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
-		if (!nuevaFisica->Crear(objetosEscena, objetosAnimados, datosAnimadosEscena, error)) return false;
+		if (!nuevaFisica->Crear(objetosEscena, objetosAnimados, datosAnimadosEscena, error, autoridadFisica)) return false;
 		escenaFisica->Vaciar();
 		escenaFisica = std::move(nuevaFisica);
 		return true;
@@ -1787,10 +2221,13 @@ static bool dibujarEscenaVR()
 			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
 
 		glDisable(GL_SCISSOR_TEST);
+		glm::vec3 sumaOjos(0.0f); int ojosCabeza = 0; vr::PoseXR primerOjo;
 		for (int i = 0; i < gestorOpenXR.NumeroDeOjos(); ++i)
 		{
 			vr::OjoVR ojo;
 			if (!gestorOpenXR.AdquirirOjo(i, ojo)) continue;   // el fotograma se enviará vacío; AdquirirOjo no deja nada a medias
+			if (ojosCabeza++ == 0) primerOjo = ojo.pose;       // para la red: pose real de la cabeza (media de los ojos)
+			sumaOjos += ojo.pose.posicion;
 
 			glViewport(0, 0, ojo.ancho, ojo.alto);
 			ProjectionMatrix = vr::ProyeccionDesdeCampo(ojo.fov, vrPlanoCercano, vrPlanoLejano);
@@ -1811,6 +2248,12 @@ static bool dibujarEscenaVR()
 			if (i == 0) copiarOjoAVentana(ojo);   // espejo en el monitor: ojo izquierdo
 			gestorOpenXR.LiberarOjo(i);
 			dibujado = true;
+		}
+		if (ojosCabeza > 0)
+		{
+			ultimaCabezaVR = primerOjo;
+			ultimaCabezaVR.posicion = sumaOjos / static_cast<float>(ojosCabeza);
+			hayCabezaVR = true;
 		}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, w, h);
@@ -2326,6 +2769,14 @@ void dibuixa_Escena() {
 	else if (mostrarColisionadores && !editorEscenas.Activo())
 		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
 
+	// Multijugador: jugadores remotos (el local NUNCA se dibuja) y objeto compartido de prueba.
+	if (redJuego.Activa() && !editorEscenas.Activo())
+	{
+		netjuego::DibujarAvataresRemotos(eixos_programID, ProjectionMatrix, ViewMatrix, redJuego.RemotosParaDibujar(glfwGetTime()),
+			redJuego.Objeto().conocido, redJuego.PosicionVisualObjeto(), redJuego.SoyDuenoDelObjeto(),
+			redJuego.Objeto().dueno != netjuego::kSinDueno);
+	}
+
 	// Dibujar el rayo láser del mando derecho en VR.
 	dibujarRayoMandoVR();
 }
@@ -2637,6 +3088,89 @@ enum EstadoJuego {
 
 EstadoJuego estadoActual = ESTADO_MENU_PRINCIPAL;
 
+// Panel de multijugador: seleccion Offline/Host/Cliente, IP y puerto, y diagnostico. Offline es el valor por defecto.
+static void dibujarPanelRed()
+{
+	using netjuego::FaseRed;
+	const netjuego::Diagnostico d = redJuego.ObtenerDiagnostico();
+	ImGui::SetNextWindowPos(ImVec2(12.0f, 12.0f), ImGuiCond_FirstUseEver);
+	ImGui::SetNextWindowSize(ImVec2(360.0f, 0.0f), ImGuiCond_FirstUseEver);
+	ImGui::Begin("Multijugador", &mostrarPanelRed);
+	ImGui::Text("Modo: %s | Estado: %s", d.modo.c_str(), d.estado.c_str());
+	if (d.fase != FaseRed::Offline)
+	{
+		if (d.modo == "Host") ImGui::Text("Escucha UDP: %s:%u (todas las interfaces)", d.endpoint.c_str(), static_cast<unsigned>(d.puerto));
+		else ImGui::Text("Servidor: %s:%u", d.endpoint.c_str(), static_cast<unsigned>(d.puerto));
+	}
+	if (!d.mensaje.empty()) ImGui::TextWrapped("%s", d.mensaje.c_str());
+	const bool libre = d.fase == FaseRed::Offline || d.fase == FaseRed::Error;
+	static int modo = -1; static char ip[64]; static int puerto = netjuego::kPuertoPorDefecto; static char nombre[33];
+	static std::string errorEntrada;
+	if (modo < 0)
+	{
+		modo = configRedPendiente.rol == net::Role::Host ? 1 : (configRedPendiente.rol == net::Role::Client ? 2 : 0);
+		netjuego::UltimoEndpoint ultimo;
+		const bool hayUltimo = netjuego::CargarUltimoEndpoint(ultimo);
+		const std::string& hostInicial = configRedPendiente.rol == net::Role::Client ? configRedPendiente.host : (hayUltimo ? ultimo.host : configRedPendiente.host);
+		std::snprintf(ip, sizeof ip, "%s", hostInicial.c_str());
+		std::snprintf(nombre, sizeof nombre, "%s", configRedPendiente.nombre.c_str());
+		puerto = configRedPendiente.rol == net::Role::Client || configRedPendiente.rol == net::Role::Host
+			? configRedPendiente.puerto : (hayUltimo ? ultimo.puerto : configRedPendiente.puerto);
+	}
+	if (libre)
+	{
+		ImGui::RadioButton("Offline", &modo, 0); ImGui::SameLine();
+		ImGui::RadioButton("Host", &modo, 1); ImGui::SameLine();
+		ImGui::RadioButton("Cliente", &modo, 2);
+		if (modo == 2) ImGui::InputText("IP del host", ip, sizeof ip);
+		if (modo != 0)
+		{
+			ImGui::InputInt("Puerto", &puerto);
+			ImGui::InputText("Nombre", nombre, sizeof nombre);
+			static int enet = -1;
+			if (enet < 0) enet = netjuego::RedJuego::EnetDisponible() ? 1 : 0;   // solo al elegir red; no inicializa ENet
+			if (!enet) ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "ENet no incluido en esta compilacion.");
+			if (!errorEntrada.empty()) ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "%s", errorEntrada.c_str());
+			if (ImGui::Button("Iniciar"))
+			{
+				errorEntrada.clear();
+				netjuego::ConfigRed cfg;
+				cfg.rol = modo == 1 ? net::Role::Host : net::Role::Client;
+				cfg.nombre = nombre[0] ? nombre : "jugador";
+				std::string error;
+				if (!netjuego::PuertoValido(puerto)) errorEntrada = "Puerto fuera de rango: usa un valor entre 1 y 65535.";
+				else if (cfg.rol == net::Role::Client && !netjuego::ParsearEndpoint(std::string(ip) + ":" + std::to_string(puerto), cfg.host, cfg.puerto, error))
+					errorEntrada = error;
+				else
+				{
+					cfg.puerto = static_cast<uint16_t>(puerto);
+					if (cfg.rol == net::Role::Client)
+					{
+						std::string errorGuardado;
+						if (!netjuego::GuardarUltimoEndpoint({ cfg.host, cfg.puerto }, errorGuardado))
+							errorEntrada = "No se guardo la ultima direccion: " + errorGuardado;
+					}
+					configRedPendiente = cfg; iniciarRed(cfg);
+				}
+			}
+		}
+	}
+	else if (ImGui::Button(d.fase == FaseRed::Arrancando ? "Cancelar" : "Desconectar")) detenerRed();
+	if (d.fase == FaseRed::Activa)
+	{
+		ImGui::Separator();
+		ImGui::Text("Escena: %s | peer local: %u", d.escena.c_str(), static_cast<unsigned>(d.peerLocal));
+		ImGui::Text("Remotos: %zu | puertas en red: %zu", d.remotos, d.puertasEnRed);
+		ImGui::Text("Eventos ignorados: %zu | descartados: %zu", d.eventosIgnorados, d.eventosDescartados);
+		const auto& obj = redJuego.Objeto();
+		if (obj.conocido)
+			ImGui::Text("Objeto compartido: %s", obj.dueno == netjuego::kSinDueno ? "libre"
+				: (redJuego.SoyDuenoDelObjeto() ? "lo tengo yo" : "en manos de otro jugador"));
+		ImGui::TextUnformatted("E / gatillo apuntando al cubo amarillo: coger o soltar.");
+	}
+	ImGui::End();
+}
+
 void draw_Menu_ImGui()
 {
 	// Start the Dear ImGui frame
@@ -2775,6 +3309,8 @@ void draw_Menu_ImGui()
 		ImGui::PopStyleColor(2);
 		ImGui::PopStyleVar(2);
 	}
+
+	if (mostrarPanelRed) dibujarPanelRed();
 
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
@@ -3006,7 +3542,7 @@ void draw_Menu_ImGui()
 			ImGui::PushID(objeto.id.c_str());   // cada fila necesita un ID distinto para sus botones
 			if (ImGui::Button("Abrir")) glb::IniciarAnimacion(objeto);     // depuración: reinicia la apertura
 			ImGui::SameLine();
-			if (ImGui::Button("Alternar")) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
+			if (ImGui::Button("Alternar") && !redJuego.EsCliente()) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
 			ImGui::SameLine();
 			ImGui::Text("%s  %s  %.2f / %.2f s", objeto.id.c_str(), glb::NombreDelEstado(objeto.estado),
 				objeto.reproductor.tiempo, objeto.reproductor.duracion);
@@ -5745,6 +6281,15 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	// EntornVGI.ImGui: Test si events de mouse han sigut filtrats per ImGui (io.WantCaptureMouse)
 	// (1) ALWAYS forward mouse data to ImGui! This is automatic with default backends. With your own backend:
 	ImGuiIO& io = ImGui::GetIO();
+	// F4 es global: el panel se puede recuperar desde PLAY, EDIT, pausa o VR,
+	// incluso cuando los paneles de depuracion estan cerrados.
+	if (key == GLFW_KEY_F4 && action == GLFW_PRESS && mods == 0 &&
+		!io.WantTextInput)
+	{
+		mostrarPanelRed = !mostrarPanelRed;
+		sincronizarCursorFPS(window);
+		return;
+	}
 	if (key == GLFW_KEY_E && action == GLFW_RELEASE && cargaLanzamientoActiva)
 	{
 		if (entradaFPSActiva() && !io.WantTextInput && !io.WantCaptureKeyboard &&
@@ -5762,6 +6307,11 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		!io.WantTextInput &&
 		estadoActual != ESTADO_MENU_PRINCIPAL)
 	{
+		if (redJuego.EnRed() && redJuego.EsCliente())
+		{
+			editorEscenas.InformarEstado("Solo el host puede editar la escena compartida.", true);
+			return;
+		}
 		editorEscenas.Atajo(key, action, mods, false);
 		sincronizarCursorFPS(window);
 		return;
@@ -5834,7 +6384,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
 			!gestorOpenXR.SesionEnMarcha())
 		{
-			if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+			if (jugadorTieneAgarre()) iniciarCargaLanzamiento();
 			else interactuar();
 		}
 		return;
@@ -8442,6 +8992,20 @@ int main(int argc, char** argv)
 {
 	SetWorkingDirectoryToAssetRoot(argc > 0 ? argv[0] : nullptr);
 	audioManager.init();
+	{	// Red: --host [--port N] | --connect HOST[:PUERTO] [--name N]. Sin argumentos: OFFLINE.
+		std::string errorRed;
+		if (!netjuego::ParsearArgumentos(argc, argv, configRedPendiente, errorRed))
+		{
+			std::cerr << "Argumentos de red ignorados: " << errorRed << std::endl;
+			configRedPendiente = netjuego::ConfigRed{};
+		}
+		else if (configRedPendiente.rol == net::Role::Client)
+		{
+			std::string errorGuardado;
+			if (!netjuego::GuardarUltimoEndpoint({ configRedPendiente.host, configRedPendiente.puerto }, errorGuardado))
+				std::cerr << "Red: no se guardo la ultima direccion: " << errorGuardado << std::endl;
+		}
+	}
 
 // Entorn VGI. Timer: Variables
 	float time = elapsedTime;
@@ -8637,6 +9201,8 @@ int main(int argc, char** argv)
 		glfwTerminate();
 		return EXIT_FAILURE;
 	}
+	// Red solo si se pidio por linea de comandos (--host / --connect); por defecto sigue OFFLINE.
+	if (configRedPendiente.rol != net::Role::Offline) iniciarRed(configRedPendiente);
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
 	OnFramebufferSize(window, w, h);
@@ -8754,7 +9320,7 @@ int main(int argc, char** argv)
 			{
 				if (gestorOpenXR.GatilloRecienPulsado())
 				{
-					if (escenaFisica->HayAgarre()) iniciarCargaLanzamiento();
+			if (jugadorTieneAgarre()) iniciarCargaLanzamiento();
 					else interactuar();
 				}
 				if (gestorOpenXR.GatilloRecienSoltado() && cargaLanzamientoActiva)
@@ -8771,6 +9337,9 @@ int main(int argc, char** argv)
 			sincronizarJugadorYCamara();
 			actualizarBalanceoVisual(static_cast<float>(delta));
 		}
+
+		// Red: los mensajes se aplican aqui (hilo de juego). Offline: no hace nada.
+		actualizarRed(glfwGetTime(), estadoActual == ESTADO_JUGANDO);
 
 		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
 		actualizarHiriti(estadoActual == ESTADO_JUGANDO &&
@@ -8822,7 +9391,15 @@ int main(int argc, char** argv)
 				editorEscenas.Activar(true);
 			}
 			else
+			{
 				mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+				if (redJuego.Activa() && redJuego.EsHost())
+				{
+					std::vector<netjuego::EstadoObjetoEscena> estados;
+					if (!capturarEstadoEscenaRed(estados) || !redJuego.FijarEstadoEscena(estados, true))
+						editorEscenas.InformarEstado("La sesión solo replica objetos existentes; no se sincronizaron altas, bajas o IDs no válidos.", true);
+				}
+			}
 			// Sin saltos: se descartan el ultimo cursor, los deltas del raton y la referencia del balanceo.
 			fpsTienePosicionAnterior = false;
 			mouseDeltaX = mouseDeltaY = 0.0;
@@ -8923,6 +9500,7 @@ int main(int argc, char** argv)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
+	redJuego.Detener();           // cierra la red (si la hay) antes que la ventana
 	gestorOpenXR.Desactivar();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
 	NFD_QuitCompat();
 
@@ -8935,6 +9513,7 @@ int main(int argc, char** argv)
 	mundoFisico.EliminarJugador();
 	escenaFisica.reset();                       // quita las colisiones de la habitacion antes de cerrar
 	fisica::LiberarDibujoColisionadores();
+	netjuego::LiberarDibujoAvatares();
 
 	if (phoneOBJ != nullptr)
 	{

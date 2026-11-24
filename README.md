@@ -39,7 +39,7 @@ permiso, también se pueden llamar directamente con `./run-linux.sh` o
 
 Instala Visual Studio 2026 con los componentes **Desarrollo de escritorio con
 C++**, **MSVC x64**, **Windows SDK**, **CMake** y **Ninja**. El proyecto utiliza
-`vcpkg.json` para gestionar GLFW, GLEW, GLM, Bullet Physics (`bullet3`), stb y Native File Dialog Extended.
+`vcpkg.json` para gestionar GLFW, GLEW, GLM, Bullet Physics (`bullet3`), ENet (`enet`, multijugador LAN, ver `docs/MULTIJUGADOR_LAN.md`) y Native File Dialog Extended.
 
 En el equipo donde se preparó el lanzador se detecta Visual Studio en
 `D:\Visual Studio` y vcpkg en `D:\Visual Studio\VC\vcpkg`. También se
@@ -71,7 +71,7 @@ Instala las dependencias una sola vez:
 ```bash
 sudo apt update
 sudo apt install -y build-essential cmake ninja-build pkg-config \
-    libgl1-mesa-dev libglfw3-dev libglew-dev libglm-dev libbullet-dev libopenxr-dev libgtk-3-dev libstb-dev
+    libgl1-mesa-dev libglfw3-dev libglew-dev libglm-dev libbullet-dev libopenxr-dev libenet-dev libgtk-3-dev libstb-dev
 ```
 
 Después, desde la raíz del repositorio:

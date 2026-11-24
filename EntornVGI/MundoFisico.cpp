@@ -10,6 +10,7 @@
 #include <algorithm>
 #include <cmath>
 #include <limits>
+#include <map>
 
 namespace fisica
 {
@@ -66,6 +67,7 @@ namespace fisica
 		// Cuerpo que lleva "en la mano" el jugador (CuerpoInvalido = ninguno) y hacia dónde va.
 		IdCuerpo cuerpoSujeto = CuerpoInvalido;
 		glm::vec3 destinoSujecion{ 0.0f };
+		std::map<IdCuerpo, glm::vec3> destinosSujecion;
 
 		// Guarda el cuerpo en el primer hueco libre (un cuerpo eliminado deja un hueco) y
 		// devuelve su id. Así los ids de los demás cuerpos nunca cambian.
@@ -134,15 +136,18 @@ namespace fisica
 
 	void MundoFisico::ImpulsarCuerpoSujeto()
 	{
-		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(impl->cuerpoSujeto));
-		if (cuerpo == nullptr) return;
-		// Velocidad que llevaría el cuerpo hasta la mano en UN paso, recortada al máximo.
-		glm::vec3 velocidad = (impl->destinoSujecion - AGlm(cuerpo->getWorldTransform().getOrigin())) / PasoFijo;
-		const float rapidez = glm::length(velocidad);
-		if (rapidez > VelocidadMaximaDeSujecion) velocidad *= VelocidadMaximaDeSujecion / rapidez;
-		cuerpo->activate(true);                              // un cuerpo "dormido" ignoraría la velocidad
-		cuerpo->setLinearVelocity(ABullet(velocidad));
-		cuerpo->setAngularVelocity(btVector3(0, 0, 0));      // no gira solo mientras se sujeta
+		for (const auto& sujecion : impl->destinosSujecion)
+		{
+			btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(sujecion.first));
+			if (cuerpo == nullptr) continue;
+			// Velocidad que llevaría el cuerpo hasta la mano en UN paso, recortada al máximo.
+			glm::vec3 velocidad = (sujecion.second - AGlm(cuerpo->getWorldTransform().getOrigin())) / PasoFijo;
+			const float rapidez = glm::length(velocidad);
+			if (rapidez > VelocidadMaximaDeSujecion) velocidad *= VelocidadMaximaDeSujecion / rapidez;
+			cuerpo->activate(true);
+			cuerpo->setLinearVelocity(ABullet(velocidad));
+			cuerpo->setAngularVelocity(btVector3(0, 0, 0));
+		}
 	}
 
 	void MundoFisico::EmpujarRebotadores()
@@ -357,6 +362,7 @@ namespace fisica
 	{
 		if (impl->Buscar(id) == nullptr) return;
 		if (id == impl->cuerpoSujeto) impl->cuerpoSujeto = CuerpoInvalido;   // no dejar un agarre colgando
+		impl->destinosSujecion.erase(id);
 		Impl::Cuerpo& c = impl->cuerpos[id];
 		impl->mundo.removeRigidBody(c.cuerpo.get());   // primero se saca del mundo...
 		c.cuerpo.reset();                              // ...y luego se libera (cuerpo, estado, forma)
@@ -407,11 +413,39 @@ namespace fisica
 		}
 		return false;
 	}
+	glm::vec3 MundoFisico::VelocidadAngularDe(IdCuerpo id) const
+	{
+		const btRigidBody* cuerpo = impl->Buscar(id);
+		return cuerpo ? AGlm(cuerpo->getAngularVelocity()) : glm::vec3(0.0f);
+	}
 
 	bool MundoFisico::EstaDormido(IdCuerpo id) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);
 		return cuerpo != nullptr && cuerpo->getActivationState() == ISLAND_SLEEPING;
+	}
+
+	bool MundoFisico::EstaActivo(IdCuerpo id) const
+	{
+		const btRigidBody* cuerpo = impl->Buscar(id);
+		return cuerpo != nullptr && cuerpo->isActive();
+	}
+
+	bool MundoFisico::FijarPoseCinematica(IdCuerpo id, const glm::vec3& posicion, const glm::quat& rotacion)
+	{
+		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
+		if (!cuerpo || impl->cuerpos[id].tipo != TipoCuerpo::Cinematico ||
+			!std::isfinite(posicion.x + posicion.y + posicion.z) || !std::isfinite(rotacion.x + rotacion.y + rotacion.z + rotacion.w)) return false;
+		btTransform transformacion; transformacion.setIdentity();
+		transformacion.setOrigin(ABullet(posicion));
+		const glm::quat q = glm::normalize(rotacion);
+		transformacion.setRotation(btQuaternion(q.x, q.y, q.z, q.w));
+		cuerpo->setWorldTransform(transformacion);
+		cuerpo->setInterpolationWorldTransform(transformacion);
+		if (cuerpo->getMotionState()) cuerpo->getMotionState()->setWorldTransform(transformacion);
+		impl->mundo.updateSingleAabb(cuerpo);
+		cuerpo->activate(true);
+		return true;
 	}
 
 	void MundoFisico::EliminarTodosLosCuerpos()
@@ -751,14 +785,9 @@ namespace fisica
 	{
 		if (!EsDinamico(id)) return false;
 		SoltarCuerpoSujeto();
-		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
-		// La gravedad del mundo se desactiva SOLO para este cuerpo: el indicador evita que
-		// btDiscreteDynamicsWorld::setGravity se la vuelva a poner.
-		cuerpo->setFlags(cuerpo->getFlags() | BT_DISABLE_WORLD_GRAVITY);
-		cuerpo->setGravity(btVector3(0, 0, 0));
-		cuerpo->activate(true);
+		if (!SujetarCuerpoAutoritativo(id)) return false;
 		impl->cuerpoSujeto = id;
-		impl->destinoSujecion = AGlm(cuerpo->getWorldTransform().getOrigin());   // empieza quieto
+		impl->destinoSujecion = AGlm(impl->Buscar(id)->getWorldTransform().getOrigin());
 		return true;
 	}
 
@@ -769,9 +798,32 @@ namespace fisica
 
 	bool MundoFisico::LanzarCuerpoSujeto(const glm::vec3& velocidad)
 	{
-		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(impl->cuerpoSujeto));
+		const IdCuerpo id = impl->cuerpoSujeto;
 		impl->cuerpoSujeto = CuerpoInvalido;
-		if (cuerpo == nullptr) return false;
+		return SoltarCuerpoAutoritativo(id, velocidad);
+	}
+
+	bool MundoFisico::SujetarCuerpoAutoritativo(IdCuerpo id)
+	{
+		if (!EsDinamico(id) || EstaSujeto(id)) return false;
+		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
+		cuerpo->setFlags(cuerpo->getFlags() | BT_DISABLE_WORLD_GRAVITY);
+		cuerpo->setGravity(btVector3(0, 0, 0));
+		cuerpo->activate(true);
+		impl->destinosSujecion[id] = AGlm(cuerpo->getWorldTransform().getOrigin());
+		return true;
+	}
+
+	void MundoFisico::FijarDestinoDeSujecion(IdCuerpo id, const glm::vec3& destino)
+	{
+		auto it = impl->destinosSujecion.find(id);
+		if (it != impl->destinosSujecion.end() && std::isfinite(destino.x + destino.y + destino.z)) it->second = destino;
+	}
+
+	bool MundoFisico::SoltarCuerpoAutoritativo(IdCuerpo id, const glm::vec3& velocidad)
+	{
+		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
+		if (!cuerpo || impl->destinosSujecion.erase(id) == 0) return false;
 		cuerpo->setFlags(cuerpo->getFlags() & ~BT_DISABLE_WORLD_GRAVITY);
 		cuerpo->setGravity(impl->mundo.getGravity());
 		cuerpo->setLinearVelocity(ABullet(velocidad));
@@ -779,8 +831,14 @@ namespace fisica
 		return true;
 	}
 
+	bool MundoFisico::EstaSujeto(IdCuerpo id) const { return impl->destinosSujecion.find(id) != impl->destinosSujecion.end(); }
+
 	IdCuerpo MundoFisico::CuerpoSujeto() const { return impl->cuerpoSujeto; }
-	void MundoFisico::FijarDestinoDeSujecion(const glm::vec3& destino) { impl->destinoSujecion = destino; }
+	void MundoFisico::FijarDestinoDeSujecion(const glm::vec3& destino)
+	{
+		impl->destinoSujecion = destino;
+		if (impl->cuerpoSujeto != CuerpoInvalido) FijarDestinoDeSujecion(impl->cuerpoSujeto, destino);
+	}
 	glm::vec3 MundoFisico::DestinoDeSujecion() const { return impl->destinoSujecion; }
 
 	std::vector<glm::vec3> AristasDeCaja(const CajaColision& caja)

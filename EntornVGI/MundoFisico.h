@@ -132,9 +132,13 @@ namespace fisica
 		glm::vec3 VelocidadDe(IdCuerpo id) const;
 		// True si el cuerpo tiene al menos un punto de contacto activo con otro cuerpo.
 		bool HayContacto(IdCuerpo id) const;
+		glm::vec3 VelocidadAngularDe(IdCuerpo id) const;
 
 		// True si Bullet ha "dormido" el cuerpo porque lleva un rato quieto.
 		bool EstaDormido(IdCuerpo id) const;
+		bool EstaActivo(IdCuerpo id) const;
+		// Actualiza un cuerpo cinemático ya existente, sin reconstruir forma ni cuerpo.
+		bool FijarPoseCinematica(IdCuerpo id, const glm::vec3& posicion, const glm::quat& rotacion);
 
 		// Elimina todos los cuerpos pero conserva el mundo (se usa al reiniciar la demo).
 		void EliminarTodosLosCuerpos();
@@ -199,6 +203,10 @@ namespace fisica
 		void SoltarCuerpoSujeto();
 		// Suelta el cuerpo sujeto conservando la velocidad inicial indicada.
 		bool LanzarCuerpoSujeto(const glm::vec3& velocidad);
+		bool SujetarCuerpoAutoritativo(IdCuerpo id);
+		void FijarDestinoDeSujecion(IdCuerpo id, const glm::vec3& destino);
+		bool SoltarCuerpoAutoritativo(IdCuerpo id, const glm::vec3& velocidad = glm::vec3(0.0f));
+		bool EstaSujeto(IdCuerpo id) const;
 		IdCuerpo CuerpoSujeto() const;
 		// Punto del mundo hacia el que se lleva el cuerpo sujeto (se puede cambiar cada fotograma).
 		void FijarDestinoDeSujecion(const glm::vec3& destino);

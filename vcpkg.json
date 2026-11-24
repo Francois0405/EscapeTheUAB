@@ -9,6 +9,7 @@
     "bullet3",
     "stb",
     "nativefiledialog-extended",
+    "enet",
     {
       "name": "openxr-loader",
       "platform": "windows"

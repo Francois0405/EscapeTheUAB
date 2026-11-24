@@ -43,6 +43,13 @@ namespace fisica
 	class EscenaFisica
 	{
 	public:
+		struct EstadoDinamico
+		{
+			int indiceObjeto = -1;
+			PoseCuerpo pose;
+			glm::vec3 velocidad{ 0.0f }, velocidadAngular{ 0.0f };
+			bool activo = false, agarrado = false;
+		};
 		explicit EscenaFisica(MundoFisico& mundoCompartido) : mundo(mundoCompartido) {}
 		~EscenaFisica() { Vaciar(); }
 		EscenaFisica(const EscenaFisica&) = delete;
@@ -53,7 +60,7 @@ namespace fisica
 		// ya existían (escena anterior) no se tocan. Para cambiar de habitación: crear la nueva
 		// en otra EscenaFisica o llamar a Vaciar() antes.
 		bool Crear(const std::vector<SceneObject>& objetos, const glb::EscenaAnimada& animados,
-			const std::vector<SceneObjetoAnimado>& datosAnimados, std::string& error);
+			const std::vector<SceneObjetoAnimado>& datosAnimados, std::string& error, bool autoridadFisica = true);
 		bool ImpulsarObjetoDinamico(int indiceObjeto, const glm::vec3& impulso);
 		bool PosicionObjetoDinamico(int indiceObjeto, glm::vec3& posicion) const;
 		bool VelocidadObjetoDinamico(int indiceObjeto, glm::vec3& velocidad) const;
@@ -100,6 +107,11 @@ namespace fisica
 		bool HayAgarre() const;
 		// Índice (en la lista de la escena) del objeto que se sujeta, o -1.
 		int ObjetoAgarrado() const;
+		bool SujetarDinamicoRemoto(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion);
+		void ActualizarAgarreRemoto(int indiceObjeto, const glm::vec3& destino);
+		bool SoltarDinamicoRemoto(int indiceObjeto, const glm::vec3& velocidad);
+		bool AplicarEstadoReplicado(const EstadoDinamico& estado);
+		void CapturarEstadosDinamicos(std::vector<EstadoDinamico>& salida) const;
 
 		int NumeroDeCuerpos() const { return static_cast<int>(todos.size()); }
 		int NumeroDeDinamicos() const { return static_cast<int>(dinamicos.size()); }
@@ -133,5 +145,6 @@ namespace fisica
 		std::vector<IdCuerpo> todos;          // todo lo que hay que quitar en Vaciar()
 		std::vector<Dinamico> dinamicos;
 		std::vector<Colision> colisionesNodo;
+		bool autoridadFisica = true;
 	};
 }
