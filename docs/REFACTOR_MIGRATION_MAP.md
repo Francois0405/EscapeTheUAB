@@ -2,7 +2,9 @@
 
 Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fechado el 2026-11-25. El contexto, los contratos, los no objetivos y las marcas de evidencia ([C], [H], [D], [P]) están en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas; P3 iniciada, con el corte S3 integrado en `0ccaea3` (§9). P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
+**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas; P3 iniciada, con los cortes S3 (`0ccaea3`, §9) y S4 (`fe4d7da`, §10) integrados. P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
+
+El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cortes S1 a S10 están en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md). Es un objetivo, no está realizado. **Enmienda pendiente:** [ARCHITECTURE.md](ARCHITECTURE.md) (§1.2, §1.4 y §7) todavía dice que los ficheros y recursos no se mueven en las primeras etapas; no se ha editado.
 
 ## 1. Estado de partida
 
@@ -12,12 +14,13 @@ Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fec
 - La extracción de bibliotecas de P2 está integrada en la rama local `refactor/project-architecture` como `4418c2d08c1186ce896309c9487315a9e3ec4a21`, a partir de `0aa6329` en `itsCarlosDev/cmake-core-libraries-codex` [C]. Detalle, evidencia y límites en §6.4.
 - **Las líneas base de P1 siguen incompletas**, en particular las capturas y las referencias de ejecución. La puerta de P2 compara contra ellas.
 - P3 se ha iniciado, al amparo de la autorización provisional, con la puerta de P2 abierta y P1 incompleta: el corte S3 (`RemotePhysicsTimeline`) está integrado como `0ccaea3` (§9).
+- El corte S4 (mezcla de réplica y transición a dormido) está integrado como `fe4d7da` (§10).
 - Conviene coordinar antes de editar CMake o `main.cpp`.
 
 ## 2. Reglas
 
 1. Un solo ejecutable; el target sigue llamándose `EntornVGI` y la salida sigue en `build/<preset>/bin/`.
-2. Primero bibliotecas con los ficheros en su sitio; después costuras y pruebas; **mover ficheros al final**.
+2. Primero bibliotecas con los ficheros en su sitio; después costuras y pruebas; **mover ficheros al final**. Enmienda propuesta, pendiente de aprobación: un módulo que ya tenga target y pruebas puede moverse antes ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §3).
 3. Un commit (o una serie corta y contigua) por etapa, revertible, sin arreglos funcionales mezclados.
 4. Un único propietario de `main.cpp`, `main.h`, `EntornVGI/CMakeLists.txt` y `tests/CMakeLists.txt` por etapa.
 5. No se avanza con una puerta en rojo. Lo que no se ejecuta se declara como no ejecutado.
@@ -32,7 +35,7 @@ Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fec
 Procedimiento [P]:
 
 - Antes de abrir una etapa, anotar el SHA de partida.
-- Para deshacer, usar `git revert` de los commits de la etapa en orden inverso. No usar `reset --hard` ni reescribir ramas compartidas. Para el cambio de P2: `git revert 4418c2d` en `refactor/project-architecture` (SHA de partida: `8dc63b5`). Para el corte S3: `git revert 0ccaea3` (SHA de partida: `f9cd52b`), antes de revertir `4418c2d`.
+- Para deshacer, usar `git revert` de los commits de la etapa en orden inverso. No usar `reset --hard` ni reescribir ramas compartidas. Para el cambio de P2: `git revert 4418c2d` en `refactor/project-architecture` (SHA de partida: `8dc63b5`). Para el corte S4: `git revert fe4d7da` (SHA de partida: `7ace570`), antes de revertir `0ccaea3`. Para el corte S3: `git revert 0ccaea3` (SHA de partida: `f9cd52b`), antes de revertir `4418c2d`.
 - Si ya hay etapas posteriores encima, revertir primero las posteriores.
 - Tras revertir, configurar en un directorio de build limpio y repetir la puerta común.
 - El editor puede escribir en `EntornVGI/assets` (copia al árbol fuente). Revertir código no revierte escenas guardadas: revisar `git status` sobre `assets/` después de cada sesión de QA.
@@ -66,11 +69,11 @@ macOS, Linux y VR se declaran **no validados** mientras no se ejecuten en esas p
 | **P8. Gameplay** | Control del jugador, después interacción y agarre, después Hirity | Pruebas de P3 y QA offline |
 | **P9. Red** | Sincronización de escena, réplica cliente, autoridad del host. **Sin tocar el formato en cable** | Bytes e identidades de P1 idénticos; QA host/cliente |
 | **P10. Aplicación** | `main()` queda como composición; RAII conservando el orden de limpieza | Cierre limpio; editor con cambios sin guardar |
-| **P11. Mover ficheros** | `git mv` por módulo solo cuando su target y sus pruebas existan; actualizar CMake, pruebas, `.vscode` y documentación. Los recursos no se mueven | Build desde cero; revisar mayúsculas y Unicode |
-| **P12. Nombres** | Opcional y último, por módulo. Excluye IDs, claves JSON, protocolo, rutas de assets, textos de jugador y base VGI | Bytes e identidades sin cambios |
-| **Aparte** | Reorganizar assets, limpiar artefactos versionados, decidir sobre `.slnx`/`.vcxproj` | Decisión y rama propias |
+| **P11. Mover ficheros** | `git mv` por módulo solo cuando su target y sus pruebas existan; actualizar CMake, pruebas, `.vscode` y documentación. Enmienda (objetivo del usuario): los recursos **sí** se mueven en el árbol fuente, sin cambiar nombres ni la disposición de `bin/`; parte de los movimientos se adelanta como lotes B2 a B5 del [plan físico](REFACTOR_PHYSICAL_PLAN.md). El calendario y la enmienda de ARCHITECTURE.md están pendientes | Build desde cero; revisar mayúsculas y Unicode |
+| **P12. Nombres** | Último, por módulo. Enmienda (objetivo del usuario): deja de ser opcional para el código propio. Excluye IDs, claves JSON, protocolo, rutas de assets, textos de jugador y base VGI | Bytes e identidades sin cambios |
+| **Aparte** | Reorganizar el contenido de assets, limpiar artefactos versionados, decidir sobre `.slnx`/`.vcxproj` | Decisión y rama propias |
 
-P6 a P9 no empiezan sin las pruebas de P3 en verde y sin P4.
+P6 a P9 no empiezan sin las pruebas de P3 en verde y sin P4. Ajuste propuesto, pendiente de aprobación: P6 y P7 solo esperan a los cortes S1, S2 y S5 a S9; S10 va tras la QA de agarre en cliente y bloquea P8 en adelante ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §3).
 
 ### Correspondencia de origen a destino
 
@@ -177,7 +180,7 @@ Commit `4418c2d08c1186ce896309c9487315a9e3ec4a21` en `refactor/project-architect
 | Refactor con agarre de cliente sin verificar | Crítico | Líneas base de P1; QA de P0 abierta |
 | Autoridad, réplica y Hirity sin pruebas, con `static` locales y orden implícito | Crítico | P3; mover sin reescribir |
 | Cambiar nombre de escena, `id` o serialización | Alto | Identidades y bytes de P1 |
-| Mover assets rompe la raíz, las rutas literales y el destino del guardado | Alto | No se mueven |
+| Mover assets rompe la raíz, las rutas literales y el destino del guardado | Alto | Se mueven solo en B4, con variables de raíz, ficheros sonda y hashes de `bin/` ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §7) |
 | `main.h` con definiciones | Alto | P4 antes de extraer unidades que usen ese estado |
 | Orden de inicialización y destrucción | Alto | RAII solo en P10 |
 | Estado OpenGL implícito | Alto | Capturas por modo de shader |
@@ -193,7 +196,7 @@ Commit `4418c2d08c1186ce896309c9487315a9e3ec4a21` en `refactor/project-architect
 | P0 | Sin commit de superación | **No superada.** Dispensada solo para iniciar el refactor provisional y aislado | Agarre y lanzamiento de objeto normal desde el cliente, paridad visual host/cliente, reanudación de Hirity y el resto de la QA de ARCHITECTURE.md §2 |
 | P1 | Sin commit | **Incompleta** | Líneas base completas de capturas y ejecución, y el resto de referencias de §5 sin registrar |
 | P2 | `4418c2d` (origen `0aa6329`) | Extracción de bibliotecas completada e integrada; Debug y Release compilan y CTest 21/21 en ambas, según el supervisor (§6.4) | Build limpio, arranque desde `bin/`, guardado del editor y comparación con P1 |
-| P3 | `0ccaea3` (origen `7c8b174`), solo corte S3 | **Parcial.** `RemotePhysicsTimeline` integrado; Debug y Release PASS y CTest 21/21 en ambas, según el coordinador (§9) | Autoridad de agarre, resto de la aplicación de réplicas, `identificadorEscenaRed`, máquina de Hirity, pruebas de enlace de shaders, repeticiones de red y QA de gameplay |
+| P3 | `0ccaea3` (origen `7c8b174`), corte S3; `fe4d7da` (origen `943e658`), corte S4 | **Parcial.** S3 y S4 integrados; evidencia informada por el coordinador en §9 y §10 | Cortes S1, S2 y S5 a S10, pruebas de enlace de shaders y QA de gameplay y gráfica |
 
 ## 9. P3, corte S3: `RemotePhysicsTimeline` (2026-11-25)
 
@@ -227,3 +230,36 @@ S3 es la etiqueta de coordinación de este corte; no implica que existan otros c
 **Sin evidencia registrada:** `NetJuegoTests --repeat until-fail:20` y `ENetLoopbackTests --repeat until-fail:10` (§4 los pide para cambios de red), arranque del juego desde `bin/` y comparación con las líneas base de P1.
 
 **Pendiente:** pruebas gráficas y de gameplay, incluida la réplica en cliente; compilación y prueba en Linux y macOS; OpenXR con hardware. **Es un avance arquitectónico provisional: no es un GO funcional ni autoriza consolidar o publicar en `master`.**
+
+## 10. P3, corte S4: mezcla de réplica y transición a dormido (2026-11-25)
+
+Commit `fe4d7da4679f24ed7b912d11b92fd0285d0bcc00` en `refactor/project-architecture`; commit de origen `943e6581e97cd39a0fa289f6e7e6d34ea2d6c7c4`. Es un cherry-pick con el mismo patch-id estable (`7b6478ec…`) [C]. Los árboles de ambos commits difieren solo en `docs/REFACTOR_MIGRATION_MAP.md`, por el commit documental `7ace570` situado entre sus padres [C].
+
+**Cambios [C]**
+
+| Fichero | Cambio |
+|---|---|
+| `EntornVGI/Network/Game/HostPhysicsPublication.h` (nuevo) | `netjuego::publication::ObserveHostSleepTransition`: devuelve verdadero solo en la transición de despierto a dormido |
+| `EntornVGI/Network/Game/RemotePhysicsTimeline.h` | `RemotePhysicsPose`, `RemotePhysicsBlendFactor` y `BlendRemotePhysicsPose` |
+| `EntornVGI/main.cpp` | Sustituye ambos bloques por llamadas a las cabeceras. Pasa de 10 170 a 10 171 líneas |
+| `tests/NetJuegoTests.cpp` | Comprobaciones nuevas: delta 0 (posición y rotación), factor literal 0,834701 con delta 0,1, pose mezclada, primera observación, repeticiones, transición e IDs independientes |
+
+No cambia ningún fichero CMake; CTest sigue en 21 pruebas.
+
+**Equivalencia por lectura [C]:** misma fórmula `1 - exp(-18*delta)`, mismas llamadas `mix` y `slerp` y misma regla de transición. Las guardas del llamador (`flags & 1` y objeto local encontrado) siguen en `main.cpp` y no tienen prueba automática. `ultimoTiempoFisica` sigue sin reiniciarse entre sesiones (comportamiento previo). Las pruebas llegan en el mismo commit, así que tampoco aquí se cumple el «verde antes y después» de P3.
+
+**Evidencia del corte de origen (`943e658`), informada; no reejecutada al redactar este documento**
+
+| Comprobación | Resultado informado | Sobre qué se hizo, según los mensajes de coordinación |
+|---|---|---|
+| Lanzadores oficiales Debug y Release | PASS | Árbol revisado **antes** de crear el commit: comunicado a las 15:25:06Z; `943e658` es de las 15:29:50Z |
+| CTest Debug y Release | 21/21 en ambas | El mismo árbol sin confirmar |
+| Revisión estática de Claude | Sin bloqueos (NO BLOCKERS) | Diff sin confirmar sobre `0ccaea3` |
+| `NetJuegoTests` repetido 20 veces, Debug y Release | PASS | SHA de ejecución no indicado (comunicado a las 15:31:20Z) |
+| `ENetLoopbackTests` repetido 10 veces, Debug y Release | PASS | SHA de ejecución no indicado (comunicado a las 15:31:20Z) |
+
+El coordinador presenta esta evidencia como la del corte de origen. Durante la revisión, `HostPhysicsPublication.h` aún no estaba versionado y se advirtió que debía incluirse; está presente en `fe4d7da` [C].
+
+**Sobre `fe4d7da`:** este registro no contiene una ejecución propia. La evidencia se traslada porque el parche de `943e658` y el de `fe4d7da` son equivalentes y entre ambos árboles solo cambia documentación, no por haberla repetido.
+
+**Pendiente:** QA gráfica y de gameplay (incluida la réplica en cliente), comparación con las líneas base de P1, Linux, macOS y OpenXR. **No es un GO funcional ni autoriza consolidar o publicar en `master`.**
