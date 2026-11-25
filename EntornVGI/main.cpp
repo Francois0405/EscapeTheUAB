@@ -16,6 +16,7 @@
 #include "src/rendering/shader.h"
 #include "src/rendering/visualitzacio.h"
 #include "src/rendering/LegacyVgiGeometryControls.h"
+#include "src/rendering/LegacyVgiSceneRenderer.h"
 #include "src/rendering/LegacyVgiViewControls.h"
 #include "src/rendering/RuntimeRenderControls.h"
 #include "src/rendering/RuntimeRenderer.h"
@@ -60,7 +61,6 @@
 #include <chrono>
 #include <sstream>
 #include "src/rendering/UniformCache.h"
-#include "src/rendering/FrustumCulling.h"
 #include "src/rendering/RenderMetrics.h"
 
 // CODI NOSTRE
@@ -1542,257 +1542,70 @@ namespace
 	}
 }
 
-// dibuixa_Escena: Funcio que crida al dibuix dels diferents elements de l'escana
-void dibuixa_Escena() {
-	const auto inicioEscena = std::chrono::steady_clock::now();
-	glcache::enabled = renderizadoOptimizado;
-	iniciarConsultaGpu();
-	actualizarOclusoresPhong();
-	glUseProgram(shader_programID);
-	glUniform1f(glcache::UniformLocation(shader_programID, "uIndirectIntensity"), intensidadIndirectaEscena);
-	glUniform1f(glcache::UniformLocation(shader_programID, "uIndirectAmbientBase"), intensidadAmbientalBaseEscena);
-	glUniform1f(glcache::UniformLocation(shader_programID, "uSceneDirectScale"), escalaLuzDirectaEscena);
-	glUniform1i(glcache::UniformLocation(shader_programID, "uLightingDebugMode"), modoDiagnosticoIluminacion);
-	glUniform3f(glcache::UniformLocation(shader_programID, "uIndirectFloorColor"),
-		colorReboteSueloEscena.r, colorReboteSueloEscena.g, colorReboteSueloEscena.b);
-	glUniform3f(glcache::UniformLocation(shader_programID, "uIndirectSkyColor"),
-		colorReboteCieloEscena.r, colorReboteCieloEscena.g, colorReboteCieloEscena.b);
-	glUniform1f(glcache::UniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
-	const bool renderizarMovil = modoJuegoFPS() && !editorEscenas.Activo() && mostrarMovil && phoneOBJ != nullptr;
-	glm::mat4 matrizMovilMundo(1.0f);
-	if (renderizarMovil)
-	{
-		glm::mat4 mundoMandoIzq(1.0f);
-		if (matrizMandoIzquierdoMundo(mundoMandoIzq))
-		{
-			// En VR: anclado al mando izquierdo
-			glm::mat4 ajusteLocal(1.0f);
-			ajusteLocal = glm::rotate(ajusteLocal, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-			ajusteLocal = glm::scale(ajusteLocal, glm::vec3(movilEscala));
-			matrizMovilMundo = mundoMandoIzq * ajusteLocal;
-		}
-		else
-		{
-			// En PC: anclado a la cámara
-			matrizMovilMundo = glm::inverse(ViewMatrix) * matrizLocalMovilActual();
-		}
-
-		actualizarLinternaMovil(matrizMovilMundo);
-	}
-
-	else llumGL[3].encesa = false;
-	glUniform1f(glcache::UniformLocation(shader_programID, "uDirtStrength"), 0.0f);
-	glUniform1f(glcache::UniformLocation(shader_programID, "uTextureEmission"), 0.0f);
-	glUniform1i(glcache::UniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
-
-
-	//glUseProgram(shader_programID);
-
-//	Dibuix SkyBox Cúbic.
-	// El Skybox se muestra en PLAY, pero no en EDIT.
-	if (SkyBoxCube && !editorEscenas.Activo())
-	{
-		dibuixa_Skybox(
-			skC_programID,
-			cubemapTexture,
-			Vis_Polar,
-			ProjectionMatrix,
-			ViewMatrix
-		);
-	}
-//	Dibuix Coordenades Món i Reixes.
-	dibuixa_Eixos(eixos_programID, eixos, eixos_Id, grid, hgrid, ProjectionMatrix, ViewMatrix);
-
-// Escalat d'objectes, per adequar-los a les vistes ortogràfiques (Pràctica 2)
-//	GTMatrix = glm::scale();
-
-	// Dibuja cada objeto de la habitacion con su transformacion.
-	if (!objetosEscena.empty())
-	{
-		for (std::size_t i = 0; i < objetosEscena.size(); ++i)
-		{
-			const SceneObject& obj = objetosEscena[i];
-			if (!editorEscenas.ObjetoVisible(i)) continue;   // visibilidad TEMPORAL de la vista de edicion
-			auto it = modelosHabitacion.find(obj.modelo);
-
-			if (it == modelosHabitacion.end())
-				continue;
-
-			// Un muro paramétrico se dibuja como paños generados al vuelo. El OBJ compartido
-			// sigue intacto y el material/UV de mundo se comparte entre todas las secciones.
-			std::vector<glm::mat4> matrices;
-			if (obj.pared.presente && !obj.pared.aperturas.empty())
-			{
-				std::vector<SceneSeccionPared> secciones;
-				std::string errorPared;
-				if (GenerarSeccionesPared(glm::abs(obj.escala), obj.pared.aperturas, secciones, errorPared))
-				{
-					const glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(obj.rotacion.z), glm::vec3(0, 0, 1));
-					for (const auto& seccion : secciones)
-					{
-						glm::mat4 m = glm::translate(glm::mat4(1.0f), obj.posicion + glm::vec3(giro * glm::vec4(seccion.centroLocal, 0.0f)));
-						m = glm::rotate(m, glm::radians(obj.rotacion.z), glm::vec3(0, 0, 1));
-						matrices.push_back(glm::scale(m, seccion.mitad));
-					}
-				}
-				else std::cerr << "Pared paramétrica '" << obj.id << "' inválida: " << errorPared << '\n';
-			}
-			if (matrices.empty()) matrices.push_back(editorEscenas.Activo()
-				? fisica::MatrizDeObjeto(obj) : escenaFisica->MatrizVisualDe(static_cast<int>(i), obj));
-			if (renderizadoOptimizado)
-			{
-				Vector3D minimo{}, maximo{};
-				if (it->second->GetLocalBounds(minimo, maximo))
-				{
-					const glm::vec3 lo(minimo.fX, minimo.fY, minimo.fZ), hi(maximo.fX, maximo.fY, maximo.fZ);
-					const glm::mat4 vp = ProjectionMatrix * ViewMatrix;
-					matrices.erase(std::remove_if(matrices.begin(), matrices.end(), [&](const glm::mat4& m)
-					{
-						const bool fuera = CajaFueraDeFrustum(vp, m, lo, hi);
-						if (renderMetrics::enabled) { if (fuera) ++renderMetrics::descartados; else ++renderMetrics::visibles; }
-						return fuera;
-					}), matrices.end());
-				}
-				else if (renderMetrics::enabled) ++renderMetrics::visibles;
-			}
-			else if (renderMetrics::enabled) ++renderMetrics::visibles;
-			if (matrices.empty()) continue;
-			const GLuint texturaOverride = texturaDeMaterial(obj.material);
-			const float rugosidad = std::clamp(obj.material.roughness, 0.0f, 1.0f);
-			const float brilloPhong = 4.0f + std::pow(1.0f - rugosidad, 4.0f) * 124.0f;
-			it->second->SetInstanceMaterialOverride(texturaOverride, obj.material.presente ? brilloPhong : -1.0f);
-			glUseProgram(shader_programID);
-			glUniform1i(glcache::UniformLocation(shader_programID, "uWorldTiling"),
-				obj.material.presente ? GL_TRUE : GL_FALSE);
-			glUniform2f(glcache::UniformLocation(shader_programID, "uWorldTileSize"),
-				obj.material.tileSize.x, obj.material.tileSize.y);
-			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtStrength"), obj.material.dirtStrength);
-			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtScale"), obj.material.dirtScale);
-			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtSeed"), obj.material.dirtSeed);
-			const float emisionLuminaria = obj.luz.presente
-				? (obj.luz.encendida && lamparasLaboratorioActivas ? 1.0f : 0.0f) : 1.0f;
-			glUniform1f(glcache::UniformLocation(shader_programID, "uLampEmissionScale"), emisionLuminaria);
-
-			for (const glm::mat4& matriz : matrices)
-				dibuixa_EscenaGL(
-					shader_programID, eixos, eixos_Id, grid, hgrid,
-					OBJOBJ, col_obj, sw_material,
-					true, texturesID, textura_map, tFlag_invert_Y,
-					npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-					it->second.get(), matriz
-				);
-			it->second->SetInstanceMaterialOverride(0, -1.0f);
-			glUniform1f(glcache::UniformLocation(shader_programID, "uLampEmissionScale"), 1.0f);
-			glUniform1i(glcache::UniformLocation(shader_programID, "uWorldTiling"), GL_FALSE);
-			glUniform1f(glcache::UniformLocation(shader_programID, "uDirtStrength"), 0.0f);
-
-		}
-
-	}
-	else
-	{
-		// Dibujar el objeto seleccionado cuando no hay una habitación cargada.
-		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, objecte, col_obj, sw_material,
-			textura, texturesID, textura_map, tFlag_invert_Y,
-			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-			ObOBJ, GTMatrix);
-	}
-
-	// DEMO FASE 1: la puerta usa el cubo test.obj ya cargado por la escena.
-	for (const auto& modelo : modelosHabitacion)
-	{
-		if (!modelo.first.ends_with("test.obj")) continue;
-		dibuixa_EscenaGL(
-			shader_programID, eixos, eixos_Id, grid, hgrid,
-			OBJOBJ, col_obj, sw_material,
-			false, texturesID, textura_map, tFlag_invert_Y,
-			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-			modelo.second.get(),
-			animacion::MatrizPuertaConBisagra(mitadTamanoPuertaDemo, bisagraPuertaDemo, anguloPuertaDemo)
-		);
-		break;
-	}
-
-	// DEMO FÍSICA: dibuja el cubo con la pose que calcula Bullet (reutiliza test.obj, de ±1 m).
-	if (demoFisica.EstaActiva())
-	{
-		for (const auto& modelo : modelosHabitacion)
-		{
-			if (!modelo.first.ends_with("test.obj")) continue;
-			const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
-			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
-			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
-				* glm::mat4_cast(pose.rotacion)
-				* glm::scale(glm::mat4(1.0f), demoFisica.MitadTamanoCubo());
-			dibuixa_EscenaGL(
-				shader_programID, eixos, eixos_Id, grid, hgrid,
-				OBJOBJ, col_obj, sw_material,
-				false, texturesID, textura_map, tFlag_invert_Y,
-				npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-				modelo.second.get(), matrizCubo
-			);
-			break;
-		}
-	}
-
-	// Objetos animados GLB (puertas...): mismo shader y cámara que el resto de la escena.
-	if (objetosAnimadosListos && editorEscenas.MostrarAnimados())
-	{
-		glUseProgram(shader_programID);
-		glb::DibujarObjetosAnimados(objetosAnimados, shader_programID, ProjectionMatrix * ViewMatrix, renderizadoOptimizado);
-	}
-
-	if (renderizarMovil)
-	{
-		const bool texturaAnterior = textura;
-		textura = true;
-		glUniform1i(glcache::UniformLocation(shader_programID, "uMobileSurface"), GL_TRUE);
-		glUniform1f(glcache::UniformLocation(shader_programID, "uTextureEmission"), 0.045f);
-		dibuixa_EscenaGL(shader_programID, eixos, eixos_Id, grid, hgrid, OBJOBJ, col_obj, sw_material,
-			textura, texturesID, textura_map, tFlag_invert_Y,
-			npts_T, PC_t, pas_CS, sw_Punts_Control, dibuixa_TriedreFrenet,
-			phoneOBJ, matrizMovilMundo);
-		glUniform1f(glcache::UniformLocation(shader_programID, "uTextureEmission"), 0.0f);
-		glUniform1i(glcache::UniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);
-		textura = texturaAnterior;
-	}
-
-	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
-	if (editorEscenas.Activo() && editorEscenas.MostrarColisionadores())
-	{
-		std::vector<fisica::CajaColision> cajasEditor;
-		for (std::size_t indiceObjeto = 0; indiceObjeto < objetosEscena.size(); ++indiceObjeto)
-		{
-			const SceneObject& objeto = objetosEscena[indiceObjeto];
-			if (!objeto.fisica.presente || !editorEscenas.ObjetoVisible(indiceObjeto)) continue;
-			glm::mat4 giro(1.0f);
-			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
-			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
-			giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
-			fisica::CajaColision caja;
-			caja.tipo = objeto.fisica.tipo;
-			caja.pose.posicion = objeto.posicion + glm::vec3(giro * glm::vec4(objeto.escala * objeto.fisica.desplazamiento, 0.0f));
-			caja.pose.rotacion = glm::quat_cast(glm::mat3(giro));
-			caja.mitadTamano = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
-			cajasEditor.push_back(caja);
-		}
-		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, cajasEditor);
-	}
-	else if (mostrarColisionadores && !editorEscenas.Activo())
-		fisica::DibujarColisionadores(eixos_programID, ProjectionMatrix, ViewMatrix, mundoFisico.CajasDeColision());
-
-	// Multijugador: jugadores remotos (el local NUNCA se dibuja) y objeto compartido de prueba.
-	if (redJuego.Activa() && !editorEscenas.Activo())
-	{
-		netjuego::DibujarAvataresRemotos(eixos_programID, ProjectionMatrix, ViewMatrix, redJuego.RemotosParaDibujar(glfwGetTime()),
-			redJuego.Objeto().conocido, redJuego.PosicionVisualObjeto(), redJuego.SoyDuenoDelObjeto(),
-			redJuego.Objeto().dueno != netjuego::kSinDueno);
-	}
-
-	// Dibujar el rayo láser del mando derecho en VR.
-	dibujarRayoMandoVR();
-	finalizarConsultaGpu();
-	if (renderMetrics::enabled) renderMetrics::escenaMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioEscena).count();
+void dibuixa_Escena()
+{
+	RenderLegacyVgiScene({
+		.shader_programID = shader_programID,
+		.eixos_programID = eixos_programID,
+		.eixos_Id = eixos_Id,
+		.ProjectionMatrix = ProjectionMatrix,
+		.ViewMatrix = ViewMatrix,
+		.SkyBoxCube = SkyBoxCube,
+		.skC_programID = skC_programID,
+		.cubemapTexture = cubemapTexture,
+		.Vis_Polar = Vis_Polar,
+		.eixos = eixos,
+		.grid = grid,
+		.hgrid = hgrid,
+		.objecte = objecte,
+		.col_obj = col_obj,
+		.sw_material = sw_material,
+		.textura = textura,
+		.texturesID = texturesID,
+		.textura_map = textura_map,
+		.tFlag_invert_Y = tFlag_invert_Y,
+		.npts_T = npts_T,
+		.PC_t = PC_t,
+		.pas_CS = pas_CS,
+		.sw_Punts_Control = sw_Punts_Control,
+		.dibuixa_TriedreFrenet = dibuixa_TriedreFrenet,
+		.ObOBJ = ObOBJ,
+		.GTMatrix = GTMatrix,
+		.renderizadoOptimizado = renderizadoOptimizado,
+		.intensidadIndirectaEscena = intensidadIndirectaEscena,
+		.intensidadAmbientalBaseEscena = intensidadAmbientalBaseEscena,
+		.escalaLuzDirectaEscena = escalaLuzDirectaEscena,
+		.modoDiagnosticoIluminacion = modoDiagnosticoIluminacion,
+		.colorReboteSueloEscena = colorReboteSueloEscena,
+		.colorReboteCieloEscena = colorReboteCieloEscena,
+		.lamparasLaboratorioActivas = lamparasLaboratorioActivas,
+		.llumGL = llumGL,
+		.mostrarMovil = mostrarMovil,
+		.phoneOBJ = phoneOBJ,
+		.movilEscala = movilEscala,
+		.objetosEscena = objetosEscena,
+		.modelosHabitacion = modelosHabitacion,
+		.editorEscenas = editorEscenas,
+		.escenaFisica = escenaFisica,
+		.mitadTamanoPuertaDemo = mitadTamanoPuertaDemo,
+		.bisagraPuertaDemo = bisagraPuertaDemo,
+		.anguloPuertaDemo = anguloPuertaDemo,
+		.demoFisica = demoFisica,
+		.objetosAnimadosListos = objetosAnimadosListos,
+		.objetosAnimados = objetosAnimados,
+		.mostrarColisionadores = mostrarColisionadores,
+		.mundoFisico = mundoFisico,
+		.redJuego = redJuego,
+		.iniciarConsultaGpu = iniciarConsultaGpu,
+		.actualizarOclusoresPhong = actualizarOclusoresPhong,
+		.modoJuegoFPS = modoJuegoFPS,
+		.matrizMandoIzquierdoMundo = matrizMandoIzquierdoMundo,
+		.matrizLocalMovilActual = matrizLocalMovilActual,
+		.actualizarLinternaMovil = actualizarLinternaMovil,
+		.texturaDeMaterial = texturaDeMaterial,
+		.dibujarRayoMandoVR = dibujarRayoMandoVR,
+		.finalizarConsultaGpu = finalizarConsultaGpu,
+	});
 }
 
 
