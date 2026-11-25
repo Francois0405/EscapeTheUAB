@@ -32,6 +32,7 @@
 #include "src/vr/VistaEstereo.h"
 #include "src/vr/OpenXRManager.h"
 #include "src/gameplay/player/MovimientoFPS.h"
+#include "src/gameplay/player/PlayerRuntime.h"
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/hirity/AnimacionHiriti.h"
 #include "src/gameplay/hirity/HiritiRuntime.h"
@@ -729,10 +730,8 @@ namespace
 		objetosAnimadosListos = false;
 	}
 
-	bool modoJuegoFPS()
-	{
-		return camera == CAM_NAVEGA && projeccio == PERSPECT;
-	}
+	gameplay::player::PlayerContext& contextoJugador();
+	bool modoJuegoFPS() { return gameplay::player::isFpsMode(contextoJugador()); }
 
 	void fijarCapturaCursor(GLFWwindow* window, bool capturar)
 	{
@@ -761,70 +760,33 @@ namespace
 	glm::vec3 colorReboteSueloEscena{ 0.42f, 0.46f, 0.43f };
 	glm::vec3 colorReboteCieloEscena{ 0.24f, 0.28f, 0.34f };
 	bool escenaTieneGeometriaValida = false;
+	bool entradaFPSActiva();
 
-	void fijarCamaraAlSpawn(const SceneSpawn& spawn)
+	gameplay::player::PlayerContext& contextoJugador()
 	{
-		const float alturaOjos = mundoFisico.HayJugador() ? mundoFisico.AlturaOjosJugador() : fisica::MedidasJugador::AlturaOjos;
-		const glm::vec3 ojos = spawn.pies + glm::vec3(0.0f, 0.0f, alturaOjos);
-		const glm::vec3 direccion = glm::normalize(spawn.direccion);
-		opvN.x = ojos.x; opvN.y = ojos.y; opvN.z = ojos.z;
-		n[0] = ojos.x + direccion.x;
-		n[1] = ojos.y + direccion.y;
-		n[2] = ojos.z + direccion.z;
-		angleZ = 0.0;
+		static gameplay::player::PlayerContext context{
+			mundoFisico, escenaFisica, escenaTieneGeometriaValida, spawnEscenaActiva, nombreEscenaActiva,
+			opvN, n, angleZ, camera, projeccio, CAM_NAVEGA, PERSPECT,
+			show_EntornVGI_window, oProjeccio, oCamera, oObjecte, oIlumina, oShader, ifixe, SkyBoxCube,
+			[] { OnProjeccioPerspectiva(); }, [] { OnCameraNavega(); }, [] { OnObjecteCub(); },
+			[] { OnShaderPhong(); }, [] { OnVistaSkyBox(); },
+			[] {
+				llumGL[0].encesa = true;
+				llumGL[0].difusa.r = 0.12f; llumGL[0].difusa.g = 0.15f; llumGL[0].difusa.b = 0.18f;
+				llumGL[0].especular.r = 0.03f; llumGL[0].especular.g = 0.03f; llumGL[0].especular.b = 0.03f;
+			},
+			 movimientoJugador, balanceoCamara, hayPiesFotogramaAnterior, piesFotogramaAnterior,
+			 pesoCaminata, faseCaminata, mouseSwayX, mouseSwayY, mouseDeltaX, mouseDeltaY, intensidadMouse,
+			 tiempoFPS, deltaFPS, [] { return entradaFPSActiva(); }
+		};
+		return context;
 	}
 
-	void aplicarPresetJuego()
-	{
-		show_EntornVGI_window = true;
-		oProjeccio = 3;
-		oCamera = 1;
-		oObjecte = 1;
-		oIlumina = 3;
+	void fijarCamaraAlSpawn(const SceneSpawn& spawn) { gameplay::player::fixCameraAtSpawn(contextoJugador(), spawn); }
 
-		OnProjeccioPerspectiva();
-		OnCameraNavega();
-		OnObjecteCub();
+	void aplicarPresetJuego() { gameplay::player::applyGamePreset(contextoJugador()); }
 
-		// Iluminación Phong: cálculo por fragmento.
-		OnShaderPhong();
-		oShader = 2;
-		oIlumina = 3;
-
-		// Interpretar las luces en coordenadas del mundo.
-		ifixe = true;
-
-		SkyBoxCube = true;
-		OnVistaSkyBox();
-
-		// Luz general tenue, azulada, para mantener algo de visibilidad.
-		llumGL[0].encesa = true;
-
-		llumGL[0].difusa.r = 0.12f;
-		llumGL[0].difusa.g = 0.15f;
-		llumGL[0].difusa.b = 0.18f;
-
-		llumGL[0].especular.r = 0.03f;
-		llumGL[0].especular.g = 0.03f;
-		llumGL[0].especular.b = 0.03f;
-	}
-
-	void inclinarJugadorFPS(double deltaY)
-	{
-		const double dx = n[0] - opvN.x;
-		const double dy = n[1] - opvN.y;
-		const double horizontal = sqrt(dx * dx + dy * dy);
-		if (horizontal == 0.0) return;
-
-		double inclinacion = atan2(n[2] - opvN.z, horizontal) - deltaY * 0.12 * PI / 180.0;
-		const double limite = 85.0 * PI / 180.0;
-		inclinacion = std::clamp(inclinacion, -limite, limite);
-		const double longitud = sqrt(dx * dx + dy * dy + (n[2] - opvN.z) * (n[2] - opvN.z));
-		const double factor = longitud * cos(inclinacion) / horizontal;
-		n[0] = opvN.x + dx * factor;
-		n[1] = opvN.y + dy * factor;
-		n[2] = opvN.z + longitud * sin(inclinacion);
-	}
+	void inclinarJugadorFPS(double deltaY) { gameplay::player::look(contextoJugador(), deltaY); }
 
 	// --- JUGADOR FÍSICO (Fase 3) ---------------------------------------------------------
 	// Reparto de trabajo (el mismo que se usará con VR):
@@ -943,101 +905,17 @@ namespace
 
 	// Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
 	// el suelo ya exista y el jugador no caiga al vacío.
-	bool crearJugadorFisico()
-	{
-		if (!escenaTieneGeometriaValida || !escenaFisica || escenaFisica->NumeroDeCuerpos() == 0)
-		{
-			std::cerr << "No se puede iniciar: la escena no tiene geometria fisica valida." << std::endl;
-			return false;
-		}
-		glm::vec3 pies, normalSuelo;
-		std::string error;
-		if (!mundoFisico.ValidarSpawnJugador(spawnEscenaActiva.pies, pies, normalSuelo, error))
-		{
-			std::cerr << "Spawn invalido para la escena '" << nombreEscenaActiva << "': " << error << std::endl;
-			return false;
-		}
-		spawnEscenaActiva.pies = pies;
-		if (mundoFisico.HayJugador())
-		{
-			if (!mundoFisico.ActualizarJugadorAgachado(false, 1.0f))
-			{
-				std::cerr << "No se puede reiniciar el spawn: hay un obstaculo sobre la capsula." << std::endl;
-				return false;
-			}
-			mundoFisico.TeletransportarJugador(pies);
-		}
-		else if (!mundoFisico.CrearJugador(pies))
-		{
-			std::cerr << "No se pudo crear la capsula Bullet del jugador." << std::endl;
-			return false;
-		}
-		fijarCamaraAlSpawn(spawnEscenaActiva);
-		std::cout << "Spawn validado: pies (" << pies.x << ", " << pies.y << ", " << pies.z
-			<< "), ojos Z=" << pies.z + mundoFisico.AlturaOjosJugador() << ", normal suelo ("
-			<< normalSuelo.x << ", " << normalSuelo.y << ", " << normalSuelo.z << ")." << std::endl;
-		return true;
-	}
+	bool crearJugadorFisico() { return gameplay::player::createPhysicsPlayer(contextoJugador()); }
 
 	// Convierte las teclas WASD en una velocidad horizontal DEL MUNDO (sin tocar la posición).
-	void moverJugadorFPS(GLFWwindow* window, double velocidadJugador)
-	{
-		const double dx = n[0] - opvN.x;
-		const double dy = n[1] - opvN.y;
-		const double longitud = sqrt(dx * dx + dy * dy);
-		if (longitud == 0.0) return;
-
-		const double delanteX = dx / longitud;
-		const double delanteY = dy / longitud;
-		double moverX = 0.0;
-		double moverY = 0.0;
-
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { moverX += delanteX; moverY += delanteY; }
-		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { moverX -= delanteX; moverY -= delanteY; }
-		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { moverX += delanteY; moverY -= delanteX; }
-		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { moverX -= delanteY; moverY += delanteX; }
-
-		const double distancia = sqrt(moverX * moverX + moverY * moverY);
-		if (distancia == 0.0) return;
-		// Normalizado: en diagonal no se va más rápido.
-		mundoFisico.FijarVelocidadJugador(glm::vec3(moverX / distancia * velocidadJugador,
-			moverY / distancia * velocidadJugador, 0.0));
-	}
+	void moverJugadorFPS(GLFWwindow* window, double velocidadJugador) { gameplay::player::moveFpsPlayer(contextoJugador(), window, velocidadJugador); }
 
 	// Después de simular: la cámara va a donde está la cápsula (conservando hacia dónde mira).
 	// Si NO estamos en modo FPS (cámaras de depuración), ocurre lo contrario: la cápsula sigue a la
 	// cámara, para que al volver al modo FPS esté donde toca y no haya un salto.
-	void sincronizarJugadorYCamara()
-	{
-		if (!mundoFisico.HayJugador()) return;
-		if (!modoJuegoFPS())
-		{
-			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
-			return;
-		}
-		const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
-		const double ojosX = pies.x, ojosY = pies.y, ojosZ = pies.z + mundoFisico.AlturaOjosJugador();
-		const double mueveX = ojosX - opvN.x, mueveY = ojosY - opvN.y, mueveZ = ojosZ - opvN.z;
-		opvN.x += mueveX;  opvN.y += mueveY;  opvN.z += mueveZ;
-		n[0] += mueveX;    n[1] += mueveY;    n[2] += mueveZ;   // el punto mirado se desplaza igual: la dirección no cambia
-	}
+	void sincronizarJugadorYCamara() { gameplay::player::synchronizePlayerAndCamera(contextoJugador()); }
 
-	void actualizarMovimientoMovil(GLFWwindow* window, float deltaTime)
-	{
-		deltaTime = std::clamp(deltaTime, 0.0f, 0.05f);
-		tiempoFPS += deltaTime;
-		deltaFPS = deltaTime;
-
-		const float limiteMouse = 0.12f;
-		mouseSwayX = std::clamp(mouseSwayX + static_cast<float>(mouseDeltaX) * intensidadMouse,
-			-limiteMouse, limiteMouse);
-		mouseSwayY = std::clamp(mouseSwayY + static_cast<float>(mouseDeltaY) * intensidadMouse,
-			-limiteMouse, limiteMouse);
-		mouseDeltaX = mouseDeltaY = 0.0;
-		const float retornoMouse = 1.0f - std::exp(-5.0f * deltaTime);
-		mouseSwayX += (0.0f - mouseSwayX) * retornoMouse;
-		mouseSwayY += (0.0f - mouseSwayY) * retornoMouse;
-	}
+	void actualizarMovimientoMovil(GLFWwindow* window, float deltaTime) { (void)window; gameplay::player::updateMobile(contextoJugador(), deltaTime); }
 
 	// Estado del juego FPS que permite la entrada (no hay pausa, ni foco perdido, ni paneles de depuracion).
 	bool entradaFPSActiva()
@@ -1064,37 +942,11 @@ namespace
 
 	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
 	// asi que la camara y el movil comparten la misma fase y se quedan quietos al chocar con una pared.
-	void actualizarBalanceoVisual(float delta)
-	{
-		const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : glm::vec3(0.0f);
-		float distancia = 0.0f;
-		if (hayPiesFotogramaAnterior)
-			distancia = glm::length(glm::vec2(pies.x - piesFotogramaAnterior.x, pies.y - piesFotogramaAnterior.y));
-		piesFotogramaAnterior = pies;
-		hayPiesFotogramaAnterior = mundoFisico.HayJugador();
-		if (distancia > 1.0f) distancia = 0.0f;   // teletransporte o cambio de habitacion: no es un paso
-
-		const float fraccion = mundoFisico.FraccionAgachado();
-		balanceoCamara.Actualizar(delta, distancia, mundoFisico.JugadorEnSuelo(), entradaFPSActiva() && mundoFisico.HayJugador(),
-			movimientoJugador.Velocidad(), movimientoJugador.parametros, fraccion);
-
-		// El movil usa la misma fase; su amplitud crece al correr y baja al agacharse.
-		pesoCaminata = balanceoCamara.Peso() * balanceoCamara.FactorDeAmplitud();
-		faseCaminata = balanceoCamara.Fase();
-	}
+	void actualizarBalanceoVisual(float delta) { gameplay::player::updateVisualBob(contextoJugador(), delta); }
 
 	// Desplazamiento SOLO VISUAL del ojo en pantalla (derecha y arriba de la camara). No modifica opvN/n, que usan la
 	// fisica, las puertas y el agarre. No se aplica en VR: alli manda la cabeza real.
-	glm::dvec3 desplazamientoVisualDeCamara()
-	{
-		if (!modoJuegoFPS() || !mundoFisico.HayJugador()) return glm::dvec3(0.0);
-		const fps::DesplazamientoVisual d = balanceoCamara.Desplazamiento();
-		const double dx = n[0] - opvN.x, dy = n[1] - opvN.y;
-		const double largo = std::sqrt(dx * dx + dy * dy);
-		glm::dvec3 resultado(0.0, 0.0, d.vertical);
-		if (largo > 1e-6) resultado += glm::dvec3(dy / largo, -dx / largo, 0.0) * static_cast<double>(d.lateral);
-		return resultado;
-	}
+	glm::dvec3 desplazamientoVisualDeCamara() { return gameplay::player::visualCameraDisplacement(contextoJugador()); }
 
 	bool cargarYAplicarEscena(const std::filesystem::path& ruta)
 	{

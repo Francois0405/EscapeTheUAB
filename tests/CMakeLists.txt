@@ -337,3 +337,17 @@ if(TARGET EntornVGI_network AND ENTORNVGI_NETWORK_TIENE_ENET)
 	target_link_libraries(ENetLoopbackTests PRIVATE EntornVGI_network)
 	add_test(NAME ENetLoopbackTests COMMAND ENetLoopbackTests)
 endif()
+
+# Pure player camera and sway behavior through the extracted runtime context.
+add_executable(PlayerRuntimeTests
+	PlayerRuntimeTests.cpp
+	${PROJECT_SOURCE_DIR}/src/gameplay/player/PlayerRuntime.cpp
+)
+target_include_directories(PlayerRuntimeTests PRIVATE
+	${PROJECT_SOURCE_DIR}/src/platform
+	${PROJECT_SOURCE_DIR}/third_party/SOIL2/src
+)
+target_link_libraries(PlayerRuntimeTests PRIVATE EntornVGI_physics ${TEST_GLFW_TARGET})
+target_compile_features(PlayerRuntimeTests PRIVATE cxx_std_20)
+target_compile_definitions(PlayerRuntimeTests PRIVATE GLM_ENABLE_EXPERIMENTAL)
+add_test(NAME PlayerRuntimeTests COMMAND PlayerRuntimeTests)
