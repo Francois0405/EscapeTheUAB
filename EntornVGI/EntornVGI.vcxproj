@@ -170,6 +170,10 @@
     <ClCompile Include="..\src\scene\SceneLoader.cpp" />
     <ClCompile Include="..\src\rendering\shader.cpp" />
     <ClCompile Include="..\src\rendering\visualitzacio.cpp" />
+    <ClCompile Include="..\src\ui\DebugPanels.cpp" />
+    <ClCompile Include="..\src\ui\NetworkPanels.cpp" />
+    <ClCompile Include="..\src\ui\RuntimeUi.cpp" />
+    <ClCompile Include="..\src\ui\StatusBar.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\third_party\imgui\imconfig.h" />

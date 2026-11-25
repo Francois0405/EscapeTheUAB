@@ -259,6 +259,17 @@ target_include_directories(EscalaUITests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI
 target_compile_features(EscalaUITests PRIVATE cxx_std_20)
 add_test(NAME EscalaUITests COMMAND EscalaUITests)
 
+# Console status bar text and multiplayer panel decisions extracted from main.cpp (no window, no OpenGL context).
+add_executable(RuntimeUiTests
+	RuntimeUiTests.cpp
+	${PROJECT_SOURCE_DIR}/src/ui/StatusBar.cpp
+)
+target_include_directories(RuntimeUiTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+# GLEW headers only provide the GL scalar types; NetJuegoLogica needs the network headers.
+target_link_libraries(RuntimeUiTests PRIVATE ${TEST_GLEW_TARGET} EntornVGI_network_game)
+target_compile_features(RuntimeUiTests PRIVATE cxx_std_20)
+add_test(NAME RuntimeUiTests COMMAND RuntimeUiTests)
+
 # Descubrimiento por mirada y animacion de Hiriti (sin ventana ni fisica).
 add_executable(AnimacionHiritiTests
 	AnimacionHiritiTests.cpp

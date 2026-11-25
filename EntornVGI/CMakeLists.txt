@@ -81,6 +81,10 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/vr/OpenXRManager.cpp
 	${REPO_ROOT}/src/rendering/quatern.cpp
 	${REPO_ROOT}/src/rendering/shader.cpp
+	${REPO_ROOT}/src/ui/DebugPanels.cpp
+	${REPO_ROOT}/src/ui/NetworkPanels.cpp
+	${REPO_ROOT}/src/ui/RuntimeUi.cpp
+	${REPO_ROOT}/src/ui/StatusBar.cpp
 	${REPO_ROOT}/src/rendering/visualitzacio.cpp
 )
 
