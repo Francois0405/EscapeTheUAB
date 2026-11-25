@@ -318,3 +318,10 @@ Commit integrado `52f00c4` (`refactor: extract scene network fingerprint from ma
 La validación del agente fue una compilación no oficial del target y CTest focalizado Debug 1/1; el resultado central actual sustituye esa evidencia: Debug y Release compilaron con los lanzadores oficiales y CTest completo pasó 21/21 en ambas. La prueba de escena usa `ENTORNVGI_SOURCE_ASSETS_DIR` apuntando a `EntornVGI/assets`; debe actualizarse en el lote que mueva assets. No hubo QA de juego ni validación Linux/macOS.
 
 **Métrica verificada en Git en HEAD `52f00c4`:** `main.cpp` tiene 8.870 líneas frente a 8.947 en `62a7018` (−77). El número anterior de 8.888 era incorrecto y queda sustituido aquí.
+## 16. B4, traslado físico de código propio a `src/` (2026-11-25)
+
+Commit `852920c` mueve 65 fuentes y cabeceras de editor, escena, física, animación, gameplay, audio, networking/replicación, render, UI y VR bajo módulos reales de `src/`; conserva `main.cpp`, `main.h`, los archivos VGI heredados y los assets en sus ubicaciones actuales. Se actualizaron includes, CMake/CTest y entradas existentes de Visual Studio. `983defa` agrega `$(ProjectDir)` a los includes del `.vcxproj`, requerido para que fuentes ya listadas bajo `src/` encuentren headers heredados en `EntornVGI/`.
+
+**Validación del HEAD con el movimiento:** lanzadores oficiales Debug/Release PASS; CTest 21/21 en ambas configuraciones. No se ejecutaron las repeticiones de red porque el cambio es solo de rutas. Revisión estática Claude: sin BLOCKER; el include de Visual Studio se corrigió en `983defa`. Las guías `CAMBIOS_FPS_JSON.md` y `EDITOR_PAREDES_PUERTAS.md` conservan algunas rutas antiguas y el `.vcxproj` sigue siendo un manifiesto heredado incompleto; queda como mantenimiento pendiente. No hubo compilación independiente con el generador Visual Studio.
+
+`main.cpp` permanece en 8.870 líneas: este lote reorganiza físicamente 65 ficheros, pero aún no extrae funciones de ese archivo. La siguiente prioridad es extraer un bloque funcional grande de UI y después seguir con otros bloques de `main.cpp` y los assets.
