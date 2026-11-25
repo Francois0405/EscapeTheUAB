@@ -4,7 +4,7 @@ Idea: **se diseña en Blender, se exporta a `.glb` y el juego reproduce lo que t
 No se escriben keyframes en C++.
 
 ```
-Blender (.blend)  --exportar_glb.py-->  EntornVGI/assets/animations/Objeto.glb  --ModeloGLB.cpp-->  juego
+Blender (.blend)  --exportar_glb.py-->  assets/animations/Objeto.glb  --ModeloGLB.cpp-->  juego
 ```
 
 ## Cómo se reproduce (resumen del código)
@@ -46,7 +46,7 @@ Desde la raíz del repositorio (ajusta la ruta de Blender en Windows/Linux):
 
 ```bash
 /Applications/Blender.app/Contents/MacOS/Blender -b Cajon.blend \
-  --python tools/exportar_glb.py -- EntornVGI/assets/animations/Cajon.glb
+  --python tools/exportar_glb.py -- assets/animations/Cajon.glb
 ```
 
 Si prefieres hacerlo a mano: `File > Export > glTF 2.0`, formato **glTF Binary (.glb)**,
@@ -111,7 +111,7 @@ Si un `.glb` trae algo de esto, `ModeloGLB::avisos` lo indica en la consola.
 
 1. En Blender, un cubo escalado a (0.4, 0.5, 0.2) m con el origen en su cara trasera.
 2. Keyframes de posición: en el fotograma 1 en (0, 0, 0) y en el 12 en (0, -0.4, 0).
-3. Exporta con `tools/exportar_glb.py` a `EntornVGI/assets/animations/Cajon.glb`.
+3. Exporta con `tools/exportar_glb.py` a `assets/animations/Cajon.glb`.
 4. Añade un bloque a la lista `"animated"` del JSON de la habitación con su `.glb`, posición y giro.
 5. Comprueba con `ctest` y abriendo el cajón desde el botón.
 6. Reto: duplica la animación para que, en el fotograma 24, el cajón vuelva a cerrarse.

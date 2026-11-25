@@ -40,7 +40,7 @@ Procedimiento [P]:
 - Para deshacer, usar `git revert` de los commits de la etapa en orden inverso. No usar `reset --hard` ni reescribir ramas compartidas. Para el cambio de P2: `git revert 4418c2d` en `refactor/project-architecture` (SHA de partida: `8dc63b5`). Para el corte S4: `git revert fe4d7da` (SHA de partida: `7ace570`), antes de revertir `0ccaea3`. Para el corte S3: `git revert 0ccaea3` (SHA de partida: `f9cd52b`), antes de revertir `4418c2d`.
 - Si ya hay etapas posteriores encima, revertir primero las posteriores.
 - Tras revertir, configurar en un directorio de build limpio y repetir la puerta común.
-- El editor puede escribir en `EntornVGI/assets` (copia al árbol fuente). Revertir código no revierte escenas guardadas: revisar `git status` sobre `assets/` después de cada sesión de QA.
+- El editor puede escribir en `assets` (copia al árbol fuente). Revertir código no revierte escenas guardadas: revisar `git status` sobre `assets/` después de cada sesión de QA.
 - Volver a C0 es el último recurso y requiere decisión del usuario.
 
 ## 4. Puerta común de cada etapa
@@ -309,13 +309,13 @@ Los lanzadores confirmaron ENet, Bullet, OpenXR y meshoptimizer habilitados. Se 
 
 Commit integrado `f34616d` (`refactor: relocate vendored dependencies (B3)`), origen `11602bf`, sobre `9e13716`; follow-up documental `a095e9a` corrige el estado de la licencia de Dear ImGui. Los blobs de las dependencias movidas se conservaron idénticos (23 renombres R100): Dear ImGui pasa de `include/ImGui` a `third_party/imgui`, ImGuizmo de `EntornVGI/third_party` a `third_party/imguizmo` y nlohmann/json a `third_party/nlohmann`. Se actualizaron CMake, includes y referencias de Visual Studio. El upstream identifica la licencia MIT, pero el snapshot no trae el `LICENSE.txt` al que remite `imgui.cpp`; no se inventó ni descargó una licencia.
 
-La revisión estática Claude no encontró bloqueos. La rama de implementación informó build oficial y CTest 21/21 en Windows Debug/Release; el HEAD central integrado B3/S1 acaba de validar con ambos lanzadores oficiales y CTest 21/21 por configuración. Linux/macOS no se probaron. El arranque de la rama informó que `EntornVGI/textures/fonde-menu.png` contiene datos WebP incompatibles con SOIL2; el archivo coincide con el checkpoint y B3 no lo causó. La validación gráfica sigue pendiente.
+La revisión estática Claude no encontró bloqueos. La rama de implementación informó build oficial y CTest 21/21 en Windows Debug/Release; el HEAD central integrado B3/S1 acaba de validar con ambos lanzadores oficiales y CTest 21/21 por configuración. Linux/macOS no se probaron. El arranque de la rama informó que `assets/textures/fonde-menu.png` contiene datos WebP incompatibles con SOIL2; el archivo coincide con el checkpoint y B3 no lo causó. La validación gráfica sigue pendiente.
 
 ## 15. P3, corte S1: fingerprint de escena de red (2026-11-25)
 
 Commit integrado `52f00c4` (`refactor: extract scene network fingerprint from main.cpp`), origen `6abf1c7`. `SceneNetworkFingerprint` vive en `EntornVGI/NetJuegoLogica.h`; `main.cpp` llama al helper y `NetJuegoTests` fija los vectores FNV-1a/ET2, incluyendo la escena calibrada. Se conservan el nombre de escena, IDs ordenados, endianess y formato `ET2-%08X`.
 
-La validación del agente fue una compilación no oficial del target y CTest focalizado Debug 1/1; el resultado central actual sustituye esa evidencia: Debug y Release compilaron con los lanzadores oficiales y CTest completo pasó 21/21 en ambas. La prueba de escena usa `ENTORNVGI_SOURCE_ASSETS_DIR` apuntando a `EntornVGI/assets`; debe actualizarse en el lote que mueva assets. No hubo QA de juego ni validación Linux/macOS.
+La validación del agente fue una compilación no oficial del target y CTest focalizado Debug 1/1; el resultado central actual sustituye esa evidencia: Debug y Release compilaron con los lanzadores oficiales y CTest completo pasó 21/21 en ambas. La prueba de escena usa `ENTORNVGI_SOURCE_ASSETS_DIR` apuntando a `assets`; debe actualizarse en el lote que mueva assets. No hubo QA de juego ni validación Linux/macOS.
 
 **Métrica verificada con `rg -n '^'` sobre blobs Git en HEAD `52f00c4`:** `main.cpp` tenía 10.132 líneas frente a 10.212 en `62a7018` (−80). Los conteos anteriores 8.870/8.947 provenían de un conteo incorrecto del pipeline de PowerShell.
 ## 16. B4, traslado físico de código propio a `src/` (2026-11-25)

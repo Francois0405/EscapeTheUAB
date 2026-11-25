@@ -1,14 +1,9 @@
 
 set(REPO_ROOT "${PROJECT_SOURCE_DIR}")
-set(ENTORNVGI_SOURCE_RESOURCE_ROOT "${REPO_ROOT}/EntornVGI")
-set(ENTORNVGI_SOURCE_ASSETS_DIR "${ENTORNVGI_SOURCE_RESOURCE_ROOT}/assets")
-set(ENTORNVGI_SOURCE_SHADERS_DIR "${ENTORNVGI_SOURCE_RESOURCE_ROOT}/shaders")
-set(ENTORNVGI_UI_RESOURCE_ROOT "${REPO_ROOT}/res/ui")
+set(ENTORNVGI_SOURCE_ASSETS_DIR "${REPO_ROOT}/assets")
+set(ENTORNVGI_SOURCE_SHADERS_DIR "${ENTORNVGI_SOURCE_ASSETS_DIR}/shaders")
 if(NOT IS_DIRECTORY "${ENTORNVGI_SOURCE_ASSETS_DIR}")
 	message(FATAL_ERROR "EscapeTheUAB source asset root is missing: ${ENTORNVGI_SOURCE_ASSETS_DIR}")
-endif()
-if(NOT IS_DIRECTORY "${ENTORNVGI_UI_RESOURCE_ROOT}")
-	message(FATAL_ERROR "EscapeTheUAB UI resource root is missing: ${ENTORNVGI_UI_RESOURCE_ROOT}")
 endif()
 foreach(required_resource IN ITEMS
 	"${ENTORNVGI_SOURCE_SHADERS_DIR}/gouraud_shdrML.vert"
@@ -349,43 +344,28 @@ set_target_properties(EntornVGI PROPERTIES
 # model, texture or shader without relinking the executable, while
 # copy_if_different avoids rewriting unchanged large assets.
 set(ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS)
-foreach(resource assets shaders textures)
-	if(resource STREQUAL "assets")
-		set(resource_source "${ENTORNVGI_SOURCE_ASSETS_DIR}")
-	else()
-		set(resource_source "${CMAKE_CURRENT_SOURCE_DIR}/${resource}")
-	endif()
-	file(GLOB_RECURSE resource_files CONFIGURE_DEPENDS
-		LIST_DIRECTORIES false
-		"${resource_source}/*"
-	)
-	foreach(source_file IN LISTS resource_files)
-		file(RELATIVE_PATH resource_relative_path
-			"${resource_source}"
-			"${source_file}"
-		)
-		set(destination_file "${CMAKE_BINARY_DIR}/bin/${resource}/${resource_relative_path}")
-		get_filename_component(destination_directory "${destination_file}" DIRECTORY)
-		add_custom_command(OUTPUT "${destination_file}"
-			COMMAND ${CMAKE_COMMAND} -E make_directory "${destination_directory}"
-			COMMAND ${CMAKE_COMMAND} -E copy_if_different "${source_file}" "${destination_file}"
-			DEPENDS "${source_file}"
-			VERBATIM
-			COMMENT "Syncing ${resource}/${resource_relative_path}"
-		)
-		list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${destination_file}")
-	endforeach()
-endforeach()
-set(hand_texture_source "${ENTORNVGI_UI_RESOURCE_ROOT}/hand.png")
-set(hand_texture_output "${CMAKE_BINARY_DIR}/bin/res/ui/hand.png")
-add_custom_command(OUTPUT "${hand_texture_output}"
-	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/res/ui"
-	COMMAND ${CMAKE_COMMAND} -E copy_if_different "${hand_texture_source}" "${hand_texture_output}"
-	DEPENDS "${hand_texture_source}"
-	VERBATIM
-	COMMENT "Syncing res/ui/hand.png"
+set(resource "assets")
+set(resource_source "${ENTORNVGI_SOURCE_ASSETS_DIR}")
+file(GLOB_RECURSE resource_files CONFIGURE_DEPENDS
+	LIST_DIRECTORIES false
+	"${resource_source}/*"
 )
-list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${hand_texture_output}")
+foreach(source_file IN LISTS resource_files)
+	file(RELATIVE_PATH resource_relative_path
+		"${resource_source}"
+		"${source_file}"
+	)
+	set(destination_file "${CMAKE_BINARY_DIR}/bin/${resource}/${resource_relative_path}")
+	get_filename_component(destination_directory "${destination_file}" DIRECTORY)
+	add_custom_command(OUTPUT "${destination_file}"
+		COMMAND ${CMAKE_COMMAND} -E make_directory "${destination_directory}"
+		COMMAND ${CMAKE_COMMAND} -E copy_if_different "${source_file}" "${destination_file}"
+		DEPENDS "${source_file}"
+		VERBATIM
+		COMMENT "Syncing ${resource}/${resource_relative_path}"
+	)
+	list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${destination_file}")
+endforeach()
 add_custom_target(EntornVGI_runtime_resources ALL
 	DEPENDS ${ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS}
 )

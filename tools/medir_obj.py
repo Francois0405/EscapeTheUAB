@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Mide un archivo OBJ y escribe el bloque "physics" listo para pegar en el JSON.
 
-Uso:  python3 tools/medir_obj.py EntornVGI/assets/models/TaulaRara.obj [static|dynamic] [masa_kg]
+Uso:  python3 tools/medir_obj.py assets/models/TaulaRara.obj [static|dynamic] [masa_kg]
 
 halfSize y offset salen en el espacio del MODELO (las coordenadas de los vertices del
 archivo, antes de aplicar la escala del objeto), que es exactamente lo que espera el JSON.

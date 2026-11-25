@@ -40,8 +40,8 @@ namespace
 
 	void PruebaRecursoIconoInteraccion()
 	{
-		const fs::path fuente = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "res/ui/hand.png";
-		const fs::path runtime = fs::path(ESCAPETHEUAB_RUNTIME_ASSET_ROOT) / "res/ui/hand.png";
+		const fs::path fuente = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/ui/hand.png";
+		const fs::path runtime = fs::path(ESCAPETHEUAB_RUNTIME_ASSET_ROOT) / "assets/ui/hand.png";
 		comprobar(fs::is_regular_file(fuente), "hand.png existe en recursos fuente");
 		comprobar(fs::is_regular_file(runtime), "hand.png se copia junto al ejecutable independientemente del cwd de CTest");
 		if (!fs::is_regular_file(fuente) || !fs::is_regular_file(runtime)) return;
@@ -465,7 +465,7 @@ namespace
 
 	std::string RutaDeEscena(const char* nombre)
 	{
-		return (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/scenes" / nombre).string();
+		return (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/scenes" / nombre).string();
 	}
 
 	// Carga una escena JSON real y la monta: datos, GLB y cuerpos.
@@ -572,7 +572,7 @@ namespace
 		pared.pared.aperturas.push_back({ "door", 0.0f, 1.04f, 2.1f, 0.0f, "door-opening" });
 		SceneObjetoAnimado door;
 		door.id = "door";
-		door.modelo = (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/animations/Puerta_Lab.glb").string();
+		door.modelo = (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/animations/Puerta_Lab.glb").string();
 		door.posicion = glm::vec3(0.0f, 0.0f, -1.5f);
 		door.colisionadores = {
 			{"DoorFrame", TipoCuerpo::Estatico, {0.05f,1.05f,0.04f}, {-0.45f,1.05f,-0.013f}},
@@ -719,9 +719,9 @@ namespace
 		fs::create_directories(temp);
 		{
 			std::string json = "{\"version\":1,\"name\":\"mala\",\"architecture\":[],\"objects\":["
-				"{\"id\":\"a\",\"model\":\"" + (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/models/test.obj").generic_string() +
+				"{\"id\":\"a\",\"model\":\"" + (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/models/test.obj").generic_string() +
 				"\",\"position\":[0,0,0],\"rotation\":[0,0,0],\"scale\":[1,1,1],\"physics\":{\"type\":\"static\",\"halfSize\":[1,1,1]}}],"
-				"\"animated\":[{\"id\":\"p\",\"model\":\"" + (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/animations/Puerta.glb").generic_string() +
+				"\"animated\":[{\"id\":\"p\",\"model\":\"" + (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/animations/Puerta.glb").generic_string() +
 				"\",\"position\":[0,0,0],\"colliders\":[{\"node\":\"NodoQueNoExiste\",\"type\":\"static\",\"halfSize\":[1,1,1]}]}]}";
 			std::ofstream(temp / "mala.json") << json;
 		}
@@ -737,7 +737,7 @@ namespace
 		{
 			glb::EscenaAnimada una;
 			std::string e;
-			const std::string glbPuerta = (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/animations/Puerta.glb").string();
+			const std::string glbPuerta = (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/animations/Puerta.glb").string();
 			comprobar(glb::AnadirObjeto(una, "x", glbPuerta, glm::vec3(0.0f), 0.0f, e), "cargar la puerta para elegir animacion");
 			const std::string nombreReal = una.objetos[0].modelo->animaciones[0].nombre;
 			comprobar(glb::SeleccionarAnimacion(una.objetos[0], nombreReal, e), "elegir la animacion por su nombre real");
@@ -748,7 +748,7 @@ namespace
 		// Escena con un animacion inexistente falla antes de crear nada.
 		{
 			std::string json = "{\"version\":1,\"name\":\"mala2\",\"architecture\":[],\"objects\":[],\"animated\":[{\"id\":\"p\",\"model\":\"" +
-				(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/animations/Puerta.glb").generic_string() +
+				(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/animations/Puerta.glb").generic_string() +
 				"\",\"position\":[0,0,0],\"animation\":\"NoExiste\"}]}";
 			std::ofstream(temp / "mala2.json") << json;
 		}

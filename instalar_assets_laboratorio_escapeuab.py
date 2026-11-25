@@ -22,8 +22,8 @@ import sys
 import zipfile
 from pathlib import Path
 
-ARCH = Path('EntornVGI/assets/models/escape_pack/arquitectura')
-SCI = Path('EntornVGI/assets/models/escape_pack/scifi')
+ARCH = Path('assets/models/escape_pack/arquitectura')
+SCI = Path('assets/models/escape_pack/scifi')
 WALKWAY_NAME = 'MetalWalkway010_2K-PNG.zip'
 MEGAKIT_NAME = 'Modular SciFi MegaKit[Standard].zip'
 MEGAKIT_ROOT = 'Modular SciFi MegaKit[Standard]/'

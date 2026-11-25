@@ -91,6 +91,7 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 			candidates.push_back(executable.parent_path());
 			candidates.push_back(executable.parent_path().parent_path());
 			candidates.push_back(executable.parent_path().parent_path().parent_path());
+			candidates.push_back(executable.parent_path().parent_path().parent_path().parent_path());
 		}
 	}
 	candidates.push_back(fs::current_path(ec));
@@ -98,7 +99,7 @@ static void SetWorkingDirectoryToAssetRoot(const char* executablePath)
 	for (const auto& candidate : candidates)
 	{
 		ec.clear();
-		if (fs::exists(candidate / "shaders" / "gouraud_shdrML.vert", ec) &&
+		if (fs::exists(candidate / "assets" / "shaders" / "gouraud_shdrML.vert", ec) &&
 			fs::exists(candidate / "assets" / "scenes" / "aula_informatica_calibrada.json", ec))
 		{
 			fs::current_path(candidate, ec);
@@ -346,10 +347,10 @@ namespace
 	void cargarTexturaManoInteraccion()
 	{
 		std::error_code ec;
-		const std::filesystem::path rutaAbs = std::filesystem::absolute("res/ui/hand.png", ec).lexically_normal();
+		const std::filesystem::path rutaAbs = std::filesystem::absolute("assets/ui/hand.png", ec).lexically_normal();
 		if (ec || !std::filesystem::is_regular_file(rutaAbs, ec))
 		{
-			std::fprintf(stderr, "No se encuentra res/ui/hand.png desde la raiz de recursos '%s'. "
+			std::fprintf(stderr, "No se encuentra assets/ui/hand.png desde la raiz de recursos '%s'. "
 				"Comprueba que EntornVGI_runtime_resources se haya ejecutado.\n",
 				std::filesystem::current_path(ec).string().c_str());
 			return;
@@ -2278,7 +2279,7 @@ void InitGL()
 // Entorn VGI: Càrrega SHADERS ---------------------------------------------------
 // Càrrega Shader Eixos
 	fprintf(stderr, "Eixos: \n");
-	if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./shaders/eixos.vert", "./shaders/eixos.frag");
+	if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./assets/shaders/eixos.vert", "./assets/shaders/eixos.frag");
 
 // VAO dels eixos: es crea aqui perque OnPaint() nomes el creava a la branca 'default', que mai
 // s'executa (els shaders ja es carreguen en aquesta inicialitzacio). Sense VAO es dibuixava amb
@@ -2287,7 +2288,7 @@ void InitGL()
 
 // Entorn VGI: Càrrega Shader Skybox
 	fprintf(stderr, "SkyBox: \n");
-	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./shaders/skybox.VERT", "./shaders/skybox.FRAG");
+	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./assets/shaders/skybox.VERT", "./assets/shaders/skybox.FRAG");
 
 // Entorn VGI: Càrrega VAO Skybox Cube
 	if (skC_VAOID.vaoId == 0) skC_VAOID = loadCubeSkybox_VAO();
@@ -2297,12 +2298,12 @@ void InitGL()
 	{	// load Skybox textures
 		// -------------
 		std::vector<std::string> faces =
-		{ "./textures/skybox/right.jpg",
-			"./textures/skybox/left.jpg",
-			"./textures/skybox/top.jpg",
-			"./textures/skybox/bottom.jpg",
-			"./textures/skybox/front.jpg",
-			"./textures/skybox/back.jpg"
+		{ "./assets/textures/skybox/right.jpg",
+			"./assets/textures/skybox/left.jpg",
+			"./assets/textures/skybox/top.jpg",
+			"./assets/textures/skybox/bottom.jpg",
+			"./assets/textures/skybox/front.jpg",
+			"./assets/textures/skybox/back.jpg"
 		};
 		cubemapTexture = loadCubemap(faces);
 	}
@@ -2310,7 +2311,7 @@ void InitGL()
 // Càrrega Shader de Gouraud
 	shader_programID = 0;
 	fprintf(stderr, "Gouraud_shdrML: \n");
-	if (!shader_programID) shader_programID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
+	if (!shader_programID) shader_programID = shaderLighting.loadFileShaders("./assets/shaders/gouraud_shdrML.vert", "./assets/shaders/gouraud_shdrML.frag");
 	shader = GOURAUD_SHADER;
 // Entorn VGI: FI Càrrega SHADERS ---------------------------------------------------
 
@@ -2755,10 +2756,10 @@ void OnPaint(GLFWwindow* window)
 	default:
 		// Entorn VGI: Càrrega SHADERS
 		// Entorn VGI: Càrrega Shader Eixos
-		if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./shaders/eixos.vert", "./shaders/eixos.frag");
+		if (!eixos_programID) eixos_programID = shaderEixos.loadFileShaders("./assets/shaders/eixos.vert", "./assets/shaders/eixos.frag");
 
 		// Entorn VGI: Càrrega Shader de Gouraud
-		if (!shader_programID) shader_programID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
+		if (!shader_programID) shader_programID = shaderLighting.loadFileShaders("./assets/shaders/gouraud_shdrML.vert", "./assets/shaders/gouraud_shdrML.frag");
 
 		// Entorn VGI: Creació de la llista que dibuixarà els eixos Coordenades Món. Funció on està codi per dibuixar eixos	
 		if (!eixos_Id) eixos_Id = deixos();						// Funció que defineix els Eixos Coordenades Món com un VAO.
@@ -4513,12 +4514,12 @@ void OnArxiuObrirSkybox()
 //	{	// load Skybox textures
 //		// -------------
 //		std::vector<std::string> faces =
-//		{ "./textures/skybox/right.jpg",
-//		"./textures/skybox/left.jpg",
-//		"./textures/skybox/top.jpg",
-//		"./textures/skybox/bottom.jpg",
-//		"./textures/skybox/front.jpg",
-//		"./textures/skybox/back.jpg"
+//		{ "./assets/textures/skybox/right.jpg",
+//		"./assets/textures/skybox/left.jpg",
+//		"./assets/textures/skybox/top.jpg",
+//		"./assets/textures/skybox/bottom.jpg",
+//		"./assets/textures/skybox/front.jpg",
+//		"./assets/textures/skybox/back.jpg"
 //	};
 
 	cubemapTexture = loadCubemap(faces);
@@ -4773,7 +4774,7 @@ void OnVistaSkyBox()
 	//SkyBoxCube = !SkyBoxCube;
 
 // Càrrega Shader Skybox
-	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./shaders/skybox.VERT", "./shaders/skybox.FRAG");
+	if (!skC_programID) skC_programID = shader_SkyBoxC.loadFileShaders("./assets/shaders/skybox.VERT", "./assets/shaders/skybox.FRAG");
 
 // Càrrega VAO Skybox Cube
 	if (skC_VAOID.vaoId == 0) skC_VAOID = loadCubeSkybox_VAO();
@@ -4783,12 +4784,12 @@ void OnVistaSkyBox()
 		{	// load Skybox textures
 			// -------------
 			std::vector<std::string> faces =
-			{ "./textures/skybox/right.jpg",
-				"./textures/skybox/left.jpg",
-				"./textures/skybox/top.jpg",
-				"./textures/skybox/bottom.jpg",
-				"./textures/skybox/front.jpg",
-				"./textures/skybox/back.jpg"
+			{ "./assets/textures/skybox/right.jpg",
+				"./assets/textures/skybox/left.jpg",
+				"./assets/textures/skybox/top.jpg",
+				"./assets/textures/skybox/bottom.jpg",
+				"./assets/textures/skybox/front.jpg",
+				"./assets/textures/skybox/back.jpg"
 			};
 		cubemapTexture = loadCubemap(faces);
 	}
@@ -5436,7 +5437,7 @@ void OnIluminacioPlana()
 			// Elimina shader anterior
 			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
 			// Càrrega Flat shader
-			shader_programID = shaderLighting.loadFileShaders("./shaders/flat_shdrML.vert", "./shaders/flat_shdrML.frag");
+			shader_programID = shaderLighting.loadFileShaders("./assets/shaders/flat_shdrML.vert", "./assets/shaders/flat_shdrML.frag");
 		}
 }
 
@@ -5451,7 +5452,7 @@ void OnIluminacioSuau()
 			// Elimina shader anterior
 			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
 			// Càrrega Flat shader
-			shader_programID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
+			shader_programID = shaderLighting.loadFileShaders("./assets/shaders/gouraud_shdrML.vert", "./assets/shaders/gouraud_shdrML.frag");
 		}
 }
 
@@ -5695,7 +5696,7 @@ void OnShaderFlat()
 // Elimina shader anterior
 	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Flat shader
-	newShaderID = shaderLighting.loadFileShaders("./shaders/flat_shdrML.vert", "./shaders/flat_shdrML.frag");
+	newShaderID = shaderLighting.loadFileShaders("./assets/shaders/flat_shdrML.vert", "./assets/shaders/flat_shdrML.frag");
 
 // Càrrega shaders dels fitxers
 	if (newShaderID) {	shader_programID = newShaderID;
@@ -5720,7 +5721,7 @@ void OnShaderGouraud()
 // Elimina shader anterior
 	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Gouraud shader 
-	newShaderID = shaderLighting.loadFileShaders("./shaders/gouraud_shdrML.vert", "./shaders/gouraud_shdrML.frag");
+	newShaderID = shaderLighting.loadFileShaders("./assets/shaders/gouraud_shdrML.vert", "./assets/shaders/gouraud_shdrML.frag");
 
 // Càrrega shaders dels fitxers
 	if (newShaderID) {	shader_programID = newShaderID;
@@ -5746,7 +5747,7 @@ void OnShaderPhong()
 // Elimina shader anterior
 	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Phong Shader
-	newShaderID = shaderLighting.loadFileShaders("./shaders/phong_shdrML.vert", "./shaders/phong_shdrML.frag");
+	newShaderID = shaderLighting.loadFileShaders("./assets/shaders/phong_shdrML.vert", "./assets/shaders/phong_shdrML.frag");
 
 // Càrrega shaders dels fitxers
 	if (newShaderID) {	shader_programID = newShaderID;
@@ -6418,13 +6419,13 @@ void Teclat_Shift(int key, GLFWwindow* window)
 				{	// load Skybox textures
 					// -------------
 					std::vector<std::string> faces =
-						{	"./textures/skybox/right.jpg",
-							"./textures/skybox/right.jpg",
-							"./textures/skybox/left.jpg",
-							"./textures/skybox/top.jpg",
-							"./textures/skybox/bottom.jpg",
-							"./textures/skybox/front.jpg",
-							"./textures/skybox/back.jpg"
+						{	"./assets/textures/skybox/right.jpg",
+							"./assets/textures/skybox/right.jpg",
+							"./assets/textures/skybox/left.jpg",
+							"./assets/textures/skybox/top.jpg",
+							"./assets/textures/skybox/bottom.jpg",
+							"./assets/textures/skybox/front.jpg",
+							"./assets/textures/skybox/back.jpg"
 						};
 					cubemapTexture = loadCubemap(faces);
 				}
@@ -8979,7 +8980,7 @@ int main(int argc, char** argv)
 // Loop until the user closes the window
 
 	texturaFondoMenu = SOIL_load_OGL_texture(
-    	"textures/fonde-menu.png",
+		"assets/textures/fonde-menu.png",
     	SOIL_LOAD_AUTO,
     	SOIL_CREATE_NEW_ID,
     	0

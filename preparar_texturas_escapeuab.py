@@ -16,7 +16,7 @@ import sys
 import zipfile
 from pathlib import Path
 
-ROOT_MODELS = Path('EntornVGI/assets/models/escape_pack/arquitectura')
+ROOT_MODELS = Path('assets/models/escape_pack/arquitectura')
 # (modelo OBJ/MTL, slug de Poly Haven)
 MATERIALS = {
     'suelo': 'concrete_floor_painted',       # Aula informatica

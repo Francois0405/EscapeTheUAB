@@ -29,7 +29,7 @@ configurado por CMake.
 - Licencia: MIT. El texto está en `third_party/cgltf/LICENSE` y también al final
   de `cgltf.h`. El archivo se conserva **sin modificar**.
 - Uso: `EntornVGI/ModeloGLB.cpp` lee mallas, jerarquía de nodos y animaciones de
-  los archivos `.glb` de `EntornVGI/assets/animations/`. Es una biblioteca de un
+  los archivos `.glb` de `assets/animations/`. Es una biblioteca de un
   solo archivo: `CGLTF_IMPLEMENTATION` se define únicamente en `ModeloGLB.cpp`.
 - Se usa en todas las plataformas (Windows, Linux y macOS) y no depende de vcpkg.
 

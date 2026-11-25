@@ -2,7 +2,7 @@
 """Aplica mapeado UV repetible a suelo/pared/techo de EscapeTheUAB.
 
 Ejecutar en la raiz del repo: python .\aplicar_tiling_escapeuab.py
-Solo modifica EntornVGI/main.cpp y EntornVGI/shaders/phong_shdrML.vert.
+Solo modifica EntornVGI/main.cpp y assets/shaders/phong_shdrML.vert.
 Primero valida ambos parches, luego crea backups .pre-tiling.bak.
 Reejecutar es seguro: detecta cambios ya aplicados.
 """
@@ -15,7 +15,7 @@ import sys
 from pathlib import Path
 
 MAIN = Path('EntornVGI/main.cpp')
-VERT = Path('EntornVGI/shaders/phong_shdrML.vert')
+VERT = Path('assets/shaders/phong_shdrML.vert')
 
 DECLS = '''// Escala fisica de la textura para los cubos arquitectonicos.
 uniform bool uArchitectureTiling;

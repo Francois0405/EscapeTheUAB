@@ -122,9 +122,9 @@ run-macos.sh                  Lanzador macOS
 EntornVGI/main.cpp            Entrada, renderizado y controles
 EntornVGI/SceneLoader.*       Lectura de escenas JSON
 EntornVGI/objLoader.*         Importador OBJ/MTL del profesor
-EntornVGI/assets/models/     Modelos y materiales
-EntornVGI/assets/scenes/     Escenas JSON
-EntornVGI/shaders/           Shaders GLSL
+assets/models/     Modelos y materiales
+assets/scenes/     Escenas JSON
+assets/shaders/           Shaders GLSL
 third_party/imgui/            Dear ImGui
 third_party/SOIL2/           Carga de texturas
 third_party/nativefiledialog/ Backend GTK3 para Linux
@@ -132,8 +132,8 @@ lib/                          Bibliotecas Windows heredadas
 build/<preset>/bin/           Ejecutables generados por CMake
 ```
 
-Los recursos (`assets/`, `shaders/` y `textures/`) se sincronizan junto al
-ejecutable en cada build. CMake registra cada archivo como entrada y usa
+Los recursos bajo `assets/` (modelos, escenas, shaders, texturas, audio y UI)
+se sincronizan junto al ejecutable en cada build. CMake registra cada archivo como entrada y usa
 `copy_if_different`, así que al modificar JSON, OBJ, MTL, PNG o shaders se
 actualiza su copia sin volver a enlazar el juego ni reescribir recursos que no
 cambiaron. El programa busca automáticamente la raíz de recursos. Al importar
@@ -141,13 +141,13 @@ un OBJ con `.mtl`, las texturas deben referenciarse con nombres o
 rutas **relativas** (por ejemplo `map_Kd Phone_BaseColor.png`), nunca con una
 ruta `C:\...` o `D:\...`: Linux y macOS no conocen esas rutas.
 
-La habitación inicial es `EntornVGI/assets/scenes/habitacion_beta.json` y tiene
+La habitación inicial es `assets/scenes/habitacion_beta.json` y tiene
 12 instancias. El formato JSON versión 1 define nombre, arquitectura y objetos;
 cada elemento incluye ID, ruta OBJ relativa, posición, rotación y escala. Las
 rutas se resuelven desde la carpeta del JSON y una escena inválida no sustituye
 la que ya está activa.
 
-En modo FPS se muestra `EntornVGI/assets/models/Phone.obj` con
+En modo FPS se muestra `assets/models/Phone.obj` con
 `Phone_BaseColor.png`. El movimiento incluye idle sway, walking bob y mouse
 sway. El panel **Movil FPS** aparece con F1. El cargador utiliza `map_Kd` para
 la textura difusa; `Phone_Roughness.png` se conserva como recurso, pero

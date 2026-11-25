@@ -71,7 +71,7 @@ int main()
     std::string nombre;
 
     const fs::path habitacion = fs::path(ESCAPETHEUAB_SOURCE_DIR) /
-        "EntornVGI/assets/scenes/habitacion_beta.json";
+        "assets/scenes/habitacion_beta.json";
     comprobar(cargar(habitacion, objetos, error, nombre), "habitacion_beta.json debe cargar");
     comprobar(objetos.size() == 12, "habitacion_beta debe contener 12 instancias");
     comprobar(nombre == "habitacion_beta", "nombre de habitacion_beta");
@@ -293,7 +293,7 @@ int main()
         previos.objetos.size() == 1, "carga fallida no modifica los datos previos");
 
     DatosEscena laboratorio;
-    const fs::path escenaLaboratorio = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/scenes/aula_informatica_calibrada.json";
+    const fs::path escenaLaboratorio = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/scenes/aula_informatica_calibrada.json";
     comprobar(CargarDatosEscenaJSON(escenaLaboratorio, laboratorio, error),
         "la escena calibrada y sus nuevas rutas de materiales se cargan");
     comprobar(laboratorio.objetos.size() == 83,

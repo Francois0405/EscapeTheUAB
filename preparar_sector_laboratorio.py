@@ -100,8 +100,8 @@ def main():
     args = pa.parse_args()
 
     root = Path(__file__).resolve().parent
-    model_dir = root / "EntornVGI/assets/models/escape_pack/arquitectura"
-    scene_file = root / "EntornVGI/assets/scenes/aula_informatica_calibrada.json"
+    model_dir = root / "assets/models/escape_pack/arquitectura"
+    scene_file = root / "assets/scenes/aula_informatica_calibrada.json"
     source_file = model_dir / "suelo.obj"
     for p in (scene_file, source_file):
         if not p.is_file():

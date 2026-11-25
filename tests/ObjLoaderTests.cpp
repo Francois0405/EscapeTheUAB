@@ -231,7 +231,7 @@ int main()
     }
 
     const fs::path cuadroBotanico = fs::path(ESCAPETHEUAB_SOURCE_DIR) /
-        "EntornVGI/assets/models/escape_pack/lab/clue_botanical_frame.obj";
+        "assets/models/escape_pack/lab/clue_botanical_frame.obj";
     if (!validarGeometriaCuadroBotanico(cuadroBotanico))
     {
         std::cerr << "FALLO: geometria del cuadro botanico debe estar cerrada, sin caras repetidas y con UV/normales coherentes.\n";
@@ -364,7 +364,7 @@ int main()
             std::ifstream archivo(ruta, std::ios::binary);
             return std::string(std::istreambuf_iterator<char>(archivo), std::istreambuf_iterator<char>());
         };
-        const fs::path shaders = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/shaders";
+        const fs::path shaders = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/shaders";
         const std::string vs = leerShader(shaders / "phong_shdrML.vert");
         const std::string fsSource = leerShader(shaders / "phong_shdrML.frag");
         const char* vsPtr = vs.c_str();
@@ -781,7 +781,7 @@ int main()
 
     {
         const fs::path arquitectura = fs::path(ESCAPETHEUAB_SOURCE_DIR) /
-            "EntornVGI/assets/models/escape_pack/arquitectura";
+            "assets/models/escape_pack/arquitectura";
         for (const char* nombre : { "industrial_wall_lab.png", "industrial_wall_maintenance.png" })
         {
             int ancho = 0, alto = 0, canales = 0;
@@ -839,7 +839,7 @@ int main()
     {
         COBJModel phone;
         std::string phonePath = (fs::path(ESCAPETHEUAB_SOURCE_DIR) /
-            "EntornVGI/assets/models/Phone.obj").string();
+            "assets/models/Phone.obj").string();
         if (phone.LoadModel(phonePath.data()) != 0)
         {
             std::cerr << "FALLO: no se pudo cargar Phone.obj con su MTL y map_Kd relativo.\n";
@@ -849,7 +849,7 @@ int main()
         phone.netejaVAOList_OBJ();
     }
     {
-        const fs::path assets = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI/assets/models/escape_pack";
+        const fs::path assets = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/models/escape_pack";
         const std::vector<fs::path> modelos = {
             assets / "arquitectura/suelo_base.obj",
             assets / "arquitectura/pared.obj",

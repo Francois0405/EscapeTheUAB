@@ -63,7 +63,7 @@ Pendiente según ese documento [D]: selección, agarre y lanzamiento confirmados
 | `EntornVGI` | Ejecutable | Casi todo el código propio e ImGui |
 | `EntornVGI_network` | Biblioteca estática | `NetProtocol`, `NetSession`, `NetService`, `ENetTransport` |
 | `EntornVGI_bullet`, `EntornVGI_openxr` | Interfaz | Dependencias externas |
-| `EntornVGI_runtime_resources` | Custom | Copia `assets/`, `shaders/`, `textures/` y `res/ui/hand.png` a `build/<preset>/bin/` |
+| `EntornVGI_runtime_resources` | Custom | Copia `assets/` a `build/<preset>/bin/assets/` |
 | `soil2`, `nfd` (solo Linux) | Terceros | |
 
 No existe `src/main.cpp` ni ninguna biblioteca propia de escena, física, gameplay o render.
@@ -169,7 +169,7 @@ Renombrar un fichero de escena o un `id` rompe la compatibilidad entre host y cl
 
 | Elemento | Contrato |
 |---|---|
-| Raíz de recursos | Se exige `shaders/gouraud_shdrML.vert` **y** `assets/scenes/aula_informatica_calibrada.json`; después todo es relativo al directorio de trabajo |
+| Raíz de recursos | Se exige `assets/shaders/gouraud_shdrML.vert` **y** `assets/scenes/aula_informatica_calibrada.json`; después todo es relativo al directorio de trabajo |
 | Disposición de salida | `build/<preset>/bin/` con el ejecutable y los recursos copiados |
 | Escena JSON | Claves raíz `version, name, playerSpawn, indirectLighting, architecture, objects, animated`; nombres de campos sin cambios; rutas de modelo relativas al JSON |
 | Guardado del editor | Temporal, copia `.bak`, sustitución atómica y copia al árbol fuente mediante `ENTORNVGI_RUNTIME_ASSETS_DIR` y `ENTORNVGI_SOURCE_ASSETS_DIR` |

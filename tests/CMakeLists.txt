@@ -294,7 +294,7 @@ target_include_directories(AudioDecoderTests PRIVATE
 	"${PROJECT_SOURCE_DIR}/third_party/miniaudio"
 )
 target_compile_definitions(AudioDecoderTests PRIVATE
-	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/EntornVGI/assets"
+	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/assets"
 )
 target_compile_features(AudioDecoderTests PRIVATE cxx_std_20)
 add_test(NAME AudioDecoderTests COMMAND AudioDecoderTests)
@@ -314,7 +314,7 @@ add_executable(NetJuegoTests
 target_include_directories(NetJuegoTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
 target_link_libraries(NetJuegoTests PRIVATE EntornVGI_network_game EntornVGI_scene_loader)
 target_compile_definitions(NetJuegoTests PRIVATE
-	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/EntornVGI/assets"
+	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/assets"
 )
 target_compile_features(NetJuegoTests PRIVATE cxx_std_20)
 add_test(NAME NetJuegoTests COMMAND NetJuegoTests)

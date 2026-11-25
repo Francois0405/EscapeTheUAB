@@ -65,11 +65,7 @@ EscapeTheUAB/
 │  ├─ editor/
 │  ├─ diagnostics/             trazas de agarre, colisionadores, paneles
 │  └─ legacy_vgi/              solo la base académica VGI original, sin traducir
-├─ resources/
-│  ├─ assets/                  {animations, audio, licenses, models, scenes}
-│  ├─ shaders/
-│  ├─ textures/
-│  └─ ui/                      hand.png, hand.svg
+├─ assets/                     {animations, audio, licenses, models, scenes, shaders, textures, ui}
 ├─ tests/
 │  ├─ unit/
 │  ├─ integration/
@@ -79,14 +75,14 @@ EscapeTheUAB/
 ├─ docs/
 ├─ third_party/                imgui/ imguizmo/ nlohmann/ cgltf/ miniaudio/ SOIL2/ nativefiledialog/  (sin modificar)
 └─ build/<preset>/bin/         (generado, no versionado)
-      EntornVGI[.exe]  assets/  shaders/  textures/  res/ui/hand.png
+      EntornVGI[.exe]  assets/
 ```
 
 Se conservan: un único ejecutable `EntornVGI`, `build/<preset>/bin/`, la disposición de recursos dentro de `bin/`, los presets y los lanzadores.
 
 Cada módulo de `src/` y cada categoría de `tests/` tiene su propio `CMakeLists.txt` (patrón actual de `Network/`), para que los dos ficheros CMake centrales dejen de ser un cuello de botella.
 
-**Nombres de carpeta prohibidos** bajo `src/`, `tests/`, `tools/` y `resources/`: `debug`, `release`, `bin`, `obj`, `log`, `logs`, `build`, `out`, `x64`. Las reglas actuales de `.gitignore` los excluyen [C].
+**Nombres de carpeta prohibidos** bajo `src/`, `tests/`, `tools/` y `assets/`: `debug`, `release`, `bin`, `obj`, `log`, `logs`, `build`, `out`, `x64`. Las reglas actuales de `.gitignore` los excluyen [C].
 
 ## 2. Rutas actuales y destino
 
@@ -138,10 +134,10 @@ Columna **Sec.**: lote en que se mueve (§3). Los ficheros se renombran al ingl�
 
 | Actual | Destino | Sec. |
 |---|---|---|
-| `EntornVGI/assets/` | `resources/assets/` | B4 |
-| `EntornVGI/shaders/` | `resources/shaders/` | B4 |
-| `EntornVGI/textures/` | `resources/textures/` | B4 |
-| `res/ui/hand.png`, `res/ui/hand.svg` | `resources/ui/` | B4 |
+| `EntornVGI/assets/` | `assets/` | B4 |
+| `EntornVGI/shaders/` | `assets/shaders/` | B4 |
+| `EntornVGI/textures/` | `assets/textures/` | B4 |
+| `res/ui/hand.png` | `assets/ui/hand.png` | B4 |
 | `EntornVGI/third_party/ImGuizmo.{h,cpp}`, `LICENSE-ImGuizmo`, `README-ImGuizmo.md` | `third_party/imguizmo/` | B3 |
 | `EntornVGI/third_party/nlohmann/` | `third_party/nlohmann/` | B3 |
 | `include/ImGui/`, `include/ImGui Version.txt` | `third_party/imgui/` | B3, **I5** |
@@ -196,7 +192,7 @@ Criterio de origen usado arriba: la importación inicial (`6991d95`) contiene `o
 
 | Contenido de la rama | Situación en el árbol actual |
 |---|---|
-| Icono `assets/mano.png` al mirar un cuerpo marcado como interactuable | Imagen distinta: es la fotografía de una mano (100 359 bytes) y la actual `res/ui/hand.png` una silueta blanca (20 974 bytes) [C]. No aporta una capacidad de juego necesaria que falte: el HUD actual es más avanzado, ya que `dibujarHUDInteraccion` parte de `ObjetivoInteraccion`, escala con la interfaz, muestra texto según el contexto y cubre también las puertas [C] |
+| Icono `assets/mano.png` al mirar un cuerpo marcado como interactuable | Imagen distinta: es la fotografía de una mano (100 359 bytes) y la actual `assets/ui/hand.png` una silueta blanca (20 974 bytes) [C]. No aporta una capacidad de juego necesaria que falte: el HUD actual es más avanzado, ya que `dibujarHUDInteraccion` parte de `ObjetivoInteraccion`, escala con la interfaz, muestra texto según el contexto y cubre también las puertas [C] |
 | `MundoFisico::setInteractuable` / `getInteractuable` y su uso en `EscenaFisica.cpp` | Sin referencias en el árbol actual [C] (`BuscarObjetoInteractuable` es otra función) |
 | `cargarTexturaPNG` llamada desde `draw_Menu_ImGui` | Mientras se permite interactuar, crea una textura GL en cada fotograma y nunca la libera [C] |
 | Se comenta el **registro** del callback: la llamada `glfwSetErrorCallback(error_callback)` | No es una edición de un comentario: desactiva el callback de errores de GLFW. El árbol actual mantiene la llamada [C]; integrarlo sería una regresión |
@@ -224,7 +220,7 @@ Criterio de origen usado arriba: la importación inicial (`6991d95`) contiene `o
 | 3 | **B2** | Transporte a `src/networking/transport/` | G1. **En serie con S1, S2 y S5** (`NetJuegoLogica.h`) | V, N, R, M |
 | 4 | **B2b** | Scripts a `tools/assets/` y guías en subcarpetas, con nombres en inglés y sin traducir el contenido | G1, I6, I7; el supervisor edita `tests/CMakeLists.txt` | Enlaces, rutas de scripts, V |
 | 5 | **B3** | `third_party/` consolidado | G1, I5, I8 | V, R, M, S |
-| 6 | **B4** | Recursos a `resources/` | G1 | V, R, M, S |
+| 6 | **B4** | Recursos a `assets/` (completado en este lote) | G1 | V, R, M, S |
 | en paralelo | **P3** | S1, S2, S5, S6, S7, S8, S9 y enlace de shaders (§3.4) | S3 y S4 cerradas | V, N, S |
 | 7 | **B5** | Mover escena, animación, física y editor | G1, S1 y S2, y una ventana exclusiva de `main.cpp` entre cortes | V, N, R, M, S |
 | 8 | **P4** | `main.h`: de definiciones en cabecera a estado explícito | S1, S2 y S5 a S9 (el mapa ordena P3 antes de P4); va tras B5 solo por turno | V, S |
@@ -254,7 +250,7 @@ Rollback de cualquier lote: anotar el SHA de partida; un commit o serie corta co
 1. Targets estáticos para `ObjetosAnimadosGLB`, física (`MundoFisico`, `EscenaFisica`, con Bullet), `NetJuego` (con `EntornVGI_network` y GLM), `GrabDiagnostics` y `PreferenciasRed`. Las pruebas los enlazan en lugar de listar `.cpp`. Declarar `cxx_std_20` y avisos; `GLM_ENABLE_EXPERIMENTAL` y `NOMINMAX` por paridad con el ejecutable (de estas unidades, `GrabDiagnostics.cpp` incluye `windows.h` [C]).
 2. Variables de raíz de recursos y comprobación de ficheros sonda (§7), con los valores actuales.
 3. **Diferido y no bloquea B2:** antes de B4, en un commit aparte, sustituir en `GlbTests`, `PhysicsTests`, `SceneLoaderTests` y `ObjLoaderTests` las rutas literales `EntornVGI/...` por las macros; cubrir también la ruta literal de assets de `AudioDecoderTests`. Añadir las macros de §7. B4 no empieza hasta que este cambio y sus pruebas pasen.
-4. `.gitignore`: añadir `!resources/assets/models/**/*.obj` sin quitar la excepción actual.
+4. `.gitignore`: permitir `assets/models/**/*.obj` pese a la regla global `*.obj`.
 
 **B2:** `git mv` de los nueve ficheros de transporte y su `CMakeLists.txt`; `add_subdirectory` con directorio binario explícito, después de definir `ENTORNVGI_ENABLE_NETWORK`; `EntornVGI_network` añade `src/` a su include público y **conserva** `EntornVGI/` (estrecharlo es otro cambio). Includes a actualizar [C]: `NetJuegoLogica.h`, `NetJuego.h`, `NetJuego.cpp`, `NetworkTests.cpp`, `ENetLoopbackTests.cpp`. No toca `main.cpp`.
 
@@ -354,7 +350,7 @@ ctest --test-dir build/windows-debug -R '^ENetLoopbackTests$' --repeat until-fai
 # R
 cmake --preset windows-debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 $bin = (Resolve-Path build/windows-debug/bin).Path
-Get-ChildItem "$bin/assets","$bin/shaders","$bin/textures","$bin/res" -Recurse -File |
+Get-ChildItem "$bin/assets" -Recurse -File |
   ForEach-Object { '{0}  {1}' -f (Get-FileHash $_.FullName).Hash, [IO.Path]::GetRelativePath($bin, $_.FullName) } |
   Sort-Object | Set-Content <manifiesto-fuera-del-repo>
 git ls-files -ci --exclude-standard | Measure-Object
@@ -426,19 +422,19 @@ Raíz anclada a `CMAKE_SOURCE_DIR` (hoy equivale a `PROJECT_SOURCE_DIR`):
 
 | Variable [P] | Valor antes de B4 | Valor tras B4 |
 |---|---|---|
-| `ENTORNVGI_RESOURCE_ROOT` | `${CMAKE_SOURCE_DIR}/EntornVGI` | `${CMAKE_SOURCE_DIR}/resources` |
-| `ENTORNVGI_UI_RESOURCE_ROOT` | `${CMAKE_SOURCE_DIR}/res/ui` | `${CMAKE_SOURCE_DIR}/resources/ui` |
+| `ENTORNVGI_RESOURCE_ROOT` | `${CMAKE_SOURCE_DIR}/EntornVGI` | `${CMAKE_SOURCE_DIR}` |
+| `ENTORNVGI_SOURCE_ASSETS_DIR` | `${CMAKE_SOURCE_DIR}/EntornVGI/assets` | `${CMAKE_SOURCE_DIR}/assets` |
 | `ENTORNVGI_RUNTIME_ROOT` | `${CMAKE_BINARY_DIR}/bin` | sin cambio |
 
 - **Directorios de assets:** `ENTORNVGI_SOURCE_ASSETS_DIR = <RESOURCE_ROOT>/assets`; `ENTORNVGI_RUNTIME_ASSETS_DIR = <RUNTIME_ROOT>/assets`. Hoy dependen de `CMAKE_CURRENT_SOURCE_DIR` [C]: mover ese CMake o los assets haría que el editor dejara de copiar al árbol fuente **sin error**, y `EditorPersistenceTests` no lo detecta porque usa directorios temporales.
-- **Ficheros sonda:** `FATAL_ERROR` en configuración si faltan `<RESOURCE_ROOT>/shaders/gouraud_shdrML.vert` o `<RESOURCE_ROOT>/assets/scenes/aula_informatica_calibrada.json`, los mismos que busca `SetWorkingDirectoryToAssetRoot` en ejecución.
-- **Rutas de ejecución:** sin cambios. El directorio de trabajo sigue siendo la raíz de recursos; las rutas `assets/...`, `./shaders/...`, `./textures/...`, `res/ui/hand.png` y las de modelos relativas al JSON no se tocan.
-- **Copia:** `EntornVGI_runtime_resources` conserva su nombre y sus destinos en `bin/`; la copia de DLL tras el build se conserva.
+- **Ficheros sonda:** `FATAL_ERROR` en configuración si faltan `<SOURCE_ASSETS_DIR>/shaders/gouraud_shdrML.vert` o `<SOURCE_ASSETS_DIR>/scenes/aula_informatica_calibrada.json`, los mismos que busca `SetWorkingDirectoryToAssetRoot` en ejecución.
+- **Rutas de ejecución:** el directorio de trabajo sigue siendo la raíz del repositorio en fuente y `bin/` en ejecución. Los shaders usan `assets/shaders/...`, las texturas globales `assets/textures/...`, la UI `assets/ui/hand.png` y las rutas internas del modelo/escena conservan sus relativos.
+- **Copia:** `EntornVGI_runtime_resources` conserva su nombre y copia el árbol completo a `bin/assets/`; la copia de DLL tras el build se conserva.
 - **Macros de prueba:** se conservan `ESCAPETHEUAB_SOURCE_DIR` y `ESCAPETHEUAB_RUNTIME_ASSET_ROOT`; añadir [P] `ESCAPETHEUAB_SOURCE_ASSETS_DIR`, `ESCAPETHEUAB_SOURCE_SHADERS_DIR` y `ESCAPETHEUAB_UI_RESOURCE_DIR`. Mantener el aislamiento de `EditorPersistenceTests` y la variante sin directorios de `EditorTests`.
 - **Hashes:** manifiesto SHA-256 de `bin/` idéntico antes y después de B3 y B4. El `GLOB` copia también `.bak`, `.blend` y `*.pre-tiling.bak` [C]; limpiarlos cambia el manifiesto y va aparte.
 - **B3:** `IMGUI_DIR`; include de `third_party/` para `EntornVGI_scene_loader` y las pruebas que compilan el serializador; includes en `SceneLoader.cpp`, `SerializadorEscenas.cpp`, `EditorEscenas.cpp`, `EditorPersistenceTests.cpp` y `file_dialog_compat.h`; fuentes de `EditorGizmoInteractionTests`; includes de `ObjLoaderTests`; orden `BEFORE` del include de NFD. El contenido de los terceros no se modifica.
 - **P5 (audio):** al mover los adaptadores de Vorbis, actualizar la ruta de reserva `ENTORNVGI_STB_IMPLEMENTATION_SOURCE` del CMake raíz, el include `<stb_vorbis_compat.h>` de `AudioManager.cpp` y `AudioDecoderTests.cpp` y sus directorios de include. Hasta entonces `EntornVGI/third_party/` conserva esos dos ficheros.
-- **B4:** además de lo anterior, mover la excepción `*.obj` de `.gitignore`, actualizar `.vscode` (hoy usa `EntornVGI/` como directorio de trabajo; con `resources/` la búsqueda de respaldo encuentra escenas y shaders pero no `res/ui/hand.png` [H]), rutas de los scripts, README y guías.
+- **B4:** mover los recursos a `assets/`, actualizar `.vscode` y el directorio de depuración de Visual Studio para usar la raíz del repositorio, además de scripts, README y guías.
 - Los targets nuevos no heredan las definiciones `PRIVATE` del ejecutable: declararlas y comparar `compile_commands.json`.
 
 ## 8. `main.cpp`
