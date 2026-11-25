@@ -21,7 +21,7 @@ Marcas: **[C]** confirmado leyendo ficheros o git; **[H]** inferencia o aproxima
 | Nombres en inglés obligatorios para el código propio (P12) | **Decidido** (usuario, vía coordinador) |
 | Lotes B2 a B5 antes de que termine la modularización | **Decidido** (orden encargado por el coordinador) |
 | Terceros en `third_party/` sin modificar; `legacy_vgi` solo con la base académica original | **Decidido** (coordinador) |
-| El cuerpo (la prosa) de la documentación conserva su idioma; van en inglés los identificadores del código escrito por el equipo y los nombres de fichero y carpeta | **Decidido** (coordinador) |
+| El cuerpo (la prosa) de la documentación conserva su idioma; van en inglés los identificadores del código escrito por el equipo y los nombres de fichero y carpeta del código y la documentación del equipo | **Decidido** (coordinador) |
 | `origin/Issue#5` no se integra; la rama se conserva | **Decidido** (coordinador) |
 | B2 y S1, S2, S5 en serie por `NetJuegoLogica.h` | **Decidido** (coordinador) |
 | Continuación de las etapas arquitectónicas provisionales sin esperar la QA manual ni aprobación por corte | **Autorizada** (usuario) |
@@ -231,7 +231,7 @@ Criterio de origen usado arriba: la importación inicial (`6991d95`) contiene `o
 | 9 | **P5** | Hojas: audio, escala UI, cabeceras de gameplay, diagnóstico, paneles, HUD | P4 | V, N, S |
 | 10 | **P6** | a) sacar la lógica de juego del bloque VGI; b) mover el bloque a `legacy_vgi/` | P4, I3 | V, R, M, S |
 | 11 | **P7** | Render y VR | P6 | V, S |
-| 12 | **S10** | Ramas por rol de interacción, lanzamiento y solicitudes | Antes de P8; caracterización previa en verde y revisión cruzada (§3.4) | V, N, S |
+| 12 | **S10** | Ramas por rol de interacción, lanzamiento y solicitudes | Sin QA manual; caracterización previa en verde y revisión cruzada (§3.4) | V, N, S |
 | 13 | **P8** | Gameplay | P7, S10 | V, S |
 | 14 | **P9** | Red de juego, sin tocar el formato en cable | P8 | V, N, S |
 | 15 | **P10** | `app` como raíz de composición; RAII con el mismo orden de limpieza | P9 | V, N, S |

@@ -45,7 +45,7 @@ Procedimiento [P]:
 
 ## 4. Puerta común de cada etapa
 
-Ejecutar sobre el commit de la etapa y guardar el resultado con su SHA. Los puntos 1 a 4 bloquean la integración de la etapa a la que apliquen. Los puntos 5 y 6 requieren pantalla o referencias de P1: bloquean donde la puerta propia de la etapa los pide (§5, §6.3 y [plan físico](REFACTOR_PHYSICAL_PLAN.md) §3.1 y §4.4); en el resto, si no se ejecutan, se declaran como no ejecutados y quedan pendientes. Una etapa integrada con comprobaciones pendientes no se declara superada.
+Ejecutar sobre el commit de la etapa y guardar el resultado con su SHA. Los puntos 1 a 4 bloquean la integración de la etapa a la que apliquen. Los puntos 5 y 6 requieren pantalla o referencias de P1. Para el arranque y lo demás que exige pantalla, qué bloquea lo decide la tabla de niveles del [plan físico](REFACTOR_PHYSICAL_PLAN.md) §4.4: el nivel Escritorio bloquea recursos, render, UI y `app`. En los demás lotes y cortes, incluidos S1 a S10 aunque editen `main.cpp`, el arranque se ejecuta si hay pantalla; si no, se declara no ejecutado, queda pendiente y no bloquea. La columna de validación del plan §3.1 (letra S) indica qué ejecutar, no qué bloquea. Además se mantienen las puertas propias de cada etapa (§5 y §6.3). Una etapa integrada con comprobaciones pendientes no se declara superada.
 
 1. `git diff --check`.
 2. `.\run-windows.cmd -NoRun` y `.\run-windows.cmd -Configuration Release -NoRun`, con **directorio de build limpio** si cambian targets o se mueven ficheros.
