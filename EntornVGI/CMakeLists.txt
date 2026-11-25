@@ -65,23 +65,23 @@ option(ENTORNVGI_REQUIRE_ENET "Fallar la configuracion si ENet no esta disponibl
 add_subdirectory("${REPO_ROOT}/src/networking/transport" "${CMAKE_BINARY_DIR}/EntornVGI/networking/transport")
 
 set(ENTORNVGI_SOURCES
-	AudioManager.cpp
-	DibujoColisionadores.cpp
-	DibujoGLB.cpp
-	Editor/EditorEscenas.cpp
-	Editor/SerializadorEscenas.cpp
-	escena.cpp
-	glut_geometry.cpp
+	${REPO_ROOT}/src/audio/AudioManager.cpp
+	${REPO_ROOT}/src/physics/DibujoColisionadores.cpp
+	${REPO_ROOT}/src/rendering/DibujoGLB.cpp
+	${REPO_ROOT}/src/editor/EditorEscenas.cpp
+	${REPO_ROOT}/src/editor/SerializadorEscenas.cpp
+	${REPO_ROOT}/src/scene/escena.cpp
+	${REPO_ROOT}/src/rendering/glut_geometry.cpp
 	${REPO_ROOT}/third_party/imguizmo/ImGuizmo.cpp
 	main.cpp
-	material.cpp
-	NetAvatar.cpp
+	${REPO_ROOT}/src/rendering/material.cpp
+	${REPO_ROOT}/src/networking/replication/NetAvatar.cpp
 	objLoader.cpp
-	ObjMeshOptimization.cpp
-	OpenXRManager.cpp
-	quatern.cpp
-	shader.cpp
-	visualitzacio.cpp
+	${REPO_ROOT}/src/rendering/ObjMeshOptimization.cpp
+	${REPO_ROOT}/src/vr/OpenXRManager.cpp
+	${REPO_ROOT}/src/rendering/quatern.cpp
+	${REPO_ROOT}/src/rendering/shader.cpp
+	${REPO_ROOT}/src/rendering/visualitzacio.cpp
 )
 
 set(IMGUI_SOURCES
@@ -102,6 +102,7 @@ if(ENTORNVGI_MESHOPT_TARGET)
 endif()
 
 target_include_directories(EntornVGI PRIVATE
+	${REPO_ROOT}
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${IMGUI_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/third_party
@@ -176,9 +177,10 @@ else()
 endif()
 
 add_library(EntornVGI_scene_loader STATIC
-	SceneLoader.cpp
+	${REPO_ROOT}/src/scene/SceneLoader.cpp
 )
 target_include_directories(EntornVGI_scene_loader PUBLIC
+	${REPO_ROOT}
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${REPO_ROOT}/third_party
 )
@@ -187,10 +189,10 @@ target_compile_features(EntornVGI_scene_loader PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_scene_loader PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_glb_model STATIC
-	ModeloGLB.cpp
+	${REPO_ROOT}/src/rendering/ModeloGLB.cpp
 )
 target_include_directories(EntornVGI_glb_model
-	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+	PUBLIC ${REPO_ROOT} ${CMAKE_CURRENT_SOURCE_DIR}
 	PRIVATE ${REPO_ROOT}/third_party/cgltf
 )
 target_link_libraries(EntornVGI_glb_model PUBLIC ${ENTORNVGI_GLM_TARGET})
@@ -198,9 +200,10 @@ target_compile_features(EntornVGI_glb_model PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_glb_model PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_animated_glb STATIC
-	ObjetosAnimadosGLB.cpp
+	${REPO_ROOT}/src/animation/ObjetosAnimadosGLB.cpp
 )
 target_include_directories(EntornVGI_animated_glb PUBLIC
+	${REPO_ROOT}
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(EntornVGI_animated_glb PUBLIC
@@ -211,10 +214,11 @@ target_compile_features(EntornVGI_animated_glb PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_animated_glb PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_physics STATIC
-	MundoFisico.cpp
-	EscenaFisica.cpp
+	${REPO_ROOT}/src/physics/MundoFisico.cpp
+	${REPO_ROOT}/src/physics/EscenaFisica.cpp
 )
 target_include_directories(EntornVGI_physics PUBLIC
+	${REPO_ROOT}
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(EntornVGI_physics PUBLIC
@@ -237,8 +241,8 @@ add_library(EntornVGI_network_preferences STATIC Network/PreferenciasRed.cpp)
 target_include_directories(EntornVGI_network_preferences PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(EntornVGI_network_preferences PUBLIC cxx_std_20)
 
-add_library(EntornVGI_network_game STATIC NetJuego.cpp)
-target_include_directories(EntornVGI_network_game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(EntornVGI_network_game STATIC ${REPO_ROOT}/src/networking/replication/NetJuego.cpp)
+target_include_directories(EntornVGI_network_game PUBLIC ${REPO_ROOT} ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(EntornVGI_network_game PUBLIC
 	EntornVGI_network
 	${ENTORNVGI_GLM_TARGET}
@@ -247,12 +251,13 @@ target_compile_features(EntornVGI_network_game PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_network_game PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_editor_core STATIC
-	Editor/LimitesModelo.cpp
-	Editor/SelectorObjetos.cpp
-	Editor/ValidadorColocacion.cpp
-	Editor/VisibilidadEditor.cpp
+	${REPO_ROOT}/src/editor/LimitesModelo.cpp
+	${REPO_ROOT}/src/editor/SelectorObjetos.cpp
+	${REPO_ROOT}/src/editor/ValidadorColocacion.cpp
+	${REPO_ROOT}/src/editor/VisibilidadEditor.cpp
 )
 target_include_directories(EntornVGI_editor_core PUBLIC
+	${REPO_ROOT}
 	${CMAKE_CURRENT_SOURCE_DIR}
 )
 target_link_libraries(EntornVGI_editor_core PUBLIC

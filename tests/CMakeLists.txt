@@ -1,3 +1,4 @@
+include_directories("${PROJECT_SOURCE_DIR}")
 find_package(glm CONFIG REQUIRED)
 file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}" ENTORNVGI_TEST_SOURCE_ROOT)
 file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/bin" ENTORNVGI_TEST_RUNTIME_ROOT)
@@ -29,7 +30,7 @@ add_test(NAME SceneLoaderTests COMMAND SceneLoaderTests)
 
 add_executable(EditorPersistenceTests
 	EditorPersistenceTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
+	${PROJECT_SOURCE_DIR}/src/editor/SerializadorEscenas.cpp
 )
 target_include_directories(EditorPersistenceTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
@@ -51,7 +52,7 @@ add_test(NAME EditorPersistenceTests COMMAND EditorPersistenceTests)
 
 add_executable(EditorTests
 	EditorTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
+	${PROJECT_SOURCE_DIR}/src/editor/SerializadorEscenas.cpp
 )
 target_include_directories(EditorTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
@@ -151,9 +152,9 @@ endif()
 add_executable(ObjLoaderTests
 	ObjLoaderTests.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/objLoader.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ObjMeshOptimization.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/glut_geometry.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/material.cpp
+	${PROJECT_SOURCE_DIR}/src/rendering/ObjMeshOptimization.cpp
+	${PROJECT_SOURCE_DIR}/src/rendering/glut_geometry.cpp
+	${PROJECT_SOURCE_DIR}/src/rendering/material.cpp
 )
 target_include_directories(ObjLoaderTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
@@ -178,7 +179,7 @@ endif()
 
 add_executable(ObjMeshOptimizationTests
     ObjMeshOptimizationTests.cpp
-    ${PROJECT_SOURCE_DIR}/EntornVGI/ObjMeshOptimization.cpp
+    ${PROJECT_SOURCE_DIR}/src/rendering/ObjMeshOptimization.cpp
 )
 target_include_directories(ObjMeshOptimizationTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
 target_compile_features(ObjMeshOptimizationTests PRIVATE cxx_std_20)
@@ -215,7 +216,7 @@ endif()
 # limpieza tras un fallo). Las que necesitan un casco real NO estan aqui: ver docs/OPENXR.md.
 add_executable(OpenXRTests
 	OpenXRTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/OpenXRManager.cpp
+	${PROJECT_SOURCE_DIR}/src/vr/OpenXRManager.cpp
 )
 target_include_directories(OpenXRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
 # OpenXRManager.cpp usa GLEW/OpenGL para los framebuffers de los swapchains (solo se llaman con sesion real).

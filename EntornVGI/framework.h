@@ -36,7 +36,7 @@
 using namespace glm;
 
 // VGI: Fonts dels Objectes de la llibreria freeglut adaptats a estructures VAO, EBO i VBO
-#include "glut_geometry.h"
+#include "src/rendering/glut_geometry.h"
 
 // VGI: Llibreria SOIL2 (actualitzaci� de SOIL) per llegir imatges de diferents formats 
 //     (BMP,JPG,TIF,GIF,etc.) en la funci� loadIMA (visualitzacio.cpp)

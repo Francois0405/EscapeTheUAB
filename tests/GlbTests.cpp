@@ -7,8 +7,8 @@
 //   3. Un GLB inventado dentro de la prueba (un "cajón") con una jerarquía DISTINTA
 //      a la de la puerta, para comprobar que el cargador no depende de ella.
 // -----------------------------------------------------------------------------
-#include "ModeloGLB.h"
-#include "ObjetosAnimadosGLB.h"
+#include "src/rendering/ModeloGLB.h"
+#include "src/animation/ObjetosAnimadosGLB.h"
 
 #include <chrono>
 #include <cmath>

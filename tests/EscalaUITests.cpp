@@ -1,4 +1,4 @@
-#include "EscalaUI.h"
+#include "src/ui/EscalaUI.h"
 
 #include <cmath>
 #include <iostream>

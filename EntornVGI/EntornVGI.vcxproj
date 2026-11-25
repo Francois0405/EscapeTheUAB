@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framdework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -128,7 +128,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -148,28 +148,28 @@
     <ClCompile Include="..\third_party\imgui\imgui_impl_opengl3.cpp" />
     <ClCompile Include="..\third_party\imgui\imgui_tables.cpp" />
     <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp" />
-    <ClCompile Include="DibujoColisionadores.cpp" />
-    <ClCompile Include="DibujoGLB.cpp" />
-    <ClCompile Include="Editor\EditorEscenas.cpp" />
-    <ClCompile Include="Editor\LimitesModelo.cpp" />
-    <ClCompile Include="Editor\SelectorObjetos.cpp" />
-    <ClCompile Include="Editor\SerializadorEscenas.cpp" />
-    <ClCompile Include="Editor\VisibilidadEditor.cpp" />
-    <ClCompile Include="EscenaFisica.cpp" />
-    <ClCompile Include="escena.cpp" />
-    <ClCompile Include="glut_geometry.cpp" />
+    <ClCompile Include="..\src\physics\DibujoColisionadores.cpp" />
+    <ClCompile Include="..\src\rendering\DibujoGLB.cpp" />
+    <ClCompile Include="..\src\editor\EditorEscenas.cpp" />
+    <ClCompile Include="..\src\editor\LimitesModelo.cpp" />
+    <ClCompile Include="..\src\editor\SelectorObjetos.cpp" />
+    <ClCompile Include="..\src\editor\SerializadorEscenas.cpp" />
+    <ClCompile Include="..\src\editor\VisibilidadEditor.cpp" />
+    <ClCompile Include="..\src\physics\EscenaFisica.cpp" />
+    <ClCompile Include="..\src\scene\escena.cpp" />
+    <ClCompile Include="..\src\rendering\glut_geometry.cpp" />
     <ClCompile Include="..\third_party\imguizmo\ImGuizmo.cpp" />
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="material.cpp" />
-    <ClCompile Include="ModeloGLB.cpp" />
-    <ClCompile Include="MundoFisico.cpp" />
-    <ClCompile Include="ObjetosAnimadosGLB.cpp" />
+    <ClCompile Include="..\src\rendering\material.cpp" />
+    <ClCompile Include="..\src\rendering\ModeloGLB.cpp" />
+    <ClCompile Include="..\src\physics\MundoFisico.cpp" />
+    <ClCompile Include="..\src\animation\ObjetosAnimadosGLB.cpp" />
     <ClCompile Include="objLoader.cpp" />
-    <ClCompile Include="OpenXRManager.cpp" />
-    <ClCompile Include="quatern.cpp" />
-    <ClCompile Include="SceneLoader.cpp" />
-    <ClCompile Include="shader.cpp" />
-    <ClCompile Include="visualitzacio.cpp" />
+    <ClCompile Include="..\src\vr\OpenXRManager.cpp" />
+    <ClCompile Include="..\src\rendering\quatern.cpp" />
+    <ClCompile Include="..\src\scene\SceneLoader.cpp" />
+    <ClCompile Include="..\src\rendering\shader.cpp" />
+    <ClCompile Include="..\src\rendering\visualitzacio.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\third_party\imgui\imconfig.h" />
@@ -201,36 +201,36 @@
     <ClInclude Include="..\third_party\imgui\nfd.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="file_dialog_compat.h" />
-    <ClInclude Include="Editor\EditorEscenas.h" />
-    <ClInclude Include="Editor\HistorialEscena.h" />
-    <ClInclude Include="Editor\LimitesModelo.h" />
-    <ClInclude Include="Editor\SelectorObjetos.h" />
-    <ClInclude Include="Editor\SerializadorEscenas.h" />
-    <ClInclude Include="Editor\VisibilidadEditor.h" />
+    <ClInclude Include="..\src\editor\EditorEscenas.h" />
+    <ClInclude Include="..\src\editor\HistorialEscena.h" />
+    <ClInclude Include="..\src\editor\LimitesModelo.h" />
+    <ClInclude Include="..\src\editor\SelectorObjetos.h" />
+    <ClInclude Include="..\src\editor\SerializadorEscenas.h" />
+    <ClInclude Include="..\src\editor\VisibilidadEditor.h" />
     <ClInclude Include="..\third_party\nlohmann\json.hpp" />
     <ClInclude Include="..\third_party\imguizmo\ImGuizmo.h" />
-    <ClInclude Include="escena.h" />
+    <ClInclude Include="..\src\scene\escena.h" />
     <ClInclude Include="framework.h" />
-    <ClInclude Include="glut_geometry.h" />
-    <ClInclude Include="AnimacionGLB.h" />
-    <ClInclude Include="AnimacionPuerta.h" />
-    <ClInclude Include="DibujoColisionadores.h" />
-    <ClInclude Include="DibujoGLB.h" />
-    <ClInclude Include="EscenaFisica.h" />
+    <ClInclude Include="..\src\rendering\glut_geometry.h" />
+    <ClInclude Include="..\src\animation\AnimacionGLB.h" />
+    <ClInclude Include="..\src\animation\AnimacionPuerta.h" />
+    <ClInclude Include="..\src\physics\DibujoColisionadores.h" />
+    <ClInclude Include="..\src\rendering\DibujoGLB.h" />
+    <ClInclude Include="..\src\physics\EscenaFisica.h" />
     <ClInclude Include="main.h" />
-    <ClInclude Include="material.h" />
-    <ClInclude Include="ModeloGLB.h" />
-    <ClInclude Include="MundoFisico.h" />
-    <ClInclude Include="ObjetosAnimadosGLB.h" />
-    <ClInclude Include="VistaEstereo.h" />
+    <ClInclude Include="..\src\rendering\material.h" />
+    <ClInclude Include="..\src\rendering\ModeloGLB.h" />
+    <ClInclude Include="..\src\physics\MundoFisico.h" />
+    <ClInclude Include="..\src\animation\ObjetosAnimadosGLB.h" />
+    <ClInclude Include="..\src\vr\VistaEstereo.h" />
     <ClInclude Include="objLoader.h" />
-    <ClInclude Include="OpenXRManager.h" />
-    <ClInclude Include="VistaVR.h" />
-    <ClInclude Include="MovimientoFPS.h" />
-    <ClInclude Include="quatern.h" />
-    <ClInclude Include="SceneLoader.h" />
-    <ClInclude Include="shader.h" />
-    <ClInclude Include="visualitzacio.h" />
+    <ClInclude Include="..\src\vr\OpenXRManager.h" />
+    <ClInclude Include="..\src\vr\VistaVR.h" />
+    <ClInclude Include="..\src\gameplay\player\MovimientoFPS.h" />
+    <ClInclude Include="..\src\rendering\quatern.h" />
+    <ClInclude Include="..\src\scene\SceneLoader.h" />
+    <ClInclude Include="..\src\rendering\shader.h" />
+    <ClInclude Include="..\src\rendering\visualitzacio.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <Target Name="CopyX64RuntimeLibraries" AfterTargets="Build" Condition="'$(Platform)' == 'x64'">

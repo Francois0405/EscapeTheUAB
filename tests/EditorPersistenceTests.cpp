@@ -1,5 +1,5 @@
-#include "Editor/SerializadorEscenas.h"
-#include "SceneLoader.h"
+#include "src/editor/SerializadorEscenas.h"
+#include "src/scene/SceneLoader.h"
 #include <nlohmann/json.hpp>
 
 #include <chrono>

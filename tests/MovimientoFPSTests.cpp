@@ -1,6 +1,6 @@
 // MovimientoFPSTests.cpp
 // Pruebas de velocidad, sprint, estamina y balanceo (MovimientoFPS.h) sin ventana ni fisica.
-#include "MovimientoFPS.h"
+#include "src/gameplay/player/MovimientoFPS.h"
 
 #include <cmath>
 #include <iostream>

@@ -7,11 +7,11 @@
 //   4. Pausa.
 //   5. Colisión con el suelo y reposo (demo del cubo) y reinicio.
 // -----------------------------------------------------------------------------
-#include "EscenaFisica.h"
-#include "AnimacionHiriti.h"
-#include "MundoFisico.h"
-#include "SceneLoader.h"
-#include "VistaEstereo.h"
+#include "src/physics/EscenaFisica.h"
+#include "src/gameplay/hirity/AnimacionHiriti.h"
+#include "src/physics/MundoFisico.h"
+#include "src/scene/SceneLoader.h"
+#include "src/vr/VistaEstereo.h"
 
 #include <algorithm>
 #include <cmath>

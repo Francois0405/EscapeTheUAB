@@ -1,5 +1,5 @@
-#include "SceneLoader.h"
-#include "MundoFisico.h"
+#include "src/scene/SceneLoader.h"
+#include "src/physics/MundoFisico.h"
 
 #include <chrono>
 #include <filesystem>

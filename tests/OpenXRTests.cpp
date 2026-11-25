@@ -10,7 +10,7 @@
 // NO se prueba aqui (requiere un casco real, ver docs/OPENXR.md): crear la sesion, eventos reales,
 // version de OpenGL aceptada por Quest Link, bucle de fotogramas.
 // -----------------------------------------------------------------------------
-#include "OpenXRManager.h"
+#include "src/vr/OpenXRManager.h"
 
 #include <iostream>
 

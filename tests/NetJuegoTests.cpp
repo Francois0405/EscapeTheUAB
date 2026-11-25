@@ -2,11 +2,11 @@
 // Adaptador de red del juego (EntornVGI/NetJuego*.h): configuracion, poses PC/OpenXR (Z arriba), interpolacion,
 // puertas con el host como autoridad, propiedad temporal del objeto compartido, offline sin ENet ni hilos.
 // Usa un transporte en memoria: sin sockets, sin ENet, sin OpenGL, sin Bullet, sin visor.
-#include "NetJuego.h"
-#include "MundoFisico.h"
-#include "Network/Game/RemotePhysicsTimeline.h"
-#include "Network/Game/HostPhysicsPublication.h"
-#include "Network/Game/SceneNetworkState.h"
+#include "src/networking/replication/NetJuego.h"
+#include "src/physics/MundoFisico.h"
+#include "src/networking/replication/Game/RemotePhysicsTimeline.h"
+#include "src/networking/replication/Game/HostPhysicsPublication.h"
+#include "src/networking/replication/Game/SceneNetworkState.h"
 
 #include <chrono>
 #include <cmath>

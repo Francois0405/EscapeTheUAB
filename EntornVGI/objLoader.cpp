@@ -13,9 +13,9 @@
 
 #include "framework.h"
 #include "objLoader.h"
-#include "UniformCache.h"
-#include "RenderMetrics.h"
-#include "ObjMeshOptimization.h"
+#include "src/rendering/UniformCache.h"
+#include "src/rendering/RenderMetrics.h"
+#include "src/rendering/ObjMeshOptimization.h"
 #include <utility>
 #include <algorithm>
 #include <cerrno>

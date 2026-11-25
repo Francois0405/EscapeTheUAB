@@ -1,4 +1,4 @@
-#include "Editor/ValidadorColocacion.h"
+#include "src/editor/ValidadorColocacion.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 

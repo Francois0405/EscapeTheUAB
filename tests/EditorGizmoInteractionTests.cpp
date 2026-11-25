@@ -1,4 +1,4 @@
-#include "Editor/CamaraEditor.h"
+#include "src/editor/CamaraEditor.h"
 #include "imgui.h"
 #include "ImGuizmo.h"
 

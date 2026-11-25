@@ -1,6 +1,6 @@
 // VistaVRTests.cpp
 // Pruebas de la matemática VR (VistaVR.h) sin visor, ventana ni OpenGL.
-#include "VistaVR.h"
+#include "src/vr/VistaVR.h"
 
 #include <cmath>
 #include <iostream>

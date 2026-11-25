@@ -1,4 +1,4 @@
-#include "ObjMeshOptimization.h"
+#include "src/rendering/ObjMeshOptimization.h"
 
 #include <cassert>
 #include <cmath>

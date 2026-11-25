@@ -1,13 +1,13 @@
 // EditorTests.cpp
 // Pruebas del editor sin ventana: historial (deshacer/rehacer), visibilidad temporal, selección por rayo,
 // límites de modelos y persistencia (añadir OBJ, puertas GLB, guardar y recargar).
-#include "Editor/CamaraEditor.h"
-#include "Editor/HistorialEscena.h"
-#include "Editor/LimitesModelo.h"
-#include "Editor/SelectorObjetos.h"
-#include "Editor/SerializadorEscenas.h"
-#include "Editor/VisibilidadEditor.h"
-#include "SceneLoader.h"
+#include "src/editor/CamaraEditor.h"
+#include "src/editor/HistorialEscena.h"
+#include "src/editor/LimitesModelo.h"
+#include "src/editor/SelectorObjetos.h"
+#include "src/editor/SerializadorEscenas.h"
+#include "src/editor/VisibilidadEditor.h"
+#include "src/scene/SceneLoader.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 

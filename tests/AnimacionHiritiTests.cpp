@@ -1,4 +1,4 @@
-#include "AnimacionHiriti.h"
+#include "src/gameplay/hirity/AnimacionHiriti.h"
 #include "TemporizadorAmbiente.h"
 
 #include <iostream>
