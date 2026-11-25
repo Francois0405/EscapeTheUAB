@@ -128,10 +128,13 @@ Validación de esta corrección en `integration/pre-refactor` sobre el árbol mo
 | Lanzador oficial Release (`run-windows.cmd -Configuration Release -NoRun`) | PASS; mismas dependencias habilitadas |
 | CTest Debug | PASS, 20/20 |
 | CTest Release | PASS, 20/20 |
-| `NetJuegoTests`, Debug/Release, repetición hasta 20 | PASS, 20/20 en cada configuración |
-| `ENetLoopbackTests`, Debug/Release, repetición hasta 10 | PASS, 10/10 en cada configuración |
+| `NetJuegoTests`, CTest integrado Debug/Release | PASS, 1/1 en cada configuración; la repetición hasta 20 no se ejecutó sobre este HEAD |
+| `ENetLoopbackTests`, CTest integrado Debug/Release | PASS, 1/1 en cada configuración; la repetición hasta 10 no se ejecutó sobre este HEAD |
 | `PhysicsTests` y `AnimacionHiritiTests` | PASS en CTest completo de ambas configuraciones |
-| Arranque simultáneo de dos instancias Release con los argumentos host y cliente | Ambas cargaron la escena; modo de cuerpo host dinámico y cliente réplica cinemática confirmados en diagnóstico |
-| Handshake y manipulación interactiva entre ventanas | NO VERIFICADO; Orca no reconoció las ventanas GLFW para captura/entrada, y el cliente no pudo guardar `multijugador.ini` en AppData bajo los permisos del entorno |
+| Dos instancias Release: host/cliente en `127.0.0.1:17777` | PASS de conexión observado en F4: host escuchando con 1 remoto y cliente conectado con 1 remoto; ambas ventanas mostraron la escena |
+| Agarre desde el cliente y sincronización física | NO VERIFICADO: tras una pulsación E con el objeto resaltado, el panel siguió indicando objeto libre y no hubo transición `[grab] request/accepted/reject`; Orca marcó la entrada sintética como `unverified` |
+| Repeticiones de estabilidad de red | NO RUN sobre este HEAD: NetJuegoTests ×20 y ENetLoopbackTests ×10 por configuración siguen pendientes |
 
-Por tanto, los PASS automatizados no demuestran que el handshake ni el agarre se hayan reproducido visualmente. Para cerrar QA manual, ejecutar ambas instancias desde una terminal normal de Windows con `ENTORNVGI_DEBUG_GRAB=1`, confirmar el panel F4 y realizar el checklist de manipulación que sigue. Si aparecen `reject`, usar su `detail` para distinguir raycast exacto fallido, propiedad ocupada o pose no disponible; durante un agarre remoto se espera `holding ... host-dynamic-constraint-active`, y Hirity debe indicar `held=yes`/`tracking=suspended-or-stabilizing` hasta soltarlo.
+El commit `6b6af8f` corrige tres defectos confirmados estáticamente: la simulación autoritativa del host ya no se pausa solo por perder foco mientras sigue en PLAY (la entrada local sí se desactiva); la réplica conserva el subtipo local `Rebotador` cuando el host informa un cuerpo dinámico; y el host limita a 15 m/s el pequeño exceso de redondeo float32 sin aceptar excesos mayores. Los tests de NetJuego cubren estas reglas y el flujo de recepción de lanzamientos. El merge integrado es `2942290`.
+
+La conexión host/cliente y la carga de la escena sí se observaron en ventanas reales. El agarre no quedó confirmado: el diagnóstico no registró una solicitud y Orca declaró no verificada la pulsación E, por lo que el resultado no distingue entre una entrada que no llegó a GLFW y una interacción rechazada antes de la ruta instrumentada. Antes de consolidar, ejecutar desde teclado físico el checklist de agarre en host y cliente; con `ENTORNVGI_DEBUG_GRAB=1`, confirmar `[grab] request` seguido de `accepted` y `holding ... host-dynamic-constraint-active`, y verificar posición/propiedad en ambas instancias. Para Hirity, confirmar `held=yes`, seguimiento suspendido mientras está sujeto y su reanudación al liberar. Los automatizados no sustituyen esa prueba gráfica.
