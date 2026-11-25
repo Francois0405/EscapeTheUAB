@@ -450,3 +450,31 @@ Refactor: rama `refactor/project-architecture`. Referencia: `integration/pre-ref
 **Consolidación.** 1) Auditoría Codex de `0d727a8..HEAD`. 2) QA manual de juego, multijugador, editor y VR comparando con `62a7018`. 3) Compilación en Linux y macOS. 4) Solo entonces, decidir el merge; `master` no se ha tocado y no hay push.
 
 **Veredictos:** GO técnico en Windows, provisional hasta la auditoría. GO funcional: **no** (falta QA). GO para publicar `master`: **no**.
+
+## 31. Cierre definitivo (2026-11-26)
+
+Implementado por Claude Sonnet sobre `5bc72fd`. Auditoría independiente de solo lectura por otro agente Claude Sonnet de `0d727a8..5bc72fd`: 0 BLOCKER, 0 REQUIRED; los OPTIONAL aplicados son los enumeradores mezclados, `Empty()`, los textos de uso de `tools/` y comentarios obsoletos. **Los commits posteriores a `5bc72fd` no se han auditado.**
+
+| Commit | Contenido |
+|---|---|
+| `42e623b` | Defecto previo: el fondo del menú era un WebP con extensión PNG. Mismos píxeles RGBA |
+| `c9c3c10`, `b580135` | Defecto previo: pasos opcionales. El primero no compilaba; el segundo lo corrige |
+| `59f3226`, `a120140`, `d0b8594` | `res/`, `x64/`, `include/` y `lib/` pasan a `archive/legacy/` |
+| `4d4a932` | La solución de Visual Studio vuelve a compilar, generada desde CMake |
+| `edf0cb5` | Estado dividido por responsabilidad; el pegamento sale de las carpetas de módulos |
+| `924a410` | Enumeradores y 96 campos y parámetros en inglés |
+| `3d99e7e` | Comentarios obsoletos y rutas de include duplicadas |
+
+**Validación sobre `3d99e7e` (Windows), exportado con `git archive` a un directorio nuevo:** lanzadores oficiales Debug y Release con código 0; CTest 23/23 en ambas; `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10 en cada configuración (60 pasadas); arranque de 20 s en ambas con 4 programas de shaders enlazados, escena de 83 instancias, spawn válido y cierre con código 0. MSBuild Debug y Release se compilaron y arrancaron sobre `4d4a932`, y Debug de nuevo sobre `edf0cb5`; el proyecto generado coincide con las fuentes de `3d99e7e`. Host y cliente locales en `127.0.0.1`: ninguno reporta fallo, mientras que un cliente sin host sí reporta «Sin respuesta» en el mismo plazo; es evidencia indirecta de conexión, no de juego multijugador.
+
+**Pendiente de decisión del equipo:** gitlink `ImDesignManager` (sin `.gitmodules`, no se puede inicializar; entró en `9b7fbf4`), `third_party/OpenXR-SDK-main` (CMake no lo referencia), `archive/legacy/` (copias, artefactos de compilación de Visual Studio, muestras VGI, modelos de `res/`, dependencias vendorizadas).
+
+**Consolidación en `master`.** `master` y `origin/master` (referencias locales, sin `fetch`) son ancestros de esta rama.
+
+1. `git fetch` y comprobar que `origin/master` sigue siendo ancestro.
+2. QA manual de la lista de abajo en esta rama, comparando con `integration/pre-refactor`.
+3. Portar `origin/Issue#5` (1 commit sobre la estructura antigua; ver [PORTING_MAP.md](PORTING_MAP.md)) o descartarlo.
+4. `git switch master && git merge --no-ff refactor/project-architecture`, compilar y pasar CTest.
+5. Publicar solo cuando el equipo lo apruebe. No se ha hecho push.
+
+**QA manual pendiente:** movimiento y cámara; coger, mover, lanzar y puertas; Hirity y su audio; menús y fondo del menú; editor (F6) y guardado; F1/F4; dos jugadores en dos equipos; OpenXR con visor; compilación en Linux y macOS.

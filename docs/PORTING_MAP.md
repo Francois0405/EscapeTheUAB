@@ -1,0 +1,211 @@
+# Tabla de portado: `EntornVGI/main.cpp` → módulos
+
+Para ramas basadas en `62a7018` o anteriores. Cada función del antiguo `main.cpp` y dónde está ahora.
+Las funciones que ya se habían extraído a módulos antes del cierre conservan su adaptador en la ruta indicada.
+Los mapas completos de nombres están en [`tools/refactor/`](../tools/refactor/).
+
+| Función antigua | Nombre actual | Fichero |
+|---|---|---|
+| `SetWorkingDirectoryToAssetRoot` | `SetWorkingDirectoryToAssetRoot` | `src/app/WorkingDirectory.cpp` |
+| `texturaDeMaterial` | `materialTexture` | `src/app/render/MaterialTextures.cpp` |
+| `texturaParaEditor` | `editorTexture` | `src/app/render/MaterialTextures.cpp` |
+| `liberarTexturasMaterialEscena` | `liberarTexturasMaterialEscena` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `aplicarIntensidadMaterial` | `applyMaterialIntensity` | `src/legacy_vgi/VgiMaterial.cpp` |
+| `alternarOpenXR` | `toggleOpenXr` | `src/app/VrToggle.cpp` |
+| `iniciarConsultaGpu` | `beginGpuQuery` | `src/app/render/GpuFrameTimer.cpp` |
+| `finalizarConsultaGpu` | `endGpuQuery` | `src/app/render/GpuFrameTimer.cpp` |
+| `radioHiriti` | `radioHiriti` | `src/gameplay/hirity/HiritiRuntime.cpp` |
+| `reproducirSonidoAparicionHiriti` | `reproducirSonidoAparicionHiriti` | `src/gameplay/hirity/HiritiRuntime.cpp` |
+| `actualizarPuertaDemo` | `updateDemoDoor` | `src/app/DemoDoor.cpp` |
+| `iniciarPuertaDemo` | `startDemoDoor` | `src/app/DemoDoor.cpp` |
+| `volumenSonidoHiriti` | `volumenSonidoHiriti` | `src/gameplay/hirity/HiritiRuntime.cpp` |
+| `reproducirSonidoHiriti` | `playHiritiSoundCue` | `src/app/adapters/HirityAdapters.cpp` |
+| `cargarTexturaManoInteraccion` | `loadInteractionHandTexture` | `src/app/ui/InteractionHudTexture.cpp` |
+| `actualizarLucesDeEscena` | `updateSceneLights` | `src/app/render/SceneLighting.cpp` |
+| `actualizarOclusoresPhong` | `updatePhongOccluders` | `src/app/render/SceneLighting.cpp` |
+| `matrizLocalMovilActual` | `currentPhoneLocalMatrix` | `src/app/render/HandheldDevices.cpp` |
+| `actualizarLinternaMovil` | `updatePhoneFlashlight` | `src/app/render/HandheldDevices.cpp` |
+| `diagnosticoAgarreActivo` | `grabTraceEnabled` | `src/app/adapters/GrabTrace.cpp` |
+| `rolDiagnosticoAgarre` | `grabTraceRole` | `src/app/adapters/GrabTrace.cpp` |
+| `persistirDiagnosticoAgarre` | `persistGrabTrace` | `src/app/adapters/GrabTrace.cpp` |
+| `emitirDiagnosticoAgarre` | `emitGrabTrace` | `src/app/adapters/GrabTrace.cpp` |
+| `trazarAgarre` | `traceGrab` | `src/app/adapters/GrabTrace.cpp` |
+| `jugadorTieneAgarre` | `playerHoldsObject` | `src/app/adapters/InteractionAdapters.cpp` |
+| `buscarObjetivoInteraccion` | `findCurrentInteractionTarget` | `src/app/adapters/InteractionAdapters.cpp` |
+| `actualizarObjetivoInteraccion` | `updateCurrentInteractionTarget` | `src/app/adapters/InteractionAdapters.cpp` |
+| `iniciarCargaLanzamiento` | `beginThrowCharge` | `src/app/adapters/InteractionAdapters.cpp` |
+| `interactuar` | `performInteraction` | `src/app/adapters/InteractionAdapters.cpp` |
+| `actualizarAgarreDelJugador` | `updateHeldObject` | `src/app/adapters/InteractionAdapters.cpp` |
+| `reaparecerHiritiDetrasDelJugador` | `reaparecerHiritiDetrasDelJugador` | `src/gameplay/hirity/HiritiRuntime.cpp` |
+| `actualizarHiriti` | `updateHiritiBehaviour` | `src/app/adapters/HirityAdapters.cpp` |
+| `actualizarAudioAmbiente` | `updateAmbientSound` | `src/app/adapters/HirityAdapters.cpp` |
+| `liberarObjetosAnimados` | `releaseSceneAnimations` | `src/app/adapters/SceneAdapters.cpp` |
+| `modoJuegoFPS` | `fpsModeActive` | `src/app/input/CursorCapture.cpp` |
+| `fijarCapturaCursor` | `setCursorCapture` | `src/app/input/CursorCapture.cpp` |
+| `sincronizarCursorFPS` | `syncFpsCursor` | `src/app/input/CursorCapture.cpp` |
+| `fijarCamaraAlSpawn` | `placeCameraAtSpawn` | `src/app/adapters/PlayerAdapters.cpp` |
+| `aplicarPresetJuego` | `applyStartupPreset` | `src/app/adapters/PlayerAdapters.cpp` |
+| `inclinarJugadorFPS` | `pitchFpsPlayer` | `src/app/adapters/PlayerAdapters.cpp` |
+| `hayTeclaDeMovimiento` | `movementKeyPressed` | `src/app/adapters/PlayerAdapters.cpp` |
+| `posicionPiesDesdeCamara` | `feetPositionFromCamera` | `src/app/adapters/PlayerAdapters.cpp` |
+| `origenYDireccionDeLaMirada` | `gazeOriginAndDirection` | `src/app/adapters/PlayerAdapters.cpp` |
+| `matrizMandoIzquierdoMundo` | `leftControllerWorldMatrix` | `src/app/render/HandheldDevices.cpp` |
+| `poseLocalParaRed` | `poseLocalParaRed` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `capturarEstadoEscenaRed` | `captureNetworkSceneState` | `src/app/adapters/SessionAdapters.cpp` |
+| `indiceUnicoObjetoRed` | `indiceUnicoObjetoRed` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `guardarMuestraFisicaRemota` | `guardarMuestraFisicaRemota` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `interpolarEstadoFisico` | `interpolarEstadoFisico` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `identificadorEscenaRed` | `identificadorEscenaRed` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `aplicarEstadosEscenaRed` | `aplicarEstadosEscenaRed` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `iniciarRed` | `startNetwork` | `src/app/adapters/SessionAdapters.cpp` |
+| `detenerRed` | `stopNetwork` | `src/app/adapters/SessionAdapters.cpp` |
+| `actualizarRed` | `updateNetwork` | `src/app/adapters/SessionAdapters.cpp` |
+| `crearJugadorFisico` | `spawnPhysicsPlayer` | `src/app/adapters/PlayerAdapters.cpp` |
+| `moverJugadorFPS` | `moveFirstPersonPlayer` | `src/app/adapters/PlayerAdapters.cpp` |
+| `sincronizarJugadorYCamara` | `syncPlayerWithCamera` | `src/app/adapters/PlayerAdapters.cpp` |
+| `actualizarMovimientoMovil` | `updatePhoneMotion` | `src/app/adapters/PlayerAdapters.cpp` |
+| `entradaFPSActiva` | `fpsInputActive` | `src/app/input/CursorCapture.cpp` |
+| `cancelarCargaLanzamiento` | `cancelThrowChargeInput` | `src/app/adapters/InteractionAdapters.cpp` |
+| `lanzarObjetoCargado` | `throwHeldObject` | `src/app/adapters/InteractionAdapters.cpp` |
+| `actualizarCargaLanzamiento` | `updateThrowChargeInput` | `src/app/adapters/InteractionAdapters.cpp` |
+| `actualizarBalanceoVisual` | `updateCameraBobbing` | `src/app/adapters/PlayerAdapters.cpp` |
+| `desplazamientoVisualDeCamara` | `cameraVisualOffset` | `src/app/adapters/PlayerAdapters.cpp` |
+| `cargarYAplicarEscena` | `loadAndApplyScene` | `src/app/adapters/SceneAdapters.cpp` |
+| `reconstruirFisicaTrasEdicion` | `rebuildPhysicsAfterEditing` | `src/app/adapters/SceneAdapters.cpp` |
+| `cargarModeloParaEditor` | `loadEditorModel` | `src/app/adapters/SceneAdapters.cpp` |
+| `OnWindowFocus` | `OnWindowFocus` | `src/app/WindowCallbacks.cpp` |
+| `OnWindowCloseRequest` | `OnWindowCloseRequest` | `src/app/WindowCallbacks.cpp` |
+| `InitGL` | `InitGL` | `src/app/adapters/GraphicsAdapters.cpp` |
+| `OnSize` | `OnSize` | `src/app/adapters/RenderAdapters.cpp` |
+| `OnFramebufferSize` | `OnFramebufferSize` | `src/app/adapters/RenderAdapters.cpp` |
+| `dibujarEscenaEstereo` | `drawStereoScene` | `src/rendering/RuntimeRenderer.cpp` |
+| `copiarOjoAVentana` | `copyEyeToWindow` | `src/rendering/RuntimeRenderer.cpp` |
+| `dibujarEscenaVR` | `drawVrScene` | `src/app/adapters/RenderAdapters.cpp` |
+| `OnPaint` | `OnPaint` | `src/app/adapters/RenderAdapters.cpp` |
+| `configura_Escena` | `configura_Escena` | `src/app/adapters/RenderAdapters.cpp` |
+| `dibujarRayoMandoVR` | `drawVrControllerRay` | `src/app/render/HandheldDevices.cpp` |
+| `dibuixa_Escena` | `dibuixa_Escena` | `src/app/adapters/RenderAdapters.cpp` |
+| `Barra_Estat` | `Barra_Estat` | `src/legacy_vgi/VgiStatusBar.cpp` |
+| `dibujarBarraEstamina` | `dibujarBarraEstamina` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `dibujarHUDInteraccion` | `dibujarHUDInteraccion` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `actualizarEscalaUI` | `actualizarEscalaUI` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `dibujarControlVolumen` | `dibujarControlVolumen` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `dibujarPanelRed` | `dibujarPanelRed` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `dibujarPanelObjetosDinamicos` | `dibujarPanelObjetosDinamicos` | extraída en un lote anterior; ver REFACTOR_MIGRATION_MAP.md |
+| `draw_Menu_ImGui` | `draw_Menu_ImGui` | `src/app/ui/UiFrame.cpp` |
+| `MostraEntornVGIWindow` | `MostraEntornVGIWindow` | `src/legacy_vgi/VgiMenus.cpp` |
+| `ShowArxiusOptions` | `ShowArxiusOptions` | `src/legacy_vgi/VgiMenus.cpp` |
+| `ShowAboutWindow` | `ShowAboutWindow` | `src/legacy_vgi/VgiMenus.cpp` |
+| `shortCut_Camera` | `shortCut_Camera` | `src/legacy_vgi/VgiMenus.cpp` |
+| `shortCut_Polars` | `shortCut_Polars` | `src/legacy_vgi/VgiMenus.cpp` |
+| `shortCut_Projeccio` | `shortCut_Projeccio` | `src/legacy_vgi/VgiMenus.cpp` |
+| `shortCut_Objecte` | `shortCut_Objecte` | `src/legacy_vgi/VgiMenus.cpp` |
+| `shortCut_Iluminacio` | `shortCut_Iluminacio` | `src/legacy_vgi/VgiMenus.cpp` |
+| `shortCut_Shader` | `shortCut_Shader` | `src/legacy_vgi/VgiMenus.cpp` |
+| `ShowEntornVGIWindow` | `ShowEntornVGIWindow` | `src/legacy_vgi/VgiMainWindow.cpp` |
+| `OnArxiuObrirFractal` | `OnArxiuObrirFractal` | `src/legacy_vgi/VgiFileActions.cpp` |
+| `OnArxiuObrirFitxerObj` | `OnArxiuObrirFitxerObj` | `src/legacy_vgi/VgiFileActions.cpp` |
+| `OnArxiuObrirFitxerFontLlum` | `OnArxiuObrirFitxerFontLlum` | `src/legacy_vgi/VgiFileActions.cpp` |
+| `llegir_FontLlum` | `llegir_FontLlum` | `src/legacy_vgi/VgiFileActions.cpp` |
+| `OnArxiuObrirSkybox` | `OnArxiuObrirSkybox` | `src/legacy_vgi/VgiFileActions.cpp` |
+| `OnCameraEsferica` | `OnCameraEsferica` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnCameraOrigenEsferica` | `OnCameraOrigenEsferica` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaMobil` | `OnVistaMobil` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaZoom` | `OnVistaZoom` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaZoomOrto` | `OnVistaZoomOrto` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaSatelit` | `OnVistaSatelit` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaPolarsX` | `OnVistaPolarsX` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaPolarsY` | `OnVistaPolarsY` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaPolarsZ` | `OnVistaPolarsZ` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnCameraNavega` | `OnCameraNavega` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnCameraOrigenNavega` | `OnCameraOrigenNavega` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnCameraGeode` | `OnCameraGeode` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnCameraOrigenGeode` | `OnCameraOrigenGeode` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaFullscreen` | `OnVistaFullscreen` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaPan` | `OnVistaPan` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaOrigenPan` | `OnVistaOrigenPan` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaEixos` | `OnVistaEixos` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnVistaSkyBox` | `OnVistaSkyBox` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnProjeccioPerspectiva` | `OnProjeccioPerspectiva` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnProjeccioOrtografica` | `OnProjeccioOrtografica` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnProjeccioAxonometrica` | `OnProjeccioAxonometrica` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCap` | `OnObjecteCap` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCub` | `OnObjecteCub` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCubRGB` | `OnObjecteCubRGB` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteEsfera` | `OnObjecteEsfera` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteTetera` | `OnObjecteTetera` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteArc` | `OnObjecteArc` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteTie` | `OnObjecteTie` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCorbaBezier` | `OnObjecteCorbaBezier` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCorbaLemniscata` | `OnObjecteCorbaLemniscata` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCorbaHermitte` | `OnObjecteCorbaHermitte` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCorbaCatmullRom` | `OnObjecteCorbaCatmullRom` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteCorbaBSpline` | `OnObjecteCorbaBSpline` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjectePuntsControl` | `OnObjectePuntsControl` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnCorbesTriedreFrenet` | `OnCorbesTriedreFrenet` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnCorbesTriedreDarboux` | `OnCorbesTriedreDarboux` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteMatriuPrimitives` | `OnObjecteMatriuPrimitives` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnObjecteMatriuPrimitivesVAO` | `OnObjecteMatriuPrimitivesVAO` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaTraslacio` | `OnTransformaTraslacio` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaOrigenTraslacio` | `OnTransformaOrigenTraslacio` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaRotacio` | `OnTransformaRotacio` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaOrigenRotacio` | `OnTransformaOrigenRotacio` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaEscalat` | `OnTransformaEscalat` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaOrigenEscalat` | `OnTransformaOrigenEscalat` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaMobilX` | `OnTransformaMobilX` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaMobilY` | `OnTransformaMobilY` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnTransformaMobilZ` | `OnTransformaMobilZ` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnOcultacionsFrontFaces` | `OnOcultacionsFrontFaces` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnOcultacionsTestvis` | `OnOcultacionsTestvis` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnOcultacionsZBuffer` | `OnOcultacionsZBuffer` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioLlumfixe` | `OnIluminacioLlumfixe` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacio2Sides` | `OnIluminacio2Sides` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioPunts` | `OnIluminacioPunts` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioFilferros` | `OnIluminacioFilferros` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioPlana` | `OnIluminacioPlana` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioSuau` | `OnIluminacioSuau` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnMaterialReflmaterial` | `OnMaterialReflmaterial` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnMaterialEmissio` | `OnMaterialEmissio` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnMaterialAmbient` | `OnMaterialAmbient` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnMaterialDifusa` | `OnMaterialDifusa` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnMaterialEspecular` | `OnMaterialEspecular` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioTextures` | `OnIluminacioTextures` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioTexturaFitxerimatge` | `OnIluminacioTexturaFitxerimatge` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnIluminacioTexturaFlagInvertY` | `OnIluminacioTexturaFlagInvertY` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlumAmbient` | `OnLlumsLlumAmbient` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum0` | `OnLlumsLlum0` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum1` | `OnLlumsLlum1` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum2` | `OnLlumsLlum2` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum3` | `OnLlumsLlum3` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum4` | `OnLlumsLlum4` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum5` | `OnLlumsLlum5` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum6` | `OnLlumsLlum6` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnLlumsLlum7` | `OnLlumsLlum7` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnShaderFlat` | `OnShaderFlat` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnShaderGouraud` | `OnShaderGouraud` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnShaderPhong` | `OnShaderPhong` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnShaderLoadFiles` | `OnShaderLoadFiles` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnShaderPBinaryWrite` | `OnShaderPBinaryWrite` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnShaderPBinaryRead` | `OnShaderPBinaryRead` | `src/legacy_vgi/VgiMenuCallbacks.cpp` |
+| `OnKeyDown` | `OnKeyDown` | `src/app/input/KeyboardInput.cpp` |
+| `Teclat_Shift` | `Teclat_Shift` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_Ctrl` | `Teclat_Ctrl` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_ColorObjecte` | `Teclat_ColorObjecte` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_ColorFons` | `Teclat_ColorFons` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_Navega` | `Teclat_Navega` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_Pan` | `Teclat_Pan` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_TransEscala` | `Teclat_TransEscala` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_TransRota` | `Teclat_TransRota` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_TransTraslada` | `Teclat_TransTraslada` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_Grid` | `Teclat_Grid` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `Teclat_PasCorbes` | `Teclat_PasCorbes` | `src/legacy_vgi/VgiKeyboard.cpp` |
+| `OnMouseButton` | `OnMouseButton` | `src/app/input/MouseInput.cpp` |
+| `OnMouseMove` | `OnMouseMove` | `src/app/input/MouseInput.cpp` |
+| `OnMouseWheel` | `OnMouseWheel` | `src/app/input/MouseInput.cpp` |
+| `OnTimer` | `OnTimer` | `src/legacy_vgi/VgiTimer.cpp` |
+| `Log2` | `Log2` | `src/legacy_vgi/VgiTimer.cpp` |
+| `llegir_ptsC` | `llegir_ptsC` | `src/legacy_vgi/VgiFileActions.cpp` |
+| `OnFull_Screen` | `OnFull_Screen` | `src/app/WindowCallbacks.cpp` |
+| `error_callback` | `error_callback` | `src/app/WindowCallbacks.cpp` |
+| `glDebugOutput` | `glDebugOutput` | `src/app/WindowCallbacks.cpp` |
+| `main` | `main` | `src/app/main.cpp` |

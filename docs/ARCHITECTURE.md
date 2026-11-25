@@ -2,7 +2,16 @@
 
 Documento inicial. Describe la arquitectura **actual** y propone una dirección. La arquitectura propuesta **todavía no existe** en el código. El plan por etapas está en [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md) y el árbol destino con sus lotes de movimiento en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md).
 
-> **Estado posterior (2026-11-25).** El inventario de abajo describe `62a7018`. La estructura actual, ya sin `EntornVGI/`, está en el README y en la sección 30 de [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md).
+## Estado actual (2026-11-26)
+
+Las secciones numeradas describen `62a7018` y la propuesta que se hizo entonces; se conservan como registro. Lo vigente:
+
+- Estructura y responsabilidades: [TEAM_GUIDE.md](TEAM_GUIDE.md).
+- Composición: `src/app/main.cpp` llama a `Application`, `MainLoop` y `Shutdown`.
+- Estado compartido: seis cabeceras en `src/app/state/` (escena, render, jugador, juego, red, VR), definidas en una sola unidad, `src/app/AppState.cpp`, porque `physicsScene` y `fallingCubeDemo` se construyen a partir de `physicsWorld`. El estado VGI está en `src/legacy_vgi/LegacyVgiState.*`.
+- Dependencias: fuera de `app/` y `legacy_vgi/` no se incluye ninguna cabecera de la aplicación. `legacy_vgi/` sí depende de `app/` (ciclo pendiente entre ambos).
+- Propiedad y vida: el estado es global y estático; los recursos GPU se liberan en `Shutdown` con el contexto vivo. El orden de destrucción entre las dos unidades de estado no está definido y no se conoce ningún destructor que dependa de él. Si `StartGame` falla, los programas de shaders no se borran antes de cerrar GLFW (defecto anterior, sin corregir).
+- Decisión 7 (nombres y `legacy_vgi`): **cumplida solo en parte**. `src/legacy_vgi/Vgi*` mezcla la base académica con código del juego (`MostraEntornVGIWindow`, cargas de escena de `ShowArxiusOptions`, casilla «Lamparas de escena», ramas de juego de `Teclat_*`, `applyMaterialIntensity`). Quedan en español muchos campos, locales y comentarios.
 
 ## 0. Base, método y evidencia
 
@@ -39,8 +48,6 @@ Decisiones del usuario, transmitidas por el coordinador el 2026-11-25 (los punto
 6. El alcance incluye fuentes y cabeceras, recursos, shaders, pruebas, documentación, herramientas y terceros.
 7. Los **nombres en inglés son obligatorios para el código propio** (etapa P12): código y módulos del equipo, adaptadores, pruebas, herramientas y documentación, incluidos sus nombres de fichero y carpeta. `src/legacy_vgi/` contiene solo la base académica VGI original, que conserva sus identificadores y API. El código de terceros permanece en `third_party/`, sin modificar ni traducir. El **cuerpo** de la documentación conserva su idioma actual; los nombres oficiales y los términos de contrato se mantienen. Los contratos de §4 y los textos visibles para el jugador no cambian.
 8. Se mantienen el **ejecutable único**, la disposición `build/<preset>/bin/` y el contrato de recursos en ejecución, incluida la comprobación de la raíz (§4.2).
-
-> **Cumplimiento de la decisión 7 (2026-11-25): parcial.** `src/legacy_vgi/Vgi*` todavía mezcla la base académica con código del juego: `MostraEntornVGIWindow` (menú de pausa), las cargas de escena de `ShowArxiusOptions`, la casilla «Lamparas de escena» de `ShowEntornVGIWindow`, las ramas de juego de `Teclat_*` y `applyMaterialIntensity`. Además quedan campos, locales y enumeradores en español.
 
 
 ## 2. Autorización y estado de aprobación

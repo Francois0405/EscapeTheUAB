@@ -2,8 +2,8 @@
 
 Proyecto académico de visualización gráfica 3D basado en el entorno del profesor.
 Utiliza **C++20, OpenGL, GLFW, GLEW, GLM, SOIL2, Dear ImGui**, carga de
-modelos **OBJ/MTL** y escenas en **JSON**. Se conserva la solución original de
-Visual Studio y se utiliza **CMake** para las compilaciones multiplataforma.
+modelos **OBJ/MTL** y escenas en **JSON**. **CMake** es el sistema de compilación principal; la solución de Visual Studio
+se genera a partir de él. La guía del equipo está en [docs/TEAM_GUIDE.md](docs/TEAM_GUIDE.md).
 
 ## Inicio rápido — una sola orden
 
@@ -128,16 +128,16 @@ src/networking/           transport/, replication/, session/, preferences/
 src/editor/  src/ui/  src/audio/  src/vr/  src/diagnostics/  src/platform/
 assets/                   Modelos, escenas, shaders, texturas, audio y UI
 tests/                    Pruebas CTest
-tools/                    Utilidades de assets (se ejecutan desde la raiz)
-visualstudio/             Proyecto Visual Studio heredado (abierto desde EntornVGI.slnx)
+tools/                    Utilidades de assets y generador del proyecto Visual Studio
+visualstudio/             Proyecto Visual Studio generado (abierto desde EntornVGI.slnx)
 third_party/              Dependencias de terceros
 archive/legacy/           Ficheros sin uso, pendientes de decision del equipo
 build/<preset>/bin/       Ejecutables generados (EntornVGI)
 ```
 
-El estado de juego compartido sigue siendo global: se declara en `src/app/AppState.h` y
-`src/legacy_vgi/LegacyVgiState.h`. Los modulos de `gameplay/`, `scene/` y `networking/session/`
-no lo incluyen y lo reciben por contextos que se construyen en `src/app/adapters/`.
+El estado compartido sigue siendo global y se declara por responsabilidad en `src/app/state/` y en
+`src/legacy_vgi/LegacyVgiState.h`. Fuera de `src/app/` y `src/legacy_vgi/` los módulos lo reciben por
+contextos que se construyen en `src/app/adapters/`.
 
 Los recursos bajo `assets/` (modelos, escenas, shaders, texturas, audio y UI)
 se sincronizan junto al ejecutable en cada build. CMake registra cada archivo como entrada y usa
@@ -208,7 +208,7 @@ CMake. Ejecútalas con `ctest --test-dir build/<preset> --output-on-failure`.
 no se puede crear el contexto, CTest lo marca como omitido.
 
 El estado de validación vigente, con sus limitaciones, está en la sección 30 de
-[docs/REFACTOR_MIGRATION_MAP.md](docs/REFACTOR_MIGRATION_MAP.md).
+[docs/REFACTOR_MIGRATION_MAP.md](docs/REFACTOR_MIGRATION_MAP.md) (secciones 30 y 31).
 
 `archive/legacy/ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
 no estaba incluido en el proyecto original. `SceneLoader` y el cargador propio
@@ -219,9 +219,7 @@ permitan.
 
 ## Contribuciones del equipo
 
-Antes de incorporar los cambios, ejecuta `git status -sb` y confirma qué rama
-estás utilizando. Respeta el trabajo de tus compañeros; no uses `git reset
---hard`, `git clean` ni copies un `main.cpp` antiguo sobre cambios nuevos.
-Mantén `master` para versiones comprobadas y desarrolla funcionalidades en la
-rama de trabajo acordada con el grupo; solicita revisión antes del merge.
+Antes de incorporar cambios, ejecuta `git status -sb` y confirma en qué rama estás. Respeta el trabajo
+de tus compañeros: no uses `git reset --hard` ni `git clean`. La propuesta de ramas y los requisitos
+antes de un merge están en [docs/TEAM_GUIDE.md](docs/TEAM_GUIDE.md).
 Los scripts de ejecución no hacen ninguna operación Git.
