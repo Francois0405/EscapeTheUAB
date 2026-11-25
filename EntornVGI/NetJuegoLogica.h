@@ -231,6 +231,23 @@ namespace netjuego
 
 	struct EventoSalida { uint16_t tipo = 0; uint32_t objetivo = 0; std::vector<uint8_t> payload; };
 
+	// El contrato de escena distingue solo cuerpos estáticos de cuerpos replicables.
+	// La subclase física (dynamic/bouncy) sigue siendo responsabilidad de la autoridad.
+	inline uint8_t TipoColisionEscena(bool presente, bool cuerpoDinamico)
+	{
+		return !presente ? 0 : (cuerpoDinamico ? 2 : 1);
+	}
+
+	template <typename T, typename IdFn, typename ReplicableFn>
+	inline bool IndiceUnicoObjetoRed(uint32_t id, const std::vector<T>& objetos, IdFn hashId,
+		ReplicableFn esReplicable, std::size_t& indice)
+	{
+		std::size_t encontrados = 0;
+		for (std::size_t i = 0; i < objetos.size(); ++i)
+			if (hashId(objetos[i]) == id) { indice = i; ++encontrados; }
+		return encontrados == 1 && indice < objetos.size() && esReplicable(objetos[indice]);
+	}
+
 	// Estado replicable de un objeto OBJ existente. El identificador se deriva del id
 	// persistente del JSON; no depende del orden de las listas ni de punteros de Bullet.
 	struct EstadoObjetoEscena

@@ -3,6 +3,7 @@
 // puertas con el host como autoridad, propiedad temporal del objeto compartido, offline sin ENet ni hilos.
 // Usa un transporte en memoria: sin sockets, sin ENet, sin OpenGL, sin Bullet, sin visor.
 #include "NetJuego.h"
+#include "MundoFisico.h"
 
 #include <chrono>
 #include <iostream>
@@ -181,6 +182,41 @@ int main()
 
 	// ---------------- estado replicable de objetos JSON ----------------
 	{
+		struct ObjetoConFisica
+		{
+			std::string id;
+			bool colision = true;
+			fisica::TipoCuerpo tipo = fisica::TipoCuerpo::Estatico;
+		};
+		const std::vector<ObjetoConFisica> objetos = {
+			{ "mueble", true, fisica::TipoCuerpo::Estatico },
+			{ "hiriti", true, fisica::TipoCuerpo::Rebotador },
+			{ "caja", true, fisica::TipoCuerpo::Dinamico }
+		};
+		const auto hashObjeto = [](const ObjetoConFisica& objeto) { return HashId(objeto.id); };
+		const auto objetoReplicable = [](const ObjetoConFisica& objeto)
+		{
+			return objeto.colision && fisica::EsCuerpoDinamico(objeto.tipo);
+		};
+		const auto& hiriti = objetos[1];
+		const uint32_t hiritiId = HashId("hiriti");
+		const uint8_t tipoHiriti = TipoColisionEscena(hiriti.colision, fisica::EsCuerpoDinamico(hiriti.tipo));
+		ok(tipoHiriti == 2, "Rebotador de Hiriti se anuncia como cuerpo dynamic replicable");
+		EstadoObjetoEscena estadoHiriti;
+		estadoHiriti.id = hiritiId; estadoHiriti.colisionPresente = true;
+		estadoHiriti.tipoColision = tipoHiriti; estadoHiriti.masa = 0.25f;
+		ok(EstadoObjetoEscenaValido(estadoHiriti) &&
+			CodificarEstadoObjetoEscena(estadoHiriti).size() == 66,
+			"estado inicial de Hiriti conserva su ID persistente y acepta clase replicable");
+		std::size_t indiceHiriti = objetos.size();
+		ok(IndiceUnicoObjetoRed(hiritiId, objetos, hashObjeto, objetoReplicable, indiceHiriti) && indiceHiriti == 1,
+			"filtro de snapshots encuentra el índice único de Hiriti Rebotador");
+		auto ambiguos = objetos; ambiguos.push_back(hiriti);
+		ok(!IndiceUnicoObjetoRed(hiritiId, ambiguos, hashObjeto, objetoReplicable, indiceHiriti),
+			"filtro de snapshots rechaza IDs persistentes ambiguos");
+		ok(!IndiceUnicoObjetoRed(HashId("mueble"), objetos, hashObjeto, objetoReplicable, indiceHiriti),
+			"filtro de snapshots sigue rechazando objetos estáticos");
+
 		EstadoObjetoEscena original;
 		original.id = HashId("caja_sobre_mesa");
 		original.posicion = glm::vec3(1.25f, -2.0f, 3.5f);
