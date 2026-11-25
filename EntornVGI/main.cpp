@@ -3552,6 +3552,107 @@ static void dibujarPanelRed()
 	ImGui::End();
 }
 
+// Snapshot solo de lectura para el panel F4. Bullet se consulta en una captura
+// agrupada y acotada; la tabla no vuelve a consultar cuerpos durante el dibujo.
+static void dibujarPanelObjetosDinamicos()
+{
+	struct Fila
+	{
+		std::string id;
+		uint32_t idRed = 0;
+		net::PeerId propietario = netjuego::kSinDueno;
+		fisica::PoseCuerpo aplicado;
+		fisica::PoseCuerpo autoritativo;
+		bool tieneAutoritativo = false;
+		bool activo = false;
+		bool sujeto = false;
+		bool hiriti = false;
+		bool seguimiento = false;
+	};
+	static std::vector<Fila> filas;
+	static double siguienteActualizacion = 0.0;
+	const double ahora = glfwGetTime();
+	if (ahora >= siguienteActualizacion)
+	{
+		filas.clear();
+		siguienteActualizacion = ahora + 0.5;
+		if (escenaFisica)
+		{
+			std::vector<fisica::EscenaFisica::EstadoDinamico> cuerpos;
+			escenaFisica->CapturarEstadosDinamicos(cuerpos);
+			const auto remotos = redJuego.EsCliente()
+				? redJuego.EstadosFisicosRemotos() : std::map<uint32_t, net::DynamicStateEntry>{};
+			for (const auto& cuerpo : cuerpos)
+			{
+				if (cuerpo.indiceObjeto < 0 || cuerpo.indiceObjeto >= static_cast<int>(objetosEscena.size())) continue;
+				const SceneObject& objeto = objetosEscena[static_cast<std::size_t>(cuerpo.indiceObjeto)];
+				Fila fila;
+				fila.id = objeto.id;
+				fila.idRed = netjuego::HashId(objeto.id);
+				fila.propietario = redJuego.Activa()
+					? redJuego.PropietarioDinamico(fila.idRed) : netjuego::kSinDueno;
+				fila.aplicado = cuerpo.pose;
+				fila.activo = cuerpo.activo;
+				fila.sujeto = cuerpo.agarrado || fila.propietario != netjuego::kSinDueno;
+				fila.hiriti = objeto.id == "hiriti";
+				fila.seguimiento = fila.hiriti && hiritiFollowPlayerEnabled && !animacionHiriti.SeguimientoSuspendido();
+				if (redJuego.EsCliente())
+				{
+					const auto remoto = remotos.find(fila.idRed);
+					if (remoto != remotos.end() && netjuego::EstadoFisicoValido(remoto->second))
+					{
+						fila.autoritativo.posicion = netjuego::PosDe(remoto->second.transform);
+						fila.autoritativo.rotacion = netjuego::RotDe(remoto->second.transform);
+						fila.tieneAutoritativo = true;
+					}
+				}
+				else
+				{
+					fila.autoritativo = cuerpo.pose;
+					fila.tieneAutoritativo = true;
+				}
+				filas.push_back(std::move(fila));
+			}
+			std::sort(filas.begin(), filas.end(), [](const Fila& a, const Fila& b)
+			{
+				if (a.sujeto != b.sujeto) return a.sujeto > b.sujeto;
+				if (a.activo != b.activo) return a.activo > b.activo;
+				return a.id < b.id;
+			});
+			if (filas.size() > 8) filas.resize(8);
+		}
+	}
+
+	ImGui::Begin("Objetos dinamicos | F4");
+	ImGui::Text("Modo: %s | maximo 8 | refresco 500 ms",
+		redJuego.EsHost() ? "host" : redJuego.EsCliente() ? "client" : "offline");
+	if (filas.empty()) ImGui::TextUnformatted("Sin objetos dinamicos en la escena.");
+	for (const Fila& fila : filas)
+	{
+		const char* rol = redJuego.EsHost() ? "host" : redJuego.EsCliente() ? "client" : "offline";
+		const char* cuerpo = redJuego.EsCliente() ? "replica cinematica" : "body dinamico";
+		if (fila.propietario == netjuego::kSinDueno)
+			ImGui::Text("%s  id=%08x  owner=libre  %s/%s  %s%s", fila.id.c_str(), fila.idRed,
+				rol, cuerpo, fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),
+				fila.hiriti ? (fila.seguimiento ? " | Hiriti: seguimiento" : " | Hiriti: seguimiento pausado") : "");
+		else
+			ImGui::Text("%s  id=%08x  owner=%u  %s/%s  %s%s", fila.id.c_str(), fila.idRed,
+				static_cast<unsigned>(fila.propietario), rol, cuerpo,
+				fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),
+				fila.hiriti ? (fila.seguimiento ? " | Hiriti: seguimiento" : " | Hiriti: seguimiento pausado") : "");
+		const auto dibujarPose = [](const char* nombre, const fisica::PoseCuerpo& pose)
+		{
+			ImGui::Text("%s p(%.2f,%.2f,%.2f) q(%.2f,%.2f,%.2f,%.2f)", nombre,
+				pose.posicion.x, pose.posicion.y, pose.posicion.z,
+				pose.rotacion.x, pose.rotacion.y, pose.rotacion.z, pose.rotacion.w);
+		};
+		if (fila.tieneAutoritativo) dibujarPose("  auth", fila.autoritativo);
+		else ImGui::TextUnformatted("  auth: esperando snapshot del host");
+		dibujarPose("  aplicado", fila.aplicado);
+	}
+	ImGui::End();
+}
+
 void draw_Menu_ImGui()
 {
 	actualizarEscalaUI(window);
@@ -3810,6 +3911,7 @@ void draw_Menu_ImGui()
 	}
 	if (modoJuegoFPS() && mostrarPanelesDebug)
 	{
+		dibujarPanelObjetosDinamicos();
 		ImGui::Begin("Movil FPS");
 		ImGui::Checkbox("Mostrar movil", &mostrarMovil);
 		ImGui::InputFloat3("Posicion", &movilPosicion.x, "%.3f");
