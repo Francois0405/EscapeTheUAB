@@ -345,3 +345,11 @@ El commit central `5cca160f36239f59528d9bf4b6d89b9a2b416b6c` (origen Codex `fe32
 La extracción elimina 561 líneas de `main.cpp` y añade 64 de adaptadores/contexto, neto −497. CMake, `.vcxproj` y `.filters` registran el módulo. Los lanzadores oficiales Debug/Release pasaron; CTest pasó 22/22 en ambas configuraciones. No hubo repeticiones de red porque el corte no toca red, y no hubo validación visual o en otra plataforma.
 
 **Métrica actual verificada por `rg -n '^'` sobre el blob de HEAD `5cca160`:** `main.cpp` tiene 8.309 líneas, −1.903 (−18,6 %) respecto a las 10.212 del checkpoint `62a7018`. Los dos módulos de controles de renderizado suman 58 callbacks y están en `src/rendering/`; siguen pendientes el pipeline de dibujo, iluminación runtime fuera de estos menús, cámara, física, networking, composición y más trabajo de nomenclatura.
+
+## 20. P7 parcial, viewport y pipeline de dibujo (2026-11-25)
+
+Commit central `f6496cb9b5ac774194650ed5fb1cb6bc9e852705` (origen Claude `18132631bd3d12046549dd56626381a0c512f34b`) crea `src/rendering/RuntimeRenderer.{h,cpp}` y traslada `OnSize`, `OnFramebufferSize`, `dibujarEscenaEstereo`, `dibujarEscenaVR`, `copiarOjoAVentana` y `OnPaint`. Los callbacks que GLFW conserva en `main.cpp` delegan al contexto; no se trasladó `InitGL`, que sigue inicializando el estado global y el orden de carga GPU. La extracción no cambia protocolo ni estado de juego; conserva FBO PS1, composición nativa y bucle por ojo OpenXR según revisión del diff.
+
+La integración retiró 347 líneas y añadió 60 adaptadores en `main.cpp` (neto −287; conteo medido por contenido del archivo). Los lanzadores oficiales Debug y Release terminaron con código 0; CTest completo pasó 22/22 en cada configuración. ENet y OpenXR se detectaron habilitados. La primera llamada Debug sin elevar falló al crear `build/windows-debug/CMakeFiles/pkgRedirects` en el worktree C:; el mismo lanzador oficial con acceso autorizado completó. No se ejecutó el juego ni se probó hardware OpenXR; InitGL y otras responsabilidades siguen pendientes.
+
+Métrica de `main.cpp` en el commit central: 8.022 líneas frente a 10.212 en `62a7018` (−2.190; −21,4 %). No se repitieron tests de red porque esta extracción no toca su código.
