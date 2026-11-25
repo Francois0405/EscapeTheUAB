@@ -3864,7 +3864,11 @@ void draw_Menu_ImGui()
 		ImGui::PopStyleVar(2);
 	}
 
-	if (mostrarPanelRed) dibujarPanelRed();
+	if (mostrarPanelRed)
+	{
+		dibujarPanelRed();
+		if (modoJuegoFPS()) dibujarPanelObjetosDinamicos();
+	}
 
 	if (!modoJuegoFPS() || mostrarPanelesDebug)
 	{
@@ -3966,7 +3970,6 @@ void draw_Menu_ImGui()
 	}
 	if (modoJuegoFPS() && mostrarPanelesDebug)
 	{
-		dibujarPanelObjetosDinamicos();
 		ImGui::Begin("Movil FPS");
 		ImGui::Checkbox("Mostrar movil", &mostrarMovil);
 		ImGui::InputFloat3("Posicion", &movilPosicion.x, "%.3f");
