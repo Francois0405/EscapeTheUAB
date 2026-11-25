@@ -216,6 +216,32 @@ int main()
 			"filtro de snapshots rechaza IDs persistentes ambiguos");
 		ok(!IndiceUnicoObjetoRed(HashId("mueble"), objetos, hashObjeto, objetoReplicable, indiceHiriti),
 			"filtro de snapshots sigue rechazando objetos estáticos");
+		ok(TipoFisicoReplicaEscena(true, 2, fisica::TipoCuerpo::Rebotador,
+			fisica::TipoCuerpo::Dinamico, fisica::TipoCuerpo::Rebotador, fisica::TipoCuerpo::Estatico) == fisica::TipoCuerpo::Rebotador &&
+			TipoFisicoReplicaEscena(true, 2, fisica::TipoCuerpo::Estatico,
+				fisica::TipoCuerpo::Dinamico, fisica::TipoCuerpo::Rebotador, fisica::TipoCuerpo::Estatico) == fisica::TipoCuerpo::Dinamico &&
+			TipoFisicoReplicaEscena(true, 1, fisica::TipoCuerpo::Rebotador,
+				fisica::TipoCuerpo::Dinamico, fisica::TipoCuerpo::Rebotador, fisica::TipoCuerpo::Estatico) == fisica::TipoCuerpo::Estatico &&
+			TipoFisicoReplicaEscena(false, 2, fisica::TipoCuerpo::Rebotador,
+				fisica::TipoCuerpo::Dinamico, fisica::TipoCuerpo::Rebotador, fisica::TipoCuerpo::Estatico) == fisica::TipoCuerpo::Estatico,
+			"el estado recibido conserva Rebotador local solo con dynamic; static/none del host manda y dynamic discrepante cae a Dinamico");
+		ok(!PausarMundoJuego(true, false, false, false, false, true) &&
+			PausarMundoJuego(true, false, false, false, false, false) &&
+			PausarMundoJuego(true, true, false, false, false, true) &&
+			PausarMundoJuego(true, false, true, false, false, true) &&
+			PausarMundoJuego(false, false, false, true, false, true) &&
+			!PausarMundoJuego(true, false, false, false, true, false),
+			"host en PLAY sin foco avanza; cliente/offline sin foco, editor, pausa y menú congelan; XR conserva su excepción");
+		glm::vec3 lanzamientoMaximo = glm::normalize(glm::vec3(1.0f, 1.0f, 1.0f)) * kRapidezMaximaLanzamiento;
+		ok(LimitarRapidezLanzamientoHost(lanzamientoMaximo) && glm::length(lanzamientoMaximo) <= kRapidezMaximaLanzamiento,
+			"la velocidad máxima normalizada respeta el límite estricto de 15 m/s");
+		glm::vec3 redondeoLanzamiento(kRapidezMaximaLanzamiento + 5e-5f, 0.0f, 0.0f);
+		ok(LimitarRapidezLanzamientoHost(redondeoLanzamiento) &&
+			cerca(glm::length(redondeoLanzamiento), kRapidezMaximaLanzamiento, 1e-6f),
+			"el host ajusta solo el pequeño exceso de redondeo float32 a 15 m/s");
+		glm::vec3 lanzamientoExcesivo(kRapidezMaximaLanzamiento + 0.01f, 0.0f, 0.0f);
+		ok(!LimitarRapidezLanzamientoHost(lanzamientoExcesivo),
+			"el host rechaza lanzamientos que exceden el margen de redondeo acotado");
 
 		EstadoObjetoEscena original;
 		original.id = HashId("caja_sobre_mesa");
@@ -471,6 +497,28 @@ int main()
 		});
 		ok(lanzamientoRecibido && solicitudes.size() == 1 && !solicitudes[0].agarrar && solicitudes[0].peer == peerC1 && cerca(solicitudes[0].velocidad.z, 5.0f),
 			"el host recibe solicitud de lanzamiento del propietario actual");
+		ok(c1->red->SolicitarSoltarDinamico(enVuelo.objectId,
+			{ kRapidezMaximaLanzamiento + 5e-5f, 0.0f, 0.0f }),
+			"el transporte acepta el exceso float32 acotado para que decida el host");
+		solicitudes.clear();
+		const bool lanzamientoRedondeadoRecibido = Esperar(hostYC1, [&] {
+			host->red->TomarSolicitudesFisicas(solicitudes);
+			return !solicitudes.empty();
+		});
+		ok(lanzamientoRedondeadoRecibido && solicitudes.size() == 1 &&
+			cerca(glm::length(solicitudes[0].velocidad), kRapidezMaximaLanzamiento, 1e-6f),
+			"el host entrega una velocidad ajustada exactamente al límite de 15 m/s");
+		const size_t ignoradosAntes = host->red->ObtenerDiagnostico().eventosIgnorados;
+		ok(c1->red->SolicitarSoltarDinamico(enVuelo.objectId,
+			{ kRapidezMaximaLanzamiento + 0.01f, 0.0f, 0.0f }),
+			"el transporte permite enviar una solicitud excesiva para validación autoritativa");
+		const bool excesoRechazado = Esperar(hostYC1, [&] {
+			return host->red->ObtenerDiagnostico().eventosIgnorados > ignoradosAntes;
+		});
+		solicitudes.clear();
+		host->red->TomarSolicitudesFisicas(solicitudes);
+		ok(excesoRechazado && solicitudes.empty(),
+			"la ruta real de recepción del host rechaza el exceso fuera del margen y no crea una solicitud de lanzamiento");
 		auto c2 = Crear(hub, Role::Client, "aula", glm::vec3(1, -0.5f, 1.7f), &fabricas);
 		std::vector<Nodo*> todos = { host.get(), c1.get(), c2.get() };
 		ok(Esperar(todos, [&] { return host->red->Activa() && c1->red->Activa() && c2->red->Activa() && host->red->ObtenerDiagnostico().remotos == 2 && c1->red->ObtenerDiagnostico().remotos >= 1; }), "los tres se conectan y se ven");
