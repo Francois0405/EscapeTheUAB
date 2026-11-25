@@ -32,9 +32,17 @@ bool AudioManager::init() {
     m_initialized = true;
     ma_engine_set_volume(m_engine, m_masterVolume);
 
-    loadSound("paso_0", "assets/audio/paso_1.wav", false, false);
-    loadSound("paso_1", "assets/audio/paso_2.wav", false, false);
-    loadSound("paso_2", "assets/audio/paso_3.wav", false, false);
+    // Los sonidos de pasos son opcionales: el repositorio no los incluye todavia.
+    // Se cargan de assets/audio/paso_1..3.wav. Nada llama todavia a playFootstep (ARCHITECTURE.md, O3).
+    int pasosCargados = 0;
+    for (int i = 0; i < 3; ++i) {
+        const std::string ruta = "assets/audio/paso_" + std::to_string(i + 1) + ".wav";
+        if (std::filesystem::exists(ruta) && loadSound("paso_" + std::to_string(i), ruta, false, false))
+            ++pasosCargados;
+    }
+    if (pasosCargados == 0)
+        std::clog << "[AudioManager] Sin sonidos de pasos en assets/audio; el juego continua sin ellos.
+";
 
     return true;
 }
