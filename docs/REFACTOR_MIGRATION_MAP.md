@@ -2,7 +2,7 @@
 
 Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fechado el 2026-11-25. El contexto, los contratos, los no objetivos y las marcas de evidencia ([C], [H], [D], [P]) están en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Estado a 2026-11-25: inventario y diseño completos; targets de P2/B1 integrados (`4418c2d`, `1baca0e`, `0f0927d`); P3 con S2 (`181ed93`), S3 (`0ccaea3`) y S4 (`fe4d7da`) integrados. Las puertas de P1/P2 siguen abiertas, P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
+**Estado a 2026-11-25: inventario y diseño completos; targets de P2/B1 integrados (`4418c2d`, `1baca0e`, `0f0927d`); P3 con S2 (`181ed93`), S3 (`0ccaea3`) y S4 (`fe4d7da`) integrados; B2 de transporte integrado (`41ca5dc`). Las puertas de P1/P2 siguen abiertas, P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
 
 El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cortes S1 a S10 están en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md). Es un objetivo, no está realizado. [ARCHITECTURE.md](ARCHITECTURE.md) (§1 y §7) está alineado con él: la reorganización física y los nombres en inglés del código propio son resultados obligatorios.
 
@@ -285,3 +285,22 @@ La extracción B1 está integrada en `1baca0e` (targets iniciales, origen `9e76e
 Commit integrado `181ed931506123df5fb944a8ca2dbcbe55a50dd9` (origen `273fbab43d25fc956b35f12e685dd71464767f53`). Crea `EntornVGI/Network/Game/SceneNetworkState.h` y sustituye en `main.cpp` la captura de estados y la búsqueda única de objetos dinámicos por helpers con dependencias explícitas. `NetJuegoTests.cpp` cubre IDs duplicados, objeto Hirity/Rebotador, collider ausente y copia de pose y dimensiones no predeterminadas.
 
 Claude revisó el cambio y no encontró bloqueos; los casos de regresión fueron reforzados antes de integrar. Los lanzadores oficiales Debug y Release y CTest completo pasaron tras los ajustes finales de nomenclatura (21/21 por configuración). Las repeticiones NetJuego 20/20 y ENetLoopback 10/10 se ejecutaron antes de ese último cambio exclusivamente de identificadores; no se han repetido sobre el commit central `181ed93`. No hubo ejecución del juego.
+
+## 13. B2, traslado físico del transporte ENet (2026-11-25)
+
+Commit `41ca5dc` (`refactor: relocate network transport module`) sobre `refactor/project-architecture`, padre `f12ede6`. Mueve con `git mv` los nueve ficheros de transporte y su `CMakeLists.txt` desde `EntornVGI/Network/` a `src/networking/transport/`. `EntornVGI/Network/` conserva `GrabDiagnostics`, `PreferenciasRed` y `Game/`.
+
+`EntornVGI/CMakeLists.txt` añade el subdirectorio con una ruta de binario explícita después de definir las opciones de red. El target sigue llamándose `EntornVGI_network` y publica los include roots `src/` y `EntornVGI/`. Se actualizaron las rutas de include en `NetJuego.cpp`, `NetJuego.h`, `NetJuegoLogica.h`, `NetworkTests.cpp` y `ENetLoopbackTests.cpp`. No se editó `main.cpp`, el protocolo, el comportamiento ni los registros de tests.
+
+**Revisión:** Claude Sonnet revisó el diff exacto en solo lectura y dio PASS sin BLOCKER ni defectos de código. Exigió stagear también las modificaciones de CMake/includes junto a las renombradas; las 16 rutas cambiadas quedaron incluidas en `41ca5dc`.
+
+**Validación del árbol central antes del commit:**
+
+| Comprobación | Debug | Release |
+|---|---|---|
+| Lanzador oficial `run-windows.cmd -NoRun` | PASS, código 0 | PASS, código 0 |
+| CTest completo | 21/21 | 21/21 |
+| `NetJuegoTests --repeat until-fail:20` | 20/20 | 20/20 |
+| `ENetLoopbackTests --repeat until-fail:10` | 10/10 | 10/10 |
+
+Los lanzadores confirmaron ENet, Bullet, OpenXR y meshoptimizer habilitados. Se observaron avisos ya existentes de `getenv`, `strncpy` y redefinición de `NOMINMAX`; no impidieron la compilación. `git diff --check` pasó. No se ejecutó el juego: el lote solo traslada el transporte. No hay validación Linux/macOS ni OpenXR con hardware. La evidencia corresponde al árbol exacto que se confirmó en `41ca5dc`, no a una ejecución posterior del hash confirmado.

@@ -394,7 +394,7 @@ Ningún lote, corte ni etapa espera a la QA manual; cada uno espera a sus depend
 **Solo el supervisor** edita e integra:
 
 - `main.cpp`, `main.h`.
-- `CMakeLists.txt` raíz, `EntornVGI/CMakeLists.txt`, `EntornVGI/Network/CMakeLists.txt`, `tests/CMakeLists.txt`, `CMakePresets.json`.
+- `CMakeLists.txt` raíz, `EntornVGI/CMakeLists.txt`, `src/networking/transport/CMakeLists.txt` (tras B2), `tests/CMakeLists.txt`, `CMakePresets.json`.
 
 **Propiedad en serie** (un solo propietario a la vez):
 
