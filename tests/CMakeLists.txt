@@ -267,7 +267,7 @@ add_executable(RuntimeUiTests
 	RuntimeUiTests.cpp
 	${PROJECT_SOURCE_DIR}/src/ui/StatusBar.cpp
 )
-target_include_directories(RuntimeUiTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_include_directories(RuntimeUiTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI ${PROJECT_SOURCE_DIR}/src/legacy_vgi)
 # GLEW headers only provide the GL scalar types; NetJuegoLogica needs the network headers.
 target_link_libraries(RuntimeUiTests PRIVATE ${TEST_GLEW_TARGET} EntornVGI_network_game)
 target_compile_features(RuntimeUiTests PRIVATE cxx_std_20)
