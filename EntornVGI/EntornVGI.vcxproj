@@ -167,6 +167,7 @@
     <ClCompile Include="objLoader.cpp" />
     <ClCompile Include="..\src\vr\OpenXRManager.cpp" />
     <ClCompile Include="..\src\rendering\quatern.cpp" />
+    <ClCompile Include="..\src\rendering\LegacyVgiGeometryControls.cpp" />
     <ClCompile Include="..\src\rendering\RuntimeRenderControls.cpp" />
     <ClCompile Include="..\src\scene\SceneLoader.cpp" />
     <ClCompile Include="..\src\rendering\shader.cpp" />
@@ -235,6 +236,7 @@
     <ClInclude Include="..\src\rendering\quatern.h" />
     <ClInclude Include="..\src\scene\SceneLoader.h" />
     <ClInclude Include="..\src\rendering\shader.h" />
+    <ClInclude Include="..\src\rendering\LegacyVgiGeometryControls.h" />
     <ClInclude Include="..\src\rendering\RuntimeRenderControls.h" />
     <ClInclude Include="..\src\rendering\visualitzacio.h" />
   </ItemGroup>
