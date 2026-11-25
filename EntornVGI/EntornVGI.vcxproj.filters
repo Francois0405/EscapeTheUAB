@@ -48,6 +48,9 @@
     <ClCompile Include="..\src\rendering\RuntimeRenderControls.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\rendering\RuntimeRenderer.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\rendering\visualitzacio.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
@@ -144,6 +147,9 @@
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\RuntimeRenderControls.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\RuntimeRenderer.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\visualitzacio.h">

@@ -169,6 +169,7 @@
     <ClCompile Include="..\src\rendering\quatern.cpp" />
     <ClCompile Include="..\src\rendering\LegacyVgiGeometryControls.cpp" />
     <ClCompile Include="..\src\rendering\RuntimeRenderControls.cpp" />
+    <ClCompile Include="..\src\rendering\RuntimeRenderer.cpp" />
     <ClCompile Include="..\src\scene\SceneLoader.cpp" />
     <ClCompile Include="..\src\rendering\shader.cpp" />
     <ClCompile Include="..\src\rendering\visualitzacio.cpp" />
@@ -238,6 +239,7 @@
     <ClInclude Include="..\src\rendering\shader.h" />
     <ClInclude Include="..\src\rendering\LegacyVgiGeometryControls.h" />
     <ClInclude Include="..\src\rendering\RuntimeRenderControls.h" />
+    <ClInclude Include="..\src\rendering\RuntimeRenderer.h" />
     <ClInclude Include="..\src\rendering\visualitzacio.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
