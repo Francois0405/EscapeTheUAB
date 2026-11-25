@@ -51,18 +51,13 @@ set(ENTORNVGI_SOURCES
 	DibujoColisionadores.cpp
 	DibujoGLB.cpp
 	Editor/EditorEscenas.cpp
-	Editor/LimitesModelo.cpp
-	Editor/SelectorObjetos.cpp
 	Editor/SerializadorEscenas.cpp
-	Editor/ValidadorColocacion.cpp
-	Editor/VisibilidadEditor.cpp
 	EscenaFisica.cpp
 	escena.cpp
 	glut_geometry.cpp
 	third_party/ImGuizmo.cpp
 	main.cpp
 	material.cpp
-	ModeloGLB.cpp
 	MundoFisico.cpp
 	NetAvatar.cpp
 	NetJuego.cpp
@@ -73,7 +68,6 @@ set(ENTORNVGI_SOURCES
 	ObjMeshOptimization.cpp
 	OpenXRManager.cpp
 	quatern.cpp
-	SceneLoader.cpp
 	shader.cpp
 	visualitzacio.cpp
 )
@@ -167,6 +161,46 @@ else()
 	message(FATAL_ERROR "The GLM package did not define a supported target.")
 endif()
 
+add_library(EntornVGI_scene_loader STATIC
+	SceneLoader.cpp
+)
+target_include_directories(EntornVGI_scene_loader PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(EntornVGI_scene_loader PUBLIC ${ENTORNVGI_GLM_TARGET})
+target_compile_features(EntornVGI_scene_loader PUBLIC cxx_std_20)
+target_compile_definitions(EntornVGI_scene_loader PRIVATE GLM_ENABLE_EXPERIMENTAL)
+
+add_library(EntornVGI_glb_model STATIC
+	ModeloGLB.cpp
+)
+target_include_directories(EntornVGI_glb_model
+	PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}
+	PRIVATE ${REPO_ROOT}/third_party/cgltf
+)
+target_link_libraries(EntornVGI_glb_model PUBLIC ${ENTORNVGI_GLM_TARGET})
+target_compile_features(EntornVGI_glb_model PUBLIC cxx_std_20)
+target_compile_definitions(EntornVGI_glb_model PRIVATE GLM_ENABLE_EXPERIMENTAL)
+
+add_library(EntornVGI_editor_core STATIC
+	Editor/LimitesModelo.cpp
+	Editor/SelectorObjetos.cpp
+	Editor/ValidadorColocacion.cpp
+	Editor/VisibilidadEditor.cpp
+)
+target_include_directories(EntornVGI_editor_core PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(EntornVGI_editor_core PUBLIC
+	${ENTORNVGI_GLM_TARGET}
+	EntornVGI_glb_model
+	EntornVGI_scene_loader
+)
+target_compile_features(EntornVGI_editor_core PUBLIC cxx_std_20)
+target_compile_definitions(EntornVGI_editor_core PRIVATE
+	GLM_ENABLE_EXPERIMENTAL
+)
+
 target_link_libraries(EntornVGI PRIVATE
 	OpenGL::GL
 	${ENTORNVGI_GLFW_TARGET}
@@ -176,6 +210,9 @@ target_link_libraries(EntornVGI PRIVATE
 	EntornVGI_bullet
 	EntornVGI_openxr
 	EntornVGI_network
+	EntornVGI_scene_loader
+	EntornVGI_glb_model
+	EntornVGI_editor_core
 	Threads::Threads
 	${CMAKE_DL_LIBS}
 )
@@ -199,12 +236,22 @@ if(WIN32)
 	)
 endif()
 
-# Avisos activados pero nunca tratados como errores.
-if(MSVC)
-	target_compile_options(EntornVGI PRIVATE /W3)
-else()
-	target_compile_options(EntornVGI PRIVATE -Wall -Wextra -Wno-unused-parameter)
-endif()
+function(entornvgi_enable_warnings target)
+	if(MSVC)
+		target_compile_options(${target} PRIVATE /W3)
+	else()
+		target_compile_options(${target} PRIVATE -Wall -Wextra -Wno-unused-parameter)
+	endif()
+endfunction()
+
+foreach(target IN ITEMS
+	EntornVGI
+	EntornVGI_scene_loader
+	EntornVGI_glb_model
+	EntornVGI_editor_core
+)
+	entornvgi_enable_warnings(${target})
+endforeach()
 
 set_target_properties(EntornVGI PROPERTIES
 	RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"

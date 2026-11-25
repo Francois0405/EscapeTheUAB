@@ -11,7 +11,6 @@ file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}" ESCAPETHEUAB_SOURCE_PATH)
 
 add_executable(SceneLoaderTests
 	SceneLoaderTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
 )
 target_include_directories(SceneLoaderTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
@@ -20,9 +19,9 @@ target_compile_definitions(SceneLoaderTests PRIVATE
 	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
 )
 if(TARGET glm::glm)
-	target_link_libraries(SceneLoaderTests PRIVATE glm::glm)
+	target_link_libraries(SceneLoaderTests PRIVATE glm::glm EntornVGI_scene_loader)
 else()
-	target_link_libraries(SceneLoaderTests PRIVATE glm)
+	target_link_libraries(SceneLoaderTests PRIVATE glm EntornVGI_scene_loader)
 endif()
 target_compile_features(SceneLoaderTests PRIVATE cxx_std_20)
 
@@ -31,7 +30,6 @@ add_test(NAME SceneLoaderTests COMMAND SceneLoaderTests)
 add_executable(EditorPersistenceTests
 	EditorPersistenceTests.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
 )
 target_include_directories(EditorPersistenceTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
@@ -44,44 +42,37 @@ target_compile_definitions(EditorPersistenceTests PRIVATE
 )
 target_compile_features(EditorPersistenceTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
-	target_link_libraries(EditorPersistenceTests PRIVATE glm::glm)
+	target_link_libraries(EditorPersistenceTests PRIVATE glm::glm EntornVGI_scene_loader)
 else()
-	target_link_libraries(EditorPersistenceTests PRIVATE glm)
+	target_link_libraries(EditorPersistenceTests PRIVATE glm EntornVGI_scene_loader)
 endif()
 add_test(NAME EditorPersistenceTests COMMAND EditorPersistenceTests)
 
 add_executable(EditorTests
 	EditorTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/LimitesModelo.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SelectorObjetos.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/VisibilidadEditor.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
 )
 target_include_directories(EditorTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/third_party/cgltf
 )
 target_compile_definitions(EditorTests PRIVATE GLM_ENABLE_EXPERIMENTAL)
 target_compile_features(EditorTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
-	target_link_libraries(EditorTests PRIVATE glm::glm)
+	target_link_libraries(EditorTests PRIVATE glm::glm EntornVGI_editor_core EntornVGI_scene_loader EntornVGI_glb_model)
 else()
-	target_link_libraries(EditorTests PRIVATE glm)
+	target_link_libraries(EditorTests PRIVATE glm EntornVGI_editor_core EntornVGI_scene_loader EntornVGI_glb_model)
 endif()
 add_test(NAME EditorTests COMMAND EditorTests)
 
 add_executable(EditorPlacementTests
 	EditorPlacementTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/ValidadorColocacion.cpp
 )
 target_include_directories(EditorPlacementTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
 target_compile_features(EditorPlacementTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
-	target_link_libraries(EditorPlacementTests PRIVATE glm::glm)
+	target_link_libraries(EditorPlacementTests PRIVATE glm::glm EntornVGI_editor_core)
 else()
-	target_link_libraries(EditorPlacementTests PRIVATE glm)
+	target_link_libraries(EditorPlacementTests PRIVATE glm EntornVGI_editor_core)
 endif()
 add_test(NAME EditorPlacementTests COMMAND EditorPlacementTests)
 
@@ -135,7 +126,6 @@ add_executable(PhysicsTests
 	PhysicsTests.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/MundoFisico.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/EscenaFisica.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
 	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
 )
@@ -149,9 +139,9 @@ target_compile_definitions(PhysicsTests PRIVATE
 	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${CMAKE_BINARY_DIR}/bin"
 )
 if(TARGET glm::glm)
-	target_link_libraries(PhysicsTests PRIVATE glm::glm EntornVGI_bullet)
+	target_link_libraries(PhysicsTests PRIVATE glm::glm EntornVGI_bullet EntornVGI_scene_loader)
 else()
-	target_link_libraries(PhysicsTests PRIVATE glm EntornVGI_bullet)
+	target_link_libraries(PhysicsTests PRIVATE glm EntornVGI_bullet EntornVGI_scene_loader)
 endif()
 target_compile_features(PhysicsTests PRIVATE cxx_std_20)
 
