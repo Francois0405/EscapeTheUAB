@@ -369,6 +369,7 @@ EntornVGI/main.cpp~RF31ab74.TMP
 
 # Modelos Blender que sí queremos guardar
 !EntornVGI/assets/models/**/*.obj
+!resources/assets/models/**/*.obj
 
 # Bibliotecas x64 necesarias para enlazar el proyecto Visual Studio.
 !lib/

@@ -1,6 +1,8 @@
 
 set(REPO_ROOT "${PROJECT_SOURCE_DIR}")
-set(ENTORNVGI_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+set(ENTORNVGI_SOURCE_RESOURCE_ROOT "${REPO_ROOT}/EntornVGI")
+set(ENTORNVGI_SOURCE_ASSETS_DIR "${ENTORNVGI_SOURCE_RESOURCE_ROOT}/assets")
+set(ENTORNVGI_SOURCE_SHADERS_DIR "${ENTORNVGI_SOURCE_RESOURCE_ROOT}/shaders")
 set(ENTORNVGI_UI_RESOURCE_ROOT "${REPO_ROOT}/res/ui")
 if(NOT IS_DIRECTORY "${ENTORNVGI_SOURCE_ASSETS_DIR}")
 	message(FATAL_ERROR "EscapeTheUAB source asset root is missing: ${ENTORNVGI_SOURCE_ASSETS_DIR}")
@@ -8,6 +10,14 @@ endif()
 if(NOT IS_DIRECTORY "${ENTORNVGI_UI_RESOURCE_ROOT}")
 	message(FATAL_ERROR "EscapeTheUAB UI resource root is missing: ${ENTORNVGI_UI_RESOURCE_ROOT}")
 endif()
+foreach(required_resource IN ITEMS
+	"${ENTORNVGI_SOURCE_SHADERS_DIR}/gouraud_shdrML.vert"
+	"${ENTORNVGI_SOURCE_ASSETS_DIR}/scenes/aula_informatica_calibrada.json"
+)
+	if(NOT EXISTS "${required_resource}")
+		message(FATAL_ERROR "EscapeTheUAB required resource is missing: ${required_resource}")
+	endif()
+endforeach()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -285,6 +295,9 @@ if(WIN32)
 	target_compile_definitions(EntornVGI PRIVATE NOMINMAX)
 	target_compile_definitions(EntornVGI_grab_diagnostics PRIVATE NOMINMAX)
 	target_compile_definitions(EntornVGI_physics PRIVATE NOMINMAX)
+	target_compile_definitions(EntornVGI_animated_glb PRIVATE NOMINMAX)
+	target_compile_definitions(EntornVGI_network_preferences PRIVATE NOMINMAX)
+	target_compile_definitions(EntornVGI_network_game PRIVATE NOMINMAX)
 	add_custom_command(TARGET EntornVGI POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			$<TARGET_RUNTIME_DLLS:EntornVGI>
