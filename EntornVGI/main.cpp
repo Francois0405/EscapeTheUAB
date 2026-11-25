@@ -6782,9 +6782,49 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	// Mantener E carga el lanzamiento; soltarla lanza el objeto sujeto.
 	if (key == GLFW_KEY_E && action == GLFW_PRESS)
 	{
-		if (glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput) &&
-			!mostrarPanelesDebug && !io.WantCaptureKeyboard && !io.WantCaptureMouse &&
-			!gestorOpenXR.SesionEnMarcha())
+		const bool gateJuego = glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput);
+		const bool gateInterfaz = !mostrarPanelesDebug && !io.WantCaptureKeyboard &&
+			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha();
+		if (diagnosticoAgarreActivo())
+		{
+			const ObjetivoInteraccion& objetivo = objetivoInteraccionActual;
+			uint32_t idObjetivo = 0;
+			if (objetivo.accion == AccionInteraccion::Recoger && objetivo.indiceDinamico >= 0 &&
+				objetivo.indiceDinamico < static_cast<int>(objetosEscena.size()))
+				idObjetivo = netjuego::HashId(objetosEscena[objetivo.indiceDinamico].id);
+			glm::vec3 origenRayo(0.0f), direccionRayo(0.0f);
+			origenYDireccionDeLaMirada(origenRayo, direccionRayo);
+			float distanciaRayo = std::numeric_limits<float>::infinity();
+			const fisica::IdCuerpo cuerpoRayo = mundoFisico.CuerpoAlFinalDelRayo(
+				origenRayo, direccionRayo,
+				std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION), &distanciaRayo);
+			const int indiceCuerpoDinamico = cuerpoRayo == fisica::CuerpoInvalido
+				? -1 : escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoRayo);
+			const int indiceCuerpoAnimado = cuerpoRayo == fisica::CuerpoInvalido
+				? -1 : escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoRayo);
+			std::string idCuerpoRayo = "none";
+			if (indiceCuerpoDinamico >= 0 && indiceCuerpoDinamico < static_cast<int>(objetosEscena.size()))
+				idCuerpoRayo = objetosEscena[indiceCuerpoDinamico].id;
+			const char* rol = redJuego.EsHost() ? "host" : redJuego.EsCliente() ? "client" : "offline";
+			std::clog << "[grab] input key=E role=" << rol
+				<< " game=" << (estadoActual == ESTADO_JUGANDO)
+				<< " allowed=" << (gateJuego && gateInterfaz)
+				<< " paused=" << fpsPausado << " focused=" << ventanaConFoco
+				<< " text=" << io.WantTextInput << " captureKeyboard=" << io.WantCaptureKeyboard
+				<< " captureMouse=" << io.WantCaptureMouse
+				<< " debugPanels=" << mostrarPanelesDebug
+				<< " xr=" << gestorOpenXR.SesionEnMarcha()
+				<< " holding=" << jugadorTieneAgarre()
+				<< " action=" << static_cast<int>(objetivo.accion)
+				<< " dynamicIndex=" << objetivo.indiceDinamico
+				<< " targetId=" << idObjetivo
+				<< " rayBody=" << cuerpoRayo << " rayDynamicIndex=" << indiceCuerpoDinamico
+				<< " rayAnimatedIndex=" << indiceCuerpoAnimado << " rayObjectId=" << idCuerpoRayo
+				<< " rayDistance=" << distanciaRayo
+				<< " rayOrigin=(" << origenRayo.x << ',' << origenRayo.y << ',' << origenRayo.z
+				<< ") rayDirection=(" << direccionRayo.x << ',' << direccionRayo.y << ',' << direccionRayo.z << ")\n";
+		}
+		if (gateJuego && gateInterfaz)
 		{
 			if (jugadorTieneAgarre()) iniciarCargaLanzamiento();
 			else interactuar();
