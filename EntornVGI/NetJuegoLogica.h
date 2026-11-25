@@ -231,11 +231,48 @@ namespace netjuego
 
 	struct EventoSalida { uint16_t tipo = 0; uint32_t objetivo = 0; std::vector<uint8_t> payload; };
 
-	// El contrato de escena distingue solo cuerpos estáticos de cuerpos replicables.
-	// La subclase física (dynamic/bouncy) sigue siendo responsabilidad de la autoridad.
+	// El contrato de escena distingue solo cuerpos estáticos de cuerpos replicables;
+	// la réplica conserva una subclase local conocida si el host aún reporta dynamic.
 	inline uint8_t TipoColisionEscena(bool presente, bool cuerpoDinamico)
 	{
 		return !presente ? 0 : (cuerpoDinamico ? 2 : 1);
+	}
+
+	// El protocolo solo reporta none/static/dynamic. Al aplicar el estado recibido,
+	// conserva Rebotador únicamente si el host sigue marcando dynamic y ya existe en
+	// la configuración local. En cualquier discrepancia manda el estado del host.
+	template <typename TipoCuerpo>
+	inline TipoCuerpo TipoFisicoReplicaEscena(bool colisionHostPresente, uint8_t tipoHost,
+		TipoCuerpo tipoLocal, TipoCuerpo dinamico, TipoCuerpo rebotador, TipoCuerpo estatico)
+	{
+		if (!colisionHostPresente || tipoHost != 2) return estatico;
+		return tipoLocal == rebotador ? rebotador : dinamico;
+	}
+
+	// El foco pausa la simulación local offline/cliente, pero nunca la autoridad host.
+	// El editor, la pausa explícita y salir de PLAY sí la congelan para todos.
+	inline bool PausarMundoJuego(bool enPlay, bool editorActivo, bool pausaExplicita,
+		bool tieneFoco, bool sesionXRActiva, bool esHost)
+	{
+		return !enPlay || editorActivo || pausaExplicita ||
+			(!tieneFoco && !sesionXRActiva && !esHost);
+	}
+
+	constexpr float kRapidezMaximaLanzamiento = 15.0f;
+	constexpr float kMargenRedondeoLanzamiento = 1e-4f;
+	inline bool CoordenadaValida(const glm::vec3& v);
+
+	// Admite únicamente el pequeño exceso que puede introducir float32 al normalizar
+	// y escalar el lanzamiento máximo; velocidades mayores se rechazan sin cambiar.
+	inline bool LimitarRapidezLanzamientoHost(glm::vec3& velocidad)
+	{
+		if (!CoordenadaValida(velocidad)) return false;
+		const float rapidez = glm::length(velocidad);
+		if (!std::isfinite(rapidez) || rapidez > kRapidezMaximaLanzamiento + kMargenRedondeoLanzamiento)
+			return false;
+		if (rapidez > kRapidezMaximaLanzamiento)
+			velocidad *= kRapidezMaximaLanzamiento / rapidez;
+		return true;
 	}
 
 	template <typename T, typename IdFn, typename ReplicableFn>

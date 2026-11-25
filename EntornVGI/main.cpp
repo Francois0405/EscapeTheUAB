@@ -1282,7 +1282,9 @@ namespace
 			const auto& e = *aplicacion.second;
 			objeto.posicion = e.posicion; objeto.rotacion = e.rotacion; objeto.escala = e.escala;
 			objeto.fisica.presente = e.colisionPresente;
-			objeto.fisica.tipo = e.tipoColision == 2 ? fisica::TipoCuerpo::Dinamico : fisica::TipoCuerpo::Estatico;
+			objeto.fisica.tipo = netjuego::TipoFisicoReplicaEscena(e.colisionPresente, e.tipoColision,
+				objeto.fisica.tipo, fisica::TipoCuerpo::Dinamico, fisica::TipoCuerpo::Rebotador,
+				fisica::TipoCuerpo::Estatico);
 			objeto.fisica.mitadTamano = e.mitadTamano; objeto.fisica.desplazamiento = e.desplazamiento; objeto.fisica.masa = e.masa;
 		}
 		std::string error;
@@ -9712,8 +9714,9 @@ int main(int argc, char** argv)
 
 			actualizarMovimientoMovil(window, static_cast<float>(delta));
 
-			const bool animacionPausada = editorEscenas.Activo() || fpsPausado ||
-				(!ventanaConFoco && !gestorOpenXR.SesionEnMarcha());
+			const bool animacionPausada = netjuego::PausarMundoJuego(
+				estadoActual == ESTADO_JUGANDO, editorEscenas.Activo(), fpsPausado,
+				ventanaConFoco, gestorOpenXR.SesionEnMarcha(), redJuego.EsHost());
 			actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
 			const auto inicioAnimacion = std::chrono::steady_clock::now();
 			glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
@@ -9735,7 +9738,8 @@ int main(int argc, char** argv)
 			}
 
 			escenaFisica->SincronizarCinematicos(objetosAnimados);
-			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS());
+			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS() &&
+				(!redJuego.EsHost() || entradaFPSActiva()));
 			mundoFisico.FijarPausa(animacionPausada);
 			const auto inicioFisica = std::chrono::steady_clock::now();
 			mundoFisico.Actualizar(static_cast<float>(delta));

@@ -395,7 +395,7 @@ namespace netjuego
 		case kEvSolicitarSoltarDinamico:
 		{
 			glm::vec3 velocidad;
-			if (DecodificarVec3(ev.payload, velocidad) && glm::length(velocidad) <= 15.0f)
+			if (DecodificarVec3(ev.payload, velocidad) && LimitarRapidezLanzamientoHost(velocidad))
 				solicitudesFisicas_.push_back({ ev.targetId, e.peer, false, velocidad });
 			else ++ignorados_;
 			break;
