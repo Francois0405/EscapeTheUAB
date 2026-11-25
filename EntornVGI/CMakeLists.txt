@@ -1,5 +1,13 @@
 
 set(REPO_ROOT "${PROJECT_SOURCE_DIR}")
+set(ENTORNVGI_SOURCE_ASSETS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets")
+set(ENTORNVGI_UI_RESOURCE_ROOT "${REPO_ROOT}/res/ui")
+if(NOT IS_DIRECTORY "${ENTORNVGI_SOURCE_ASSETS_DIR}")
+	message(FATAL_ERROR "EscapeTheUAB source asset root is missing: ${ENTORNVGI_SOURCE_ASSETS_DIR}")
+endif()
+if(NOT IS_DIRECTORY "${ENTORNVGI_UI_RESOURCE_ROOT}")
+	message(FATAL_ERROR "EscapeTheUAB UI resource root is missing: ${ENTORNVGI_UI_RESOURCE_ROOT}")
+endif()
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -52,18 +60,13 @@ set(ENTORNVGI_SOURCES
 	DibujoGLB.cpp
 	Editor/EditorEscenas.cpp
 	Editor/SerializadorEscenas.cpp
-	EscenaFisica.cpp
 	escena.cpp
 	glut_geometry.cpp
 	third_party/ImGuizmo.cpp
 	main.cpp
 	material.cpp
-	MundoFisico.cpp
 	NetAvatar.cpp
 	NetJuego.cpp
-	Network/GrabDiagnostics.cpp
-	Network/PreferenciasRed.cpp
-	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
 	ObjMeshOptimization.cpp
 	OpenXRManager.cpp
@@ -102,7 +105,7 @@ target_include_directories(EntornVGI PRIVATE
 target_compile_definitions(EntornVGI PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
 	ENTORNVGI_RUNTIME_ASSETS_DIR="${CMAKE_BINARY_DIR}/bin/assets"
-	ENTORNVGI_SOURCE_ASSETS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets"
+	ENTORNVGI_SOURCE_ASSETS_DIR="${ENTORNVGI_SOURCE_ASSETS_DIR}"
 )
 
 if(ENTORNVGI_USE_SYSTEM_DEPENDENCIES)
@@ -182,6 +185,46 @@ target_link_libraries(EntornVGI_glb_model PUBLIC ${ENTORNVGI_GLM_TARGET})
 target_compile_features(EntornVGI_glb_model PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_glb_model PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
+add_library(EntornVGI_animated_glb STATIC
+	ObjetosAnimadosGLB.cpp
+)
+target_include_directories(EntornVGI_animated_glb PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(EntornVGI_animated_glb PUBLIC
+	${ENTORNVGI_GLM_TARGET}
+	EntornVGI_glb_model
+)
+target_compile_features(EntornVGI_animated_glb PUBLIC cxx_std_20)
+target_compile_definitions(EntornVGI_animated_glb PRIVATE GLM_ENABLE_EXPERIMENTAL)
+
+add_library(EntornVGI_physics STATIC
+	MundoFisico.cpp
+	EscenaFisica.cpp
+)
+target_include_directories(EntornVGI_physics PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
+)
+target_link_libraries(EntornVGI_physics PUBLIC
+	${ENTORNVGI_GLM_TARGET}
+	EntornVGI_bullet
+	EntornVGI_scene_loader
+	EntornVGI_animated_glb
+)
+target_compile_features(EntornVGI_physics PUBLIC cxx_std_20)
+target_compile_definitions(EntornVGI_physics PRIVATE GLM_ENABLE_EXPERIMENTAL)
+
+add_library(EntornVGI_grab_diagnostics STATIC Network/GrabDiagnostics.cpp)
+target_include_directories(EntornVGI_grab_diagnostics PUBLIC
+	${CMAKE_CURRENT_SOURCE_DIR}
+	${CMAKE_CURRENT_SOURCE_DIR}/Network
+)
+target_compile_features(EntornVGI_grab_diagnostics PUBLIC cxx_std_20)
+
+add_library(EntornVGI_network_preferences STATIC Network/PreferenciasRed.cpp)
+target_include_directories(EntornVGI_network_preferences PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_features(EntornVGI_network_preferences PUBLIC cxx_std_20)
+
 add_library(EntornVGI_editor_core STATIC
 	Editor/LimitesModelo.cpp
 	Editor/SelectorObjetos.cpp
@@ -213,6 +256,10 @@ target_link_libraries(EntornVGI PRIVATE
 	EntornVGI_scene_loader
 	EntornVGI_glb_model
 	EntornVGI_editor_core
+	EntornVGI_animated_glb
+	EntornVGI_physics
+	EntornVGI_grab_diagnostics
+	EntornVGI_network_preferences
 	Threads::Threads
 	${CMAKE_DL_LIBS}
 )
@@ -227,6 +274,8 @@ endif()
 
 if(WIN32)
 	target_compile_definitions(EntornVGI PRIVATE NOMINMAX)
+	target_compile_definitions(EntornVGI_grab_diagnostics PRIVATE NOMINMAX)
+	target_compile_definitions(EntornVGI_physics PRIVATE NOMINMAX)
 	add_custom_command(TARGET EntornVGI POST_BUILD
 		COMMAND ${CMAKE_COMMAND} -E copy_if_different
 			$<TARGET_RUNTIME_DLLS:EntornVGI>
@@ -249,6 +298,10 @@ foreach(target IN ITEMS
 	EntornVGI_scene_loader
 	EntornVGI_glb_model
 	EntornVGI_editor_core
+	EntornVGI_animated_glb
+	EntornVGI_physics
+	EntornVGI_grab_diagnostics
+	EntornVGI_network_preferences
 )
 	entornvgi_enable_warnings(${target})
 endforeach()
@@ -262,7 +315,11 @@ set_target_properties(EntornVGI PROPERTIES
 # copy_if_different avoids rewriting unchanged large assets.
 set(ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS)
 foreach(resource assets shaders textures)
-	set(resource_source "${CMAKE_CURRENT_SOURCE_DIR}/${resource}")
+	if(resource STREQUAL "assets")
+		set(resource_source "${ENTORNVGI_SOURCE_ASSETS_DIR}")
+	else()
+		set(resource_source "${CMAKE_CURRENT_SOURCE_DIR}/${resource}")
+	endif()
 	file(GLOB_RECURSE resource_files CONFIGURE_DEPENDS
 		LIST_DIRECTORIES false
 		"${resource_source}/*"
@@ -284,7 +341,7 @@ foreach(resource assets shaders textures)
 		list(APPEND ENTORNVGI_RUNTIME_RESOURCE_OUTPUTS "${destination_file}")
 	endforeach()
 endforeach()
-set(hand_texture_source "${REPO_ROOT}/res/ui/hand.png")
+set(hand_texture_source "${ENTORNVGI_UI_RESOURCE_ROOT}/hand.png")
 set(hand_texture_output "${CMAKE_BINARY_DIR}/bin/res/ui/hand.png")
 add_custom_command(OUTPUT "${hand_texture_output}"
 	COMMAND ${CMAKE_COMMAND} -E make_directory "${CMAKE_BINARY_DIR}/bin/res/ui"

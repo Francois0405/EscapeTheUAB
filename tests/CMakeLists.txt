@@ -1,13 +1,13 @@
 find_package(glm CONFIG REQUIRED)
+file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}" ENTORNVGI_TEST_SOURCE_ROOT)
+file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/bin" ENTORNVGI_TEST_RUNTIME_ROOT)
 
 add_executable(GrabDiagnosticsTests
 	GrabDiagnosticsTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Network/GrabDiagnostics.cpp
 )
-target_include_directories(GrabDiagnosticsTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI/Network)
+target_link_libraries(GrabDiagnosticsTests PRIVATE EntornVGI_grab_diagnostics)
 target_compile_features(GrabDiagnosticsTests PRIVATE cxx_std_20)
 add_test(NAME GrabDiagnosticsTests COMMAND GrabDiagnosticsTests)
-file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}" ESCAPETHEUAB_SOURCE_PATH)
 
 add_executable(SceneLoaderTests
 	SceneLoaderTests.cpp
@@ -16,7 +16,7 @@ target_include_directories(SceneLoaderTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
 )
 target_compile_definitions(SceneLoaderTests PRIVATE
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
 )
 if(TARGET glm::glm)
 	target_link_libraries(SceneLoaderTests PRIVATE glm::glm EntornVGI_scene_loader)
@@ -101,48 +101,32 @@ add_test(NAME EditorGizmoInteractionTests COMMAND EditorGizmoInteractionTests)
 
 add_executable(GlbTests
 	GlbTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
 )
 target_include_directories(GlbTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/third_party/cgltf
 )
 target_compile_definitions(GlbTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
-	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${CMAKE_BINARY_DIR}/bin"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
+	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${ENTORNVGI_TEST_RUNTIME_ROOT}"
 )
-if(TARGET glm::glm)
-	target_link_libraries(GlbTests PRIVATE glm::glm)
-else()
-	target_link_libraries(GlbTests PRIVATE glm)
-endif()
+target_link_libraries(GlbTests PRIVATE EntornVGI_animated_glb)
 target_compile_features(GlbTests PRIVATE cxx_std_20)
 
 add_test(NAME GlbTests COMMAND GlbTests)
 
 add_executable(PhysicsTests
 	PhysicsTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/MundoFisico.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/EscenaFisica.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
 )
 target_include_directories(PhysicsTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/third_party/cgltf
 )
 target_compile_definitions(PhysicsTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
-	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${CMAKE_BINARY_DIR}/bin"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
+	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${ENTORNVGI_TEST_RUNTIME_ROOT}"
 )
-if(TARGET glm::glm)
-	target_link_libraries(PhysicsTests PRIVATE glm::glm EntornVGI_bullet EntornVGI_scene_loader)
-else()
-	target_link_libraries(PhysicsTests PRIVATE glm EntornVGI_bullet EntornVGI_scene_loader)
-endif()
+target_link_libraries(PhysicsTests PRIVATE EntornVGI_physics)
 target_compile_features(PhysicsTests PRIVATE cxx_std_20)
 
 add_test(NAME PhysicsTests COMMAND PhysicsTests)
@@ -176,7 +160,7 @@ target_include_directories(ObjLoaderTests PRIVATE
 )
 target_compile_definitions(ObjLoaderTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
 )
 target_link_libraries(ObjLoaderTests PRIVATE
 	OpenGL::GL
@@ -327,9 +311,9 @@ add_test(NAME NetJuegoTests COMMAND NetJuegoTests)
 # Persistencia del ultimo destino de red: usa una ruta temporal aislada.
 add_executable(NetworkPreferencesTests
 	NetworkPreferencesTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Network/PreferenciasRed.cpp
 )
 target_include_directories(NetworkPreferencesTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_link_libraries(NetworkPreferencesTests PRIVATE EntornVGI_network_preferences)
 target_compile_features(NetworkPreferencesTests PRIVATE cxx_std_20)
 add_test(NAME NetworkPreferencesTests COMMAND NetworkPreferencesTests)
 
