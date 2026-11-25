@@ -34,9 +34,6 @@ namespace
 		return state;
 	}
 
-	// Golden text follows Barra_Estat in EntornVGI/main.cpp at 852920c (lines 3112-3320). A static diff of
-	// that body against FormatStatusBar differs only in fprintf(stderr, ...) -> Append(output, ...)
-	// and one trailing blank line, so every literal, space and format is the original one.
 	void TestStatusBar()
 	{
 		auto state = BaseState();
