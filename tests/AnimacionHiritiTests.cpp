@@ -1,6 +1,8 @@
 #include "src/gameplay/hirity/AnimacionHiriti.h"
+#include "src/gameplay/hirity/VolumenSonidoHiriti.h"
 #include "TemporizadorAmbiente.h"
 
+#include <cmath>
 #include <iostream>
 
 namespace
@@ -157,6 +159,19 @@ int main()
 	comprobar(!hiriti.Actualizar(true, origen, haciaHiriti,
 		glm::vec3(0.0f, juego::AnimacionHiriti::AlcanceDescubrimiento + 1.0f, 0.0f), 0.2f),
 		"no se descubre fuera del alcance");
+
+	const auto volumenCercano = [](float volumenBase, float distancia, float esperado)
+	{
+		return std::fabs(juego::hiriti::AttenuateVolumeByDistance(volumenBase, distancia) - esperado) < 1.0e-5f;
+	};
+	comprobar(volumenCercano(1.0f, 0.0f, 1.0f) && volumenCercano(1.0f, 2.0f, 1.0f),
+		"la voz de Hiriti suena a volumen completo hasta dos metros");
+	comprobar(volumenCercano(1.0f, 11.0f, 0.575f),
+		"la voz de Hiriti se atenua linealmente entre dos y veinte metros");
+	comprobar(volumenCercano(1.0f, 20.0f, 0.15f) && volumenCercano(1.0f, 100.0f, 0.15f),
+		"la voz de Hiriti conserva un volumen minimo desde veinte metros");
+	comprobar(volumenCercano(1.6f, 11.0f, 0.92f),
+		"la atenuacion es proporcional al volumen base de cada sonido");
 
 	return fallos == 0 ? 0 : 1;
 }

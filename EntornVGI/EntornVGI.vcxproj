@@ -155,6 +155,7 @@
     <ClCompile Include="..\src\editor\SelectorObjetos.cpp" />
     <ClCompile Include="..\src\editor\SerializadorEscenas.cpp" />
     <ClCompile Include="..\src\editor\VisibilidadEditor.cpp" />
+    <ClCompile Include="..\src\gameplay\hirity\HiritiRuntime.cpp" />
     <ClCompile Include="..\src\physics\EscenaFisica.cpp" />
     <ClCompile Include="..\src\scene\escena.cpp" />
     <ClCompile Include="..\src\rendering\glut_geometry.cpp" />
@@ -235,6 +236,8 @@
     <ClInclude Include="..\src\scene\objLoader.h" />
     <ClInclude Include="..\src\vr\OpenXRManager.h" />
     <ClInclude Include="..\src\vr\VistaVR.h" />
+    <ClInclude Include="..\src\gameplay\hirity\HiritiRuntime.h" />
+    <ClInclude Include="..\src\gameplay\hirity\VolumenSonidoHiriti.h" />
     <ClInclude Include="..\src\gameplay\player\MovimientoFPS.h" />
     <ClInclude Include="..\src\rendering\quatern.h" />
     <ClInclude Include="..\src\scene\SceneLoader.h" />

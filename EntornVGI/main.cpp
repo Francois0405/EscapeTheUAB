@@ -34,6 +34,7 @@
 #include "src/gameplay/player/MovimientoFPS.h"
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/hirity/AnimacionHiriti.h"
+#include "src/gameplay/hirity/HiritiRuntime.h"
 #include "TemporizadorAmbiente.h"
 #include "src/networking/replication/NetJuego.h"
 #include "src/networking/replication/NetAdaptadores.h"
@@ -233,41 +234,6 @@ namespace
 	juego::AnimacionHiriti animacionHiriti;
 	juego::TemporizadorAudioHiriti temporizadorAudioHiriti;
 
-	float radioHiriti(const SceneObject& objeto)
-	{
-		return std::max({ std::abs(objeto.escala.x), std::abs(objeto.escala.y), std::abs(objeto.escala.z) });
-	}
-
-	float volumenSonidoHiriti(float volumenBase = 1.0f);
-	void reproducirSonidoHiriti(const std::string& ruta, float volumenBase = 1.0f);
-
-	void reproducirSonidoAparicionHiriti()
-	{
-		static const std::vector<std::string> sonidos = []
-		{
-			std::vector<std::string> encontrados;
-			const std::filesystem::path carpeta("assets/audio/hirity/appear");
-			std::error_code error;
-			for (std::filesystem::directory_iterator entrada(carpeta, error), fin;
-				!error && entrada != fin; entrada.increment(error))
-			{
-				if (entrada->is_regular_file(error) && entrada->path().extension() == ".ogg")
-					encontrados.push_back(entrada->path().string());
-			}
-			if (error)
-				std::cerr << "No se pudieron enumerar los sonidos de aparicion de Hiriti: "
-					<< error.message() << '\n';
-			if (encontrados.empty())
-				encontrados.push_back("assets/audio/hirity/appear/anotopat.ogg");
-			std::sort(encontrados.begin(), encontrados.end());
-			return encontrados;
-		}();
-
-		static std::mt19937 generador(std::random_device{}());
-		std::uniform_int_distribution<std::size_t> elegir(0, sonidos.size() - 1);
-		reproducirSonidoHiriti(sonidos[elegir(generador)], 1.6f);
-	}
-
 	// --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
 	fps::MovimientoJugador movimientoJugador;
 	fps::BalanceoCamara balanceoCamara;
@@ -318,35 +284,6 @@ namespace
 	bool cargaLanzamientoActiva = false;
 	float tiempoCargaLanzamiento = 0.0f;
 	constexpr float TiempoMaximoCargaLanzamiento = 1.25f;
-
-	float volumenSonidoHiriti(float volumenBase)
-	{
-		if (!mundoFisico.HayJugador() || !escenaFisica) return volumenBase;
-
-		glm::vec3 posicionHiriti(0.0f);
-		const auto hiriti = std::find_if(objetosEscena.begin(), objetosEscena.end(),
-			[](const SceneObject& objeto) { return objeto.id == "hiriti"; });
-		if (hiriti == objetosEscena.end()) return volumenBase;
-
-		posicionHiriti = hiriti->posicion;
-		const int indice = static_cast<int>(std::distance(objetosEscena.begin(), hiriti));
-		escenaFisica->PosicionObjetoDinamico(indice, posicionHiriti);
-
-		const glm::vec3 posicionJugador = mundoFisico.PosicionPiesJugador() +
-			glm::vec3(0.0f, 0.0f, mundoFisico.AlturaOjosJugador());
-		const float distancia = glm::length(posicionHiriti - posicionJugador);
-		constexpr float distanciaCompleta = 2.0f;
-		constexpr float distanciaMaxima = 20.0f;
-		constexpr float volumenMinimo = 0.15f;
-		const float atenuacion = 1.0f - (1.0f - volumenMinimo) *
-			std::clamp((distancia - distanciaCompleta) / (distanciaMaxima - distanciaCompleta), 0.0f, 1.0f);
-		return volumenBase * atenuacion;
-	}
-
-	void reproducirSonidoHiriti(const std::string& ruta, float volumenBase)
-	{
-		audioManager.playOneShot(ruta, volumenSonidoHiriti(volumenBase));
-	}
 
 	void cargarTexturaManoInteraccion()
 	{
@@ -710,6 +647,39 @@ namespace
 		emitirDiagnosticoAgarre(registro.str());
 	}
 
+	// Contexto prestado a src/gameplay/hirity: el estado sigue siendo de main.cpp.
+	const juego::hiriti::HiritiContext& contextoHiriti()
+	{
+		static const juego::hiriti::HiritiContext contexto{
+			audioManager, animacionHiriti, temporizadorAudioHiriti, objetosEscena, escenaFisica, mundoFisico,
+			redJuego, hiritiFollowPlayerEnabled, hiritiFollowStopDistance, hiritiFollowMaxSpeed,
+			[](glm::vec3& origen, glm::vec3& direccion) { origenYDireccionDeLaMirada(origen, direccion); },
+			[] { return glm::vec2(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y)); },
+			[] { return glfwGetTime(); },
+			[] { return diagnosticoAgarreActivo(); },
+			[](const std::string& registro) { emitirDiagnosticoAgarre(registro); },
+			[](const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
+				const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
+				{ trazarAgarre(evento, id, peer, propietario, posicion, punto, detalle); }
+		};
+		return contexto;
+	}
+
+	void reproducirSonidoHiriti(const std::string& ruta, float volumenBase = 1.0f)
+	{
+		juego::hiriti::PlayHiritiSound(contextoHiriti(), ruta, volumenBase);
+	}
+
+	void actualizarHiriti(bool puedeDescubrir, bool puedeProcesarColisiones, float delta)
+	{
+		juego::hiriti::UpdateHiriti(contextoHiriti(), puedeDescubrir, puedeProcesarColisiones, delta);
+	}
+
+	void actualizarAudioAmbiente(bool activo, float delta)
+	{
+		juego::hiriti::UpdateAmbientAudio(contextoHiriti(), activo, delta);
+	}
+
 	bool jugadorTieneAgarre()
 	{
 		return escenaFisica->HayAgarre() ||
@@ -839,197 +809,6 @@ namespace
 		glm::vec3 origen, direccion;
 		origenYDireccionDeLaMirada(origen, direccion);
 		escenaFisica->ActualizarAgarre(origen, direccion);
-	}
-
-	bool reaparecerHiritiDetrasDelJugador(int indice, const SceneObject& objeto,
-		const glm::vec3& piesJugador, glm::vec3& centroAparicion)
-	{
-		const glm::vec2 frenteSinNormalizar(
-			static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y));
-		const float longitudFrente = glm::length(frenteSinNormalizar);
-		if (longitudFrente < 1.0e-4f) return false;
-		const glm::vec2 atras = -frenteSinNormalizar / longitudFrente;
-		const float radio = std::max(0.15f, radioHiriti(objeto));
-		constexpr float angulos[] = { 0.0f, 0.5235987756f, -0.5235987756f,
-			1.0471975512f, -1.0471975512f };
-		constexpr float distancias[] = { 2.4f, 2.9f, 3.4f };
-
-		for (float distancia : distancias)
-		{
-			for (float angulo : angulos)
-			{
-				const glm::vec2 direccion(
-					atras.x * std::cos(angulo) - atras.y * std::sin(angulo),
-					atras.x * std::sin(angulo) + atras.y * std::cos(angulo));
-				const glm::vec3 candidato = piesJugador + glm::vec3(
-					direccion.x * distancia, direccion.y * distancia, radio + 0.04f);
-				const float distanciaObstaculo = escenaFisica->DistanciaObstaculoEnRayoObjetoDinamico(
-					indice, piesJugador + glm::vec3(0.0f, 0.0f, radio + 0.04f),
-					glm::vec3(direccion.x, direccion.y, 0.0f), distancia);
-				if (distanciaObstaculo < distancia - radio * 0.5f ||
-					!escenaFisica->PuedeColocarObjetoDinamico(indice, candidato))
-					continue;
-				centroAparicion = candidato;
-				return escenaFisica->TeletransportarObjetoDinamico(indice, centroAparicion);
-			}
-		}
-		return false;
-	}
-
-	void actualizarHiriti(bool puedeDescubrir, bool puedeProcesarColisiones, float delta)
-	{
-		const auto hiriti = std::find_if(objetosEscena.begin(), objetosEscena.end(),
-			[](const SceneObject& objeto) { return objeto.id == "hiriti"; });
-		if (hiriti == objetosEscena.end())
-		{
-			animacionHiriti.Reiniciar();
-			return;
-		}
-
-		if (puedeDescubrir && animacionHiriti.ActualizarAgarrame(delta))
-			reproducirSonidoHiriti("assets/audio/hirity/story/agarrame.ogg");
-
-		glm::vec3 origen(0.0f), direccion(0.0f);
-		if (puedeDescubrir) origenYDireccionDeLaMirada(origen, direccion);
-		const int indice = static_cast<int>(std::distance(objetosEscena.begin(), hiriti));
-		glm::vec3 velocidadHiriti(0.0f);
-		escenaFisica->VelocidadObjetoDinamico(indice, velocidadHiriti);
-		const uint32_t idHiriti = netjuego::HashId(hiriti->id);
-		const bool propietarioRed = redJuego.Activa() &&
-			redJuego.PropietarioDinamico(idHiriti) != netjuego::kSinDueno;
-		const bool jugadorManipulaHiriti = escenaFisica->ObjetoDinamicoSujeto(indice) || propietarioRed;
-		const bool puedeSeguir = animacionHiriti.ActualizarSuspensionSeguimiento(
-			jugadorManipulaHiriti, velocidadHiriti, puedeProcesarColisiones ? delta : 0.0f);
-		const int varianteDanio = animacionHiriti.ActualizarContacto(
-			puedeProcesarColisiones && escenaFisica->HayContactoObjetoDinamico(indice));
-		if (varianteDanio >= 0)
-		{
-			trazarAgarre("hiriti-contact", idHiriti, redJuego.PeerLocal(),
-				redJuego.PropietarioDinamico(idHiriti), hiriti->posicion, velocidadHiriti,
-				varianteDanio == 0 ? "contact-damage-audio" : "contact-damage-audio-long");
-			reproducirSonidoHiriti(varianteDanio == 0
-				? "assets/audio/hirity/damage/damagehirity.ogg"
-				: "assets/audio/hirity/damage/damegehiritylong.ogg");
-		}
-
-		glm::vec3 centro = hiriti->posicion;
-		escenaFisica->PosicionObjetoDinamico(indice, centro);
-		if (diagnosticoAgarreActivo())
-		{
-			static double ultimaMuestraHiriti = 0.0;
-			if (glfwGetTime() - ultimaMuestraHiriti >= 0.5)
-			{
-				const net::PeerId propietario = redJuego.Activa()
-					? redJuego.PropietarioDinamico(idHiriti) : netjuego::kSinDueno;
-				std::ostringstream registro;
-				registro << "[grab] hiriti id=" << idHiriti << " owner=" << propietario
-					<< " body=" << (redJuego.EsCliente() ? "kinematic-replica" : "authoritative-dynamic")
-					<< " held=" << (jugadorManipulaHiriti ? "yes" : "no")
-					<< " tracking=" << (redJuego.EsCliente() ? "host-authoritative-unknown" :
-						(puedeSeguir ? "eligible" : "suspended-or-stabilizing"))
-					<< " followTarget=" << (redJuego.EsHost() ? "host-local-player" : (redJuego.EsCliente() ? "host-authoritative" : "offline-local-player"))
-					<< " respawnElapsed=" << animacionHiriti.TiempoDesdeReaparicion()
-					<< " pos=(" << centro.x << ',' << centro.y << ',' << centro.z << ") velocity=("
-					<< velocidadHiriti.x << ',' << velocidadHiriti.y << ',' << velocidadHiriti.z << ')';
-				emitirDiagnosticoAgarre(registro.str());
-				ultimaMuestraHiriti = glfwGetTime();
-			}
-		}
-		bool reaparecio = false;
-		if (puedeProcesarColisiones && mundoFisico.HayJugador())
-		{
-			const glm::vec3 piesJugador = mundoFisico.PosicionPiesJugador();
-			const float distanciaAlJugador = glm::length(glm::vec2(
-				piesJugador.x - centro.x, piesJugador.y - centro.y));
-			const bool interaccionJugador = jugadorManipulaHiriti || !puedeSeguir;
-			if (animacionHiriti.ActualizarTemporizadorReaparicion(
-				distanciaAlJugador > juego::AnimacionHiriti::DistanciaParaReaparecer,
-				interaccionJugador, delta))
-			{
-				glm::vec3 centroAparicion(0.0f);
-				if (reaparecerHiritiDetrasDelJugador(indice, *hiriti, piesJugador, centroAparicion))
-				{
-					centro = centroAparicion;
-					reaparecio = true;
-					animacionHiriti.RegistrarReaparicion();
-					trazarAgarre("hiriti-respawn", idHiriti, net::kHostPeerId,
-						redJuego.PropietarioDinamico(idHiriti), centro, centroAparicion,
-						"host-authoritative-respawn-after-distance-and-cooldown-conditions");
-					reproducirSonidoAparicionHiriti();
-				}
-			}
-		}
-		if (!reaparecio && hiritiFollowPlayerEnabled && puedeProcesarColisiones && mundoFisico.HayJugador() &&
-			puedeSeguir && delta > 0.0f)
-		{
-			const glm::vec3 piesJugador = mundoFisico.PosicionPiesJugador();
-			const glm::vec2 haciaJugador(piesJugador.x - centro.x, piesJugador.y - centro.y);
-			const float distanciaJugador = glm::length(haciaJugador);
-			const glm::vec2 direccionObjetivo = distanciaJugador > 1.0e-4f
-				? haciaJugador / distanciaJugador : glm::vec2(0.0f);
-			constexpr float angulosSonda[] = { 0.0f, 0.7853981634f, -0.7853981634f,
-				1.5707963268f, -1.5707963268f };
-			std::array<float, 5> distanciasObstaculos{};
-			for (std::size_t i = 0; i < distanciasObstaculos.size(); ++i)
-			{
-				const float coseno = std::cos(angulosSonda[i]);
-				const float seno = std::sin(angulosSonda[i]);
-				const glm::vec3 direccion(
-					direccionObjetivo.x * coseno - direccionObjetivo.y * seno,
-					direccionObjetivo.x * seno + direccionObjetivo.y * coseno,
-					0.0f);
-				distanciasObstaculos[i] = escenaFisica->DistanciaObstaculoEnRayoObjetoDinamico(
-					indice, centro, direccion, juego::AnimacionHiriti::AlcanceAnticipacionObstaculos);
-			}
-			const glm::vec3 direccionSeguimiento = juego::AnimacionHiriti::CalcularDireccionSeguimiento(
-				centro, piesJugador, distanciasObstaculos);
-			const glm::vec3 aceleracion = juego::AnimacionHiriti::CalcularAceleracionSeguimiento(
-				centro, piesJugador, velocidadHiriti, direccionSeguimiento,
-				hiritiFollowStopDistance, hiritiFollowMaxSpeed, 3.2f);
-			escenaFisica->AplicarAceleracionHorizontalObjetoDinamico(
-				indice, aceleracion, std::min(delta, 0.05f));
-		}
-		// La primera mirada dispara el saludo y el impulso inicial.
-		if (animacionHiriti.Actualizar(puedeDescubrir, origen, direccion, centro, radioHiriti(*hiriti)))
-		{
-			static std::mt19937 generador(std::random_device{}());
-			static std::uniform_int_distribution<int> probabilidadGallego(1, 5);
-			const char* saludo = probabilidadGallego(generador) == 1
-				? "assets/audio/hirity/story/holahiritygallego.ogg"
-				: "assets/audio/hirity/story/holahirity.ogg";
-			reproducirSonidoHiriti(saludo);
-
-			// La primera mirada y su sonido pueden ser locales, pero solo el host/offline impulsa el cuerpo.
-			if (puedeProcesarColisiones &&
-				!escenaFisica->ImpulsarObjetoDinamico(indice, glm::vec3(0.0f, 0.0f, 0.75f)))
-				std::cerr << "No se pudo dar el impulso inicial a Hiriti.\n";
-			std::cout << "Has descubierto a Hiriti.\n";
-		}
-	}
-
-	void actualizarAudioAmbiente(bool activo, float delta)
-	{
-		static std::mt19937 generador(std::random_device{}());
-		static std::uniform_int_distribution<int> tipoAmbiente(0, 1);
-		static std::uniform_int_distribution<int> tipoBuscando(0, 1);
-		if (!activo) hiritiFollowPlayerEnabled = false;
-		switch (temporizadorAudioHiriti.Actualizar(activo, delta))
-		{
-		case juego::TemporizadorAudioHiriti::Evento::Ambiente:
-			hiritiFollowPlayerEnabled = false;
-			reproducirSonidoHiriti(tipoAmbiente(generador) == 0
-				? "assets/audio/hirity/ambient/cough.ogg"
-				: "assets/audio/hirity/ambient/pasosfuertes.ogg");
-			break;
-		case juego::TemporizadorAudioHiriti::Evento::Buscando:
-			hiritiFollowPlayerEnabled = true;
-			reproducirSonidoHiriti(tipoBuscando(generador) == 0
-				? "assets/audio/hirity/searching/heydondeestashirity.ogg"
-				: "assets/audio/hirity/searching/venaquihirity.ogg");
-			break;
-		case juego::TemporizadorAudioHiriti::Evento::Ninguno:
-			break;
-		}
 	}
 
 	void liberarObjetosAnimados()
