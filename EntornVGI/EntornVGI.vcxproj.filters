@@ -45,6 +45,9 @@
     <ClCompile Include="..\src\rendering\LegacyVgiGeometryControls.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\rendering\LegacyVgiGraphicsBootstrap.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\rendering\LegacyVgiSceneRenderer.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
@@ -189,6 +192,9 @@
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\LegacyVgiGeometryControls.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\LegacyVgiGraphicsBootstrap.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\LegacyVgiSceneRenderer.h">

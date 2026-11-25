@@ -72,6 +72,8 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/scene/escena.cpp
 	${REPO_ROOT}/src/rendering/glut_geometry.cpp
 	${REPO_ROOT}/src/rendering/LegacyVgiGeometryControls.cpp
+	${REPO_ROOT}/src/rendering/LegacyVgiGraphicsBootstrap.cpp
+	${REPO_ROOT}/src/rendering/LegacyVgiGraphicsBootstrap.h
 	${REPO_ROOT}/src/rendering/LegacyVgiSceneRenderer.cpp
 	${REPO_ROOT}/src/rendering/LegacyVgiSceneRenderer.h
 	${REPO_ROOT}/src/rendering/LegacyVgiViewControls.cpp
