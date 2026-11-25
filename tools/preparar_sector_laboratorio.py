@@ -99,7 +99,7 @@ def main():
     action.add_argument("--apply", action="store_true", help="Aplicar con backup")
     args = pa.parse_args()
 
-    root = Path(__file__).resolve().parent
+    root = Path(__file__).resolve().parent.parent
     model_dir = root / "assets/models/escape_pack/arquitectura"
     scene_file = root / "assets/scenes/aula_informatica_calibrada.json"
     source_file = model_dir / "suelo.obj"

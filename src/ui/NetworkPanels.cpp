@@ -9,7 +9,7 @@
 #include <vector>
 #include <GLFW/glfw3.h>
 
-#include "Network/PreferenciasRed.h"
+#include "src/networking/preferences/PreferenciasRed.h"
 #include "src/gameplay/hirity/AnimacionHiriti.h"
 #include "src/networking/replication/NetAdaptadores.h"
 #include "src/networking/replication/NetJuego.h"

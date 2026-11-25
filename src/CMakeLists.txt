@@ -57,7 +57,7 @@ add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_par
 
 option(ENTORNVGI_ENABLE_NETWORK "Compilar la capa de red (ENet opcional)" ON)
 option(ENTORNVGI_REQUIRE_ENET "Fallar la configuracion si ENet no esta disponible" OFF)
-add_subdirectory("${REPO_ROOT}/src/networking/transport" "${CMAKE_BINARY_DIR}/EntornVGI/networking/transport")
+add_subdirectory("${REPO_ROOT}/src/networking/transport" "${CMAKE_BINARY_DIR}/src/networking/transport")
 
 set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/audio/AudioManager.cpp
@@ -150,12 +150,12 @@ endif()
 
 target_include_directories(EntornVGI PRIVATE
 	${REPO_ROOT}
-	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}
 	${REPO_ROOT}/src/legacy_vgi
 	${REPO_ROOT}/src/scene
 	${REPO_ROOT}/src/platform
 	${IMGUI_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/third_party
+	${REPO_ROOT}/third_party/stb_compat
 	${REPO_ROOT}/third_party
 	${REPO_ROOT}/third_party/imguizmo
 	${REPO_ROOT}/third_party/SOIL2/src
@@ -231,7 +231,7 @@ add_library(EntornVGI_scene_loader STATIC
 )
 target_include_directories(EntornVGI_scene_loader PUBLIC
 	${REPO_ROOT}
-	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}
 	${REPO_ROOT}/third_party
 )
 target_link_libraries(EntornVGI_scene_loader PUBLIC ${ENTORNVGI_GLM_TARGET})
@@ -242,7 +242,7 @@ add_library(EntornVGI_glb_model STATIC
 	${REPO_ROOT}/src/rendering/ModeloGLB.cpp
 )
 target_include_directories(EntornVGI_glb_model
-	PUBLIC ${REPO_ROOT} ${CMAKE_CURRENT_SOURCE_DIR}
+	PUBLIC ${REPO_ROOT} ${REPO_ROOT}
 	PRIVATE ${REPO_ROOT}/third_party/cgltf
 )
 target_link_libraries(EntornVGI_glb_model PUBLIC ${ENTORNVGI_GLM_TARGET})
@@ -254,7 +254,7 @@ add_library(EntornVGI_animated_glb STATIC
 )
 target_include_directories(EntornVGI_animated_glb PUBLIC
 	${REPO_ROOT}
-	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}
 )
 target_link_libraries(EntornVGI_animated_glb PUBLIC
 	${ENTORNVGI_GLM_TARGET}
@@ -269,7 +269,7 @@ add_library(EntornVGI_physics STATIC
 )
 target_include_directories(EntornVGI_physics PUBLIC
 	${REPO_ROOT}
-	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}
 )
 target_link_libraries(EntornVGI_physics PUBLIC
 	${ENTORNVGI_GLM_TARGET}
@@ -280,19 +280,16 @@ target_link_libraries(EntornVGI_physics PUBLIC
 target_compile_features(EntornVGI_physics PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_physics PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
-add_library(EntornVGI_grab_diagnostics STATIC Network/GrabDiagnostics.cpp)
-target_include_directories(EntornVGI_grab_diagnostics PUBLIC
-	${CMAKE_CURRENT_SOURCE_DIR}
-	${CMAKE_CURRENT_SOURCE_DIR}/Network
-)
+add_library(EntornVGI_grab_diagnostics STATIC ${REPO_ROOT}/src/diagnostics/GrabDiagnostics.cpp)
+target_include_directories(EntornVGI_grab_diagnostics PUBLIC ${REPO_ROOT})
 target_compile_features(EntornVGI_grab_diagnostics PUBLIC cxx_std_20)
 
-add_library(EntornVGI_network_preferences STATIC Network/PreferenciasRed.cpp)
-target_include_directories(EntornVGI_network_preferences PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+add_library(EntornVGI_network_preferences STATIC ${REPO_ROOT}/src/networking/preferences/PreferenciasRed.cpp)
+target_include_directories(EntornVGI_network_preferences PUBLIC ${REPO_ROOT})
 target_compile_features(EntornVGI_network_preferences PUBLIC cxx_std_20)
 
 add_library(EntornVGI_network_game STATIC ${REPO_ROOT}/src/networking/replication/NetJuego.cpp)
-target_include_directories(EntornVGI_network_game PUBLIC ${REPO_ROOT} ${CMAKE_CURRENT_SOURCE_DIR})
+target_include_directories(EntornVGI_network_game PUBLIC ${REPO_ROOT} ${REPO_ROOT})
 target_link_libraries(EntornVGI_network_game PUBLIC
 	EntornVGI_network
 	${ENTORNVGI_GLM_TARGET}
@@ -308,7 +305,7 @@ add_library(EntornVGI_editor_core STATIC
 )
 target_include_directories(EntornVGI_editor_core PUBLIC
 	${REPO_ROOT}
-	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}
 )
 target_link_libraries(EntornVGI_editor_core PUBLIC
 	${ENTORNVGI_GLM_TARGET}

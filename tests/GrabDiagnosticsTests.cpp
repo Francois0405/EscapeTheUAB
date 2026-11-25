@@ -1,4 +1,4 @@
-#include "GrabDiagnostics.h"
+#include "src/diagnostics/GrabDiagnostics.h"
 
 #include <filesystem>
 #include <fstream>

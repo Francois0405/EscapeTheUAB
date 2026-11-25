@@ -1,6 +1,6 @@
 #include "src/gameplay/hirity/AnimacionHiriti.h"
 #include "src/gameplay/hirity/VolumenSonidoHiriti.h"
-#include "TemporizadorAmbiente.h"
+#include "src/gameplay/hirity/TemporizadorAmbiente.h"
 
 #include <cmath>
 #include <iostream>

@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\legacy_vgi;$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\src\legacy_vgi;$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>..\src\legacy_vgi\framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -128,7 +128,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\legacy_vgi;$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir)..\src\legacy_vgi;$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>..\src\legacy_vgi\framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>

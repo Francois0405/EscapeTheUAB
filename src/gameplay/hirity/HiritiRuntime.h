@@ -4,7 +4,7 @@
 // actualizacion por fotograma y audio ambiental. main.cpp es el dueno de todo el estado y lo presta
 // mediante este contexto; aqui no se puede incluir main.h (define globales).
 // La API publica va en ingles; main.cpp enlaza cada miembro con su global en contextoHiriti().
-#include "TemporizadorAmbiente.h"
+#include "src/gameplay/hirity/TemporizadorAmbiente.h"
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/hirity/AnimacionHiriti.h"
 #include "src/networking/replication/NetJuego.h"

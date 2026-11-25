@@ -11,7 +11,7 @@ find_path(ENTORNVGI_STB_INCLUDE_DIR
 if(EXISTS "${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c")
     set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c")
 else()
-    set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${PROJECT_SOURCE_DIR}/EntornVGI/third_party/stb_vorbis_impl.c")
+    set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${PROJECT_SOURCE_DIR}/third_party/stb_compat/stb_vorbis_impl.c")
 endif()
 
 # Bullet Physics (fisica). vcpkg (Windows/macOS) y libbullet-dev (Linux) instalan el
@@ -69,7 +69,7 @@ if(ENTORNVGI_ENABLE_OBJ_MESHOPT)
 endif()
 message(STATUS "OBJ meshoptimizer target: ${ENTORNVGI_MESHOPT_TARGET}")
 
-add_subdirectory(EntornVGI)
+add_subdirectory(src)
 
 if(BUILD_TESTING)
 	add_subdirectory(tests)
