@@ -66,6 +66,7 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/editor/EditorEscenas.cpp
 	${REPO_ROOT}/src/editor/SerializadorEscenas.cpp
 	${REPO_ROOT}/src/gameplay/hirity/HiritiRuntime.cpp
+	${REPO_ROOT}/src/gameplay/interaction/InteractionRuntime.cpp
 	${REPO_ROOT}/src/scene/escena.cpp
 	${REPO_ROOT}/src/rendering/glut_geometry.cpp
 	${REPO_ROOT}/src/rendering/LegacyVgiGeometryControls.cpp

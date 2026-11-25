@@ -3,6 +3,7 @@
 // puertas con el host como autoridad, propiedad temporal del objeto compartido, offline sin ENet ni hilos.
 // Usa un transporte en memoria: sin sockets, sin ENet, sin OpenGL, sin Bullet, sin visor.
 #include "src/networking/replication/NetJuego.h"
+#include "src/gameplay/interaction/ThrowCharge.h"
 #include "src/physics/MundoFisico.h"
 #include "src/networking/replication/Game/RemotePhysicsTimeline.h"
 #include "src/networking/replication/Game/HostPhysicsPublication.h"
@@ -898,6 +899,20 @@ int main()
 		ok(captured, "fingerprint: calibrated scene loads and captures");
 		ok(captured && SceneNetworkFingerprint(scenePath.stem().string(), sceneState) == "ET2-876E0A88",
 			"fingerprint: golden value for the calibrated scene");
+	}
+
+	// ---------------- throw charge arithmetic ----------------
+	{
+		using namespace juego::interaction;
+		ok(ThrowChargeFraction(0.0f) == 0.0f && cerca(ThrowChargeFraction(kMaxThrowChargeSeconds * 0.5f), 0.5f) &&
+			ThrowChargeFraction(10.0f) == 1.0f && ThrowChargeFraction(-1.0f) == 0.0f,
+			"throw charge: fraction is linear and clamped");
+		ok(ThrowSpeed(0.0f) == 3.0f && ThrowSpeed(1.0f) == kRapidezMaximaLanzamiento,
+			"throw charge: speed goes from 3 m/s to the host limit");
+		ok(cerca(AdvanceThrowCharge(0.5f, 0.25f), 0.75f) && AdvanceThrowCharge(1.2f, 1.0f) == kMaxThrowChargeSeconds &&
+			AdvanceThrowCharge(0.5f, -1.0f) == 0.5f, "throw charge: advance saturates and ignores negative delta");
+		glm::vec3 velocity = glm::normalize(glm::vec3(0.3f, -0.7f, 0.2f)) * ThrowSpeed(1.0f);
+		ok(LimitarRapidezLanzamientoHost(velocity), "throw charge: a full-charge throw is accepted by the host");
 	}
 
 	if (fallos == 0) std::cout << "NetJuegoTests OK\n";

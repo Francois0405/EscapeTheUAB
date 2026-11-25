@@ -35,6 +35,7 @@
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/hirity/AnimacionHiriti.h"
 #include "src/gameplay/hirity/HiritiRuntime.h"
+#include "src/gameplay/interaction/InteractionRuntime.h"
 #include "TemporizadorAmbiente.h"
 #include "src/networking/replication/NetJuego.h"
 #include "src/networking/replication/NetAdaptadores.h"
@@ -283,7 +284,7 @@ namespace
 	GLuint texturaManoInteraccion = 0;
 	bool cargaLanzamientoActiva = false;
 	float tiempoCargaLanzamiento = 0.0f;
-	constexpr float TiempoMaximoCargaLanzamiento = 1.25f;
+	constexpr float TiempoMaximoCargaLanzamiento = juego::interaction::kMaxThrowChargeSeconds;
 
 	void cargarTexturaManoInteraccion()
 	{
@@ -585,19 +586,11 @@ namespace
 	void iniciarRed(const netjuego::ConfigRed& cfg);
 	void detenerRed();
 
-	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
+	using juego::interaction::AccionInteraccion;
+	using juego::interaction::ObjetivoInteraccion;
 
 	bool modoJuegoFPS();
 	void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion);
-
-	struct ObjetivoInteraccion
-	{
-		AccionInteraccion accion = AccionInteraccion::Ninguna;
-		int indiceDinamico = -1;
-		glb::ObjetoAnimado* objetoAnimado = nullptr;
-		float distancia = std::numeric_limits<float>::infinity();
-		const char* texto = "";
-	};
 
 	ObjetivoInteraccion objetivoInteraccionActual;
 
@@ -680,135 +673,59 @@ namespace
 		juego::hiriti::UpdateAmbientAudio(contextoHiriti(), activo, delta);
 	}
 
-	bool jugadorTieneAgarre()
+	// Contexto prestado a src/gameplay/interaction: el estado sigue siendo de main.cpp.
+	const juego::interaction::InteractionContext& contextoInteraccion()
 	{
-		return escenaFisica->HayAgarre() ||
-			(redJuego.EsCliente() && redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal()) != 0);
-	}
-
-	ObjetivoInteraccion buscarObjetivoInteraccion()
-	{
-		if (jugadorTieneAgarre()) return {};
-
-		glm::vec3 origen, direccion;
-		origenYDireccionDeLaMirada(origen, direccion);
-		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
-		float distancia = std::numeric_limits<float>::infinity();
-		const fisica::IdCuerpo cuerpoMirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, alcance, &distancia);
-		if (cuerpoMirado == fisica::CuerpoInvalido) return {};
-
-		const int indiceDinamico = escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoMirado);
-		if (indiceDinamico >= 0)
-			return { AccionInteraccion::Recoger, indiceDinamico, nullptr, distancia, "[E] Coger" };
-
-		const int indiceAnimado = escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoMirado);
-		if (indiceAnimado < 0 || indiceAnimado >= static_cast<int>(objetosAnimados.objetos.size()))
-			return {};
-
-		glb::ObjetoAnimado* puerta = glb::BuscarObjetoInteractuable(objetosAnimados, origen, direccion);
-		if (puerta == nullptr || puerta != &objetosAnimados.objetos[indiceAnimado])
-			return {};
-
-		const AccionInteraccion accion =
-			(puerta->estado == glb::EstadoPuerta::Cerrada || puerta->estado == glb::EstadoPuerta::Cerrando)
-			? AccionInteraccion::Abrir : AccionInteraccion::Cerrar;
-		return { accion, -1, puerta, distancia, accion == AccionInteraccion::Abrir ? "[E] Abrir" : "[E] Cerrar" };
-	}
-
-	void actualizarObjetivoInteraccion(bool permitido)
-	{
-		objetivoInteraccionActual = {};
-		if (!permitido || !entradaFPSActiva() || editorEscenas.Activo() ||
-			mostrarPanelesDebug || gestorOpenXR.SesionEnMarcha() || jugadorTieneAgarre()) return;
-		objetivoInteraccionActual = buscarObjetivoInteraccion();
-	}
-
-	void iniciarCargaLanzamiento()
-	{
-		if (!jugadorTieneAgarre()) return;
-		cargaLanzamientoActiva = true;
-		tiempoCargaLanzamiento = 0.0f;
-	}
-
-	// Acción "interactuar" (tecla E). Prioridad:
-	//   1) Si se mira un objeto agarrable (dinámico) al alcance, se agarra.
-	//   2) Si no, se intenta con la puerta que se tiene delante.
-	// Quien la llame debe comprobar antes la pausa, el foco y el teclado de ImGui (PuedeInteractuar).
-	void interactuar()
-	{
-		const ObjetivoInteraccion objetivo = objetivoInteraccionActual;
-		// Objeto compartido de prueba (solo con red): si se apunta a el, pedirlo/soltarlo tiene prioridad.
-		if (redJuego.Activa())
-		{
-			glm::vec3 origenRed, direccionRed;
-			origenYDireccionDeLaMirada(origenRed, direccionRed);
-			if (redJuego.AlternarObjeto(origenRed, direccionRed, glfwGetTime())) return;
-		}
-		if (objetivo.accion == AccionInteraccion::Recoger)
-		{
-			if (objetivo.indiceDinamico < 0 || objetivo.indiceDinamico >= static_cast<int>(objetosEscena.size())) return;
-			glm::vec3 origen, direccion;
-			origenYDireccionDeLaMirada(origen, direccion);
-			const uint32_t id = netjuego::HashId(objetosEscena[objetivo.indiceDinamico].id);
-			bool agarrado = false;
-			if (redJuego.Activa() && redJuego.EsCliente())
-			{
-				const bool encolada = redJuego.SolicitarAgarreDinamico(id, origen, direccion);
-				trazarAgarre("request", id, redJuego.PeerLocal(), redJuego.PropietarioDinamico(id),
-					origen, direccion, encolada ? "client-kinematic-request-queued" : "client-request-queue-failed");
-			}
-			else if (redJuego.Activa() && redJuego.EsHost())
-			{
-				const net::PeerId propietario = redJuego.PropietarioDinamico(id);
-				if (propietario == netjuego::kSinDueno &&
-					escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion))
-				{
-					agarrado = true;
-					redJuego.FijarPropietarioDinamico(id, net::kHostPeerId);
-				}
-				else trazarAgarre("reject", id, redJuego.PeerLocal(), propietario, origen, direccion,
-					propietario == netjuego::kSinDueno ? "host-local-physics-rejected-grab" : "host-local-object-owned-by-peer");
-			}
-			else
-			{
-				agarrado = escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
-				if (!agarrado) trazarAgarre("reject", id, net::kUnassignedPeerId, netjuego::kSinDueno,
-					origen, direccion, "offline-local-physics-rejected-grab");
-			}
-			if (agarrado && objetosEscena[objetivo.indiceDinamico].id == "hiriti")
+		static const juego::interaction::InteractionContext contexto{
+			objetosEscena, escenaFisica, mundoFisico, redJuego, objetosAnimados, puertasRed,
+			objetivoInteraccionActual, cargaLanzamientoActiva, tiempoCargaLanzamiento, mostrarPanelesDebug,
+			[] { return entradaFPSActiva(); },
+			[] { return editorEscenas.Activo(); },
+			[] { return gestorOpenXR.SesionEnMarcha(); },
+			[](glm::vec3& origen, glm::vec3& direccion) { origenYDireccionDeLaMirada(origen, direccion); },
+			[] { return glfwGetTime(); },
+			[](const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
+				const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
+				{ trazarAgarre(evento, id, peer, propietario, posicion, punto, detalle); },
+			[]
 			{
 				animacionHiriti.DescubrirPorInteraccion();
 				if (animacionHiriti.MarcarAgarrado())
 					reproducirSonidoHiriti("assets/audio/hirity/story/lohashechobien.ogg");
-			}
-			if (agarrado)
-			{
-				glm::vec3 posicion(0.0f);
-				escenaFisica->PosicionObjetoDinamico(objetivo.indiceDinamico, posicion);
-				const net::PeerId peer = redJuego.Activa() ? redJuego.PeerLocal() : net::kUnassignedPeerId;
-				trazarAgarre("local-grab", id, peer, peer, posicion,
-					fisica::EscenaFisica::DestinoDeAgarre(origen, direccion),
-					redJuego.EsHost() ? "authoritative-host-dynamic" : "offline-dynamic");
-			}
-		}
-		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
-			objetivo.objetoAnimado != nullptr)
-		{
-			// Cliente: la puerta la decide el host (se envia la solicitud y se espera su estado).
-			size_t indicePuerta = 0;
-			if (puertasRed && puertasRed->IndiceDe(objetivo.objetoAnimado, indicePuerta) && redJuego.InterceptarPuerta(indicePuerta)) return;
-			glb::AlternarPuerta(*objetivo.objetoAnimado);
-		}
+			},
+			[](float carga) { animacionHiriti.MarcarLanzadoPorJugador(carga); }
+		};
+		return contexto;
 	}
 
-	// Cada fotograma de juego: la "mano" sigue a la mirada. Solo si se puede jugar (sin pausa, sin
-	// paneles F1 y con foco); si no, el objeto se queda donde estaba.
+	bool jugadorTieneAgarre()
+	{
+		return juego::interaction::PlayerHasGrab(contextoInteraccion());
+	}
+
+	ObjetivoInteraccion buscarObjetivoInteraccion()
+	{
+		return juego::interaction::FindInteractionTarget(contextoInteraccion());
+	}
+
+	void actualizarObjetivoInteraccion(bool permitido)
+	{
+		juego::interaction::UpdateInteractionTarget(contextoInteraccion(), permitido);
+	}
+
+	void iniciarCargaLanzamiento()
+	{
+		juego::interaction::StartThrowCharge(contextoInteraccion());
+	}
+
+	void interactuar()
+	{
+		juego::interaction::Interact(contextoInteraccion());
+	}
+
 	void actualizarAgarreDelJugador(bool puedeJugar)
 	{
-		if (!puedeJugar) return;
-		glm::vec3 origen, direccion;
-		origenYDireccionDeLaMirada(origen, direccion);
-		escenaFisica->ActualizarAgarre(origen, direccion);
+		juego::interaction::UpdatePlayerGrab(contextoInteraccion(), puedeJugar);
 	}
 
 	void liberarObjetosAnimados()
@@ -1502,68 +1419,18 @@ namespace
 
 	void cancelarCargaLanzamiento()
 	{
-		cargaLanzamientoActiva = false;
-		tiempoCargaLanzamiento = 0.0f;
+		juego::interaction::CancelThrowCharge(contextoInteraccion());
 	}
 
 	void lanzarObjetoCargado()
 	{
-		if (!cargaLanzamientoActiva) return;
-		const float carga = std::clamp(tiempoCargaLanzamiento / TiempoMaximoCargaLanzamiento, 0.0f, 1.0f);
-		cancelarCargaLanzamiento();
-		if (!jugadorTieneAgarre()) return;
-
-		glm::vec3 origen, direccion;
-		origenYDireccionDeLaMirada(origen, direccion);
-		const float rapidez = 3.0f + 12.0f * carga;
-		const glm::vec3 velocidad = glm::normalize(direccion) * rapidez;
-		if (redJuego.Activa() && redJuego.EsCliente())
-		{
-			const uint32_t id = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
-			const auto it = std::find_if(objetosEscena.begin(), objetosEscena.end(), [id](const SceneObject& objeto)
-				{ return id != 0 && netjuego::HashId(objeto.id) == id; });
-			if (id != 0)
-			{
-				const bool encolada = redJuego.SolicitarSoltarDinamico(id, velocidad);
-				trazarAgarre(encolada ? "release-request" : "release-rejected", id, redJuego.PeerLocal(),
-					redJuego.PropietarioDinamico(id), glm::vec3(0.0f), velocidad,
-					encolada ? "client-release-request-queued" : "client-release-request-queue-failed");
-				if (encolada && it != objetosEscena.end() && it->id == "hiriti")
-					animacionHiriti.MarcarLanzadoPorJugador(carga);
-			}
-		}
-		else if (escenaFisica->HayAgarre())
-		{
-			const int indice = escenaFisica->ObjetoAgarrado();
-			const uint32_t id = indice >= 0 && indice < static_cast<int>(objetosEscena.size())
-				? netjuego::HashId(objetosEscena[indice].id) : 0;
-			if (escenaFisica->LanzarAgarre(velocidad))
-			{
-				if (redJuego.Activa() && redJuego.EsHost() && id != 0)
-					redJuego.FijarPropietarioDinamico(id, netjuego::kSinDueno);
-				if (indice >= 0 && indice < static_cast<int>(objetosEscena.size()) && objetosEscena[indice].id == "hiriti")
-					animacionHiriti.MarcarLanzadoPorJugador(carga);
-				glm::vec3 posicion(0.0f);
-				if (indice >= 0) escenaFisica->PosicionObjetoDinamico(indice, posicion);
-				trazarAgarre("released", id, redJuego.Activa() ? redJuego.PeerLocal() : net::kUnassignedPeerId,
-					netjuego::kSinDueno, posicion, velocidad, "local-launch-applied-throw-velocity");
-			}
-		}
+		juego::interaction::ThrowChargedObject(contextoInteraccion());
 	}
 
 	void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
 	{
-		if (!cargaLanzamientoActiva) return;
-		const uint32_t objetoPropio = redJuego.Activa() && redJuego.EsCliente()
-			? redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal()) : 0;
-		if (!entradaFPSActiva() || !netjuego::PuedeCargarLanzamiento(escenaFisica->HayAgarre(),
-			redJuego.EsCliente() ? net::Role::Client : net::Role::Offline, objetoPropio))
-		{
-			cancelarCargaLanzamiento();
-			return;
-		}
-		if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS || gestorOpenXR.GatilloPulsado())
-			tiempoCargaLanzamiento = std::min(tiempoCargaLanzamiento + std::max(delta, 0.0f), TiempoMaximoCargaLanzamiento);
+		juego::interaction::UpdateThrowCharge(contextoInteraccion(), delta, [window]
+			{ return glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS || gestorOpenXR.GatilloPulsado(); });
 	}
 
 	// Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
