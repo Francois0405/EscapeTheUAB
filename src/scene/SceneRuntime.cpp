@@ -85,7 +85,7 @@ namespace scene::runtime
 
 		// 3) Objetos animados GLB de la lista "animated", también temporales.
 		glb::AnimatedScene nuevosAnimados;
-		if (!fisica::LoadSceneAnimatedObjects(datos.animados, std::filesystem::absolute(ruta.parent_path()),
+		if (!physics::LoadSceneAnimatedObjects(datos.animados, std::filesystem::absolute(ruta.parent_path()),
 			nuevosAnimados, error))
 		{
 			std::cerr << "No se cargo la escena: " << error << '\n';
@@ -97,7 +97,7 @@ namespace scene::runtime
 				std::cerr << modelo.first << ": " << aviso << '\n';
 
 		// 4) Cuerpos físicos NUEVOS (los de la habitación anterior siguen en el mundo hasta el final).
-		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
+		auto nuevaFisica = std::make_unique<physics::PhysicsScene>(context.physicsWorld);
 		if (!nuevaFisica->Create(objetosValidos, nuevosAnimados, datos.animados, error))
 		{
 			std::cerr << "No se cargo la escena (fisicas): " << error << '\n';
@@ -178,7 +178,7 @@ namespace scene::runtime
 
 	bool RebuildPhysicsAfterEdit(const SceneRuntimeContext& context, std::string& error, bool physicsAuthority)
 	{
-		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
+		auto nuevaFisica = std::make_unique<physics::PhysicsScene>(context.physicsWorld);
 		if (!nuevaFisica->Create(context.sceneObjects, context.animatedObjects, context.animatedData, error, physicsAuthority)) return false;
 		context.physicsScene->ClearBodies();
 		context.physicsScene = std::move(nuevaFisica);

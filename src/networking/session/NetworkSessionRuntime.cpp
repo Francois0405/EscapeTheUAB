@@ -72,8 +72,8 @@ namespace netgame::session
 				objeto.position = e.position; objeto.eulerRotation = e.eulerRotation; objeto.escala = e.escala;
 				objeto.fisica.presente = e.hasCollision;
 				objeto.fisica.tipo = netgame::ReplicaPhysicsType(e.hasCollision, e.collisionKind,
-					objeto.fisica.tipo, fisica::BodyType::Dynamic, fisica::BodyType::Bouncer,
-					fisica::BodyType::Static);
+					objeto.fisica.tipo, physics::BodyType::Dynamic, physics::BodyType::Bouncer,
+					physics::BodyType::Static);
 				objeto.fisica.halfExtents = e.halfExtents; objeto.fisica.desplazamiento = e.desplazamiento; objeto.fisica.masa = e.masa;
 			}
 			std::string error;
@@ -244,7 +244,7 @@ namespace netgame::session
 					glm::vec3 posicionObjeto(0.0f);
 					physicsScene->DynamicObjectPosition(static_cast<int>(indice), posicionObjeto);
 					const net::Transform7& poseAgarre = desdeCabeza ? poseRemota.head : poseRemota.rightHand;
-					const glm::vec3 puntoAgarre = fisica::PhysicsScene::GrabDestination(
+					const glm::vec3 puntoAgarre = physics::PhysicsScene::GrabDestination(
 						netgame::PositionOfPose(poseAgarre), netgame::RotationOfPose(poseAgarre) * glm::vec3(0, 1, 0));
 					traceGrab("accepted", solicitud.id, solicitud.peer, solicitud.peer, posicionObjeto,
 						puntoAgarre, desdeCabeza ? "host-dynamic-remote-constraint-head-anchor" : "host-dynamic-remote-constraint-vr-hand-anchor");
@@ -309,8 +309,8 @@ namespace netgame::session
 				const net::Transform7& poseAnclaje = desdeCabeza ? poseRemota.head : poseRemota.rightHand;
 				const glm::vec3 origenAgarre = netgame::PositionOfPose(poseAnclaje);
 				const glm::vec3 direccionAgarre = netgame::RotationOfPose(poseAnclaje) * glm::vec3(0, 1, 0);
-				const glm::vec3 destino = fisica::PhysicsScene::GrabDestination(origenAgarre, direccionAgarre);
-				std::vector<fisica::PhysicsScene::DynamicState> actuales;
+				const glm::vec3 destino = physics::PhysicsScene::GrabDestination(origenAgarre, direccionAgarre);
+				std::vector<physics::PhysicsScene::DynamicState> actuales;
 				physicsScene->CaptureDynamicStates(actuales);
 				auto actual = std::find_if(actuales.begin(), actuales.end(), [&](const auto& e) { return e.objectIndex == static_cast<int>(indice); });
 				if (actual == actuales.end())
@@ -320,7 +320,7 @@ namespace netgame::session
 					agarresRemotosDesdeCabeza.erase(par.first);
 					networkGame.SetDynamicOwner(par.first, netgame::kSinDueno);
 				}
-				else if (glm::distance(actual->pose.position, destino) > fisica::PhysicsScene::SoltarSiSeAleja)
+				else if (glm::distance(actual->pose.position, destino) > physics::PhysicsScene::SoltarSiSeAleja)
 				{
 					const bool liberado = physicsScene->ReleaseRemoteDynamic(static_cast<int>(indice), glm::vec3(0.0f));
 					traceGrab(liberado ? "auto-release" : "auto-drop", par.first, par.second, par.second, actual->pose.position,
@@ -347,7 +347,7 @@ namespace netgame::session
 
 			if (jugando)
 			{
-				std::vector<fisica::PhysicsScene::DynamicState> fisicos;
+				std::vector<physics::PhysicsScene::DynamicState> fisicos;
 				physicsScene->CaptureDynamicStates(fisicos);
 				std::vector<net::DynamicStateEntry> estados;
 				estados.reserve(fisicos.size());
@@ -400,13 +400,13 @@ namespace netgame::session
 				std::size_t indice = 0;
 				if (!FindDynamicObject(context, par.first, indice) || par.second.empty()) continue;
 				auto objetivo = netgame::timeline::InterpolateRemotePhysicsState(par.second, ahora);
-				fisica::PhysicsScene::DynamicState aplicado;
+				physics::PhysicsScene::DynamicState aplicado;
 				aplicado.objectIndex = static_cast<int>(indice);
 				aplicado.pose.position = netgame::PositionOfPose(objetivo.transform);
 				aplicado.pose.eulerRotation = netgame::RotationOfPose(objetivo.transform);
 				if ((objetivo.flags & 1) != 0)
 				{
-					std::vector<fisica::PhysicsScene::DynamicState> locales;
+					std::vector<physics::PhysicsScene::DynamicState> locales;
 					physicsScene->CaptureDynamicStates(locales);
 					auto actual = std::find_if(locales.begin(), locales.end(), [&](const auto& e) { return e.objectIndex == static_cast<int>(indice); });
 					if (actual != locales.end())

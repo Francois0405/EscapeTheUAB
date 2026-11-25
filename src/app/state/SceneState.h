@@ -1,6 +1,7 @@
 #pragma once
 
 // Scene state shared by the application glue. Defined in src/app/AppState.cpp.
+#include "src/app/AppIncludes.h" // types: each slice compiles on its own
 #include "src/scene/SceneLoader.h"
 #include "src/editor/SceneEditor.h"
 #include "src/editor/SceneSerializer.h"
@@ -23,9 +24,9 @@ extern SceneSpawn activeSceneSpawn;
 extern bool sceneHasValidGeometry;
 extern glb::AnimatedScene animatedObjects;
 extern bool animatedObjectsReady;
-extern fisica::PhysicsWorld physicsWorld;
-extern std::unique_ptr<fisica::PhysicsScene> physicsScene;
-extern fisica::FallingCubeDemo fallingCubeDemo;
+extern physics::PhysicsWorld physicsWorld;
+extern std::unique_ptr<physics::PhysicsScene> physicsScene;
+extern physics::FallingCubeDemo fallingCubeDemo;
 extern bool showColliders;
 extern animation::Playback demoDoorPlayback;
 extern float demoDoorAngle;

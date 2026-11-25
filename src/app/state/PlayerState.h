@@ -1,6 +1,7 @@
 #pragma once
 
 // Player state shared by the application glue. Defined in src/app/AppState.cpp.
+#include "src/app/AppIncludes.h" // types: each slice compiles on its own
 #include "src/gameplay/player/FpsMovement.h"
 #include "src/legacy_vgi/framework.h"
 #include <memory>
@@ -31,4 +32,4 @@ extern bool fpsHasPreviousPosition;
 extern bool windowFocused;
 extern bool showDebugPanels;
 extern bool showFpsCounter;
-extern EstadoJuego currentGameState;
+extern GameState currentGameState;

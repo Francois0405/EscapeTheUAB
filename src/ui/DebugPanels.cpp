@@ -147,9 +147,9 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 			openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Floor ? "STAGE" : (openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
 			openXrManager.EyeCount());
 	}
-	if (!openXrManager.Diagnostico().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
+	if (!openXrManager.NetworkDiagnostics().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
 	{
-		ImGui::TextWrapped("%s", openXrManager.Diagnostico().c_str());
+		ImGui::TextWrapped("%s", openXrManager.NetworkDiagnostics().c_str());
 		ImGui::TreePop();
 	}
 	ImGui::Separator();
@@ -204,7 +204,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		if (ImGui::Button("Reiniciar demo")) fallingCubeDemo.Start();
 		ImGui::SameLine();
 		if (ImGui::Button("Quitar demo")) fallingCubeDemo.Stop();
-		const fisica::BodyPose pose = fallingCubeDemo.CubePose();
+		const physics::BodyPose pose = fallingCubeDemo.CubePose();
 		const glm::vec3 speed = fallingCubeDemo.CubeVelocity();
 		const glm::vec3 gravedad = physicsWorld.GravityValue();
 		ImGui::Text("gravedad: (%.2f, %.2f, %.2f) m/s2", gravedad.x, gravedad.y, gravedad.z);

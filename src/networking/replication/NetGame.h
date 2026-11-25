@@ -12,7 +12,7 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
-#include "src/networking/replication/NetJuegoLogica.h"
+#include "src/networking/replication/NetGameLogic.h"
 #include "networking/transport/NetService.h"
 
 #include <atomic>
@@ -24,7 +24,7 @@ namespace netgame
 {
 	enum class NetworkPhase { Offline, Starting, Active, Error };
 
-	struct Diagnostico
+	struct NetworkDiagnostics
 	{
 		NetworkPhase fase = NetworkPhase::Offline;
 		std::string modo = "Offline";
@@ -80,7 +80,7 @@ namespace netgame
 		bool IsHosting() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Host; }
 		bool IsClient() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Client; }
 		net::PeerId LocalPeerId() const { return servicio_ ? servicio_->LocalPeer() : net::kUnassignedPeerId; }
-		Diagnostico GetDiagnosticInfo() const;
+		NetworkDiagnostics GetDiagnosticInfo() const;
 		static bool IsEnetAvailable();   // construye (sin inicializar) un transporte ENet de prueba
 
 		// ---- puertas ----

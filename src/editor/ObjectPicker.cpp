@@ -5,10 +5,10 @@
 
 namespace editor
 {
-	Rayo RayFromScreen(const glm::mat4& vista, const glm::mat4& proyeccion, const glm::vec2& cursor,
+	PickRay RayFromScreen(const glm::mat4& vista, const glm::mat4& proyeccion, const glm::vec2& cursor,
 		const glm::vec4& rectangulo)
 	{
-		Rayo rayo;
+		PickRay rayo;
 		if (rectangulo.z <= 0.0f || rectangulo.w <= 0.0f) return rayo;
 		const float ndcX = ((cursor.x - rectangulo.x) / rectangulo.z) * 2.0f - 1.0f;
 		const float ndcY = 1.0f - ((cursor.y - rectangulo.y) / rectangulo.w) * 2.0f;
@@ -25,7 +25,7 @@ namespace editor
 		return rayo;
 	}
 
-	int PickNearest(const Rayo& rayo, const std::vector<SelectionCandidate>& candidatos, float* distancia)
+	int PickNearest(const PickRay& rayo, const std::vector<SelectionCandidate>& candidatos, float* distancia)
 	{
 		if (!rayo.valido) return -1;
 		int elegido = -1;

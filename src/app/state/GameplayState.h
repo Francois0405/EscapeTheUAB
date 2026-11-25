@@ -1,6 +1,7 @@
 #pragma once
 
 // Gameplay state shared by the application glue. Defined in src/app/AppState.cpp.
+#include "src/app/AppIncludes.h" // types: each slice compiles on its own
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/hirity/HiritiAnimation.h"
 #include "src/gameplay/interaction/InteractionRuntime.h"

@@ -173,7 +173,7 @@ namespace netgame
 
 	inline bool IsValidTransform(const net::Transform7& t);
 	inline bool IsValidCoordinate(const glm::vec3& v);
-	namespace detalle { inline void WriteF32(std::vector<uint8_t>& b, float f); inline float ReadF32(const uint8_t* p); }
+	namespace detail { inline void WriteF32(std::vector<uint8_t>& b, float f); inline float ReadF32(const uint8_t* p); }
 
 	inline bool IsValidPhysicsState(const net::DynamicStateEntry& e)
 	{
@@ -190,10 +190,10 @@ namespace netgame
 		std::vector<uint8_t> b;
 		if (!IsValidPhysicsState(e)) return b;
 		b.reserve(59);
-		for (float f : e.transform.pos) detalle::WriteF32(b, f);
-		for (float f : e.transform.rot) detalle::WriteF32(b, f);
-		for (float f : e.linearVelocity) detalle::WriteF32(b, f);
-		for (float f : e.angularVelocity) detalle::WriteF32(b, f);
+		for (float f : e.transform.pos) detail::WriteF32(b, f);
+		for (float f : e.transform.rot) detail::WriteF32(b, f);
+		for (float f : e.linearVelocity) detail::WriteF32(b, f);
+		for (float f : e.angularVelocity) detail::WriteF32(b, f);
 		for (int i = 0; i < 4; ++i) b.push_back(static_cast<uint8_t>(e.tick >> (8 * i)));
 		b.push_back(e.flags);
 		b.push_back(static_cast<uint8_t>(e.owner & 0xFF)); b.push_back(static_cast<uint8_t>(e.owner >> 8));
@@ -205,10 +205,10 @@ namespace netgame
 		if (b.size() != 59) return false;
 		net::DynamicStateEntry e; e.objectId = id;
 		std::size_t at = 0;
-		for (float& f : e.transform.pos) { f = detalle::ReadF32(&b[at]); at += 4; }
-		for (float& f : e.transform.rot) { f = detalle::ReadF32(&b[at]); at += 4; }
-		for (float& f : e.linearVelocity) { f = detalle::ReadF32(&b[at]); at += 4; }
-		for (float& f : e.angularVelocity) { f = detalle::ReadF32(&b[at]); at += 4; }
+		for (float& f : e.transform.pos) { f = detail::ReadF32(&b[at]); at += 4; }
+		for (float& f : e.transform.rot) { f = detail::ReadF32(&b[at]); at += 4; }
+		for (float& f : e.linearVelocity) { f = detail::ReadF32(&b[at]); at += 4; }
+		for (float& f : e.angularVelocity) { f = detail::ReadF32(&b[at]); at += 4; }
 		for (int i = 0; i < 4; ++i) e.tick |= uint32_t(b[at++]) << (8 * i);
 		e.flags = b[at++]; e.owner = static_cast<net::PeerId>(b[at] | (uint16_t(b[at + 1]) << 8));
 		if (!IsValidPhysicsState(e)) return false;
@@ -219,15 +219,15 @@ namespace netgame
 	{
 		if (!IsValidCoordinate(origen) || !IsValidCoordinate(direccion) || glm::length(direccion) < 0.5f || glm::length(direccion) > 1.5f) return {};
 		std::vector<uint8_t> b; b.reserve(24);
-		for (float f : { origen.x, origen.y, origen.z, direccion.x, direccion.y, direccion.z }) detalle::WriteF32(b, f);
+		for (float f : { origen.x, origen.y, origen.z, direccion.x, direccion.y, direccion.z }) detail::WriteF32(b, f);
 		return b;
 	}
 
 	inline bool DecodeInteractionRay(const std::vector<uint8_t>& b, glm::vec3& origen, glm::vec3& direccion)
 	{
 		if (b.size() != 24) return false;
-		origen = glm::vec3(detalle::ReadF32(&b[0]), detalle::ReadF32(&b[4]), detalle::ReadF32(&b[8]));
-		direccion = glm::vec3(detalle::ReadF32(&b[12]), detalle::ReadF32(&b[16]), detalle::ReadF32(&b[20]));
+		origen = glm::vec3(detail::ReadF32(&b[0]), detail::ReadF32(&b[4]), detail::ReadF32(&b[8]));
+		direccion = glm::vec3(detail::ReadF32(&b[12]), detail::ReadF32(&b[16]), detail::ReadF32(&b[20]));
 		return IsValidCoordinate(origen) && IsValidCoordinate(direccion) && glm::length(direccion) >= 0.5f && glm::length(direccion) <= 1.5f;
 	}
 
@@ -350,7 +350,7 @@ namespace netgame
 		b.reserve(66);
 		for (float f : { e.position.x, e.position.y, e.position.z, e.eulerRotation.x, e.eulerRotation.y, e.eulerRotation.z,
 			e.escala.x, e.escala.y, e.escala.z, e.halfExtents.x, e.halfExtents.y, e.halfExtents.z,
-			e.desplazamiento.x, e.desplazamiento.y, e.desplazamiento.z, e.masa }) detalle::WriteF32(b, f);
+			e.desplazamiento.x, e.desplazamiento.y, e.desplazamiento.z, e.masa }) detail::WriteF32(b, f);
 		b.push_back(e.hasCollision ? 1 : 0);
 		b.push_back(e.collisionKind);
 		return b;
@@ -363,7 +363,7 @@ namespace netgame
 		float* valores[] = { &e.position.x, &e.position.y, &e.position.z, &e.eulerRotation.x, &e.eulerRotation.y, &e.eulerRotation.z,
 			&e.escala.x, &e.escala.y, &e.escala.z, &e.halfExtents.x, &e.halfExtents.y, &e.halfExtents.z,
 			&e.desplazamiento.x, &e.desplazamiento.y, &e.desplazamiento.z, &e.masa };
-		for (std::size_t i = 0; i < 16; ++i) *valores[i] = detalle::ReadF32(&b[i * 4]);
+		for (std::size_t i = 0; i < 16; ++i) *valores[i] = detail::ReadF32(&b[i * 4]);
 		if (b[64] > 1) return false;
 		e.hasCollision = b[64] != 0; e.collisionKind = b[65];
 		if (!IsValidSceneObjectState(e)) return false;
@@ -377,7 +377,7 @@ namespace netgame
 			std::fabs(v.x) <= net::kMaxCoordinate && std::fabs(v.y) <= net::kMaxCoordinate && std::fabs(v.z) <= net::kMaxCoordinate;
 	}
 
-	namespace detalle
+	namespace detail
 	{
 		inline void WriteU16(std::vector<uint8_t>& b, uint16_t v) { b.push_back(uint8_t(v)); b.push_back(uint8_t(v >> 8)); }
 		inline void WriteF32(std::vector<uint8_t>& b, float f) { uint32_t u; std::memcpy(&u, &f, 4); for (int i = 0; i < 4; ++i) b.push_back(uint8_t(u >> (8 * i))); }
@@ -387,25 +387,25 @@ namespace netgame
 
 	inline std::vector<uint8_t> EncodeVec3(const glm::vec3& v)
 	{
-		std::vector<uint8_t> b; detalle::WriteF32(b, v.x); detalle::WriteF32(b, v.y); detalle::WriteF32(b, v.z); return b;
+		std::vector<uint8_t> b; detail::WriteF32(b, v.x); detail::WriteF32(b, v.y); detail::WriteF32(b, v.z); return b;
 	}
 	inline bool DecodeVec3(const std::vector<uint8_t>& b, glm::vec3& v)
 	{
 		if (b.size() != 12) return false;
-		glm::vec3 t(detalle::ReadF32(&b[0]), detalle::ReadF32(&b[4]), detalle::ReadF32(&b[8]));
+		glm::vec3 t(detail::ReadF32(&b[0]), detail::ReadF32(&b[4]), detail::ReadF32(&b[8]));
 		if (!IsValidCoordinate(t)) return false;
 		v = t; return true;
 	}
 	constexpr net::PeerId kSinDueno = net::kUnassignedPeerId;
 	inline std::vector<uint8_t> EncodeObjectState(net::PeerId dueno, const glm::vec3& p)
 	{
-		std::vector<uint8_t> b; detalle::WriteU16(b, dueno);
+		std::vector<uint8_t> b; detail::WriteU16(b, dueno);
 		const auto v = EncodeVec3(p); b.insert(b.end(), v.begin(), v.end()); return b;
 	}
 	inline bool DecodeObjectState(const std::vector<uint8_t>& b, net::PeerId& dueno, glm::vec3& p)
 	{
 		if (b.size() != 14) return false;
-		const net::PeerId d = detalle::ReadU16(&b[0]);
+		const net::PeerId d = detail::ReadU16(&b[0]);
 		if (d != kSinDueno && d > net::kMaxPeerId) return false;
 		glm::vec3 t; if (!DecodeVec3(std::vector<uint8_t>(b.begin() + 2, b.end()), t)) return false;
 		dueno = d; p = t; return true;
@@ -553,8 +553,8 @@ namespace netgame
 			out = c.back().pose; out.peer = peer; return true;
 		}
 	private:
-		struct Muestra { double t; net::PoseEntry pose; };
-		std::map<net::PeerId, std::deque<Muestra>> datos_;
+		struct PoseSample { double t; net::PoseEntry pose; };
+		std::map<net::PeerId, std::deque<PoseSample>> datos_;
 	};
 
 	// ------------------------------------------------------------------ puertas (host = autoridad)

@@ -535,7 +535,7 @@
     <ClInclude Include="..\src\networking\replication\NetGame.h">
       <Filter>src\networking\replication</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\networking\replication\NetJuegoLogica.h">
+    <ClInclude Include="..\src\networking\replication\NetGameLogic.h">
       <Filter>src\networking\replication</Filter>
     </ClInclude>
     <ClInclude Include="..\src\networking\session\NetworkSessionRuntime.h">

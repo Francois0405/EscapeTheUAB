@@ -39,8 +39,8 @@ namespace scene::runtime
 		editor::SceneSerializer& serializer;
 
 		// Fisica: referencia al unique_ptr porque cargar o reconstruir sustituye la escena fisica.
-		fisica::PhysicsWorld& physicsWorld;
-		std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+		physics::PhysicsWorld& physicsWorld;
+		std::unique_ptr<physics::PhysicsScene>& physicsScene;
 
 		// Datos de la escena activa
 		std::string& activeSceneName;

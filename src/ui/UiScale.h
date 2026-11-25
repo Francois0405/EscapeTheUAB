@@ -3,7 +3,7 @@
 #include <algorithm>
 #include <cmath>
 
-namespace interfaz
+namespace uiscale
 {
 	struct UiWindowRect
 	{

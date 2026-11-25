@@ -1,7 +1,7 @@
 #pragma once
 
 // Reglas puras de la sesion de red del juego: sin escena, fisica, ventana ni estado.
-#include "src/networking/replication/NetJuegoLogica.h"
+#include "src/networking/replication/NetGameLogic.h"
 
 #include <algorithm>
 #include <cmath>

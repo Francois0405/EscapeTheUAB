@@ -38,8 +38,8 @@ namespace netgame::session
 		// Estado prestado
 		std::vector<SceneObject>& sceneObjects;
 		// Referencia al unique_ptr: reconstruir la fisica sustituye la escena fisica en mitad de una llamada.
-		std::unique_ptr<fisica::PhysicsScene>& physicsScene;
-		const fisica::PhysicsWorld& physicsWorld;
+		std::unique_ptr<physics::PhysicsScene>& physicsScene;
+		const physics::PhysicsWorld& physicsWorld;
 		NetworkGame& session;
 		glb::AnimatedScene& animatedObjects;
 		std::unique_ptr<GlbDoors>& networkDoors;

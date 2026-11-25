@@ -15,8 +15,8 @@
 struct ScenePhysics
 {
     bool presente = false;                                  // false = el objeto no tiene físicas
-    fisica::BodyType tipo = fisica::BodyType::Static; // static, dynamic o bouncy
-    fisica::BodyShape forma = fisica::BodyShape::Box;
+    physics::BodyType tipo = physics::BodyType::Static; // static, dynamic o bouncy
+    physics::BodyShape forma = physics::BodyShape::Box;
     glm::vec3 halfExtents = glm::vec3(0.5f);                // "halfSize": medias dimensiones; radio para esfera
     glm::vec3 desplazamiento = glm::vec3(0.0f);             // "offset": centro de la caja respecto al origen del modelo
     float masa = 0.0f;                                      // "mass" en kg (solo dinámicos)
@@ -99,7 +99,7 @@ struct SceneObject
 struct SceneCollider
 {
     std::string nodo;                                       // nombre del nodo en el GLB, p. ej. "Door"
-    fisica::BodyType tipo = fisica::BodyType::Static; // "static" (marco) o "kinematic" (hoja que se mueve)
+    physics::BodyType tipo = physics::BodyType::Static; // "static" (marco) o "kinematic" (hoja que se mueve)
     glm::vec3 halfExtents = glm::vec3(0.5f);
     glm::vec3 desplazamiento = glm::vec3(0.0f);
 };

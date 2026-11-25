@@ -12,7 +12,7 @@
 #include <limits>
 #include <map>
 
-namespace fisica
+namespace physics
 {
 	namespace
 	{

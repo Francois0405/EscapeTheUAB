@@ -195,19 +195,19 @@ int main()
     comprobar(LoadSceneDataJson(temp / "fisica-ok.json", datos, error), "physics valido carga");
     {
         const ScenePhysics& f = datos.objetos[0].fisica;
-        comprobar(f.presente && f.tipo == fisica::BodyType::Dynamic && f.masa == 2.5f &&
+        comprobar(f.presente && f.tipo == physics::BodyType::Dynamic && f.masa == 2.5f &&
             f.halfExtents == glm::vec3(0.5f, 0.25f, 1.0f) && f.desplazamiento == glm::vec3(0, 0, 0.5f),
             "physics: tipo, masa, halfSize y offset se leen bien");
     }
     escribir(temp / "fisica-estatica.json", conFisica("{\"type\":\"static\",\"halfSize\":[1,1,1]}"));
     comprobar(LoadSceneDataJson(temp / "fisica-estatica.json", datos, error) &&
-        datos.objetos[0].fisica.tipo == fisica::BodyType::Static && datos.objetos[0].fisica.desplazamiento == glm::vec3(0.0f),
+        datos.objetos[0].fisica.tipo == physics::BodyType::Static && datos.objetos[0].fisica.desplazamiento == glm::vec3(0.0f),
         "physics estatico: offset opcional vale 0");
     escribir(temp / "fisica-rebotador.json", conFisica(
         "{\"type\":\"bouncy\",\"shape\":\"sphere\",\"halfSize\":[1,1,1],\"mass\":0.25}"));
     comprobar(LoadSceneDataJson(temp / "fisica-rebotador.json", datos, error) &&
-        datos.objetos[0].fisica.tipo == fisica::BodyType::Bouncer &&
-        datos.objetos[0].fisica.forma == fisica::BodyShape::Sphere &&
+        datos.objetos[0].fisica.tipo == physics::BodyType::Bouncer &&
+        datos.objetos[0].fisica.forma == physics::BodyShape::Sphere &&
         datos.objetos[0].fisica.masa == 0.25f,
         "physics bouncy carga como esfera dinamica con masa");
     escribir(temp / "fisica-rebotador-caja.json", conFisica(
@@ -245,7 +245,7 @@ int main()
     escribir(temp / "animado-ok.json", conAnimados("[" + animado + "]"));
     comprobar(LoadSceneDataJson(temp / "animado-ok.json", datos, error), "objeto animado valido carga");
     comprobar(datos.animados.size() == 1 && datos.animados[0].yawDegrees == -90.0f && datos.animados[0].escala == 2.0f &&
-        datos.animados[0].animation == "Abrir" && datos.animados[0].colisionadores[0].tipo == fisica::BodyType::Kinematic,
+        datos.animados[0].animation == "Abrir" && datos.animados[0].colisionadores[0].tipo == physics::BodyType::Kinematic,
         "objeto animado: giro, escala, animacion y colisionador se leen bien");
     const std::string paredConVano = R"json({"version":1,"name":"parametric-wall","architecture":[
       {"id":"wall","model":"models/cube.obj","position":[0,0,0],"rotation":[0,0,0],"scale":[5,0.15,1.5],
@@ -313,18 +313,18 @@ int main()
     const SceneObject* hiriti = dinamico("hiriti");
     comprobar(hiriti && hiriti->modelo == "../models/Hiriti.obj" &&
         hiriti->position == glm::vec3(-5.5f, -5.65f, -3.0f) &&
-        hiriti->fisica.tipo == fisica::BodyType::Bouncer &&
-        hiriti->fisica.forma == fisica::BodyShape::Sphere &&
+        hiriti->fisica.tipo == physics::BodyType::Bouncer &&
+        hiriti->fisica.forma == physics::BodyShape::Sphere &&
         hiriti->fisica.desplazamiento == glm::vec3(0.0f),
         "Hiriti tiene la esfera rebotadora centrada en la malla");
     const SceneObject* frasco = dinamico("frasco_muestras_sur");
     const SceneObject* vaso = dinamico("vaso_investigacion_norte");
     const SceneObject* escritorio = dinamico("mesa_control_sur");
-    comprobar(frasco && frasco->fisica.presente && frasco->fisica.tipo == fisica::BodyType::Dynamic && frasco->fisica.masa > 0.0f,
+    comprobar(frasco && frasco->fisica.presente && frasco->fisica.tipo == physics::BodyType::Dynamic && frasco->fisica.masa > 0.0f,
         "frasco de muestras está configurado como manipulable dinámico");
-    comprobar(vaso && vaso->fisica.presente && vaso->fisica.tipo == fisica::BodyType::Dynamic,
+    comprobar(vaso && vaso->fisica.presente && vaso->fisica.tipo == physics::BodyType::Dynamic,
         "vaso de investigación tiene collider dinámico");
-    comprobar(escritorio && (!escritorio->fisica.presente || escritorio->fisica.tipo == fisica::BodyType::Static),
+    comprobar(escritorio && (!escritorio->fisica.presente || escritorio->fisica.tipo == physics::BodyType::Static),
         "mobiliario grande permanece estático");
     std::size_t suelos = 0;
     std::size_t lucesEscena = 0;
@@ -339,7 +339,7 @@ int main()
         if (objeto.modelo.find("suelo_base.obj") != std::string::npos)
         {
             ++suelos;
-            comprobar(objeto.fisica.presente && objeto.fisica.tipo == fisica::BodyType::Static,
+            comprobar(objeto.fisica.presente && objeto.fisica.tipo == physics::BodyType::Static,
                 "el suelo reutilizable conserva su collider estático");
             comprobar(objeto.material.dirtStrength > 0.0f,
                 "la máscara de suciedad se configura en la escena");

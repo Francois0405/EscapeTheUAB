@@ -170,7 +170,7 @@ namespace editor
 
 		// --- Cámara estilo Unity y arbitraje de la entrada ---
 		enum class CameraMode { None, Look, Pan, Orbit };
-		CamaraEditor camara;
+		EditorCamera camara;
 		CameraOptions opciones;
 		CameraMode modoCamara = CameraMode::None;
 		glm::vec3 orbitPivot{ 0.0f };

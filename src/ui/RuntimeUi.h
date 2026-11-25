@@ -12,17 +12,17 @@ class AudioManager;
 struct GLFWwindow;
 struct SceneObject;
 namespace animation { struct Playback; }
-namespace fisica { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
+namespace physics { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
 namespace fps { class CameraBob; class StaminaBar; class PlayerMovement; }
 namespace glb { struct AnimatedScene; }
 namespace game { class HiritiAnimator; }
 namespace netgame { class NetworkGame; struct NetworkConfig; }
 namespace vr { class OpenXrManager; }
 
-enum EstadoJuego {
-	ESTADO_MENU_PRINCIPAL,
-	ESTADO_JUGANDO,
-	ESTADO_PAUSA
+enum GameState {
+	GAME_STATE_MAIN_MENU,
+	GAME_STATE_PLAYING,
+	GAME_STATE_PAUSED
 };
 
 namespace runtimeui
@@ -39,7 +39,7 @@ namespace runtimeui
 		const bool& throwCharging;
 		const float& throwChargeSeconds;
 		float maxThrowChargeSeconds;
-		const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+		const std::unique_ptr<physics::PhysicsScene>& physicsScene;
 		std::function<const char*()> interactionPrompt;   // nullptr when nothing is targeted
 		const unsigned int& handTexture;
 	};
@@ -47,7 +47,7 @@ namespace runtimeui
 	struct MenuContext
 	{
 		GLFWwindow* window;
-		EstadoJuego& state;
+		GameState& state;
 		const unsigned int& backgroundTexture;
 		float& masterVolumePercent;
 		AudioManager& audio;
@@ -66,7 +66,7 @@ namespace runtimeui
 	struct DynamicObjectsContext
 	{
 		netgame::NetworkGame& session;
-		const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+		const std::unique_ptr<physics::PhysicsScene>& physicsScene;
 		const std::vector<SceneObject>& sceneObjects;
 		const bool& hiritiFollowEnabled;
 		const game::HiritiAnimator& hiriti;
@@ -98,9 +98,9 @@ namespace runtimeui
 		float& hiritiMaxSpeed;
 		bool& stereoPreview;
 		vr::OpenXrManager& openXR;
-		fisica::PhysicsWorld& physicsWorld;
-		const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
-		fisica::FallingCubeDemo& cubeDemo;
+		physics::PhysicsWorld& physicsWorld;
+		const std::unique_ptr<physics::PhysicsScene>& physicsScene;
+		physics::FallingCubeDemo& cubeDemo;
 		netgame::NetworkGame& session;
 		const std::vector<SceneObject>& sceneObjects;
 		glb::AnimatedScene& animatedObjects;

@@ -46,7 +46,7 @@ namespace editor
 
 	constexpr float LimitePitch = 89.0f;   // grados; evita la inversión en los polos
 
-	struct CamaraEditor
+	struct EditorCamera
 	{
 		ViewKind vista = ViewKind::Perspective;
 		glm::vec3 position{ 6.0f, -10.0f, 6.0f };
@@ -209,7 +209,7 @@ namespace editor
 
 	// Dirección unitaria en el MUNDO de una flecha. En perspectiva se proyecta sobre el plano horizontal (no cambia la altura);
 	// en vistas ortográficas usa los ejes de pantalla (Top: derecha = +X, arriba = +Y).
-	inline glm::vec3 ArrowDirection(ArrowKey f, const CamaraEditor& c)
+	inline glm::vec3 ArrowDirection(ArrowKey f, const EditorCamera& c)
 	{
 		if (f == ArrowKey::Raise) return glm::vec3(0, 0, 1);
 		if (f == ArrowKey::Lower) return glm::vec3(0, 0, -1);
@@ -238,7 +238,7 @@ namespace editor
 	}
 
 	// Posición nueva tras una pulsación. Con snap, el resultado queda sobre la cuadrícula en los ejes que se mueven.
-	inline glm::vec3 ApplyArrowKey(const glm::vec3& position, ArrowKey f, const CamaraEditor& c, bool ctrl, bool shift,
+	inline glm::vec3 ApplyArrowKey(const glm::vec3& position, ArrowKey f, const EditorCamera& c, bool ctrl, bool shift,
 		const CameraOptions& o)
 	{
 		bool snap = false;

@@ -265,19 +265,19 @@ namespace game::hiriti
 		if (!activo) hiritiFollowPlayerEnabled = false;
 		switch (hiritiAudioTimer.Update(activo, delta))
 		{
-		case game::HiritiAudioTimer::Evento::Ambient:
+		case game::HiritiAudioTimer::AudioEvent::Ambient:
 			hiritiFollowPlayerEnabled = false;
 			PlayHiritiSound(context, tipoAmbiente(generador) == 0
 				? "assets/audio/hirity/ambient/cough.ogg"
 				: "assets/audio/hirity/ambient/pasosfuertes.ogg");
 			break;
-		case game::HiritiAudioTimer::Evento::Searching:
+		case game::HiritiAudioTimer::AudioEvent::Searching:
 			hiritiFollowPlayerEnabled = true;
 			PlayHiritiSound(context, tipoBuscando(generador) == 0
 				? "assets/audio/hirity/searching/heydondeestashirity.ogg"
 				: "assets/audio/hirity/searching/venaquihirity.ogg");
 			break;
-		case game::HiritiAudioTimer::Evento::None:
+		case game::HiritiAudioTimer::AudioEvent::None:
 			break;
 		}
 	}

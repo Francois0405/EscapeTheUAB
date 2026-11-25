@@ -3,7 +3,7 @@
 #include "src/rendering/RenderMetrics.h"
 #include "src/physics/ColliderDrawing.h"
 
-namespace fisica
+namespace physics
 {
 	namespace
 	{

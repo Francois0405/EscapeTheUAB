@@ -109,7 +109,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 				else std::cerr << "Pared paramétrica '" << obj.id << "' inválida: " << errorPared << '\n';
 			}
 			if (matrices.empty()) matrices.push_back(ctx.sceneEditor.IsEnabled()
-				? fisica::ObjectMatrix(obj) : ctx.physicsScene->VisualMatrixOf(static_cast<int>(i), obj));
+				? physics::ObjectMatrix(obj) : ctx.physicsScene->VisualMatrixOf(static_cast<int>(i), obj));
 			if (ctx.optimizedRendering)
 			{
 				Vector3D minimo{}, maximo{};
@@ -189,7 +189,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 		for (const auto& modelo : ctx.roomModels)
 		{
 			if (!modelo.first.ends_with("test.obj")) continue;
-			const fisica::BodyPose pose = ctx.fallingCubeDemo.CubePose();
+			const physics::BodyPose pose = ctx.fallingCubeDemo.CubePose();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
 			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.position)
 				* glm::mat4_cast(pose.eulerRotation)
@@ -232,7 +232,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
 	if (ctx.sceneEditor.IsEnabled() && ctx.sceneEditor.ShowCollidersEnabled())
 	{
-		std::vector<fisica::CollisionBox> cajasEditor;
+		std::vector<physics::CollisionBox> cajasEditor;
 		for (std::size_t objectIndex = 0; objectIndex < ctx.sceneObjects.size(); ++objectIndex)
 		{
 			const SceneObject& objeto = ctx.sceneObjects[objectIndex];
@@ -241,17 +241,17 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.z), glm::vec3(0, 0, 1));
 			giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.y), glm::vec3(0, 1, 0));
 			giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.x), glm::vec3(1, 0, 0));
-			fisica::CollisionBox caja;
+			physics::CollisionBox caja;
 			caja.tipo = objeto.fisica.tipo;
 			caja.pose.position = objeto.position + glm::vec3(giro * glm::vec4(objeto.escala * objeto.fisica.desplazamiento, 0.0f));
 			caja.pose.eulerRotation = glm::quat_cast(glm::mat3(giro));
 			caja.halfExtents = glm::abs(objeto.escala) * objeto.fisica.halfExtents;
 			cajasEditor.push_back(caja);
 		}
-		fisica::DrawColliders(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, cajasEditor);
+		physics::DrawColliders(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, cajasEditor);
 	}
 	else if (ctx.showColliders && !ctx.sceneEditor.IsEnabled())
-		fisica::DrawColliders(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, ctx.physicsWorld.CollisionBoxes());
+		physics::DrawColliders(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, ctx.physicsWorld.CollisionBoxes());
 
 	// Multijugador: jugadores remotos (el local NUNCA se dibuja) y objeto compartido de prueba.
 	if (ctx.networkGame.IsActive() && !ctx.sceneEditor.IsEnabled())

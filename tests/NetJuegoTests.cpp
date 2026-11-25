@@ -127,12 +127,12 @@ namespace
 
 	double Reloj() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
-	struct Nodo
+	struct TestNode
 	{
 		std::unique_ptr<NetworkGame> red; std::unique_ptr<PuertasFalsas> puertas; PoseEntry pose;
 		void Paso() { red->Update(Reloj(), &pose); }
 	};
-	template <class F> bool Esperar(std::vector<Nodo*> nodos, F cond, double seg = 5.0)
+	template <class F> bool Esperar(std::vector<TestNode*> nodos, F cond, double seg = 5.0)
 	{
 		const double fin = Reloj() + seg;
 		while (Reloj() < fin)
@@ -144,9 +144,9 @@ namespace
 		return false;
 	}
 
-	std::unique_ptr<Nodo> Create(std::shared_ptr<Hub> hub, Role rol, const std::string& escena, const glm::vec3& cabeza, int* llamadasFabrica = nullptr)
+	std::unique_ptr<TestNode> Create(std::shared_ptr<Hub> hub, Role rol, const std::string& escena, const glm::vec3& cabeza, int* llamadasFabrica = nullptr)
 	{
-		auto n = std::make_unique<Nodo>();
+		auto n = std::make_unique<TestNode>();
 		n->puertas = NuevasPuertas(); n->pose = PoseEn(cabeza);
 		n->red = std::make_unique<NetworkGame>([hub, llamadasFabrica](const NetworkConfig& c) -> std::unique_ptr<ITransport>
 		{
@@ -336,21 +336,21 @@ int main()
 		{
 			std::string id;
 			bool colision = true;
-			fisica::BodyType tipo = fisica::BodyType::Static;
+			physics::BodyType tipo = physics::BodyType::Static;
 		};
 		const std::vector<ObjetoConFisica> objetos = {
-			{ "mueble", true, fisica::BodyType::Static },
-			{ "hiriti", true, fisica::BodyType::Bouncer },
-			{ "caja", true, fisica::BodyType::Dynamic }
+			{ "mueble", true, physics::BodyType::Static },
+			{ "hiriti", true, physics::BodyType::Bouncer },
+			{ "caja", true, physics::BodyType::Dynamic }
 		};
 		const auto hashObjeto = [](const ObjetoConFisica& objeto) { return HashId(objeto.id); };
 		const auto objetoReplicable = [](const ObjetoConFisica& objeto)
 		{
-			return objeto.colision && fisica::IsDynamicBody(objeto.tipo);
+			return objeto.colision && physics::IsDynamicBody(objeto.tipo);
 		};
 		const auto& hiriti = objetos[1];
 		const uint32_t hiritiId = HashId("hiriti");
-		const uint8_t tipoHiriti = SceneCollisionType(hiriti.colision, fisica::IsDynamicBody(hiriti.tipo));
+		const uint8_t tipoHiriti = SceneCollisionType(hiriti.colision, physics::IsDynamicBody(hiriti.tipo));
 		ok(tipoHiriti == 2, "Rebotador de Hiriti se anuncia como cuerpo dynamic replicable");
 		SceneObjectState estadoHiriti;
 		estadoHiriti.id = hiritiId; estadoHiriti.hasCollision = true;
@@ -366,14 +366,14 @@ int main()
 			"filtro de snapshots rechaza IDs persistentes ambiguos");
 		ok(!UniqueNetworkObjectIndex(HashId("mueble"), objetos, hashObjeto, objetoReplicable, indiceHiriti),
 			"filtro de snapshots sigue rechazando objetos estáticos");
-		ok(ReplicaPhysicsType(true, 2, fisica::BodyType::Bouncer,
-			fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Bouncer &&
-			ReplicaPhysicsType(true, 2, fisica::BodyType::Static,
-				fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Dynamic &&
-			ReplicaPhysicsType(true, 1, fisica::BodyType::Bouncer,
-				fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Static &&
-			ReplicaPhysicsType(false, 2, fisica::BodyType::Bouncer,
-				fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Static,
+		ok(ReplicaPhysicsType(true, 2, physics::BodyType::Bouncer,
+			physics::BodyType::Dynamic, physics::BodyType::Bouncer, physics::BodyType::Static) == physics::BodyType::Bouncer &&
+			ReplicaPhysicsType(true, 2, physics::BodyType::Static,
+				physics::BodyType::Dynamic, physics::BodyType::Bouncer, physics::BodyType::Static) == physics::BodyType::Dynamic &&
+			ReplicaPhysicsType(true, 1, physics::BodyType::Bouncer,
+				physics::BodyType::Dynamic, physics::BodyType::Bouncer, physics::BodyType::Static) == physics::BodyType::Static &&
+			ReplicaPhysicsType(false, 2, physics::BodyType::Bouncer,
+				physics::BodyType::Dynamic, physics::BodyType::Bouncer, physics::BodyType::Static) == physics::BodyType::Static,
 			"el estado recibido conserva Rebotador local solo con dynamic; static/none del host manda y dynamic discrepante cae a Dinamico");
 		ok(!ShouldPauseGameWorld(true, false, false, false, false, true) &&
 			ShouldPauseGameWorld(true, false, false, false, false, false) &&
@@ -413,7 +413,7 @@ int main()
 
 	// ---------------- captura y lookup de estado de escena ----------------
 	{
-		auto makeObject = [](const std::string& id, bool collider, fisica::BodyType bodyType, float mass)
+		auto makeObject = [](const std::string& id, bool collider, physics::BodyType bodyType, float mass)
 		{
 			SceneObject object;
 			object.id = id;
@@ -429,11 +429,11 @@ int main()
 		};
 		std::vector<SceneObjectState> states;
 		const std::vector<SceneObject> objects = {
-			makeObject("sin_collider", false, fisica::BodyType::Static, 0.0f),
-			makeObject("estatico", true, fisica::BodyType::Static, 0.0f),
-			makeObject("dinamico", true, fisica::BodyType::Dynamic, 2.0f),
-			makeObject("hiriti", true, fisica::BodyType::Bouncer, 0.25f),
-			makeObject("dinamico_sin_collider", false, fisica::BodyType::Dynamic, 2.0f)
+			makeObject("sin_collider", false, physics::BodyType::Static, 0.0f),
+			makeObject("estatico", true, physics::BodyType::Static, 0.0f),
+			makeObject("dinamico", true, physics::BodyType::Dynamic, 2.0f),
+			makeObject("hiriti", true, physics::BodyType::Bouncer, 0.25f),
+			makeObject("dinamico_sin_collider", false, physics::BodyType::Dynamic, 2.0f)
 		};
 		ok(netgame::scene_network_state::CaptureSceneNetworkStates(objects, states) && states.size() == 5,
 			"captura conserva los cinco objetos de escena");
@@ -670,7 +670,7 @@ int main()
 		caja.hasCollision = true; caja.collisionKind = 2; caja.masa = 2.0f;
 		ok(host->red->SetSceneState({ caja }, false), "host registra el estado inicial de la escena");
 		auto c1 = Create(hub, Role::Client, "aula", glm::vec3(0, -0.5f, 1.7f), &fabricas);
-		std::vector<Nodo*> hostYC1 = { host.get(), c1.get() };
+		std::vector<TestNode*> hostYC1 = { host.get(), c1.get() };
 		ok(Esperar(hostYC1, [&] { return host->red->IsActive() && c1->red->IsActive() && host->red->GetDiagnosticInfo().remotos == 1; }), "host y primer cliente conectan");
 		std::vector<SceneObjectState> estadosEscena;
 		const bool inicialRecibido = Esperar(hostYC1, [&] {
@@ -755,7 +755,7 @@ int main()
 		ok(excesoRechazado && solicitudes.empty(),
 			"la ruta real de recepción del host rechaza el exceso fuera del margen y no crea una solicitud de lanzamiento");
 		auto c2 = Create(hub, Role::Client, "aula", glm::vec3(1, -0.5f, 1.7f), &fabricas);
-		std::vector<Nodo*> todos = { host.get(), c1.get(), c2.get() };
+		std::vector<TestNode*> todos = { host.get(), c1.get(), c2.get() };
 		ok(Esperar(todos, [&] { return host->red->IsActive() && c1->red->IsActive() && c2->red->IsActive() && host->red->GetDiagnosticInfo().remotos == 2 && c1->red->GetDiagnosticInfo().remotos >= 1; }), "los tres se conectan y se ven");
 		ok(fabricas == 3, "una fabrica de transporte por participante, solo al iniciar");
 		const bool tardioEscena = Esperar(todos, [&] {
@@ -826,7 +826,7 @@ int main()
 		ok(Esperar(todos, [&] { return cerca(host->red->Objeto().pos, destino, 0.01f); }), "el dueno mueve el objeto y el host lo acepta");
 		ok(Esperar(todos, [&] { return cerca(c2->red->Objeto().pos, destino, 0.01f); }), "los demas ven el movimiento");
 		c1->red->Stop();   // c1 se desconecta con el objeto en la mano
-		std::vector<Nodo*> resto = { host.get(), c2.get() };
+		std::vector<TestNode*> resto = { host.get(), c2.get() };
 		ok(Esperar(resto, [&] { return host->red->Objeto().dueno == kSinDueno && c2->red->Objeto().dueno == kSinDueno; }), "al desconectar el dueno se libera la propiedad");
 		ok(Esperar(resto, [&] { return host->red->GetDiagnosticInfo().remotos == 1; }), "el host deja de interpolar al desconectado");
 		c2->pose = PoseEn(desde, dir);
@@ -843,7 +843,7 @@ int main()
 
 		// el host cae: los clientes pasan a Error y vuelven a controlar sus puertas
 		host->red->Stop();
-		std::vector<Nodo*> clientes = { c2.get(), c3.get() };
+		std::vector<TestNode*> clientes = { c2.get(), c3.get() };
 		ok(Esperar(clientes, [&] { return c2->red->GetDiagnosticInfo().fase == NetworkPhase::Error && c3->red->GetDiagnosticInfo().fase == NetworkPhase::Error; }), "si cae el host el cliente lo detecta");
 		ok(!c2->red->InterceptDoor(0) && c2->red->RemotePlayersToDraw(Reloj()).empty(), "tras caer el host: control local y sin fantasmas");
 		for (auto* n : { c2.get(), c3.get() }) n->red->Stop();
@@ -854,7 +854,7 @@ int main()
 		auto hub = std::make_shared<Hub>();
 		auto host = Create(hub, Role::Host, "aula", glm::vec3(0, 0, 1.7f));
 		auto c = Create(hub, Role::Client, "otra_escena", glm::vec3(0, 0, 1.7f));
-		std::vector<Nodo*> v = { host.get(), c.get() };
+		std::vector<TestNode*> v = { host.get(), c.get() };
 		ok(Esperar(v, [&] { return c->red->GetDiagnosticInfo().fase == NetworkPhase::Error; }), "escena distinta: el cliente queda en error");
 		ok(c->red->GetDiagnosticInfo().mensaje.find("escena") != std::string::npos, "el mensaje explica el rechazo");
 		host->red->Stop();

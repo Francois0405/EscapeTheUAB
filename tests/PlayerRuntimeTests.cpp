@@ -15,8 +15,8 @@ namespace
 
 	struct Fixture
 	{
-		fisica::PhysicsWorld physics;
-		std::unique_ptr<fisica::PhysicsScene> scenePhysics;
+		physics::PhysicsWorld physics;
+		std::unique_ptr<physics::PhysicsScene> scenePhysics;
 		bool validGeometry = false;
 		SceneSpawn spawn;
 		std::string sceneName = "test";

@@ -82,7 +82,7 @@ void drawVrControllerRay()
 	direccion = glm::normalize(direccion);
 
 	// Longitud del láser (mismo alcance que el agarre/interacción)
-	const float alcance = std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION);
+	const float alcance = std::max(physics::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION);
 	const glm::vec3 destino = origen + direccion * alcance;
 
 	// Color RGBA: verde si estás agarrando o apuntando a algo interactuable; cian por defecto

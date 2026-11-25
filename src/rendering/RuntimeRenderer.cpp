@@ -50,7 +50,7 @@ void RuntimeRenderer::drawStereoScene(int anchoVentana, int altoVentana)
 
 	for (const stereo::Eye ojo : { stereo::Eye::Left, stereo::Eye::Right })
 	{
-		const stereo::Rectangulo mitad = stereo::ScreenHalf(ojo, anchoVentana);
+		const stereo::ScreenRect mitad = stereo::ScreenHalf(ojo, anchoVentana);
 		// Cada mitad tiene SU relación de aspecto (la mitad de ancho): Projeccio_Perspectiva fija el viewport y la proyección.
 		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, mitad.x, 0, mitad.ancho, altoVentana, OPV.R);
 		ViewMatrix = stereo::EyeViewMatrix(vistaCentral, ojo);

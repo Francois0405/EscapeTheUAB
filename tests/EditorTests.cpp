@@ -273,7 +273,7 @@ int main()
 			comprobar(!historialSeleccion.IsTransactionOpen() && !historialSeleccion.CanUndo(), "seleccionar no abre ni registra una operacion Undo");
 		}
 
-		CamaraEditor camara;
+		EditorCamera camara;
 		camara.ChangeView(ViewKind::Top);
 		glm::mat4 original = glm::translate(glm::mat4(1.0f), glm::vec3(4.0f, -2.0f, -3.2f));
 		glm::mat4 movida = glm::translate(original, glm::vec3(1.25f, -0.5f, 187.581f));
@@ -309,30 +309,30 @@ int main()
 	// ---------------------------------------------------------------- Camara y flechas
 	{
 		CameraOptions o;
-		CamaraEditor c;
+		EditorCamera c;
 		const glm::vec3 f0 = c.Forward(), r0 = c.RightVector();
 		c.Look(40.0f, 0.0f, o);
 		comprobar(glm::dot(c.Forward(), r0) > 0.0f, "raton a la derecha: se mira a la derecha");
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.Look(-40.0f, 0.0f, o);
 		comprobar(glm::dot(c.Forward(), r0) < 0.0f, "raton a la izquierda: se mira a la izquierda");
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.Look(0.0f, -40.0f, o);   // raton hacia ARRIBA (dy < 0 en coordenadas de pantalla)
 		comprobar(c.Forward().z > f0.z, "raton hacia arriba: se mira hacia arriba");
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.Look(0.0f, 40.0f, o);
 		comprobar(c.Forward().z < f0.z, "raton hacia abajo: se mira hacia abajo");
 		o.invertirY = true;
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.Look(0.0f, -40.0f, o);
 		comprobar(c.Forward().z < f0.z, "con 'invertir Y' el eje vertical se invierte");
 		o.invertirY = false;
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.Look(0.0f, -1.0e6f, o);
 		comprobar(casi(c.pitch, LimitePitch, 1e-3f) && std::abs(c.Forward().z) < 1.0f, "el pitch se limita arriba");
 		c.Look(0.0f, 1.0e6f, o);
 		comprobar(casi(c.pitch, -LimitePitch, 1e-3f), "el pitch se limita abajo");
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.Look(123.0f, -57.0f, o);
 		comprobar(casi(glm::dot(c.Forward(), c.RightVector()), 0.0f) && casi(glm::length(c.UpVector()), 1.0f) &&
 			casi(glm::dot(c.UpVector(), c.Forward()), 0.0f), "la base de la camara sigue siendo ortonormal");
@@ -340,7 +340,7 @@ int main()
 		// Pan: la escena sigue al cursor (desplazamiento en pantalla = el del cursor).
 		{
 			glm::mat4 v, p;
-			c = CamaraEditor();
+			c = EditorCamera();
 			const glm::vec3 punto = c.PivotPoint();
 			auto pantalla = [&](glm::vec3 w) {
 				c.Matrices(16.0f / 9.0f, v, p);
@@ -353,7 +353,7 @@ int main()
 			comprobar(despues.x > antes.x && std::abs((despues.x - antes.x) - 100.0f) < 1.0f, "pan perspectiva: arrastrar a la derecha mueve la escena 100 px a la derecha");
 			c.Pan(0.0f, 60.0f, 720.0f, o);
 			comprobar(pantalla(punto).y > despues.y, "pan perspectiva: arrastrar hacia abajo baja la escena");
-			c = CamaraEditor();
+			c = EditorCamera();
 			c.ChangeView(ViewKind::Top);
 			const glm::vec2 a0 = pantalla(glm::vec3(0, 0, 0));
 			c.Pan(100.0f, 0.0f, 720.0f, o);
@@ -364,13 +364,13 @@ int main()
 		}
 
 		// Zoom y orbita.
-		c = CamaraEditor();
+		c = EditorCamera();
 		const glm::vec3 pivote = c.PivotPoint();
 		c.Zoom(+2.0f, o);
 		comprobar(c.focusDistance < 12.0f && glm::length(c.PivotPoint() - pivote) < 1e-3f, "rueda hacia arriba acerca al mismo pivote");
 		c.Zoom(-4.0f, o);
 		comprobar(c.focusDistance > 12.0f, "rueda hacia abajo aleja");
-		c = CamaraEditor();
+		c = EditorCamera();
 		const glm::vec3 piv = c.PivotPoint();
 		c.Orbit(piv, 80.0f, -20.0f, o);
 		comprobar(glm::length(c.PivotPoint() - piv) < 1e-3f && glm::length(c.position - piv) > 1.0f, "orbitar mantiene el pivote y mueve la camara");
@@ -381,7 +381,7 @@ int main()
 		comprobar(SpeedMultiplier(false, false, o) == 1.0f && SpeedMultiplier(false, true, o) == 3.0f &&
 			SpeedMultiplier(true, false, o) == 0.25f && SpeedMultiplier(true, true, o) == 0.25f,
 			"x1 / Shift x3 / Ctrl x0,25 / Ctrl+Shift: prevalece Ctrl");
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.yaw = 90.0f;
 		c.pitch = 0.0f;
 		c.position = glm::vec3(0.0f);
@@ -389,7 +389,7 @@ int main()
 		comprobar(casi(c.position.y, o.speed * 0.05f, 1e-4f), "W mueve hacia delante");
 
 		// Flechas.
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.yaw = 90.0f;
 		c.pitch = -45.0f;   // mirando a +Y y hacia abajo
 		comprobar(casi(glm::length(ArrowDirection(ArrowKey::Up, c) - glm::vec3(0, 1, 0)), 0.0f, 1e-4f), "perspectiva: flecha arriba = hacia delante en XY");
@@ -400,12 +400,12 @@ int main()
 		comprobar(casi(glm::length(ArrowDirection(ArrowKey::Up, c) - glm::vec3(1, 0, 0)), 0.0f, 1e-4f), "mirando a +X, flecha arriba = +X");
 		c.pitch = 89.0f;   // casi vertical: no se degenera
 		comprobar(casi(glm::length(ArrowDirection(ArrowKey::Up, c)), 1.0f, 1e-3f), "mirando casi recto abajo la direccion sigue siendo valida");
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.ChangeView(ViewKind::Top);
 		comprobar(ArrowDirection(ArrowKey::Up, c) == glm::vec3(0, 1, 0) && ArrowDirection(ArrowKey::Right, c) == glm::vec3(1, 0, 0),
 			"vista Top: flechas sobre el plano XY (arriba = +Y, derecha = +X)");
 
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.yaw = 0.0f;
 		c.pitch = 0.0f;   // mirando a +X
 		const glm::vec3 origen(2.0f, 3.0f, 1.0f);
@@ -434,7 +434,7 @@ int main()
 		std::vector<SceneObject> objetos = { Objeto("mesa", "objects", { 1, 1, 0 }) };
 		SceneHistory h;
 		h.BeginTransaction(CurrentState(objetos));
-		c = CamaraEditor();
+		c = EditorCamera();
 		c.yaw = 90.0f;
 		c.pitch = 0.0f;
 		for (int i = 0; i < 30; ++i)
@@ -484,7 +484,7 @@ int main()
 		SceneObject nuevo = Objeto("obj_escritorio", "objects", { 4, 1, -1.7f });
 		nuevo.modelo = (temp / "models" / "escritorio.obj").lexically_normal().string();
 		nuevo.eulerRotation = { 90, 0, 0 };
-		nuevo.fisica.presente = true; nuevo.fisica.tipo = fisica::BodyType::Static;
+		nuevo.fisica.presente = true; nuevo.fisica.tipo = physics::BodyType::Static;
 		nuevo.fisica.halfExtents = { 1, 0.5f, 0.5f }; nuevo.fisica.desplazamiento = { 1, 0.5f, 0.5f };
 
 		// Regresion del error 6: un objeto con escala 0 (como el que creaba el editor antes) es rechazado con un error claro.
@@ -525,7 +525,7 @@ int main()
 
 		// Mover con las flechas y guardar: la transformacion se conserva en el JSON.
 		{
-			CamaraEditor camara;
+			EditorCamera camara;
 			camara.yaw = 0.0f;
 			camara.pitch = 0.0f;   // mirando a +X: flecha arriba = +X
 			SceneObject* mesa = nullptr;

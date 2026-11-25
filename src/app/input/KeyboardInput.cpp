@@ -60,7 +60,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		action == GLFW_PRESS &&
 		mods == 0 &&
 		!io.WantTextInput &&
-		currentGameState != ESTADO_MENU_PRINCIPAL)
+		currentGameState != GAME_STATE_MAIN_MENU)
 	{
 		if (networkGame.IsOnline() && networkGame.IsClient())
 		{
@@ -82,7 +82,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	// F: encender/apagar linterna solo durante el juego.
 	if (key == GLFW_KEY_F &&
 		action == GLFW_PRESS &&
-		currentGameState == ESTADO_JUGANDO &&
+		currentGameState == GAME_STATE_PLAYING &&
 		fpsInputActive() &&
 		!io.WantTextInput &&
 		!io.WantCaptureKeyboard)
@@ -100,19 +100,19 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	// ESC: pausar y reanudar.
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
-		if (currentGameState == ESTADO_JUGANDO)
+		if (currentGameState == GAME_STATE_PLAYING)
 		{
-			currentGameState = ESTADO_PAUSA;
+			currentGameState = GAME_STATE_PAUSED;
 			cancelThrowChargeInput();
 		}
-		else if (currentGameState == ESTADO_PAUSA)
+		else if (currentGameState == GAME_STATE_PAUSED)
 		{
-			currentGameState = ESTADO_JUGANDO;
+			currentGameState = GAME_STATE_PLAYING;
 			fpsHasPreviousPosition = false;
 			mouseDeltaX = mouseDeltaY = 0.0;
 		}
 
-		fpsPaused = (currentGameState != ESTADO_JUGANDO);
+		fpsPaused = (currentGameState != GAME_STATE_PLAYING);
 		syncFpsCursor(window);
 		return;
 	}
@@ -148,12 +148,12 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			glm::vec3 origenRayo(0.0f), direccionRayo(0.0f);
 			gazeOriginAndDirection(origenRayo, direccionRayo);
 			float distanciaRayo = std::numeric_limits<float>::infinity();
-			const fisica::IdCuerpo cuerpoRayo = physicsWorld.BodyAtRayEnd(
+			const physics::IdCuerpo cuerpoRayo = physicsWorld.BodyAtRayEnd(
 				origenRayo, direccionRayo,
-				std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION), &distanciaRayo);
-			const int indiceCuerpoDinamico = cuerpoRayo == fisica::CuerpoInvalido
+				std::max(physics::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION), &distanciaRayo);
+			const int indiceCuerpoDinamico = cuerpoRayo == physics::CuerpoInvalido
 				? -1 : physicsScene->DynamicObjectOfBody(cuerpoRayo);
-			const int indiceCuerpoAnimado = cuerpoRayo == fisica::CuerpoInvalido
+			const int indiceCuerpoAnimado = cuerpoRayo == physics::CuerpoInvalido
 				? -1 : physicsScene->AnimatedObjectOfBody(cuerpoRayo);
 			std::string idCuerpoRayo = "none";
 			if (indiceCuerpoDinamico >= 0 && indiceCuerpoDinamico < static_cast<int>(sceneObjects.size()))
@@ -161,7 +161,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			const char* rol = networkGame.IsHosting() ? "host" : networkGame.IsClient() ? "client" : "offline";
 			std::ostringstream registro;
 			registro << "[grab] input key=E role=" << rol
-				<< " game=" << (currentGameState == ESTADO_JUGANDO)
+				<< " game=" << (currentGameState == GAME_STATE_PLAYING)
 				<< " allowed=" << (gateJuego && gateInterfaz)
 				<< " paused=" << fpsPaused << " focused=" << windowFocused
 				<< " text=" << io.WantTextInput << " captureKeyboard=" << io.WantCaptureKeyboard

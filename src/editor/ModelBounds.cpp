@@ -11,7 +11,7 @@ namespace editor
 {
 	namespace
 	{
-		struct Acumulador
+		struct BoundsAccumulator
 		{
 			glm::vec3 minimo{ std::numeric_limits<float>::max() };
 			glm::vec3 maximo{ std::numeric_limits<float>::lowest() };
@@ -36,7 +36,7 @@ namespace editor
 	{
 		std::ifstream archivo(ruta);
 		if (!archivo) return {};
-		Acumulador accumulator;
+		BoundsAccumulator accumulator;
 		std::string linea;
 		while (std::getline(archivo, linea))
 		{
@@ -52,7 +52,7 @@ namespace editor
 	{
 		const glb::GlbPose pose = glb::CreateRestPose(modelo);
 		const glm::mat4 aZArriba = glb::YUpToZUpMatrix();
-		Acumulador accumulator;
+		BoundsAccumulator accumulator;
 		for (int i = 0; i < static_cast<int>(modelo.nodos.size()); ++i)
 		{
 			const int meshIndex = modelo.nodos[static_cast<std::size_t>(i)].meshIndex;
@@ -77,7 +77,7 @@ namespace editor
 
 	LocalBox BoxInWorld(const glm::mat4& modelo, const LocalBox& caja)
 	{
-		Acumulador accumulator;
+		BoundsAccumulator accumulator;
 		for (int esquina = 0; esquina < 8; ++esquina)
 		{
 			const glm::vec3 p((esquina & 1) ? caja.maximo.x : caja.minimo.x,

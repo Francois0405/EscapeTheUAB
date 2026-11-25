@@ -238,7 +238,7 @@
     <ClInclude Include="..\src\networking\replication\NetAdapters.h" />
     <ClInclude Include="..\src\networking\replication\NetAvatar.h" />
     <ClInclude Include="..\src\networking\replication\NetGame.h" />
-    <ClInclude Include="..\src\networking\replication\NetJuegoLogica.h" />
+    <ClInclude Include="..\src\networking\replication\NetGameLogic.h" />
     <ClInclude Include="..\src\networking\session\NetworkSessionRuntime.h" />
     <ClInclude Include="..\src\networking\session\SessionRules.h" />
     <ClInclude Include="..\src\networking\transport\ENetTransport.h" />

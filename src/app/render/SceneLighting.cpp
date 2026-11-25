@@ -28,7 +28,7 @@ void updateSceneLights()
 		if (slot >= NUM_MAX_LLUMS) { ++lucesSinSlot; continue; }
 
 		auto& luz = llumGL[slot++];
-		const glm::mat4 modelo = fisica::ObjectMatrix(objeto);
+		const glm::mat4 modelo = physics::ObjectMatrix(objeto);
 		const glm::vec3 ejeU = glm::normalize(glm::vec3(modelo[0]));
 		const glm::vec3 ejeV = glm::normalize(glm::vec3(modelo[2]));
 		const glm::vec3 direccion = glm::normalize(glm::mat3(modelo) * glm::vec3(0.0f, -1.0f, 0.0f));
@@ -75,7 +75,7 @@ void updatePhongOccluders()
 	auto mezclar = [&firma](size_t valor) { firma ^= valor; firma *= 1099511628211ull; };
 	for (const SceneObject& objeto : sceneObjects)
 	{
-		if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Static) continue;
+		if (!objeto.fisica.presente || objeto.fisica.tipo != physics::BodyType::Static) continue;
 		for (int eje = 0; eje < 3; ++eje)
 		{
 			mezclar(std::hash<float>{}(objeto.position[eje])); mezclar(std::hash<float>{}(objeto.eulerRotation[eje]));
@@ -132,8 +132,8 @@ void updatePhongOccluders()
 	for (const SceneObject& objeto : sceneObjects)
 	{
 		if (!objeto.fisica.presente ||
-			objeto.fisica.tipo != fisica::BodyType::Static) continue;
-		const glm::mat4 matrizObjeto = fisica::ObjectMatrix(objeto);
+			objeto.fisica.tipo != physics::BodyType::Static) continue;
+		const glm::mat4 matrizObjeto = physics::ObjectMatrix(objeto);
 		glm::mat4 giro(1.0f);
 		giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.z), glm::vec3(0, 0, 1));
 		giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.y), glm::vec3(0, 1, 0));

@@ -121,11 +121,11 @@ glb::AnimatedScene animatedObjects;
 // --- FÍSICA (Bullet, Fase 1): cubo que cae sobre un suelo estático. Ver MundoFisico.h ---
 // UN solo mundo físico para toda la partida. La habitación activa y la demo ponen cuerpos
 // en él y cada una quita solo los suyos. No depende de GLFW ni de la cámara (válido para VR).
-fisica::PhysicsWorld physicsWorld;
+physics::PhysicsWorld physicsWorld;
 
-std::unique_ptr<fisica::PhysicsScene> physicsScene = std::make_unique<fisica::PhysicsScene>(physicsWorld);
+std::unique_ptr<physics::PhysicsScene> physicsScene = std::make_unique<physics::PhysicsScene>(physicsWorld);
 
-fisica::FallingCubeDemo fallingCubeDemo(physicsWorld);
+physics::FallingCubeDemo fallingCubeDemo(physicsWorld);
 
 bool showColliders = false;   // opción de depuración (panel "Fisica (Bullet)")
 
@@ -195,4 +195,4 @@ GLuint rayVao = 0, rayVbo = 0;
 
 GLuint menuBackgroundTexture = 0;
 
-EstadoJuego currentGameState = ESTADO_MENU_PRINCIPAL;
+GameState currentGameState = GAME_STATE_MAIN_MENU;

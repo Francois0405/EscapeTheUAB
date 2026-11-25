@@ -53,7 +53,7 @@ namespace gameplay::player
 
 	void fixCameraAtSpawn(PlayerContext& context, const SceneSpawn& spawn)
 	{
-		const float eyeHeight = context.physics.HasPlayerBody() ? context.physics.PlayerEyeHeight() : fisica::PlayerDimensions::AlturaOjos;
+		const float eyeHeight = context.physics.HasPlayerBody() ? context.physics.PlayerEyeHeight() : physics::PlayerDimensions::AlturaOjos;
 		const glm::vec3 eyes = spawn.pies + glm::vec3(0.0f, 0.0f, eyeHeight);
 		const glm::vec3 direction = glm::normalize(spawn.direccion);
 		context.cameraOrigin.x = eyes.x; context.cameraOrigin.y = eyes.y; context.cameraOrigin.z = eyes.z;

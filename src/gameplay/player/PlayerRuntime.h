@@ -18,8 +18,8 @@ namespace gameplay::player
 	// Ownership stays in src/app; callbacks bridge the legacy camera preset API.
 	struct PlayerContext
 	{
-		fisica::PhysicsWorld& physics;
-		std::unique_ptr<fisica::PhysicsScene>& scenePhysics;
+		physics::PhysicsWorld& physics;
+		std::unique_ptr<physics::PhysicsScene>& scenePhysics;
 		bool& sceneHasValidGeometry;
 		SceneSpawn& activeSpawn;
 		const std::string& activeSceneName;

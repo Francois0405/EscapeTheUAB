@@ -48,21 +48,21 @@ void MostraEntornVGIWindow(bool* p_open)
 		if (fpsModeActive() && ImGui::BeginMenu("Juego"))
 		{
 			if (ImGui::MenuItem(
-				currentGameState == ESTADO_PAUSA ? "Reanudar juego FPS" : "Pausar juego FPS"))
+				currentGameState == GAME_STATE_PAUSED ? "Reanudar juego FPS" : "Pausar juego FPS"))
 			{
-				if (currentGameState == ESTADO_JUGANDO)
+				if (currentGameState == GAME_STATE_PLAYING)
 				{
-					currentGameState = ESTADO_PAUSA;
+					currentGameState = GAME_STATE_PAUSED;
 					cancelThrowChargeInput();
 				}
-				else if (currentGameState == ESTADO_PAUSA)
+				else if (currentGameState == GAME_STATE_PAUSED)
 				{
-					currentGameState = ESTADO_JUGANDO;
+					currentGameState = GAME_STATE_PLAYING;
 					fpsHasPreviousPosition = false;
 					mouseDeltaX = mouseDeltaY = 0.0;
 				}
 
-				fpsPaused = (currentGameState != ESTADO_JUGANDO);
+				fpsPaused = (currentGameState != GAME_STATE_PLAYING);
 				syncFpsCursor(window);
 			}
 			ImGui::EndMenu();

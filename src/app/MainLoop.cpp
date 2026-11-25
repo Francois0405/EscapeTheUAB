@@ -44,14 +44,14 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 		glfwPollEvents();
 
 		// 2. Sincronizar la pausa interna del motor (libera/captura el ratón automáticamente)
-		fpsPaused = (currentGameState != ESTADO_JUGANDO);
+		fpsPaused = (currentGameState != GAME_STATE_PLAYING);
 
 		sceneEditor.Update(window, static_cast<float>(delta));
 		syncFpsCursor(window);
 		updateThrowChargeInput(window, static_cast<float>(delta));
 
 		// 3. Movimiento, física y VR (solo cuando estamos jugando)
-		if (currentGameState == ESTADO_JUGANDO)
+		if (currentGameState == GAME_STATE_PLAYING)
 		{
 			const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
 				glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
@@ -78,7 +78,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 			updatePhoneMotion(window, static_cast<float>(delta));
 
 			const bool animacionPausada = netgame::ShouldPauseGameWorld(
-				currentGameState == ESTADO_JUGANDO, sceneEditor.IsEnabled(), fpsPaused,
+				currentGameState == GAME_STATE_PLAYING, sceneEditor.IsEnabled(), fpsPaused,
 				windowFocused, openXrManager.IsSessionRunning(), networkGame.IsHosting());
 			updateDemoDoor(animacionPausada ? 0.0f : static_cast<float>(delta));
 			const auto inicioAnimacion = std::chrono::steady_clock::now();
@@ -112,19 +112,19 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 		}
 
 		// Red: los mensajes se aplican aqui (hilo de juego). Offline: no hace nada.
-		updateNetwork(glfwGetTime(), currentGameState == ESTADO_JUGANDO);
+		updateNetwork(glfwGetTime(), currentGameState == GAME_STATE_PLAYING);
 
 		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
-		updateHiritiBehaviour(currentGameState == ESTADO_JUGANDO &&
+		updateHiritiBehaviour(currentGameState == GAME_STATE_PLAYING &&
 			fpsInputActive() && !openXrManager.IsSessionRunning(),
-			currentGameState == ESTADO_JUGANDO && !sceneEditor.IsEnabled() && !networkGame.IsClient(),
+			currentGameState == GAME_STATE_PLAYING && !sceneEditor.IsEnabled() && !networkGame.IsClient(),
 			static_cast<float>(delta));
-		updateAmbientSound(currentGameState == ESTADO_JUGANDO && !sceneEditor.IsEnabled(),
+		updateAmbientSound(currentGameState == GAME_STATE_PLAYING && !sceneEditor.IsEnabled(),
 			static_cast<float>(delta));
-		updateCurrentInteractionTarget(currentGameState == ESTADO_JUGANDO);
+		updateCurrentInteractionTarget(currentGameState == GAME_STATE_PLAYING);
 
 		// La linterna se ancla durante el dibujo, una vez calculada la ViewMatrix actual.
-		if (currentGameState != ESTADO_JUGANDO) llumGL[3].encesa = false;
+		if (currentGameState != GAME_STATE_PLAYING) llumGL[3].encesa = false;
 		const auto inicioLuces = std::chrono::steady_clock::now();
 		updateSceneLights();
 		if (renderMetrics::enabled) renderMetrics::lucesMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioLuces).count();

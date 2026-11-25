@@ -5,7 +5,7 @@
 
 #include <algorithm>
 
-namespace fisica
+namespace physics
 {
 	namespace
 	{
@@ -63,7 +63,7 @@ namespace fisica
 	// Calcula dónde está AHORA la caja de un nodo animado, en coordenadas del mundo.
 	//   W = colocación de la instancia * (glTF Y-arriba -> Z-arriba) * matriz de mundo del nodo
 	// W puede llevar escala; se separa el giro y la escala se aplica una sola vez a halfSize.
-	void PhysicsScene::PlaceBox(const Colision& caja, const glb::AnimatedObject& objeto, glm::vec3& centro,
+	void PhysicsScene::PlaceBox(const CollisionEntry& caja, const glb::AnimatedObject& objeto, glm::vec3& centro,
 		glm::quat& eulerRotation, glm::vec3& mitad) const
 	{
 		const glm::mat4 mundoNodo = glb::ObjectBaseMatrix(objeto) * glb::YUpToZUpMatrix() *
@@ -137,7 +137,7 @@ namespace fisica
 
 			for (const SceneCollider& datos : datosAnimados[i].colisionadores)
 			{
-				Colision caja;
+				CollisionEntry caja;
 				caja.indiceAnimado = static_cast<int>(instancia - animados.objetos.data());
 				caja.nodo = glb::FindNodeByName(*instancia->modelo, datos.nodo);
 				if (caja.nodo < 0)
@@ -162,7 +162,7 @@ namespace fisica
 
 	bool PhysicsScene::PushDynamicObject(int objectIndex, const glm::vec3& impulso)
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex)
 				return mundo.ApplyImpulseToBody(dinamico.cuerpo, impulso);
 		return false;
@@ -170,7 +170,7 @@ namespace fisica
 
 	bool PhysicsScene::DynamicObjectPosition(int objectIndex, glm::vec3& position) const
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex)
 			{
 				position = mundo.PoseOf(dinamico.cuerpo).position;
@@ -181,7 +181,7 @@ namespace fisica
 
 	bool PhysicsScene::DynamicObjectVelocity(int objectIndex, glm::vec3& speed) const
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex)
 			{
 				speed = mundo.VelocityOf(dinamico.cuerpo);
@@ -193,7 +193,7 @@ namespace fisica
 	bool PhysicsScene::ApplyDynamicObjectHorizontalAcceleration(int objectIndex,
 		const glm::vec3& aceleracion, float deltaSegundos)
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex)
 				return mundo.ApplyHorizontalAcceleration(dinamico.cuerpo, aceleracion, deltaSegundos);
 		return false;
@@ -201,7 +201,7 @@ namespace fisica
 
 	bool PhysicsScene::TeleportDynamicObject(int objectIndex, const glm::vec3& centro)
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex)
 				return mundo.TeleportDynamicBody(dinamico.cuerpo, centro);
 		return false;
@@ -209,7 +209,7 @@ namespace fisica
 
 	bool PhysicsScene::CanPlaceDynamicObject(int objectIndex, const glm::vec3& centro) const
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex)
 				return mundo.CanPlaceDynamicBody(dinamico.cuerpo, centro);
 		return false;
@@ -218,7 +218,7 @@ namespace fisica
 	float PhysicsScene::DynamicObjectObstacleDistanceOnRay(int objectIndex,
 		const glm::vec3& origen, const glm::vec3& direccion, float alcance) const
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex)
 				return mundo.ObstacleDistanceOnRay(origen, direccion, alcance, dinamico.cuerpo);
 		return 0.0f;
@@ -226,13 +226,13 @@ namespace fisica
 
 	bool PhysicsScene::HasDynamicObjectContact(int objectIndex) const
 	{
-		for (const Dinamico& dinamico : dinamicos)
+		for (const DynamicEntry& dinamico : dinamicos)
 			if (dinamico.objectIndex == objectIndex) return mundo.HasContact(dinamico.cuerpo);
 		return false;
 	}
 	bool PhysicsScene::HoldRemoteDynamic(int objectIndex, const glm::vec3& origen, const glm::vec3& direccion)
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 		{
 			if (d.objectIndex != objectIndex || !mundo.IsDynamic(d.cuerpo) || mundo.IsHeld(d.cuerpo)) continue;
 			if (mundo.BodyAtRayEnd(origen, direccion, AlcanceDeAgarre) != d.cuerpo) return false;
@@ -243,28 +243,28 @@ namespace fisica
 
 	void PhysicsScene::UpdateRemoteGrab(int objectIndex, const glm::vec3& destino)
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 			if (d.objectIndex == objectIndex && mundo.IsHeld(d.cuerpo))
 				mundo.SetHoldDestination(d.cuerpo, destino);
 	}
 
 	bool PhysicsScene::ReleaseRemoteDynamic(int objectIndex, const glm::vec3& speed)
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 			if (d.objectIndex == objectIndex) return mundo.ReleaseAuthoritativeBody(d.cuerpo, speed);
 		return false;
 	}
 
 	bool PhysicsScene::HeldDynamicObject(int objectIndex) const
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 			if (d.objectIndex == objectIndex) return mundo.IsHeld(d.cuerpo);
 		return false;
 	}
 
 	bool PhysicsScene::ApplyReplicatedState(const DynamicState& estado)
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 			if (d.objectIndex == estado.objectIndex)
 				return mundo.SetKinematicPose(d.cuerpo, estado.pose.position, estado.pose.eulerRotation);
 		return false;
@@ -273,7 +273,7 @@ namespace fisica
 	void PhysicsScene::CaptureDynamicStates(std::vector<DynamicState>& salida) const
 	{
 		salida.clear(); salida.reserve(dinamicos.size());
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 		{
 			DynamicState e; e.objectIndex = d.objectIndex; e.pose = mundo.PoseOf(d.cuerpo);
 			e.speed = mundo.VelocityOf(d.cuerpo); e.angularSpeed = mundo.AngularVelocityOf(d.cuerpo);
@@ -284,7 +284,7 @@ namespace fisica
 
 	void PhysicsScene::SyncKinematics(const glb::AnimatedScene& animados)
 	{
-		for (const Colision& caja : colisionesNodo)
+		for (const CollisionEntry& caja : colisionesNodo)
 		{
 			if (caja.tipo != BodyType::Kinematic) continue;   // los estáticos no se mueven nunca
 			glm::vec3 centro, mitad;
@@ -296,7 +296,7 @@ namespace fisica
 
 	glm::mat4 PhysicsScene::VisualMatrixOf(int indice, const SceneObject& objeto) const
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 		{
 			if (d.objectIndex != indice) continue;
 			// Bullet mueve el centro del colisionador; el modelo tiene su origen en otro punto, así
@@ -337,21 +337,21 @@ namespace fisica
 
 	int PhysicsScene::DynamicObjectOfBody(IdCuerpo cuerpo) const
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 			if (d.cuerpo == cuerpo && cuerpo != CuerpoInvalido) return d.objectIndex;
 		return -1;
 	}
 
 	int PhysicsScene::AnimatedObjectOfBody(IdCuerpo cuerpo) const
 	{
-		for (const Colision& c : colisionesNodo)
+		for (const CollisionEntry& c : colisionesNodo)
 			if (c.cuerpo == cuerpo && cuerpo != CuerpoInvalido) return c.indiceAnimado;
 		return -1;
 	}
 
 	bool PhysicsScene::HoldDynamicObject(int objectIndex, const glm::vec3& origen, const glm::vec3& direccion)
 	{
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 		{
 			if (d.objectIndex != objectIndex) continue;
 			if (!mundo.HoldBody(d.cuerpo)) return false;
@@ -378,7 +378,7 @@ namespace fisica
 	int PhysicsScene::GrabbedObject() const
 	{
 		const IdCuerpo sujeto = mundo.HeldBody();
-		for (const Dinamico& d : dinamicos)
+		for (const DynamicEntry& d : dinamicos)
 			if (d.cuerpo == sujeto && sujeto != CuerpoInvalido) return d.objectIndex;
 		return -1;
 	}

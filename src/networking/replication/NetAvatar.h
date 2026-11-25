@@ -3,7 +3,7 @@
 // (eixos.vert/frag) que ya usa DibujoColisionadores. NO toca shaders. El jugador local NO se dibuja.
 #pragma once
 
-#include "src/networking/replication/NetJuegoLogica.h"
+#include "src/networking/replication/NetGameLogic.h"
 
 namespace netgame
 {

@@ -42,7 +42,7 @@ void ShutdownApplication(Ps1Framebuffer& ps1)
 	releaseSceneAnimations();
 	physicsWorld.RemovePlayerBody();
 	physicsScene.reset();                       // quita las colisiones de la habitacion antes de cerrar
-	fisica::ReleaseColliderDrawing();
+	physics::ReleaseColliderDrawing();
 	netgame::ReleaseAvatarDrawing();
 
 	if (phoneOBJ != nullptr)

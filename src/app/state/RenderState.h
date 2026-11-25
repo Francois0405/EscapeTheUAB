@@ -1,6 +1,7 @@
 #pragma once
 
 // Render state shared by the application glue. Defined in src/app/AppState.cpp.
+#include "src/app/AppIncludes.h" // types: each slice compiles on its own
 #include "src/legacy_vgi/framework.h"
 #include <memory>
 #include <string>

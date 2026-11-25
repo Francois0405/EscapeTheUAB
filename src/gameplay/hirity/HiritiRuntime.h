@@ -28,8 +28,8 @@ namespace game::hiriti
 		HiritiAudioTimer& hiritiAudioTimer;
 		const std::vector<SceneObject>& sceneObjects;
 		// Referencia al unique_ptr: la carga de habitacion sustituye la escena fisica.
-		std::unique_ptr<fisica::PhysicsScene>& physicsScene;
-		const fisica::PhysicsWorld& physicsWorld;
+		std::unique_ptr<physics::PhysicsScene>& physicsScene;
+		const physics::PhysicsWorld& physicsWorld;
 		const netgame::NetworkGame& session;
 		bool& hiritiFollowEnabled;
 		const float& hiritiStopDistance;

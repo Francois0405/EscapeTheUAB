@@ -37,8 +37,8 @@ namespace game::interaction
 		// Estado prestado
 		const std::vector<SceneObject>& sceneObjects;
 		// Referencias al unique_ptr: la carga de habitacion sustituye la escena fisica y las puertas.
-		std::unique_ptr<fisica::PhysicsScene>& physicsScene;
-		const fisica::PhysicsWorld& physicsWorld;
+		std::unique_ptr<physics::PhysicsScene>& physicsScene;
+		const physics::PhysicsWorld& physicsWorld;
 		netgame::NetworkGame& session;
 		glb::AnimatedScene& animatedObjects;
 		std::unique_ptr<netgame::GlbDoors>& networkDoors;

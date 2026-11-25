@@ -291,7 +291,7 @@ namespace editor
 					if (animado.permitirPenetracionArquitectura) nueva["allowArchitecturePenetration"] = true;
 					json colisionadores = json::array();
 					for (const SceneCollider& c : animado.colisionadores)
-						colisionadores.push_back({ {"node", c.nodo}, {"type", c.tipo == fisica::BodyType::Kinematic ? "kinematic" : "static"},
+						colisionadores.push_back({ {"node", c.nodo}, {"type", c.tipo == physics::BodyType::Kinematic ? "kinematic" : "static"},
 							{"halfSize", VectorJSON(c.halfExtents)}, {"offset", VectorJSON(c.desplazamiento)} });
 					if (!colisionadores.empty()) nueva["colliders"] = std::move(colisionadores);
 					reconciliados.push_back(std::move(nueva));
@@ -342,13 +342,13 @@ namespace editor
 				if (objeto.fisica.presente)
 				{
 					json fisica = {
-						{"type", objeto.fisica.tipo == fisica::BodyType::Bouncer ? "bouncy" :
-							(objeto.fisica.tipo == fisica::BodyType::Dynamic ? "dynamic" : "static")},
+						{"type", objeto.fisica.tipo == physics::BodyType::Bouncer ? "bouncy" :
+							(objeto.fisica.tipo == physics::BodyType::Dynamic ? "dynamic" : "static")},
 						{"halfSize", VectorJSON(objeto.fisica.halfExtents)},
 						{"offset", VectorJSON(objeto.fisica.desplazamiento)}
 					};
-					if (objeto.fisica.forma == fisica::BodyShape::Sphere) fisica["shape"] = "sphere";
-					if (fisica::IsDynamicBody(objeto.fisica.tipo)) fisica["mass"] = objeto.fisica.masa;
+					if (objeto.fisica.forma == physics::BodyShape::Sphere) fisica["shape"] = "sphere";
+					if (physics::IsDynamicBody(objeto.fisica.tipo)) fisica["mass"] = objeto.fisica.masa;
 					nueva["physics"] = std::move(fisica);
 				}
 				documento["objects"].push_back(std::move(nueva));

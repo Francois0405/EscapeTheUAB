@@ -11,7 +11,7 @@ class COBJModel;
 struct SceneMaterial;
 struct SceneObject;
 namespace editor { class SceneEditor; }
-namespace fisica { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
+namespace physics { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
 namespace glb { struct AnimatedScene; }
 namespace netgame { class NetworkGame; }
 
@@ -64,15 +64,15 @@ struct SceneRenderContext
 	const std::vector<SceneObject>& sceneObjects;
 	const std::unordered_map<std::string, std::unique_ptr<COBJModel>>& roomModels;
 	const editor::SceneEditor& sceneEditor;
-	const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+	const std::unique_ptr<physics::PhysicsScene>& physicsScene;
 	const glm::vec3& demoDoorHalfSize;
 	const glm::vec3& demoDoorHinge;
 	const float& demoDoorAngle;
-	const fisica::FallingCubeDemo& fallingCubeDemo;
+	const physics::FallingCubeDemo& fallingCubeDemo;
 	const bool& animatedObjectsReady;
 	const glb::AnimatedScene& animatedObjects;
 	const bool& showColliders;
-	const fisica::PhysicsWorld& physicsWorld;
+	const physics::PhysicsWorld& physicsWorld;
 	const netgame::NetworkGame& networkGame;
 
 	// Services provided by the application

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/networking/replication/NetJuegoLogica.h"
+#include "src/networking/replication/NetGameLogic.h"
 
 #include <algorithm>
 #include <cmath>

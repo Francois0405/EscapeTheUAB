@@ -125,16 +125,16 @@ namespace
         return true;
     }
 
-    bool leerTipo(const json& valor, bool permitirCinematico, fisica::BodyType& tipo,
+    bool leerTipo(const json& valor, bool permitirCinematico, physics::BodyType& tipo,
         const std::string& contexto, std::string& error)
     {
         if (valor.is_string())
         {
             const std::string texto = valor.get<std::string>();
-            if (texto == "static") { tipo = fisica::BodyType::Static; return true; }
-            if (texto == "dynamic" && !permitirCinematico) { tipo = fisica::BodyType::Dynamic; return true; }
-            if (texto == "bouncy" && !permitirCinematico) { tipo = fisica::BodyType::Bouncer; return true; }
-            if (texto == "kinematic" && permitirCinematico) { tipo = fisica::BodyType::Kinematic; return true; }
+            if (texto == "static") { tipo = physics::BodyType::Static; return true; }
+            if (texto == "dynamic" && !permitirCinematico) { tipo = physics::BodyType::Dynamic; return true; }
+            if (texto == "bouncy" && !permitirCinematico) { tipo = physics::BodyType::Bouncer; return true; }
+            if (texto == "kinematic" && permitirCinematico) { tipo = physics::BodyType::Kinematic; return true; }
         }
         error = contexto + ".type debe ser " +
             (permitirCinematico ? "\"static\" o \"kinematic\"." : "\"static\", \"dynamic\" o \"bouncy\".");
@@ -186,16 +186,16 @@ namespace
             if (!datos["shape"].is_string())
             { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
             const std::string forma = datos["shape"].get<std::string>();
-            if (forma == "box") fisica.forma = fisica::BodyShape::Box;
-            else if (forma == "sphere") fisica.forma = fisica::BodyShape::Sphere;
+            if (forma == "box") fisica.forma = physics::BodyShape::Box;
+            else if (forma == "sphere") fisica.forma = physics::BodyShape::Sphere;
             else
             { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
         }
-        if (fisica.tipo == fisica::BodyType::Bouncer && fisica.forma != fisica::BodyShape::Sphere)
+        if (fisica.tipo == physics::BodyType::Bouncer && fisica.forma != physics::BodyShape::Sphere)
         { error = ctx + " de tipo bouncy requiere shape \"sphere\"."; return false; }
         if (!leerCaja(datos, fisica.halfExtents, fisica.desplazamiento, ctx, error)) return false;
 
-        if (fisica::IsDynamicBody(fisica.tipo))
+        if (physics::IsDynamicBody(fisica.tipo))
         {
             if (!datos.contains("mass"))
             {
@@ -602,7 +602,7 @@ bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datosSalida
                     std::vector<SceneWallSection> comprobacion;
                     if (!GenerateWallSections(glm::abs(objeto.escala) * objeto.fisica.halfExtents, objeto.pared.aperturas, comprobacion, error))
                     { error = contexto + ".wall: " + error; return false; }
-                    if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Static ||
+                    if (!objeto.fisica.presente || objeto.fisica.tipo != physics::BodyType::Static ||
                         objeto.fisica.halfExtents != glm::vec3(1.0f) ||
                         objeto.fisica.desplazamiento != glm::vec3(0.0f))
                     { error = contexto + ".wall requiere un collider static centrado en el cubo de pared."; return false; }

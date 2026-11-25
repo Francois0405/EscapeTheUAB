@@ -10,7 +10,7 @@
 
 #include "src/physics/PhysicsWorld.h"
 
-namespace fisica
+namespace physics
 {
 	// 'programaEjes' es el shader de eixos ya compilado; las matrices son las de la cámara.
 	void DrawColliders(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,

@@ -105,7 +105,7 @@ float UpdateUiScale(GLFWwindow* ventana)
 	glfwGetWindowContentScale(ventana, &escalaDpiX, &escalaDpiY);
 
 	// Media geométrica: combina densidad y espacio lógico sin duplicar el factor de framebuffer.
-	uiScale = interfaz::ComputeUiScale(
+	uiScale = uiscale::ComputeUiScale(
 		static_cast<float>(anchoLogico), static_cast<float>(altoLogico), escalaDpiX, escalaDpiY);
 
 	// ImGui GLFW conserva DisplaySize en unidades lógicas y calcula DisplayFramebufferScale
@@ -125,7 +125,7 @@ void DrawMenus(const MenuContext& context)
 	// =========================================================================
 	// MENÚ PRINCIPAL
 	// =========================================================================
-	if (context.state == ESTADO_MENU_PRINCIPAL)
+	if (context.state == GAME_STATE_MAIN_MENU)
 	{
 		ImGuiViewport* viewport = ImGui::GetMainViewport();
 
@@ -171,7 +171,7 @@ void DrawMenus(const MenuContext& context)
 		ImGui::SetCursorPos(ImVec2(centroX - anchoBoton * 0.5f, inicioY));
 		if (ImGui::Button("JUGAR", ImVec2(anchoBoton, altoBoton)))
 		{
-			context.state = ESTADO_JUGANDO;
+			context.state = GAME_STATE_PLAYING;
 			context.resetMouseLook();
 		}
 
@@ -191,7 +191,7 @@ void DrawMenus(const MenuContext& context)
 	// =========================================================================
 	// MENÚ DE PAUSA
 	// =========================================================================
-	else if (context.state == ESTADO_PAUSA)
+	else if (context.state == GAME_STATE_PAUSED)
 	{
 		ImVec2 centro = ImGui::GetMainViewport()->GetCenter();
 		float ancho = 300.0f * uiScale;
@@ -226,7 +226,7 @@ void DrawMenus(const MenuContext& context)
 		// ---> AQUÍ VA EL AJUSTE DEL BOTÓN REANUDAR <---
 		if (ImGui::Button("REANUDAR", ImVec2(anchoBoton, altoBoton)))
 		{
-			context.state = ESTADO_JUGANDO;
+			context.state = GAME_STATE_PLAYING;
 			context.resetMouseLook();
 		}
 
@@ -235,7 +235,7 @@ void DrawMenus(const MenuContext& context)
 		ImGui::SetCursorPosX((ancho - anchoBoton) * 0.5f);
 		if (ImGui::Button("MENU PRINCIPAL", ImVec2(anchoBoton, altoBoton)))
 		{
-			context.state = ESTADO_MENU_PRINCIPAL;
+			context.state = GAME_STATE_MAIN_MENU;
 		}
 
 		ImGui::Dummy(ImVec2(0.0f, 12.0f * uiScale));
@@ -275,7 +275,7 @@ void DrawRuntimeUiFrame(const FrameContext& context)
 	ImGui::NewFrame();
 
 	// 1. La barra de estamina solo se dibuja mientras juegas
-	if (context.menu.state == ESTADO_JUGANDO)
+	if (context.menu.state == GAME_STATE_PLAYING)
 	{
 		DrawStaminaBar(context.hud);
 		DrawInteractionHud(context.hud);

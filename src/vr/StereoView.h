@@ -31,8 +31,8 @@ namespace stereo
 	}
 
 	// Rectángulo de pantalla de cada ojo: mitad izquierda / mitad derecha.
-	struct Rectangulo { int x, ancho; };
-	inline Rectangulo ScreenHalf(Eye ojo, int anchoTotal)
+	struct ScreenRect { int x, ancho; };
+	inline ScreenRect ScreenHalf(Eye ojo, int anchoTotal)
 	{
 		return { ojo == Eye::Left ? 0 : anchoTotal / 2, anchoTotal / 2 };
 	}

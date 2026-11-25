@@ -25,7 +25,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 	auto& networkGame = context.session;
 	auto& pendingNetworkConfig = context.pendingConfig;
 	using netgame::NetworkPhase;
-	const netgame::Diagnostico d = networkGame.GetDiagnosticInfo();
+	const netgame::NetworkDiagnostics d = networkGame.GetDiagnosticInfo();
 	ImGui::SetNextWindowPos(ImVec2(12.0f * uiScale, 12.0f * uiScale), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(360.0f * uiScale, 0.0f), ImGuiCond_FirstUseEver);
 	ImGui::Begin("Multijugador", &context.panelVisible);
@@ -104,20 +104,20 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 	auto& networkGame = context.session;
 	const auto& physicsScene = context.physicsScene;
 	const auto& sceneObjects = context.sceneObjects;
-	struct Fila
+	struct TableRow
 	{
 		std::string id;
 		uint32_t idRed = 0;
 		net::PeerId propietario = netgame::kSinDueno;
-		fisica::BodyPose aplicado;
-		fisica::BodyPose authoritative;
+		physics::BodyPose aplicado;
+		physics::BodyPose authoritative;
 		bool tieneAutoritativo = false;
 		bool activo = false;
 		bool sujeto = false;
 		bool hiriti = false;
 		const char* estadoSeguimiento = "";
 	};
-	static std::vector<Fila> filas;
+	static std::vector<TableRow> filas;
 	static double siguienteActualizacion = 0.0;
 	const double ahora = glfwGetTime();
 	if (ahora >= siguienteActualizacion)
@@ -126,7 +126,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 		siguienteActualizacion = ahora + 0.5;
 		if (physicsScene)
 		{
-			std::vector<fisica::PhysicsScene::DynamicState> cuerpos;
+			std::vector<physics::PhysicsScene::DynamicState> cuerpos;
 			physicsScene->CaptureDynamicStates(cuerpos);
 			const auto remotos = networkGame.IsClient()
 				? networkGame.EstadosFisicosRemotos() : std::map<uint32_t, net::DynamicStateEntry>{};
@@ -134,7 +134,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 			{
 				if (cuerpo.objectIndex < 0 || cuerpo.objectIndex >= static_cast<int>(sceneObjects.size())) continue;
 				const SceneObject& objeto = sceneObjects[static_cast<std::size_t>(cuerpo.objectIndex)];
-				Fila fila;
+				TableRow fila;
 				fila.id = objeto.id;
 				fila.idRed = netgame::HashId(objeto.id);
 				fila.propietario = networkGame.IsActive()
@@ -171,7 +171,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 	ImGui::Text("Modo: %s | maximo 8 | refresco 500 ms",
 		networkGame.IsHosting() ? "host" : networkGame.IsClient() ? "client" : "offline");
 	if (filas.empty()) ImGui::TextUnformatted("Sin objetos dinamicos en la escena.");
-	for (const Fila& fila : filas)
+	for (const TableRow& fila : filas)
 	{
 		const char* rol = networkGame.IsHosting() ? "host" : networkGame.IsClient() ? "client" : "offline";
 		const char* cuerpo = networkGame.IsClient() ? "replica cinematica" : "body dinamico";
@@ -184,7 +184,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 				static_cast<unsigned>(fila.propietario), rol, cuerpo,
 				fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),
 				fila.estadoSeguimiento);
-		const auto dibujarPose = [](const char* nombre, const fisica::BodyPose& pose)
+		const auto dibujarPose = [](const char* nombre, const physics::BodyPose& pose)
 		{
 			ImGui::Text("%s p(%.2f,%.2f,%.2f) q(%.2f,%.2f,%.2f,%.2f)", nombre,
 				pose.position.x, pose.position.y, pose.position.z,

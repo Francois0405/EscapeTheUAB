@@ -41,7 +41,7 @@ namespace editor
 			if (estado.escala > 0.0f && std::abs(escala - estado.escala) > 0.001f)
 			{
 				const float factor = escala / estado.escala;
-				const interfaz::UiWindowRect ajustada = interfaz::ScaleUiRect(
+				const uiscale::UiWindowRect ajustada = uiscale::ScaleUiRect(
 					{ posicionActual.x, posicionActual.y, tamanoActual.x, tamanoActual.y },
 					factor, displaySize.x, displaySize.y);
 				ImGui::SetWindowSize(ImVec2(ajustada.ancho, ajustada.alto), ImGuiCond_Always);
@@ -435,7 +435,7 @@ namespace editor
 		if (!IsAnimated(contexto, indice))
 		{
 			const SceneObject& objeto = contexto.objetos[static_cast<std::size_t>(indice)];
-			e.modelo = fisica::ObjectMatrix(objeto);
+			e.modelo = physics::ObjectMatrix(objeto);
 			e.caja = BoxOfObject(objeto);
 		}
 		else
@@ -504,23 +504,23 @@ namespace editor
 	{
 		const SceneObject& actual = indiceIgnorado >= 0 && indiceIgnorado < static_cast<int>(contexto.objetos.size())
 			? contexto.objetos[static_cast<std::size_t>(indiceIgnorado)] : candidato;
-		const auto propuesta = BoxesOfObject(candidato, matrizPropuesta != nullptr ? *matrizPropuesta : fisica::ObjectMatrix(candidato));
+		const auto propuesta = BoxesOfObject(candidato, matrizPropuesta != nullptr ? *matrizPropuesta : physics::ObjectMatrix(candidato));
 		const auto anterior = indiceIgnorado >= 0 && indiceIgnorado < static_cast<int>(contexto.objetos.size())
-			? BoxesOfObject(actual, fisica::ObjectMatrix(actual)) : std::vector<OrientedBox>{};
+			? BoxesOfObject(actual, physics::ObjectMatrix(actual)) : std::vector<OrientedBox>{};
 		std::vector<PlacementObstacle> obstaculos;
 		constexpr float toleranciaContacto = 0.01f;
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 		{
 			if (static_cast<int>(i) == indiceIgnorado || contexto.objetos[i].id == candidato.id) continue;
 			const SceneObject& objeto = contexto.objetos[i];
-			const auto cajas = BoxesOfObject(objeto, fisica::ObjectMatrix(objeto));
+			const auto cajas = BoxesOfObject(objeto, physics::ObjectMatrix(objeto));
 			const glm::vec3 dimensiones = objeto.fisica.presente
 				? glm::abs(objeto.escala) * objeto.fisica.halfExtents
 				: glm::abs(objeto.escala) * BoxOfObject(objeto).HalfSize();
 			const float minimo = std::min({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float medio = dimensiones.x + dimensiones.y + dimensiones.z - minimo - std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float maximo = std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
-			const bool paredPorForma = objeto.fisica.presente && objeto.fisica.tipo == fisica::BodyType::Static &&
+			const bool paredPorForma = objeto.fisica.presente && objeto.fisica.tipo == physics::BodyType::Static &&
 				minimo < 0.30f && medio > 1.0f && maximo > 4.0f;
 			const bool arquitectura = objeto.categoria == "architecture" || paredPorForma;
 			const std::string tipo = paredPorForma && objeto.categoria != "architecture" ? "wall" :
@@ -571,7 +571,7 @@ namespace editor
 						return { false, "door must remain aligned with its associated wall" };
 				}
 			}
-			const auto cajas = BoxesOfObject(objeto, fisica::ObjectMatrix(objeto));
+			const auto cajas = BoxesOfObject(objeto, physics::ObjectMatrix(objeto));
 			const glm::vec3 dimensiones = objeto.fisica.presente
 				? glm::abs(objeto.escala) * objeto.fisica.halfExtents
 				: glm::abs(objeto.escala) * BoxOfObject(objeto).HalfSize();
@@ -579,7 +579,7 @@ namespace editor
 			const float medio = dimensiones.x + dimensiones.y + dimensiones.z - minimo - std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float maximo = std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const bool arquitectura = objeto.categoria == "architecture" ||
-				(objeto.fisica.presente && objeto.fisica.tipo == fisica::BodyType::Static && minimo < 0.30f && medio > 1.0f && maximo > 4.0f);
+				(objeto.fisica.presente && objeto.fisica.tipo == physics::BodyType::Static && minimo < 0.30f && medio > 1.0f && maximo > 4.0f);
 			for (const OrientedBox& caja : cajas) obstaculos.push_back({ caja, objeto.id, arquitectura ? "architecture" : "object", arquitectura });
 		}
 		for (std::size_t i = 0; i < contexto.animados.size(); ++i)
@@ -603,7 +603,7 @@ namespace editor
 
 		glm::mat4 vista, proyeccion;
 		Matrices(static_cast<float>(ancho) / static_cast<float>(alto), vista, proyeccion);
-		const Rayo rayo = RayFromScreen(vista, proyeccion, glm::vec2(io.MousePos.x, io.MousePos.y),
+		const PickRay rayo = RayFromScreen(vista, proyeccion, glm::vec2(io.MousePos.x, io.MousePos.y),
 			glm::vec4(0.0f, 0.0f, static_cast<float>(ancho), static_cast<float>(alto)));
 
 		std::vector<SelectionCandidate> candidatos;
@@ -682,7 +682,7 @@ namespace editor
 		objeto.escala = glm::vec3(1.0f);
 
 		LocalBox caja = BoxOfObject(objeto);
-		const LocalBox mundo = BoxInWorld(fisica::ObjectMatrix(objeto), caja);
+		const LocalBox mundo = BoxInWorld(physics::ObjectMatrix(objeto), caja);
 		const float suelo = FloorHeight(contexto);
 		const glm::vec3 centro = mundo.CenterPoint();
 		const glm::vec3 objetivo = camara.PivotPoint();
@@ -700,7 +700,7 @@ namespace editor
 			else
 			{
 				objeto.fisica.presente = true;
-				objeto.fisica.tipo = dinamico ? fisica::BodyType::Dynamic : fisica::BodyType::Static;
+				objeto.fisica.tipo = dinamico ? physics::BodyType::Dynamic : physics::BodyType::Static;
 				objeto.fisica.halfExtents = caja.HalfSize();
 				objeto.fisica.desplazamiento = caja.CenterPoint();
 				objeto.fisica.masa = dinamico ? 5.0f : 0.0f;
@@ -872,7 +872,7 @@ namespace editor
 			indicePared < 0 || indicePared >= static_cast<int>(contexto.objetos.size())) return false;
 		SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(indicePuerta)];
 		SceneObject& paredNueva = contexto.objetos[static_cast<std::size_t>(indicePared)];
-		if (!paredNueva.pared.presente || (paredNueva.fisica.presente && paredNueva.fisica.tipo != fisica::BodyType::Static))
+		if (!paredNueva.pared.presente || (paredNueva.fisica.presente && paredNueva.fisica.tipo != physics::BodyType::Static))
 		{ ReportStatus("Select a parametric wall with static collision first.", true); return false; }
 		float mitadAncho = 0.0f, alturaMarco = 0.0f;
 		for (const SceneCollider& c : puerta.colisionadores)
@@ -1386,8 +1386,8 @@ namespace editor
 				ImGui::Separator();
 				ImGui::TextUnformatted("Physics");
 				int tipo = !objeto.fisica.presente ? 0 :
-					(objeto.fisica.tipo == fisica::BodyType::Bouncer ? 3 :
-						(objeto.fisica.tipo == fisica::BodyType::Dynamic ? 2 : 1));
+					(objeto.fisica.tipo == physics::BodyType::Bouncer ? 3 :
+						(objeto.fisica.tipo == physics::BodyType::Dynamic ? 2 : 1));
 				const int tipoAnterior = tipo;
 				const char* tipos[] = { "None", "Static box", "Dynamic box", "Bouncy sphere" };
 				if (ImGui::Combo("Collider", &tipo, tipos, 4) && tipo != tipoAnterior)
@@ -1397,15 +1397,15 @@ namespace editor
 					objeto.fisica.presente = tipo != 0;
 					if (tipo != 0)
 					{
-						objeto.fisica.forma = tipo == 3 ? fisica::BodyShape::Sphere : fisica::BodyShape::Box;
+						objeto.fisica.forma = tipo == 3 ? physics::BodyShape::Sphere : physics::BodyShape::Box;
 						if (tipoAnterior == 0)
 						{	// medidas iniciales a partir de los límites del modelo
 							const LocalBox caja = BoxOfObject(objeto);
 							objeto.fisica.halfExtents = caja.HalfSize();
 							objeto.fisica.desplazamiento = caja.CenterPoint();
 						}
-						objeto.fisica.tipo = tipo == 3 ? fisica::BodyType::Bouncer :
-							(tipo == 2 ? fisica::BodyType::Dynamic : fisica::BodyType::Static);
+						objeto.fisica.tipo = tipo == 3 ? physics::BodyType::Bouncer :
+							(tipo == 2 ? physics::BodyType::Dynamic : physics::BodyType::Static);
 						if ((tipo == 2 || tipo == 3) && objeto.fisica.masa <= 0.0f)
 							objeto.fisica.masa = 0.25f;
 					}
@@ -1421,7 +1421,7 @@ namespace editor
 					}
 					if (ImGui::InputFloat3("Offset", &objeto.fisica.desplazamiento.x, "%.3f"))
 					{ OpenTransactionIfNeeded(); MarkModified(); }
-					if (fisica::IsDynamicBody(objeto.fisica.tipo) &&
+					if (physics::IsDynamicBody(objeto.fisica.tipo) &&
 						ImGui::InputFloat("Mass (kg)", &objeto.fisica.masa, 0.5f, 5.0f, "%.2f"))
 					{
 						if (!(objeto.fisica.masa > 0.0f)) objeto.fisica.masa = 0.1f;
@@ -1439,7 +1439,7 @@ namespace editor
 				ImGui::TextWrapped("Animation: %s", animado.animation.empty() ? "(first in file)" : animado.animation.c_str());
 				ImGui::Text("Colliders: %d", static_cast<int>(animado.colisionadores.size()));
 				for (const SceneCollider& c : animado.colisionadores)
-					ImGui::BulletText("%s (%s)", c.nodo.c_str(), c.tipo == fisica::BodyType::Kinematic ? "kinematic" : "static");
+					ImGui::BulletText("%s (%s)", c.nodo.c_str(), c.tipo == physics::BodyType::Kinematic ? "kinematic" : "static");
 				if (!animado.paredId.empty())
 					for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 						if (contexto.objetos[i].id == animado.paredId) paredDestinoPuerta = static_cast<int>(i);

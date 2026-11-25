@@ -3,7 +3,7 @@
 // Solo usa ObjetosAnimadosGLB.h (sin OpenGL): el ID de red de cada puerta es el hash de su id de escena.
 #pragma once
 
-#include "src/networking/replication/NetJuegoLogica.h"
+#include "src/networking/replication/NetGameLogic.h"
 #include "src/animation/GlbAnimatedObjects.h"
 
 namespace netgame

@@ -26,7 +26,7 @@
 #include <string>
 #include <vector>
 
-namespace fisica
+namespace physics
 {
 	// Identificador de un cuerpo creado en el mundo (índice interno; -1 = inválido).
 	using IdCuerpo = int;

@@ -28,7 +28,7 @@
 #include <string>
 #include <vector>
 
-namespace fisica
+namespace physics
 {
 	// Matriz de colocación de un objeto OBJ: trasladar * Rz * Ry * Rx * escalar.
 	// (Es la misma que usa el dibujo de src/app.)
@@ -120,7 +120,7 @@ namespace fisica
 
 	private:
 		// Un objeto OBJ dinámico: hay que copiar su pose de Bullet al dibujo.
-		struct Dinamico
+		struct DynamicEntry
 		{
 			int objectIndex = -1;
 			IdCuerpo cuerpo = CuerpoInvalido;
@@ -130,7 +130,7 @@ namespace fisica
 			glm::quat rotacionInicial{ 1.0f, 0.0f, 0.0f, 0.0f };
 		};
 		// Una caja unida a un nodo de un modelo animado.
-		struct Colision
+		struct CollisionEntry
 		{
 			int indiceAnimado = -1;
 			int nodo = -1;
@@ -140,13 +140,13 @@ namespace fisica
 			glm::vec3 desplazamiento{ 0.0f };
 		};
 		
-		void PlaceBox(const Colision& caja, const glb::AnimatedObject& objeto, glm::vec3& centro,
+		void PlaceBox(const CollisionEntry& caja, const glb::AnimatedObject& objeto, glm::vec3& centro,
 			glm::quat& eulerRotation, glm::vec3& mitad) const;
 
 		PhysicsWorld& mundo;
 		std::vector<IdCuerpo> todos;          // todo lo que hay que quitar en Vaciar()
-		std::vector<Dinamico> dinamicos;
-		std::vector<Colision> colisionesNodo;
+		std::vector<DynamicEntry> dinamicos;
+		std::vector<CollisionEntry> colisionesNodo;
 		bool physicsAuthority = true;
 	};
 }

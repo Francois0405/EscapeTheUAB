@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#include "src/networking/replication/NetJuegoLogica.h"
+#include "src/networking/replication/NetGameLogic.h"
 
 namespace runtimeui
 {

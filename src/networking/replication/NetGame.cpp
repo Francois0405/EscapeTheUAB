@@ -524,9 +524,9 @@ namespace netgame
 		return v;
 	}
 
-	Diagnostico NetworkGame::GetDiagnosticInfo() const
+	NetworkDiagnostics NetworkGame::GetDiagnosticInfo() const
 	{
-		Diagnostico d; d.fase = fase_; d.escena = escena_; d.mensaje = mensaje_;
+		NetworkDiagnostics d; d.fase = fase_; d.escena = escena_; d.mensaje = mensaje_;
 		d.modo = cfg_.rol == net::Role::Host ? "Host" : (cfg_.rol == net::Role::Client ? "Cliente" : "Offline");
 		d.endpoint = cfg_.rol == net::Role::Host ? "0.0.0.0" : cfg_.host;
 		d.puerto = cfg_.puerto;

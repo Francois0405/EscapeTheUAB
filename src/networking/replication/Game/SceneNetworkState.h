@@ -24,7 +24,7 @@ namespace netgame::scene_network_state
 			state.position = object.position; state.eulerRotation = object.eulerRotation; state.escala = object.escala;
 			state.hasCollision = object.fisica.presente;
 			state.collisionKind = SceneCollisionType(object.fisica.presente,
-				fisica::IsDynamicBody(object.fisica.tipo));
+				physics::IsDynamicBody(object.fisica.tipo));
 			state.halfExtents = object.fisica.halfExtents;
 			state.desplazamiento = object.fisica.desplazamiento;
 			state.masa = object.fisica.masa;
@@ -49,7 +49,7 @@ namespace netgame::scene_network_state
 		for (std::size_t i = 0; i < objects.size(); ++i)
 			if (hashFunction(objects[i].id) == id) { index = i; ++matchCount; }
 		return matchCount == 1 && index < objects.size() && objects[index].fisica.presente &&
-			fisica::IsDynamicBody(objects[index].fisica.tipo);
+			physics::IsDynamicBody(objects[index].fisica.tipo);
 	}
 
 	inline bool FindUniqueDynamicSceneObjectIndex(uint32_t id, const std::vector<SceneObject>& objects,

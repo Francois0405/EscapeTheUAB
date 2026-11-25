@@ -1,0 +1,17 @@
+CamaraEditor EditorCamera
+EstadoJuego GameState
+ESTADO_MENU_PRINCIPAL GAME_STATE_MAIN_MENU
+ESTADO_JUGANDO GAME_STATE_PLAYING
+ESTADO_PAUSA GAME_STATE_PAUSED
+Colision CollisionEntry
+Diagnostico NetworkDiagnostics
+Dinamico DynamicEntry
+Muestra PoseSample
+Rayo PickRay
+Rectangulo ScreenRect
+Evento AudioEvent
+Acumulador BoundsAccumulator
+Fila TableRow
+Nodo TestNode
+Escenario TestScenario
+file src/networking/replication/NetJuegoLogica.h src/networking/replication/NetGameLogic.h

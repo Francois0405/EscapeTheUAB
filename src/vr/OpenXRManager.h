@@ -112,7 +112,7 @@ namespace vr
 		void EndXrFrame();
 
 		// Informe de diagnóstico (runtime, visor, GPU, extensiones, formatos, swapchains) para consola y panel.
-		const std::string& Diagnostico() const { return diagnostico; }
+		const std::string& NetworkDiagnostics() const { return diagnostico; }
 
 		// Destruye sesión e instancia (en ese orden). Se puede llamar siempre, también sin haber activado.
 		void Deactivate();

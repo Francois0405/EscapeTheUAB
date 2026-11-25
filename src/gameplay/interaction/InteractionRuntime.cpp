@@ -23,10 +23,10 @@ namespace game::interaction
 
 		glm::vec3 origen, direccion;
 		context.lookRay(origen, direccion);
-		const float alcance = std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION);
+		const float alcance = std::max(physics::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION);
 		float distancia = std::numeric_limits<float>::infinity();
-		const fisica::IdCuerpo cuerpoMirado = physicsWorld.BodyAtRayEnd(origen, direccion, alcance, &distancia);
-		if (cuerpoMirado == fisica::CuerpoInvalido) return {};
+		const physics::IdCuerpo cuerpoMirado = physicsWorld.BodyAtRayEnd(origen, direccion, alcance, &distancia);
+		if (cuerpoMirado == physics::CuerpoInvalido) return {};
 
 		const int indiceDinamico = physicsScene->DynamicObjectOfBody(cuerpoMirado);
 		if (indiceDinamico >= 0)
@@ -111,7 +111,7 @@ namespace game::interaction
 				physicsScene->DynamicObjectPosition(objetivo.indiceDinamico, position);
 				const net::PeerId peer = networkGame.IsActive() ? networkGame.LocalPeerId() : net::kUnassignedPeerId;
 				context.traceGrab("local-grab", id, peer, peer, position,
-					fisica::PhysicsScene::GrabDestination(origen, direccion),
+					physics::PhysicsScene::GrabDestination(origen, direccion),
 					networkGame.IsHosting() ? "authoritative-host-dynamic" : "offline-dynamic");
 			}
 		}

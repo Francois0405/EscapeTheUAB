@@ -20,7 +20,7 @@
 #include <iostream>
 #include <iterator>
 
-using namespace fisica;
+using namespace physics;
 namespace fs = std::filesystem;
 
 namespace
@@ -72,7 +72,7 @@ namespace
 
 	// La demo ya no tiene mundo propio (usa el mundo único del juego), así que las pruebas
 	// de la Fase 1 crean un mundo y le pasan la demo. Es el único cambio respecto a la Fase 1.
-	struct Escenario
+	struct TestScenario
 	{
 		PhysicsWorld mundo;
 		FallingCubeDemo demo{ mundo };
@@ -154,7 +154,7 @@ namespace
 
 	void PruebaIndependenciaDeLosFps()
 	{
-		Escenario a, b;
+		TestScenario a, b;
 		a.demo.Start();
 		b.demo.Start();
 		Simular(3.0f, 1.0f / 30.0f, [&](float dt) { a.Update(dt, false); });
@@ -187,7 +187,7 @@ namespace
 
 	void PruebaSuelo()
 	{
-		Escenario escenario;
+		TestScenario escenario;
 		FallingCubeDemo& demo = escenario.demo;
 		demo.Start();
 		const float alturaInicial = demo.CubePose().position.z;
@@ -584,7 +584,7 @@ namespace
 		glb::AnimatedScene animados;
 		std::string error;
 		comprobar(glb::AddAnimatedObject(animados, door.id, door.modelo, door.position, 0.0f, error), "carga GLB para pared paramétrica");
-		fisica::PhysicsScene escena(mundo);
+		physics::PhysicsScene escena(mundo);
 		comprobar(escena.Create({pared}, animados, {door}, error), "Bullet construye colliders segmentados para el vano");
 		comprobar(escena.BodyCount() == 7, "tres paños de pared sustituyen al collider completo y se suman cuatro colliders de puerta");
 		if (escena.BodyCount() != 7) return;
