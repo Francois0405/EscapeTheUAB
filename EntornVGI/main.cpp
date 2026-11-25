@@ -36,6 +36,7 @@
 #include "NetAvatar.h"
 #include "Network/PreferenciasRed.h"
 #include "Network/GrabDiagnostics.h"
+#include "Network/Game/RemotePhysicsTimeline.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include "EscalaUI.h"
@@ -633,8 +634,7 @@ namespace
 	std::map<uint32_t, bool> objetosDormidosAntes;
 	// true: agarre de escritorio anclado a cabeza/mirada; false: rayo de mando VR.
 	std::map<uint32_t, bool> agarresRemotosDesdeCabeza;
-	struct MuestraFisicaRemota { double tiempo = 0.0; net::DynamicStateEntry estado; };
-	std::map<uint32_t, std::deque<MuestraFisicaRemota>> bufferFisicaRemota;
+	netjuego::timeline::RemotePhysicsBuffers bufferFisicaRemota;
 	vr::PoseXR ultimaCabezaVR;                              // pose real del visor, la rellena el render VR
 	bool hayCabezaVR = false;
 	void iniciarRed(const netjuego::ConfigRed& cfg);
@@ -1242,40 +1242,6 @@ namespace
 			}, indice);
 	}
 
-	void guardarMuestraFisicaRemota(const net::DynamicStateEntry& estado, double ahora)
-	{
-		if (!netjuego::EstadoFisicoValido(estado)) return;
-		auto& buffer = bufferFisicaRemota[estado.objectId];
-		if (!buffer.empty() && !net::SeqNewer(estado.tick, buffer.back().estado.tick)) return;
-		const double tiempoMuestra = buffer.empty() ? ahora : netjuego::TiempoSnapshotSiguiente(
-			buffer.back().tiempo, buffer.back().estado.tick, estado.tick);
-		buffer.push_back({ tiempoMuestra, estado });
-		while (buffer.size() > 8) buffer.pop_front();
-	}
-
-	net::DynamicStateEntry interpolarEstadoFisico(uint32_t id, double ahora)
-	{
-		auto& buffer = bufferFisicaRemota[id];
-		net::DynamicStateEntry resultado = buffer.back().estado;
-		const double tiempoObjetivo = ahora - 0.12;
-		if (buffer.size() > 1)
-		{
-			for (std::size_t i = 1; i < buffer.size(); ++i)
-			{
-				if (tiempoObjetivo > buffer[i].tiempo) continue;
-				const auto& a = buffer[i - 1]; const auto& b = buffer[i];
-				const float t = b.tiempo > a.tiempo ? std::clamp(static_cast<float>((tiempoObjetivo - a.tiempo) / (b.tiempo - a.tiempo)), 0.0f, 1.0f) : 1.0f;
-				const glm::vec3 p = glm::mix(netjuego::PosDe(a.estado.transform), netjuego::PosDe(b.estado.transform), t);
-				const glm::quat q = glm::slerp(netjuego::RotDe(a.estado.transform), netjuego::RotDe(b.estado.transform), t);
-				resultado.transform = netjuego::ATransform(p, q);
-				return resultado;
-			}
-		}
-		// No extrapolar una simulación rígida: una predicción lineal puede atravesar una pared
-		// justo después de un rebote. Si falta el siguiente snapshot, se mantiene el último.
-		return resultado;
-	}
-
 	std::string identificadorEscenaRed(const std::string& nombre, const std::vector<netjuego::EstadoObjetoEscena>& estado)
 	{
 		// El saludo ENet solo admite 64 bytes. Un fingerprint compacto del nombre de
@@ -1623,17 +1589,9 @@ namespace
 			std::vector<net::DynamicStateEntry> finales;
 			redJuego.TomarEstadosFisicosFiables(finales);
 			for (const auto& estado : finales)
-			{
-				auto existente = bufferFisicaRemota.find(estado.objectId);
-				const bool hayMuestra = existente != bufferFisicaRemota.end() && !existente->second.empty();
-				const uint32_t tickActual = hayMuestra ? existente->second.back().estado.tick : 0;
-				if (netjuego::EstadoFisicoMasNuevo(estado.tick, hayMuestra, tickActual))
-				{
-					bufferFisicaRemota.erase(estado.objectId);
-					guardarMuestraFisicaRemota(estado, ahora);
-				}
-			}
-			for (const auto& par : redJuego.EstadosFisicosRemotos()) guardarMuestraFisicaRemota(par.second, ahora);
+				netjuego::timeline::ApplyReliableFinalPhysicsState(bufferFisicaRemota, estado, ahora);
+			for (const auto& par : redJuego.EstadosFisicosRemotos())
+				netjuego::timeline::StoreRemotePhysicsSample(bufferFisicaRemota, par.second, ahora);
 
 			static double ultimoTiempoFisica = ahora;
 			const float delta = std::clamp(static_cast<float>(ahora - ultimoTiempoFisica), 0.0f, 0.1f);
@@ -1642,7 +1600,7 @@ namespace
 			{
 				std::size_t indice = 0;
 				if (!indiceUnicoObjetoRed(par.first, indice) || par.second.empty()) continue;
-				auto objetivo = interpolarEstadoFisico(par.first, ahora);
+				auto objetivo = netjuego::timeline::InterpolateRemotePhysicsState(par.second, ahora);
 				fisica::EscenaFisica::EstadoDinamico aplicado;
 				aplicado.indiceObjeto = static_cast<int>(indice);
 				aplicado.pose.posicion = netjuego::PosDe(objetivo.transform);

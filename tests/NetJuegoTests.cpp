@@ -4,8 +4,10 @@
 // Usa un transporte en memoria: sin sockets, sin ENet, sin OpenGL, sin Bullet, sin visor.
 #include "NetJuego.h"
 #include "MundoFisico.h"
+#include "Network/Game/RemotePhysicsTimeline.h"
 
 #include <chrono>
+#include <cmath>
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -178,6 +180,105 @@ int main()
 		puerto = 1;
 		ok(ParsearEndpoint("10.0.0.5", host, puerto, err) && puerto == 1 && host == "10.0.0.5", "endpoint sin puerto conserva el actual");
 		ok(!ParsearEndpoint("", host, puerto, err) && !ParsearEndpoint("a:0", host, puerto, err) && !ParsearEndpoint("a:x", host, puerto, err), "endpoint vacio/puerto 0/no numerico");
+	}
+
+	// ---------------- buffer e interpolacion de fisica remota ----------------
+	{
+		using namespace netjuego::timeline;
+		const auto estado = [](uint32_t tick, float x, uint8_t flags = 0,
+			net::PeerId owner = net::kUnassignedPeerId)
+		{
+			net::DynamicStateEntry e;
+			e.objectId = HashId("timeline_test"); e.tick = tick;
+			e.transform.pos[0] = x; e.flags = flags; e.owner = owner;
+			return e;
+		};
+
+		RemotePhysicsBuffers buffer;
+		auto invalido = estado(1, 0); invalido.objectId = 0;
+		StoreRemotePhysicsSample(buffer, invalido, 1.0);
+		StoreRemotePhysicsSample(buffer, estado(100, 0), 10.0);
+		StoreRemotePhysicsSample(buffer, estado(100, 9), 99.0);
+		StoreRemotePhysicsSample(buffer, estado(99, 8), 99.0);
+		StoreRemotePhysicsSample(buffer, estado(100u + 0x80000000u, 7), 99.0);
+		StoreRemotePhysicsSample(buffer, estado(120, 2), 20.0);
+		StoreRemotePhysicsSample(buffer, estado(140, 4), 30.0);
+		const auto& reconstruidas = buffer.at(HashId("timeline_test"));
+		ok(buffer.size() == 1 && reconstruidas.size() == 3 &&
+			cerca(static_cast<float>(reconstruidas[0].time), 10.0f) &&
+			cerca(static_cast<float>(reconstruidas[1].time), 10.02f) &&
+			cerca(static_cast<float>(reconstruidas[2].time), 10.04f) &&
+			reconstruidas[1].state.transform.pos[0] == 2.0f,
+			"buffer ignora estado invalido, tick igual/antiguo/medio-rango y reconstruye tiempo desde tick pese al jitter de llegada");
+
+		RemotePhysicsBuffers envuelto;
+		StoreRemotePhysicsSample(envuelto, estado(0xFFFFFFF0u, 1), 5.0);
+		StoreRemotePhysicsSample(envuelto, estado(0x18u, 2), 100.0);
+		ok(envuelto.at(HashId("timeline_test")).size() == 2 &&
+			cerca(static_cast<float>(envuelto.at(HashId("timeline_test"))[1].time), 5.04f),
+			"buffer acepta wraparound y reconstruye el intervalo de 40 ms");
+
+		RemotePhysicsBuffers limitado;
+		for (uint32_t i = 1; i <= 9; ++i)
+			StoreRemotePhysicsSample(limitado, estado(i, static_cast<float>(i)), 50.0 + i);
+		const auto& ultimos = limitado.at(HashId("timeline_test"));
+		ok(ultimos.size() == 8 && ultimos.front().state.tick == 2 && ultimos.back().state.tick == 9,
+			"el noveno snapshot expulsa el primero y conserva ocho muestras");
+
+		std::deque<RemotePhysicsSample> muestras;
+		auto primero = estado(1, 0, 1, 3); primero.linearVelocity[0] = 1;
+		auto ultimo = estado(2, 10, 3, 7); ultimo.linearVelocity[0] = 9;
+		const float medio = std::sqrt(0.5f);
+		ultimo.transform.rot[2] = medio; ultimo.transform.rot[3] = medio;
+		muestras.push_back({ 10.0, primero }); muestras.push_back({ 10.04, ultimo });
+		const auto antes = InterpolateRemotePhysicsState(muestras, 9.9);
+		const auto entre = InterpolateRemotePhysicsState(muestras, 10.14);
+		const auto despues = InterpolateRemotePhysicsState(muestras, 10.5);
+		ok(cerca(antes.transform.pos[0], 0.0f) && cerca(entre.transform.pos[0], 5.0f) &&
+			cerca(despues.transform.pos[0], 10.0f) && entre.tick == 2 && entre.flags == 3 &&
+			entre.owner == 7 && entre.linearVelocity[0] == 9 &&
+			cerca(entre.transform.rot[2], std::sin(3.14159265f / 8.0f), 1e-3f),
+			"interpolacion usa el objetivo de 120 ms, interpola pose sin extrapolar y conserva metadata de la muestra nueva");
+
+		std::deque<RemotePhysicsSample> tresMuestras = {
+			{ 10.0, primero }, { 10.04, ultimo }, { 10.08, estado(3, 40) }
+		};
+		ok(cerca(InterpolateRemotePhysicsState(tresMuestras, 10.14).transform.pos[0], 5.0f),
+			"interpolacion con tres muestras conserva el segmento inicial");
+		ok(cerca(InterpolateRemotePhysicsState(tresMuestras, 10.18).transform.pos[0], 25.0f),
+			"interpolacion selecciona el segmento posterior con tres muestras");
+
+		const std::deque<RemotePhysicsSample> unaMuestra = { { 10.0, estado(1, 6) } };
+		ok(cerca(InterpolateRemotePhysicsState(unaMuestra, 100.0).transform.pos[0], 6.0f),
+			"una muestra conserva su pose aunque el objetivo quede mucho mas adelante");
+
+		std::deque<RemotePhysicsSample> duracionCero = {
+			{ 1.0, primero }, { 1.0, ultimo }
+		};
+		ok(cerca(InterpolateRemotePhysicsState(duracionCero, 0.0).transform.pos[0], 10.0f),
+			"segmento de duracion cero selecciona el extremo posterior");
+
+		RemotePhysicsBuffers finales;
+		StoreRemotePhysicsSample(finales, estado(0xFFFFFFFEu, 1), 2.0);
+		StoreRemotePhysicsSample(finales, estado(0xFFFFFFFFu, 2), 3.0);
+		ApplyReliableFinalPhysicsState(finales, estado(0xFFFFFFFFu, 8), 7.0);
+		ApplyReliableFinalPhysicsState(finales, estado(0xFFFFFFFEu, 9), 7.0);
+		const auto sinCambio = finales.at(HashId("timeline_test"));
+		ApplyReliableFinalPhysicsState(finales, estado(0u, 4), 7.25);
+		const auto& finalNuevo = finales.at(HashId("timeline_test"));
+		ok(sinCambio.size() == 2 && sinCambio.back().state.transform.pos[0] == 2.0f &&
+			finalNuevo.size() == 1 && finalNuevo.front().state.tick == 0 &&
+			finalNuevo.front().state.transform.pos[0] == 4.0f &&
+			cerca(static_cast<float>(finalNuevo.front().time), 7.25f),
+			"final igual o antiguo se ignora y el final nuevo con wraparound colapsa y reancla el buffer a su llegada");
+
+		RemotePhysicsBuffers sinBufferPrevio;
+		ApplyReliableFinalPhysicsState(sinBufferPrevio, estado(0, 11), 8.5);
+		const auto& primerFinal = sinBufferPrevio.at(HashId("timeline_test"));
+		ok(primerFinal.size() == 1 && primerFinal.front().state.tick == 0 &&
+			primerFinal.front().state.transform.pos[0] == 11.0f &&
+			cerca(static_cast<float>(primerFinal.front().time), 8.5f),
+			"estado final fiable sin buffer previo se acepta y reancla a su llegada");
 	}
 
 	// ---------------- estado replicable de objetos JSON ----------------
