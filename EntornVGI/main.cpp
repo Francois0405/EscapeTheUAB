@@ -38,6 +38,7 @@
 #include "Network/GrabDiagnostics.h"
 #include "Network/Game/RemotePhysicsTimeline.h"
 #include "Network/Game/HostPhysicsPublication.h"
+#include "Network/Game/SceneNetworkState.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include "EscalaUI.h"
@@ -1214,33 +1215,12 @@ namespace
 
 	bool capturarEstadoEscenaRed(std::vector<netjuego::EstadoObjetoEscena>& salida)
 	{
-		std::map<uint32_t, std::string> ids;
-		salida.clear();
-		salida.reserve(objetosEscena.size());
-		for (const SceneObject& objeto : objetosEscena)
-		{
-			netjuego::EstadoObjetoEscena e;
-			e.id = netjuego::HashId(objeto.id);
-			if (e.id == 0 || !ids.emplace(e.id, objeto.id).second) return false;
-			e.posicion = objeto.posicion; e.rotacion = objeto.rotacion; e.escala = objeto.escala;
-			e.colisionPresente = objeto.fisica.presente;
-			e.tipoColision = netjuego::TipoColisionEscena(objeto.fisica.presente,
-				fisica::EsCuerpoDinamico(objeto.fisica.tipo));
-			e.mitadTamano = objeto.fisica.mitadTamano; e.desplazamiento = objeto.fisica.desplazamiento; e.masa = objeto.fisica.masa;
-			if (!netjuego::EstadoObjetoEscenaValido(e)) return false;
-			salida.push_back(e);
-		}
-		return true;
+		return netjuego::scene_network_state::CaptureSceneNetworkStates(objetosEscena, salida);
 	}
 
 	bool indiceUnicoObjetoRed(uint32_t id, std::size_t& indice)
 	{
-		return netjuego::IndiceUnicoObjetoRed(id, objetosEscena,
-			[](const SceneObject& objeto) { return netjuego::HashId(objeto.id); },
-			[](const SceneObject& objeto)
-			{
-				return objeto.fisica.presente && fisica::EsCuerpoDinamico(objeto.fisica.tipo);
-			}, indice);
+		return netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(id, objetosEscena, indice);
 	}
 
 	std::string identificadorEscenaRed(const std::string& nombre, const std::vector<netjuego::EstadoObjetoEscena>& estado)

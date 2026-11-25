@@ -6,6 +6,7 @@
 #include "MundoFisico.h"
 #include "Network/Game/RemotePhysicsTimeline.h"
 #include "Network/Game/HostPhysicsPublication.h"
+#include "Network/Game/SceneNetworkState.h"
 
 #include <chrono>
 #include <cmath>
@@ -404,6 +405,91 @@ int main()
 		ok(!DecodificarEstadoObjetoEscena(original.id, truncado, recibido), "estado de objeto truncado rechazado");
 		original.escala.x = 0.0f;
 		ok(CodificarEstadoObjetoEscena(original).empty(), "estado de objeto con escala cero rechazado");
+	}
+
+	// ---------------- captura y lookup de estado de escena ----------------
+	{
+		auto makeObject = [](const std::string& id, bool collider, fisica::TipoCuerpo bodyType, float mass)
+		{
+			SceneObject object;
+			object.id = id;
+			object.posicion = glm::vec3(1.0f, 2.0f, 3.0f);
+			object.rotacion = glm::vec3(0.0f, 10.0f, 20.0f);
+			object.escala = glm::vec3(1.0f);
+			object.fisica.presente = collider;
+			object.fisica.tipo = bodyType;
+			object.fisica.mitadTamano = glm::vec3(0.7f, 0.8f, 0.9f);
+			object.fisica.desplazamiento = glm::vec3(0.11f, -0.22f, 0.33f);
+			object.fisica.masa = mass;
+			return object;
+		};
+		std::vector<EstadoObjetoEscena> states;
+		const std::vector<SceneObject> objects = {
+			makeObject("sin_collider", false, fisica::TipoCuerpo::Estatico, 0.0f),
+			makeObject("estatico", true, fisica::TipoCuerpo::Estatico, 0.0f),
+			makeObject("dinamico", true, fisica::TipoCuerpo::Dinamico, 2.0f),
+			makeObject("hiriti", true, fisica::TipoCuerpo::Rebotador, 0.25f),
+			makeObject("dinamico_sin_collider", false, fisica::TipoCuerpo::Dinamico, 2.0f)
+		};
+		ok(netjuego::scene_network_state::CaptureSceneNetworkStates(objects, states) && states.size() == 5,
+			"captura conserva los cinco objetos de escena");
+		ok(states.size() == 5, "captura devuelve el numero esperado de estados antes de consultar indices");
+		if (states.size() >= 5)
+		{
+			ok(states[0].id == HashId("sin_collider") && states[1].id == HashId("estatico") &&
+				states[2].id == HashId("dinamico") && states[3].id == HashId("hiriti"),
+				"captura preserva el orden de objetos de escena");
+			ok(states[0].tipoColision == 0 && !states[0].colisionPresente &&
+				states[1].tipoColision == 1 && states[1].colisionPresente &&
+				states[2].tipoColision == 2 && states[3].tipoColision == 2 &&
+				states[4].tipoColision == 0 && !states[4].colisionPresente,
+				"captura conserva none, static, dynamic y Rebotador como clases de colision de red");
+			ok(cerca(states[2].posicion, glm::vec3(1.0f, 2.0f, 3.0f)) &&
+				cerca(states[2].rotacion, glm::vec3(0.0f, 10.0f, 20.0f)) &&
+				cerca(states[2].mitadTamano, glm::vec3(0.7f, 0.8f, 0.9f)) &&
+				cerca(states[2].desplazamiento, glm::vec3(0.11f, -0.22f, 0.33f)),
+				"captura copia posicion, rotacion, mitad de tamano y desplazamiento de la fisica");
+		}
+
+		const std::vector<SceneObject> duplicateObjects = { objects[0], objects[0] };
+		ok(!netjuego::scene_network_state::CaptureSceneNetworkStates(duplicateObjects, states) && states.size() == 1,
+			"ID persistente duplicado falla y conserva solo la salida parcial anterior");
+		const std::vector<SceneObject> hashCollisionObjects = { objects[0], objects[1] };
+		const auto collidingHash = [](const std::string&) { return 123u; };
+		ok(!netjuego::scene_network_state::CaptureSceneNetworkStates(hashCollisionObjects, states, collidingHash) && states.size() == 1,
+			"colision de hash falla antes de agregar el segundo estado");
+		const auto zeroHash = [](const std::string&) { return 0u; };
+		ok(!netjuego::scene_network_state::CaptureSceneNetworkStates(std::vector<SceneObject>{ objects[0] }, states, zeroHash) && states.empty(),
+			"hash cero se rechaza antes de emitir un estado");
+		const auto reservedHash = [](const std::string&) { return kRangoReservadoIni; };
+		ok(!netjuego::scene_network_state::CaptureSceneNetworkStates(std::vector<SceneObject>{ objects[0] }, states, reservedHash) && states.empty(),
+			"hash reservado se rechaza por el validador del estado");
+
+		auto invalidScaleObject = objects[0]; invalidScaleObject.escala.y = 0.0f;
+		ok(!netjuego::scene_network_state::CaptureSceneNetworkStates(std::vector<SceneObject>{ objects[1], invalidScaleObject }, states) &&
+			states.size() == 1 && states[0].id == HashId("estatico"),
+			"escala invalida falla despues del mapeo y mantiene la salida parcial");
+		auto invalidMassObject = objects[2]; invalidMassObject.fisica.masa = 0.0f;
+		ok(!netjuego::scene_network_state::CaptureSceneNetworkStates(std::vector<SceneObject>{ objects[1], invalidMassObject }, states) &&
+			states.size() == 1 && states[0].id == HashId("estatico"),
+			"masa dinamica invalida falla despues del mapeo y mantiene la salida parcial");
+
+		std::size_t index = 77;
+		ok(netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(HashId("dinamico"), objects, index) && index == 2,
+			"lookup devuelve el unico objeto dinamico por hash persistente");
+		ok(!netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(HashId("desconocido"), objects, index),
+			"lookup rechaza IDs desconocidos");
+		ok(netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(HashId("hiriti"), objects, index) && index == 3,
+			"lookup acepta el objeto Rebotador de Hiriti");
+		ok(!netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(HashId("dinamico_sin_collider"), objects, index),
+			"lookup rechaza un objeto dinamico sin collider");
+		const std::vector<SceneObject> duplicateLookupObjects = { objects[2], objects[3] };
+		const auto ambiguousHash = [](const std::string&) { return 321u; };
+		ok(!netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(321u, duplicateLookupObjects,
+			ambiguousHash, index),
+			"lookup rechaza exactamente dos coincidencias con el mismo hash inyectado 321");
+		ok(!netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(HashId("estatico"), objects, index),
+			"lookup sigue rechazando objetos estaticos");
 	}
 
 	// ---------------- offline: nada se crea ----------------
