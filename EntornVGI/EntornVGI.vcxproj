@@ -157,6 +157,7 @@
     <ClCompile Include="..\src\editor\VisibilidadEditor.cpp" />
     <ClCompile Include="..\src\gameplay\hirity\HiritiRuntime.cpp" />
     <ClCompile Include="..\src\gameplay\interaction\InteractionRuntime.cpp" />
+    <ClCompile Include="..\src\networking\session\NetworkSessionRuntime.cpp" />
     <ClCompile Include="..\src\physics\EscenaFisica.cpp" />
     <ClCompile Include="..\src\scene\escena.cpp" />
     <ClCompile Include="..\src\rendering\glut_geometry.cpp" />
@@ -240,6 +241,8 @@
     <ClInclude Include="..\src\gameplay\hirity\HiritiRuntime.h" />
     <ClInclude Include="..\src\gameplay\hirity\VolumenSonidoHiriti.h" />
     <ClInclude Include="..\src\gameplay\interaction\InteractionRuntime.h" />
+    <ClInclude Include="..\src\networking\session\NetworkSessionRuntime.h" />
+    <ClInclude Include="..\src\networking\session\SessionRules.h" />
     <ClInclude Include="..\src\gameplay\interaction\ThrowCharge.h" />
     <ClInclude Include="..\src\gameplay\player\MovimientoFPS.h" />
     <ClInclude Include="..\src\rendering\quatern.h" />

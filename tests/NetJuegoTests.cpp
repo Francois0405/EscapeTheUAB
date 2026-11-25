@@ -8,6 +8,7 @@
 #include "src/networking/replication/Game/RemotePhysicsTimeline.h"
 #include "src/networking/replication/Game/HostPhysicsPublication.h"
 #include "src/networking/replication/Game/SceneNetworkState.h"
+#include "src/networking/session/SessionRules.h"
 
 #include <chrono>
 #include <cmath>
@@ -913,6 +914,44 @@ int main()
 			AdvanceThrowCharge(0.5f, -1.0f) == 0.5f, "throw charge: advance saturates and ignores negative delta");
 		glm::vec3 velocity = glm::normalize(glm::vec3(0.3f, -0.7f, 0.2f)) * ThrowSpeed(1.0f);
 		ok(LimitarRapidezLanzamientoHost(velocity), "throw charge: a full-charge throw is accepted by the host");
+	}
+
+	// ---------------- network session pure rules ----------------
+	{
+		using namespace netjuego::session;
+		net::PoseEntry pose;
+		pose.head = ATransform(glm::vec3(0.0f, 0.0f, 1.7f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+		pose.rightHand = ATransform(glm::vec3(0.4f, 0.0f, 1.2f), glm::quat(1.0f, 0.0f, 0.0f, 0.0f));
+		const glm::vec3 ahead(0.0f, 1.0f, 0.0f);
+
+		ok(RemoteGrabRayMatchesPose(glm::vec3(0.0f, 0.0f, 1.7f), ahead, pose), "session: ray from the peer head is accepted");
+		ok(RemoteGrabRayMatchesPose(glm::vec3(0.4f, -0.84f, 1.2f), ahead, pose) &&
+			!RemoteGrabRayMatchesPose(glm::vec3(0.4f, -0.86f, 1.2f), ahead, pose), "session: origin tolerance is 0.85 m");
+		ok(RemoteGrabRayMatchesPose(glm::vec3(0.0f, 0.0f, 1.7f), glm::vec3(0.79f, 0.61f, 0.0f), pose) &&
+			!RemoteGrabRayMatchesPose(glm::vec3(0.0f, 0.0f, 1.7f), glm::vec3(0.81f, 0.59f, 0.0f), pose),
+			"session: alignment threshold is 0.60");
+		ok(!RemoteGrabRayMatchesPose(glm::vec3(0.0f, 0.0f, 1.7f), glm::vec3(std::nanf("")), pose),
+			"session: non-finite direction is rejected");
+
+		ok(GrabAnchorsToHead(glm::vec3(0.0f, 0.0f, 1.7f), pose) && !GrabAnchorsToHead(glm::vec3(0.4f, 0.0f, 1.2f), pose),
+			"session: grab anchors to the closest of head and hand");
+
+		ok(ThrowChargeFromReleaseVelocity(glm::vec3(0.0f)) == 0.0f &&
+			cerca(ThrowChargeFromReleaseVelocity(glm::vec3(0.0f, 9.0f, 0.0f)), 0.5f) &&
+			ThrowChargeFromReleaseVelocity(glm::vec3(40.0f, 0.0f, 0.0f)) == 1.0f,
+			"session: release velocity maps to a clamped throw charge");
+
+		const glm::vec3 eye(1.0f, 2.0f, 1.7f);
+		ok(cerca(SharedObjectSpawnPosition(eye, glm::vec3(3.0f, 0.0f, 5.0f)), glm::vec3(3.0f, 2.0f, 1.2f)),
+			"session: shared object spawns 2 m ahead ignoring pitch");
+		ok(cerca(SharedObjectSpawnPosition(eye, glm::vec3(0.0f, 0.0f, 1.0f)), glm::vec3(1.0f, 4.0f, 1.2f)),
+			"session: looking straight up falls back to +Y");
+
+		ok(PhysicsSnapshotTick(1.5) == 1500u && PhysicsSnapshotTick(4294967.5) == 204u,
+			"session: snapshot tick is in milliseconds and wraps");
+		ok(PhysicsStateFlags(false, kSinDueno) == 0 && PhysicsStateFlags(true, kSinDueno) == 1 &&
+			PhysicsStateFlags(false, net::kHostPeerId) == 2 && PhysicsStateFlags(true, net::kHostPeerId) == 3,
+			"session: flags encode activity and ownership");
 	}
 
 	if (fallos == 0) std::cout << "NetJuegoTests OK\n";
