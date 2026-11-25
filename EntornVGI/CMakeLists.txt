@@ -66,7 +66,6 @@ set(ENTORNVGI_SOURCES
 	main.cpp
 	material.cpp
 	NetAvatar.cpp
-	NetJuego.cpp
 	objLoader.cpp
 	ObjMeshOptimization.cpp
 	OpenXRManager.cpp
@@ -225,6 +224,15 @@ add_library(EntornVGI_network_preferences STATIC Network/PreferenciasRed.cpp)
 target_include_directories(EntornVGI_network_preferences PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_features(EntornVGI_network_preferences PUBLIC cxx_std_20)
 
+add_library(EntornVGI_network_game STATIC NetJuego.cpp)
+target_include_directories(EntornVGI_network_game PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(EntornVGI_network_game PUBLIC
+	EntornVGI_network
+	${ENTORNVGI_GLM_TARGET}
+)
+target_compile_features(EntornVGI_network_game PUBLIC cxx_std_20)
+target_compile_definitions(EntornVGI_network_game PRIVATE GLM_ENABLE_EXPERIMENTAL)
+
 add_library(EntornVGI_editor_core STATIC
 	Editor/LimitesModelo.cpp
 	Editor/SelectorObjetos.cpp
@@ -252,6 +260,7 @@ target_link_libraries(EntornVGI PRIVATE
 	soil2
 	EntornVGI_bullet
 	EntornVGI_openxr
+	EntornVGI_network_game
 	EntornVGI_network
 	EntornVGI_scene_loader
 	EntornVGI_glb_model
@@ -302,6 +311,7 @@ foreach(target IN ITEMS
 	EntornVGI_physics
 	EntornVGI_grab_diagnostics
 	EntornVGI_network_preferences
+	EntornVGI_network_game
 )
 	entornvgi_enable_warnings(${target})
 endforeach()

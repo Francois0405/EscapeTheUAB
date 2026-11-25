@@ -296,15 +296,9 @@ add_test(NAME NetworkTests COMMAND NetworkTests)
 # transporte en memoria, sin ENet, sin OpenGL, sin Bullet y sin visor.
 add_executable(NetJuegoTests
 	NetJuegoTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/NetJuego.cpp
 )
 target_include_directories(NetJuegoTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
-target_link_libraries(NetJuegoTests PRIVATE EntornVGI_network)
-if(TARGET glm::glm)
-	target_link_libraries(NetJuegoTests PRIVATE glm::glm)
-else()
-	target_link_libraries(NetJuegoTests PRIVATE glm)
-endif()
+target_link_libraries(NetJuegoTests PRIVATE EntornVGI_network_game)
 target_compile_features(NetJuegoTests PRIVATE cxx_std_20)
 add_test(NAME NetJuegoTests COMMAND NetJuegoTests)
 
