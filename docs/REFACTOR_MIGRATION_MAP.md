@@ -2,14 +2,16 @@
 
 Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fechado el 2026-11-25. El contexto, los contratos, los no objetivos y las marcas de evidencia ([C], [H], [D], [P]) están en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Este documento no registra ninguna etapa como ejecutada.** Cada etapa se anota en §8 cuando tenga commit y resultados reales.
+**Estado a 2026-11-25: inventario y diseño completos; primer cambio de P2 en validación. Ninguna etapa está superada, tampoco P0.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
 
 ## 1. Estado de partida
 
-- El inicio de un refactor **provisional** está autorizado por el usuario.
-- La QA manual sigue **PENDIENTE** y el GO funcional también (ARCHITECTURE.md §2).
-- No se consolida en `master` mientras no haya GO funcional.
-- A la fecha, las ramas locales `refactor/project-architecture` e `itsCarlosDev/cmake-core-libraries-codex` apuntan a la misma base, sin commits propios [C]. Conviene coordinar antes de editar CMake o `main.cpp`.
+- **P0 no está superada.** La QA manual de gameplay sigue **PENDIENTE**, incluidos el agarre y lanzamiento de un objeto normal desde el cliente y la paridad visual entre host y cliente (ARCHITECTURE.md §2).
+- La autorización explícita del usuario del 2026-11-25 dispensa esa puerta **solo para iniciar un refactor provisional y aislado**. No permite declarar P0 superada, no es un GO funcional y no autoriza publicar en `master`.
+- El **GO funcional** sigue pendiente y no se consolida ni se publica en `master` mientras falte.
+- Primer cambio de P2, observado el 2026-11-25: en el worktree de `itsCarlosDev/cmake-core-libraries-codex`, sobre `62a7018`, hay un diff **sin commit** en `EntornVGI/CMakeLists.txt` y `tests/CMakeLists.txt` que define las bibliotecas estáticas `EntornVGI_scene_loader` y `EntornVGI_editor_core` [C]. Separa targets de CMake; no mueve ni extrae código fuente. Aquí no hay resultados de compilación ni de pruebas registrados para ese diff.
+- **P1 no tiene líneas base registradas.** La puerta de P2 compara contra ellas, así que P2 no puede darse por superada hasta fijarlas; la única referencia actual es el 21/21 histórico [D].
+- La rama local `refactor/project-architecture` sigue en la base, sin commits propios [C]. Conviene coordinar antes de editar CMake o `main.cpp`.
 
 ## 2. Reglas
 
@@ -52,7 +54,7 @@ macOS, Linux y VR se declaran **no validados** mientras no se ejecuten en esas p
 
 | Etapa | Cambio | Puerta de salida adicional |
 |---|---|---|
-| **P0. Gate** | Registrar la autorización provisional. La QA manual (agarre y lanzamiento de objeto normal y de Hirity en host y cliente, con `request → accepted → holding` y registros) queda abierta y bloquea el GO funcional | Autorización registrada en ARCHITECTURE.md §2 |
+| **P0. Gate** | QA manual de gameplay: agarre y lanzamiento de un objeto normal y de Hirity en host y cliente, con `request → accepted → holding` y registros; paridad visual host/cliente; reanudación de Hirity al soltarlo | QA superada con evidencia. **PENDIENTE**. La dispensa del 2026-11-25 (§1) solo permite iniciar el trabajo provisional; registrar la autorización no supera la puerta |
 | **P1. Línea base** | Sin cambios de código: avisos de compilación, CTest, capturas 1080p/4K, identidad `ET2-…` de cada escena, bytes de referencia de los paquetes, un JSON guardado por el editor | Referencias archivadas y comparables |
 | **P2. Bibliotecas sin mover ficheros** | Primera migración real (§6) | Mismas pruebas registradas y mismo resultado que en P1 |
 | **P3. Red de seguridad** | Extraer **sin cambiar** a funciones con parámetros explícitos la autoridad de agarre, la aplicación de réplicas, `identificadorEscenaRed` y la máquina de Hirity; añadir pruebas de caracterización y de enlace de shaders | Pruebas nuevas en verde antes y después de cada extracción |
@@ -147,4 +149,6 @@ Los nombres son orientativos. Conviene un commit por biblioteca, empezando por l
 
 | Etapa | Commit | Resultados | Pendiente |
 |---|---|---|---|
-| (sin etapas registradas) | | | |
+| P0 | Sin commit de superación | **No superada.** Dispensada solo para iniciar el refactor provisional y aislado | Agarre y lanzamiento de objeto normal desde el cliente, paridad visual host/cliente, reanudación de Hirity y el resto de la QA de ARCHITECTURE.md §2 |
+| P1 | Sin commit | Sin líneas base registradas | Todas las referencias de §5 |
+| P2 | Sin commit | Primer cambio en validación (§1); sin resultados registrados | Commit, validación y puerta de §6.3 |
