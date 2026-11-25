@@ -4244,8 +4244,6 @@ void OnArxiuObrirSkybox()
 */
 }
 
-/* --------------------------------------------------------------------------------- */
-/*					4. CÀMERA: Esfèrica (Mobil, Zoom, ZoomO, Satelit), Navega, Geode */
 static LegacyVgiViewControls& controlesVistaVgi()
 {
 	static LegacyVgiViewControls controles{

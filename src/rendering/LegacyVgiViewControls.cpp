@@ -7,6 +7,8 @@
 #include "src/scene/SceneLoader.h"
 
 /* --------------------------------------------------------------------------------- */
+/*`t`t`t`t4. CÀMERA: Esfèrica (Mobil, Zoom, ZoomO, Satelit), Navega, Geode */
+/* --------------------------------------------------------------------------------- */
 // CÀMERA: Mode Esfèrica (Càmera esfèrica en polars-opció booleana)
 void LegacyVgiViewControls::OnCameraEsferica()
 {
