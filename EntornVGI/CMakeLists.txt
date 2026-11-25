@@ -62,7 +62,7 @@ add_subdirectory("${REPO_ROOT}/third_party/SOIL2" "${CMAKE_BINARY_DIR}/third_par
 
 option(ENTORNVGI_ENABLE_NETWORK "Compilar la capa de red (ENet opcional)" ON)
 option(ENTORNVGI_REQUIRE_ENET "Fallar la configuracion si ENet no esta disponible" OFF)
-add_subdirectory(Network)
+add_subdirectory("${REPO_ROOT}/src/networking/transport" "${CMAKE_BINARY_DIR}/EntornVGI/networking/transport")
 
 set(ENTORNVGI_SOURCES
 	AudioManager.cpp

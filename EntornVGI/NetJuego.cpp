@@ -1,5 +1,5 @@
 #include "NetJuego.h"
-#include "Network/ENetTransport.h"
+#include "networking/transport/ENetTransport.h"
 
 #include <cstdio>
 

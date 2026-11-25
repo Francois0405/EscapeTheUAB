@@ -2,8 +2,8 @@
 // Prueba con ENet REAL por 127.0.0.1: host + cliente, handshake, pose y evento fiable, y un
 // cliente apuntando a un puerto sin host (debe acabar en Disconnected, sin colgarse).
 // Solo se compila si CMake encontro ENet (ver tests/CMakeLists.txt).
-#include "Network/ENetTransport.h"
-#include "Network/NetService.h"
+#include "networking/transport/ENetTransport.h"
+#include "networking/transport/NetService.h"
 
 #include <chrono>
 #include <iostream>

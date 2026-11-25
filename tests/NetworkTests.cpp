@@ -1,7 +1,7 @@
 // NetworkTests.cpp
 // Pruebas de serializacion, validacion, handshake, secuencias, desconexion y recuperacion del
 // modulo de red. Usan un transporte en memoria: no abren sockets ni requieren ENet/OpenGL/Bullet.
-#include "Network/NetService.h"
+#include "networking/transport/NetService.h"
 
 #include <chrono>
 #include <cmath>

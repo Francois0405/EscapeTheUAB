@@ -13,7 +13,7 @@
 #pragma once
 
 #include "NetJuegoLogica.h"
-#include "Network/NetService.h"
+#include "networking/transport/NetService.h"
 
 #include <atomic>
 #include <functional>

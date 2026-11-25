@@ -13,8 +13,8 @@
 // -----------------------------------------------------------------------------
 #pragma once
 
-#include "Network/NetProtocol.h"
-#include "Network/NetSession.h"
+#include "networking/transport/NetProtocol.h"
+#include "networking/transport/NetSession.h"
 #include "VistaVR.h"
 
 #include <glm/glm.hpp>

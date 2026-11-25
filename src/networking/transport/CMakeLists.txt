@@ -45,7 +45,7 @@ add_library(EntornVGI_network STATIC
 	NetService.cpp
 	ENetTransport.cpp
 )
-target_include_directories(EntornVGI_network PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/..")
+target_include_directories(EntornVGI_network PUBLIC "${REPO_ROOT}/src" "${REPO_ROOT}/EntornVGI")
 target_compile_features(EntornVGI_network PUBLIC cxx_std_20)
 find_package(Threads REQUIRED)
 target_link_libraries(EntornVGI_network PUBLIC Threads::Threads)
