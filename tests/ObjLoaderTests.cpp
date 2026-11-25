@@ -873,7 +873,10 @@ int main()
             assets / "lab/counter_counter_sink/counter_counter_sink.obj",
             assets / "lab/cabinet_cabinet/cabinet_cabinet.obj",
             assets / "lab/machine_hot_plate/machine_hot_plate.obj",
-		    assets / "lab/clue_botanical_frame.obj"
+		    assets / "lab/clue_botanical_frame.obj",
+            assets / "../Marc/armariLab.obj",
+            assets / "../Marc/monstruoVentana.obj",
+            assets / "../Marc/windowCreepy.obj"
         };
         std::ifstream sueloSimple(assets / "arquitectura/suelo_base.obj");
         int triangulosSuelo = 0;
