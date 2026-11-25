@@ -23,6 +23,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
 #include <deque>
 #include <map>
@@ -321,6 +322,25 @@ namespace netjuego
 		return a.id == b.id && a.posicion == b.posicion && a.rotacion == b.rotacion && a.escala == b.escala &&
 			a.colisionPresente == b.colisionPresente && a.tipoColision == b.tipoColision &&
 			a.mitadTamano == b.mitadTamano && a.desplazamiento == b.desplazamiento && a.masa == b.masa;
+	}
+
+	inline std::string SceneNetworkFingerprint(const std::string& sceneName, const std::vector<EstadoObjetoEscena>& sceneState)
+	{
+		// El saludo ENet solo admite 64 bytes. Un fingerprint compacto del nombre de
+		// escena y del conjunto de IDs persistentes detecta JSON incompatibles al entrar.
+		uint32_t hash = 2166136261u;
+		auto mix = [&hash](uint8_t byte) { hash = (hash ^ byte) * 16777619u; };
+		for (unsigned char c : sceneName) mix(c);
+		std::vector<uint32_t> ids;
+		ids.reserve(sceneState.size());
+		for (const auto& object : sceneState) ids.push_back(object.id);
+		std::sort(ids.begin(), ids.end());
+		for (uint32_t id : ids)
+			for (unsigned int shift = 0; shift < 32; shift += 8)
+				mix(static_cast<uint8_t>((id >> shift) & 0xFFu));
+		char result[16];
+		std::snprintf(result, sizeof(result), "ET2-%08X", hash);
+		return result;
 	}
 
 	inline std::vector<uint8_t> CodificarEstadoObjetoEscena(const EstadoObjetoEscena& e)

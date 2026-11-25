@@ -1223,25 +1223,6 @@ namespace
 		return netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(id, objetosEscena, indice);
 	}
 
-	std::string identificadorEscenaRed(const std::string& nombre, const std::vector<netjuego::EstadoObjetoEscena>& estado)
-	{
-		// El saludo ENet solo admite 64 bytes. Un fingerprint compacto del nombre de
-		// escena y del conjunto de IDs persistentes detecta JSON incompatibles al entrar.
-		uint32_t hash = 2166136261u;
-		auto mezclar = [&hash](uint8_t byte) { hash = (hash ^ byte) * 16777619u; };
-		for (unsigned char c : nombre) mezclar(c);
-		std::vector<uint32_t> ids;
-		ids.reserve(estado.size());
-		for (const auto& objeto : estado) ids.push_back(objeto.id);
-		std::sort(ids.begin(), ids.end());
-		for (uint32_t id : ids)
-			for (unsigned int desplazamiento = 0; desplazamiento < 32; desplazamiento += 8)
-				mezclar(static_cast<uint8_t>((id >> desplazamiento) & 0xFFu));
-		char resultado[16];
-		std::snprintf(resultado, sizeof(resultado), "ET2-%08X", hash);
-		return resultado;
-	}
-
 	bool aplicarEstadosEscenaRed(const std::vector<netjuego::EstadoObjetoEscena>& estados)
 	{
 		std::vector<std::pair<std::size_t, const netjuego::EstadoObjetoEscena*>> aplicaciones;
@@ -1303,7 +1284,7 @@ namespace
 			std::cerr << "Red: la escena tiene IDs duplicados o propiedades no validas; no se inicia la sesion.\n";
 			return;
 		}
-		const std::string escena = identificadorEscenaRed(nombreEscena, estadoEscena);
+		const std::string escena = netjuego::SceneNetworkFingerprint(nombreEscena, estadoEscena);
 		const glm::vec3 ojos(static_cast<float>(opvN.x), static_cast<float>(opvN.y), static_cast<float>(opvN.z));
 		glm::vec3 frente(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), 0.0f);
 		frente = glm::length(frente) > 1e-4f ? glm::normalize(frente) : glm::vec3(0.0f, 1.0f, 0.0f);

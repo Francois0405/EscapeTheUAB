@@ -300,7 +300,10 @@ add_executable(NetJuegoTests
 	NetJuegoTests.cpp
 )
 target_include_directories(NetJuegoTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
-target_link_libraries(NetJuegoTests PRIVATE EntornVGI_network_game)
+target_link_libraries(NetJuegoTests PRIVATE EntornVGI_network_game EntornVGI_scene_loader)
+target_compile_definitions(NetJuegoTests PRIVATE
+	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/EntornVGI/assets"
+)
 target_compile_features(NetJuegoTests PRIVATE cxx_std_20)
 add_test(NAME NetJuegoTests COMMAND NetJuegoTests)
 

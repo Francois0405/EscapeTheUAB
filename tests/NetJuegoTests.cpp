@@ -10,6 +10,8 @@
 
 #include <chrono>
 #include <cmath>
+#include <filesystem>
+#include <initializer_list>
 #include <iostream>
 #include <memory>
 #include <thread>
@@ -854,6 +856,48 @@ int main()
 		ok(Esperar(v, [&] { return c->red->ObtenerDiagnostico().fase == FaseRed::Error; }), "escena distinta: el cliente queda en error");
 		ok(c->red->ObtenerDiagnostico().mensaje.find("escena") != std::string::npos, "el mensaje explica el rechazo");
 		host->red->Detener();
+	}
+
+	// ---------------- scene network fingerprint (ET2) ----------------
+	{
+		const auto stateWithIds = [](std::initializer_list<uint32_t> ids) {
+			std::vector<EstadoObjetoEscena> state;
+			for (uint32_t id : ids) { EstadoObjetoEscena object; object.id = id; state.push_back(object); }
+			return state;
+		};
+		const auto state = stateWithIds({ 0x9ABCDEF0u, 0x12345678u, 0xCAFEBABEu, 0x01020304u });
+		const std::string fingerprint = SceneNetworkFingerprint("aula", state);
+
+		// Golden values produced by the pre-extraction function body (main.cpp at 9e13716).
+		ok(fingerprint == "ET2-10187028", "fingerprint: golden value for unsorted multi-byte IDs");
+		ok(SceneNetworkFingerprint("", {}) == "ET2-811C9DC5", "fingerprint: empty name and no IDs is the FNV-1a seed");
+
+		ok(SceneNetworkFingerprint("aula", stateWithIds({ 0x01020304u, 0x12345678u, 0x9ABCDEF0u, 0xCAFEBABEu })) == fingerprint,
+			"fingerprint: object order does not matter");
+		ok(SceneNetworkFingerprint("aulb", state) != fingerprint, "fingerprint: scene name matters");
+		ok(SceneNetworkFingerprint("aula", stateWithIds({ 0x9ABCDEF0u, 0x12345678u, 0xCAFEBABEu, 0x01020304u, 0x0BADF00Du })) != fingerprint,
+			"fingerprint: adding an ID changes it");
+		ok(SceneNetworkFingerprint("aula", stateWithIds({ 0x9ABCDEF0u, 0x12345678u, 0xCAFEBABEu })) != fingerprint,
+			"fingerprint: removing an ID changes it");
+
+		const std::string unnamed = SceneNetworkFingerprint("", state);
+		ok(unnamed != fingerprint, "fingerprint: empty name differs from a named scene");
+		for (const std::string& value : { fingerprint, unnamed })
+			ok(value.size() == 12 && value.size() <= net::kMaxSceneIdLength && value.rfind("ET2-", 0) == 0 &&
+				value.find_first_not_of("0123456789ABCDEF", 4) == std::string::npos,
+				"fingerprint: ET2- prefix, 8 uppercase hex digits, fits the handshake");
+
+		// Same inputs the game uses: file stem as name, captured architecture and objects (no animated).
+		const std::filesystem::path scenePath =
+			std::filesystem::path(ENTORNVGI_SOURCE_ASSETS_DIR) / "scenes" / "aula_informatica_calibrada.json";
+		DatosEscena sceneData;
+		std::string error;
+		std::vector<EstadoObjetoEscena> sceneState;
+		const bool captured = CargarDatosEscenaJSON(scenePath, sceneData, error) &&
+			scene_network_state::CaptureSceneNetworkStates(sceneData.objetos, sceneState);
+		ok(captured, "fingerprint: calibrated scene loads and captures");
+		ok(captured && SceneNetworkFingerprint(scenePath.stem().string(), sceneState) == "ET2-876E0A88",
+			"fingerprint: golden value for the calibrated scene");
 	}
 
 	if (fallos == 0) std::cout << "NetJuegoTests OK\n";
