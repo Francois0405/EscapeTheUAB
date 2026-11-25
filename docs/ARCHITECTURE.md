@@ -2,6 +2,8 @@
 
 Documento inicial. Describe la arquitectura **actual** y propone una dirección. La arquitectura propuesta **todavía no existe** en el código. El plan por etapas está en [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md) y el árbol destino con sus lotes de movimiento en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md).
 
+> **Estado posterior (2026-11-25).** El inventario de abajo describe `62a7018`. La estructura actual, ya sin `EntornVGI/`, está en el README y en la sección 30 de [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md).
+
 ## 0. Base, método y evidencia
 
 | Dato | Valor |

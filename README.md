@@ -113,24 +113,31 @@ OpenGL está deprecado por Apple: el soporte macOS requiere validación real.
 ## Estructura del proyecto
 
 ```text
-CMakeLists.txt                Compilación común
-CMakePresets.json             Presets para Windows, Linux y macOS
-vcpkg.json                    Dependencias Windows/macOS
-run-windows.cmd/.ps1          Lanzador Windows: MSVC + CMake + ejecutar
-run-linux.sh                  Lanzador Linux
-run-macos.sh                  Lanzador macOS
-EntornVGI/main.cpp            Entrada, renderizado y controles
-EntornVGI/SceneLoader.*       Lectura de escenas JSON
-EntornVGI/objLoader.*         Importador OBJ/MTL del profesor
-assets/models/     Modelos y materiales
-assets/scenes/     Escenas JSON
-assets/shaders/           Shaders GLSL
-third_party/imgui/            Dear ImGui
-third_party/SOIL2/           Carga de texturas
-third_party/nativefiledialog/ Backend GTK3 para Linux
-lib/                          Bibliotecas Windows heredadas
-build/<preset>/bin/           Ejecutables generados por CMake
+CMakeLists.txt, CMakePresets.json, vcpkg.json   Compilacion y dependencias
+run-windows.cmd/.ps1, run-linux.sh, run-macos.sh  Lanzadores oficiales
+src/CMakeLists.txt        Target del juego y bibliotecas internas
+src/app/                  main.cpp (composicion), ciclo de vida (Application, MainLoop, Shutdown),
+                          estado compartido (AppState), entrada (input/) y enlaces con modulos (adapters/)
+src/legacy_vgi/           Entorno academico VGI: estado, menus, ventana principal y teclado heredados
+src/rendering/            Render, iluminacion, shaders en CPU, GLB, framebuffer PS1
+src/scene/                Carga y aplicacion de escenas JSON y OBJ
+src/physics/              Mundo y escena Bullet
+src/animation/            Animaciones GLB y puertas
+src/gameplay/             player/, interaction/, hirity/
+src/networking/           transport/, replication/, session/, preferences/
+src/editor/  src/ui/  src/audio/  src/vr/  src/diagnostics/  src/platform/
+assets/                   Modelos, escenas, shaders, texturas, audio y UI
+tests/                    Pruebas CTest
+tools/                    Utilidades de assets (se ejecutan desde la raiz)
+visualstudio/             Proyecto Visual Studio heredado (abierto desde EntornVGI.slnx)
+third_party/              Dependencias de terceros
+archive/legacy/           Ficheros sin uso, pendientes de decision del equipo
+build/<preset>/bin/       Ejecutables generados (EntornVGI)
 ```
+
+El estado de juego compartido sigue siendo global: se declara en `src/app/AppState.h` y
+`src/legacy_vgi/LegacyVgiState.h`. Los modulos de `gameplay/`, `scene/` y `networking/session/`
+no lo incluyen y lo reciben por contextos que se construyen en `src/app/adapters/`.
 
 Los recursos bajo `assets/` (modelos, escenas, shaders, texturas, audio y UI)
 se sincronizan junto al ejecutable en cada build. CMake registra cada archivo como entrada y usa
@@ -219,7 +226,7 @@ Estado de esta revisión (5 de noviembre de 2026):
   No se declara validada la carga gráfica del teléfono.
 - No se implementaron Bullet Physics ni OpenXR.
 
-`ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
+`archive/legacy/ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
 no estaba incluido en el proyecto original. `SceneLoader` y el cargador propio
 OBJ/MTL son la ruta actualmente utilizada. El repositorio ignora salidas CMake,
 artefactos temporales, ImGui y archivos generados. Las rutas de assets y las

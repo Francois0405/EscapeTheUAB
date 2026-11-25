@@ -68,7 +68,7 @@ Una pared paramétrica necesita collider estático centrado en el cubo base de l
 
 ## Cálculo de los sólidos alrededor del hueco
 
-`GenerarSeccionesPared` recibe las semidimensiones locales de la pared y sus aperturas. Para cada hueco comprueba valores finitos y positivos, que no invada un margen de esquina de 10 cm, que no llegue al techo y que no solape otro hueco. Ordena aperturas por `centerU`.
+`GenerateWallSections` recibe las semidimensiones locales de la pared y sus aperturas. Para cada hueco comprueba valores finitos y positivos, que no invada un margen de esquina de 10 cm, que no llegue al techo y que no solape otro hueco. Ordena aperturas por `centerU`.
 
 Para una pared de 6 m de ancho, 30 cm de grosor y 3 m de alto:
 
@@ -89,7 +89,7 @@ Las cajas laterales definen las jambas y el dintel define el borde superior del 
 
 ## Colliders Bullet
 
-`EscenaFisica::Crear` usa la misma lista calculada por `GenerarSeccionesPared` para sustituir el collider de caja completa por un collider estático por segmento. Cada centro local se transforma con la rotación de la pared y cada media dimensión se entrega a `MundoFisico::CrearCaja`.
+`PhysicsScene::CreatePlayback` usa la misma lista calculada por `GenerateWallSections` para sustituir el collider de caja completa por un collider estático por segmento. Cada centro local se transforma con la rotación de la pared y cada media dimensión se entrega a `PhysicsWorld::CreateBox`.
 
 Esto mantiene una colisión por paño sólido, en lugar de una colisión que tape el hueco. Los colliders de marco y hoja del GLB se crean además desde sus nodos definidos en JSON. La hoja conserva su collider cinemático y se sincroniza con la animación; el hueco de pared no depende del estado abierto/cerrado de la hoja.
 
@@ -110,7 +110,7 @@ La validación del editor permite que una puerta asociada coexista con la pared 
 
 ## Undo/Redo y Save
 
-Las operaciones estructurales registran una instantánea del estado previo de la escena en el historial de `EditorEscenas`. Una operación válida de instalación o eliminación modifica puerta y pared como una sola acción de usuario; un rechazo no registra historial ni deja media apertura. Undo/Redo restaura los datos y la sincronización física se solicita de nuevo.
+Las operaciones estructurales registran una instantánea del estado previo de la escena en el historial de `SceneEditor`. Una operación válida de instalación o eliminación modifica puerta y pared como una sola acción de usuario; un rechazo no registra historial ni deja media apertura. Undo/Redo restaura los datos y la sincronización física se solicita de nuevo.
 
 El serializador conserva campos desconocidos de las instancias existentes y escribe `wall.apertures` dentro del objeto de pared. Para puertas existentes actualiza posición, rotación, escala y asociación; para instancias nuevas escribe rutas relativas al directorio de escena. Save y el cargador verifican que las asociaciones sigan apuntando al mismo hueco.
 
@@ -132,12 +132,12 @@ El repositorio consultado no declara licencia SPDX en sus metadatos de GitHub y 
 
 ## Archivos de EscapeTheUAB para estudiar
 
-- `EntornVGI/SceneLoader.h`: estructuras `ScenePared`, `SceneAperturaPared`, `SceneSeccionPared` y datos de asociación de la puerta.
-- `EntornVGI/SceneLoader.cpp`: `GenerarSeccionesPared` y lectura/validación de `wall.apertures`, `wallId` y `openingId`.
-- `EntornVGI/main.cpp`: renderizado de cada tramo generado con el material de la instancia.
-- `EntornVGI/EscenaFisica.cpp`: reemplazo del collider completo por cajas Bullet de los tramos.
-- `EntornVGI/Editor/EditorEscenas.cpp`: `CajasDeObjeto`, `ValidarAnimado`, `InstalarPuertaEnPared`, sincronización, duplicación y eliminación.
-- `EntornVGI/Editor/SerializadorEscenas.cpp`: persistencia de aperturas, asociaciones y puertas nuevas.
+- `src/scene/SceneLoader.h`: estructuras `SceneWall`, `SceneWallOpening`, `SceneWallSection` y datos de asociación de la puerta.
+- `src/scene/SceneLoader.cpp`: `GenerateWallSections` y lectura/validación de `wall.apertures`, `wallId` y `openingId`.
+- `src/app/`: renderizado de cada tramo generado con el material de la instancia.
+- `src/physics/PhysicsScene.cpp`: reemplazo del collider completo por cajas Bullet de los tramos.
+- `src/editor/SceneEditor.cpp`: `BoxesOfObject`, `ValidateAnimated`, `InstallDoorInWall`, sincronización, duplicación y eliminación.
+- `src/editor/SceneSerializer.cpp`: persistencia de aperturas, asociaciones y puertas nuevas.
 - `tests/SceneLoaderTests.cpp`: límites y validación de las aperturas.
 - `tests/EditorPersistenceTests.cpp`: Save/Reload y apertura que se conserva sin puerta.
 - `tests/PhysicsTests.cpp`: colisión en vano con puerta cerrada/abierta y reconstrucción de colliders.

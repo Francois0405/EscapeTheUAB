@@ -63,4 +63,4 @@ El estado actual de la replicación de edición y sus límites está en [`MULTIP
 * VR en red no se valida en esta guía; las pruebas de transporte no sustituyen a una prueba con visor OpenXR.
 * `EntornVGI.vcxproj`/`.filters` **no** se actualizan: ya estan desfasados (no listan `AudioManager.cpp`, no enlazan
   Bullet ni vcpkg; usan libs sueltas como `glfw3.lib`), asi que no compilan el juego actual. La ruta soportada es
-  CMake (README); las fuentes nuevas (`NetJuego.cpp`, `NetAvatar.cpp`, `Network/*`) estan solo en CMake.
+  CMake (README); las fuentes nuevas (`src/networking/replication/NetGame.cpp`, `NetAvatar.cpp`, `Network/*`) estan solo en CMake.

@@ -14,9 +14,9 @@ Los cuerpos dinámicos despiertos o agarrados se transmiten en `DynamicSnapshot`
 
 Pose, física y eventos tienen canales ENet independientes. Así, un snapshot físico secuenciado no puede desplazar un snapshot de avatares. El orden solo se garantiza dentro de cada canal; los ticks de entidad y la comprobación de antigüedad del estado final resuelven el cruce entre el canal fiable y el canal dinámico no fiable.
 
-Las funciones `TomarEstadosEscena()` y `TomarEstadosFisicosFiables()` consumen las colas: limpian el vector de salida reutilizado y lo intercambian con la cola interna. Así, una salida de la iteración anterior no vuelve a la cola ni se entrega dos veces. Los bucles de prueba esperan el evento concreto en vez de asumir que una pausa fija basta para que llegue.
+Las funciones `TakeSceneStates()` y `TakeReliablePhysicsStates()` consumen las colas: limpian el vector de salida reutilizado y lo intercambian con la cola interna. Así, una salida de la iteración anterior no vuelve a la cola ni se entrega dos veces. Los bucles de prueba esperan el evento concreto en vez de asumir que una pausa fija basta para que llegue.
 
-Los cuerpos dinámicos de escena que se replican hoy son OBJ configurados como dinámicos en el JSON. Los GLB animados actuales se sincronizan como puertas mediante su sistema de eventos y colisionadores; no hay GLB agarrables en el flujo `EscenaFisica::dinamicos`. Agregar un GLB físico jugable requiere integrarlo deliberadamente en ese registro, no solo asignarle una malla GLB.
+Los cuerpos dinámicos de escena que se replican hoy son OBJ configurados como dinámicos en el JSON. Los GLB animados actuales se sincronizan como puertas mediante su sistema de eventos y colisionadores; no hay GLB agarrables en el flujo `PhysicsScene::dinamicos`. Agregar un GLB físico jugable requiere integrarlo deliberadamente en ese registro, no solo asignarle una malla GLB.
 
 ## Comparación técnica de referencias
 
@@ -24,7 +24,7 @@ Los cuerpos dinámicos de escena que se replican hoy son OBJ configurados como d
 |---|---|---|
 | [Oculus Networked Physics Sample](https://github.com/fbsamples/oculus-networked-physics-sample) | Interacción VR, autoridad/propiedad por objeto y estado físico remoto; muestra de Unity/Rift archivada. | Reutilizamos la separación entre eventos de agarre/liberación y estado continuo, además de representar el objeto remoto con una sola autoridad. No se copia su stack Unity ni su topología de autoridad distribuida. |
 | [valverl/NetworkedPhysics](https://github.com/valverl/NetworkedPhysics) | Implementación de referencia de la serie Network Physics de Glenn Fiedler. | Sirve como contraste de buffering, orden y autoridad. Conservamos ENet, host autoritativo y el protocolo existente; no añadimos una dependencia ni una capa genérica nueva. |
-| [Bullet Physics](https://github.com/bulletphysics/bullet3) | Para mover un objeto cinemático se actualizan sus transforms del rigid body y motion state y se refresca el AABB del broadphase. | `FijarPoseCinematica` actualiza world/interpolation transforms y motion state, y llama `updateSingleAabb`. El cliente usa el mismo collider como representación visible; evita cuerpos duplicados y reconstrucciones por snapshot. |
+| [Bullet Physics](https://github.com/bulletphysics/bullet3) | Para mover un objeto cinemático se actualizan sus transforms del rigid body y motion state y se refresca el AABB del broadphase. | `SetKinematicPose` actualiza world/interpolation transforms y motion state, y llama `updateSingleAabb`. El cliente usa el mismo collider como representación visible; evita cuerpos duplicados y reconstrucciones por snapshot. |
 | [Snapshot Interpolation](https://www.gafferongames.com/post/snapshot_interpolation/) | Buffer de snapshots retrasados, secuencia para descartar datos antiguos y reconstrucción interpolada; extrapolar cuerpos con colisiones puede divergir. | Buffer de ocho muestras, ticks por entidad, 120 ms, mezcla de posición y slerp. Se eliminó extrapolación porque este juego depende de choques y rebotes; se prefiere una pausa breve ante pérdida a atravesar paredes. |
 | [Networked Physics in VR](https://www.gafferongames.com/post/networked_physics_in_virtual_reality/) | Estado de propiedad para arbitrar agarres, estado físico suficiente para reconstrucción remota y poses de manos para interacción VR. | El host arbitra agarres PC/VR con IDs de peer, y reutiliza las poses de cabeza/manos ya transmitidas. El cliente pide la acción; el host decide, simula y replica. No se transmiten matrices de huesos ni se adopta transferencia de autoridad por objeto, que añadiría conflictos y reconciliación innecesarios aquí. |
 
@@ -52,7 +52,7 @@ Al entrar un peer, el host manda de forma fiable el estado de configuración de 
 ## Añadir un objeto físico replicable
 
 1. Declarar un ID JSON único y persistente. Evitar nombres visibles repetibles.
-2. Configurar una caja física dinámica válida y confirmar que el objeto entra en `EscenaFisica::dinamicos`.
+2. Configurar una caja física dinámica válida y confirmar que el objeto entra en `PhysicsScene::dinamicos`.
 3. Mantener al host como único simulador y aplicar en el cliente el cuerpo cinemático correspondiente.
 4. Si agrega propiedades compartidas, codificarlas y validarlas en los eventos fiables de escena, sin poner selección/editor/cámara en el protocolo.
 5. Añadir pruebas de serialización, rechazo de IDs inválidos, actualización Bullet, agarre/liberación, estado final y conexión tardía.

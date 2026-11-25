@@ -4,7 +4,7 @@ Idea: **se diseña en Blender, se exporta a `.glb` y el juego reproduce lo que t
 No se escriben keyframes en C++.
 
 ```
-Blender (.blend)  --exportar_glb.py-->  assets/animations/Objeto.glb  --ModeloGLB.cpp-->  juego
+Blender (.blend)  --exportar_glb.py-->  assets/animations/Objeto.glb  --src/rendering/GlbModel.cpp-->  game
 ```
 
 ## Cómo se reproduce (resumen del código)
@@ -12,15 +12,15 @@ Blender (.blend)  --exportar_glb.py-->  assets/animations/Objeto.glb  --ModeloGL
 | Archivo | Para qué sirve |
 |---|---|
 | `third_party/cgltf/cgltf.h` | Biblioteca que lee el `.glb` (MIT, sin modificar). |
-| `EntornVGI/AnimacionGLB.h` | Matemática de keyframes: interpolación (`glm::mix` / `glm::slerp`) y `ReproductorAnimacion`. |
-| `EntornVGI/ModeloGLB.h/.cpp` | Carga el `.glb` (nodos, mallas, animaciones), aplica la pose de un instante y calcula `mundo(hijo) = mundo(padre) * local(hijo)`. |
-| `EntornVGI/ObjetosAnimadosGLB.h/.cpp` | Lista de instancias: cada una con su posición, su pose y su reloj; los modelos se comparten. |
-| `EntornVGI/DibujoGLB.h/.cpp` | Sube las mallas a OpenGL y las dibuja con el shader de la escena. |
+| `src/animation/GlbAnimation.h` | Matemática de keyframes: interpolación (`glm::mix` / `glm::slerp`) y `AnimationPlayer`. |
+| `src/rendering/GlbModel.h/.cpp` | Carga el `.glb` (nodos, mallas, animaciones), aplica la pose de un instante y calcula `mundo(hijo) = mundo(padre) * local(hijo)`. |
+| `src/animation/GlbAnimatedObjects.h/.cpp` | Lista de instancias: cada una con su posición, su pose y su reloj; los modelos se comparten. |
+| `src/rendering/GlbDrawing.h/.cpp` | Sube las mallas a OpenGL y las dibuja con el shader de la escena. |
 | `tests/GlbTests.cpp` | Pruebas: keyframes, interpolación, jerarquía, pivote y carga (`ctest`). |
 | `tools/exportar_glb.py` | Exporta desde Blender con los ajustes correctos. |
 
-Función que actualiza los keyframes: `glb::AplicarAnimacion(pose, animacion, tiempo)`.
-Función que avanza el tiempo de todas las instancias: `glb::ActualizarObjetos(escena, delta)`.
+Función que actualiza los keyframes: `glb::ApplyAnimation(pose, animation, tiempo)`.
+Función que avanza el tiempo de todas las instancias: `glb::UpdateAnimatedObjects(escena, delta)`.
 
 ## Receta para un cajón
 
@@ -68,14 +68,14 @@ habitación (ver `docs/FISICAS_BULLET.md`). Añadir uno es **un bloque JSON**, s
 - Si dos instancias usan el mismo `.glb` (dos puertas), el archivo se carga **una sola vez**, pero cada
   instancia tiene su propia pose y su propio reloj: se abren de forma independiente.
 - Con **F1** aparece un botón "Abrir" por cada instancia (solo para probar).
-- No hay que tocar `main.cpp`, `ModeloGLB`, `AnimacionGLB`, `DibujoGLB` ni `ObjetosAnimadosGLB`.
+- No hay que tocar `main.cpp`, `GlbModel`, `GlbAnimation`, `DibujoGLB` ni `ObjetosAnimadosGLB`.
 
 ## Abrir y cerrar con E
 
-Cada instancia tiene un estado (`glb::EstadoPuerta`) y se mueve con su propio reloj:
+Cada instancia tiene un estado (`glb::DoorState`) y se mueve con su propio reloj:
 
 ```
-Cerrada --E--> Abriendo --(llega al final)--> Abierta --E--> Cerrando --(llega al principio)--> Cerrada
+Cerrada --E--> Abriendo --(llega al final)--> IsOpen --E--> Cerrando --(llega al principio)--> Cerrada
 ```
 
 - **Convención al diseñar en Blender:** el PRIMER fotograma de la animación es la puerta CERRADA y el
@@ -85,11 +85,11 @@ Cerrada --E--> Abriendo --(llega al final)--> Abierta --E--> Cerrando --(llega a
 - **Qué puerta se activa:** la que está a menos de 2 m (`RADIO_INTERACCION`) y delante de la mirada
   (a menos de unos 45 grados, `COSENO_MINIMO_INTERACCION`). Si hay varias, gana la más centrada en
   la mirada y solo se activa esa.
-- **No depende de la cámara:** `InteractuarConObjeto(escena, posicion, direccion)` solo recibe una
+- **No depende de la cámara:** `InteractWithObject(escena, posicion, direccion)` solo recibe una
   posición y una dirección del mundo. En `main.cpp`, `interactuarConPuertaDelJugador()` es el único
   sitio que las saca de la cámara FPS; con VR se llamaría con las del mando.
 - **E se ignora** si el juego está en pausa, la ventana no tiene el foco o se escribe en un cuadro de
-  texto de ImGui (`PuedeInteractuar`).
+  texto de ImGui (`CanInteract`).
 - Con **F1** siguen los botones de depuración: "Abrir" reinicia la apertura y "Alternar" hace lo mismo
   que E sobre esa puerta.
 
@@ -97,7 +97,7 @@ Cerrada --E--> Abriendo --(llega al final)--> Abierta --E--> Cerrando --(llega a
 
 - Blender y nuestro juego: **Z arriba**, metros.
 - glTF estándar: **Y arriba**. Blender convierte al exportar: `(x, y, z)` pasa a `(x, z, -y)`.
-- El juego deshace el cambio con **una** matriz, `glb::MatrizYArribaAZArriba()` (giro de +90° en X):
+- El juego deshace el cambio con **una** matriz, `glb::YUpToZUpMatrix()` (giro de +90° en X):
   `(X, Y, Z)` pasa a `(X, -Z, Y)`. Se aplica una vez al dibujar, no a cada nodo.
 - `matrizBase` es la posición y orientación del modelo dentro de la habitación (ya en Z arriba).
 
@@ -105,7 +105,7 @@ Cerrada --E--> Abriendo --(llega al final)--> Abierta --E--> Cerrando --(llega a
 
 Se admiten posición, rotación y escala animadas con interpolación lineal o escalón. No hay
 esqueletos, *morph targets*, cámaras ni luces animadas, ni texturas (solo el color base del material).
-Si un `.glb` trae algo de esto, `ModeloGLB::avisos` lo indica en la consola.
+Si un `.glb` trae algo de esto, `GlbModel::avisos` lo indica en la consola.
 
 ## Ejercicio: tu primer cajón
 

@@ -405,3 +405,45 @@ El commit central `4dcda84` (cherry-pick del origen Codex `42b5b9a`, padre `959b
 El commit `a97ea96` (padre `4dcda84`, Claude Sonnet 5.5) extrae `InitGL()` a `src/rendering/LegacyVgiGraphicsBootstrap.{h,cpp}`. `InitGL()` queda como adaptador de aplicación; el nuevo contexto explícito reúne el estado y callbacks requeridos para inicializar recursos y estados OpenGL. No se registraron cambios funcionales ni de gameplay.
 
 `main.cpp` pasa de 6.573 a 6.302 líneas (−271 netas; 397 retiradas y 126 de adaptador). Los lanzadores oficiales Windows Debug/Release y CTest completo se reportaron como PASS (23/23 en cada configuración). La revisión cruzada Codex del SHA exacto no encontró BLOCKER, REQUIRED ni OPTIONAL. No se ejecutó el juego; permanecen sin validar el proyecto Visual Studio heredado con MSBuild, Linux/macOS y OpenXR con hardware.
+
+## 30. Cierre del refactor mecánico: main.cpp, retirada de EntornVGI y nombres en inglés (2026-11-25)
+
+Implementado y supervisado por Claude Sonnet 5.5 desde `0d727a8`, sin agentes secundarios.
+
+| Commit | Contenido |
+|---|---|
+| `7fe29d8` | `main.h` pasa a `LegacyVgiState.h/.cpp`; `main.cpp` se reparte en módulos de `app/`, `legacy_vgi/`, `rendering/`, `ui/` y `diagnostics/` |
+| `e8b50bb` | `main()` queda como composición: `Application`, `MainLoop`, `Shutdown`, `Ps1Framebuffer` |
+| `b6e0ad1` | Se retira `EntornVGI/` como contenedor |
+| `5cfb91e` | 95 tipos y namespaces y 40 ficheros en inglés |
+| `e9dff17` | 151 nombres de la capa de aplicación en inglés |
+| `60a4610` | 421 métodos y funciones de módulo en inglés |
+
+`src/app/main.cpp` tiene 41 líneas (6.302 al empezar; 8.947 en el checkpoint). El script de comprobación comparó las 194 funciones del `main.cpp` de `0d727a8` con su definición actual, aplicando los renombrados: 193 cuerpos idénticos token a token; el único distinto es `main`, dividido a propósito. En el cierre, la textura y el renderbuffer PS1 se borran antes que la textura del menú (antes, después). Los renombrados no tocan cadenas ni comentarios, así que claves JSON, protocolo, textos de log, IDs persistidos y nombres de test no cambian.
+
+**Validación sobre `60a4610` (Windows):** lanzadores oficiales Debug y Release con código 0; CTest 23/23 en ambas; `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10 en ambas; arranque de 15 s en ambas con escena y spawn validados y cierre con código 0.
+
+**Limitaciones**
+
+- Auditoría independiente de Codex pendiente (cuota agotada). Rango: `0d727a8..HEAD`.
+- No hubo QA de juego: ni controles, ni multijugador real, ni editor, ni aspecto visual, ni OpenXR con hardware. Tampoco Linux ni macOS.
+- `visualstudio/EntornVGI.vcxproj` tiene las rutas actualizadas pero no se compiló con MSBuild, y ya antes le faltaban fuentes e includes que CMake sí usa.
+- El acoplamiento no se redujo en este tramo: el estado que estaba en un namespace anónimo ahora es `extern`. Ficheros de `legacy_vgi/`, `rendering/`, `ui/` y `diagnostics/` incluyen `src/app/AppState.h`, una dependencia invertida respecto a la arquitectura objetivo.
+- `src/legacy_vgi/Vgi*` mezcla la base académica con llamadas al juego (carga de escenas, menú de pausa).
+- Siguen en español campos, variables locales, parámetros, enumeradores, comentarios y parte de los nombres de test. La base VGI conserva sus identificadores.
+- Ficheros grandes pendientes de división interna: `VgiKeyboard.cpp` y otros heredados.
+
+**Defectos previos observados (sin corregir):** `assets/textures/fonde-menu.png` es un WebP con extensión PNG y SOIL no lo carga (mismo blob que en `62a7018`); `assets/audio/paso_1..3.wav` no están versionados.
+
+**Probar ambas versiones.** Cada una en su worktree:
+
+```text
+.\run-windows.cmd [-Configuration Release]
+ctest --test-dir build\windows-debug --output-on-failure
+```
+
+Refactor: rama `refactor/project-architecture`. Referencia: `integration/pre-refactor` (`62a7018`).
+
+**Consolidación.** 1) Auditoría Codex de `0d727a8..HEAD`. 2) QA manual de juego, multijugador, editor y VR comparando con `62a7018`. 3) Compilación en Linux y macOS. 4) Solo entonces, decidir el merge; `master` no se ha tocado y no hay push.
+
+**Veredictos:** GO técnico en Windows, provisional hasta la auditoría. GO funcional: **no** (falta QA). GO para publicar `master`: **no**.
