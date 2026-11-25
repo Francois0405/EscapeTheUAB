@@ -25,7 +25,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-set(IMGUI_DIR "${REPO_ROOT}/include/ImGui")
+set(IMGUI_DIR "${REPO_ROOT}/third_party/imgui")
 
 if(APPLE)
 	# Prefer the system OpenGL.framework over XQuartz (/opt/X11), which has no Cocoa context.
@@ -72,7 +72,7 @@ set(ENTORNVGI_SOURCES
 	Editor/SerializadorEscenas.cpp
 	escena.cpp
 	glut_geometry.cpp
-	third_party/ImGuizmo.cpp
+	${REPO_ROOT}/third_party/imguizmo/ImGuizmo.cpp
 	main.cpp
 	material.cpp
 	NetAvatar.cpp
@@ -105,6 +105,8 @@ target_include_directories(EntornVGI PRIVATE
 	${CMAKE_CURRENT_SOURCE_DIR}
 	${IMGUI_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/third_party
+	${REPO_ROOT}/third_party
+	${REPO_ROOT}/third_party/imguizmo
 	${REPO_ROOT}/third_party/SOIL2/src
 	${REPO_ROOT}/third_party/cgltf
 	${REPO_ROOT}/third_party/miniaudio
@@ -123,7 +125,7 @@ if(ENTORNVGI_USE_SYSTEM_DEPENDENCIES)
 else()
 	target_compile_definitions(EntornVGI PRIVATE ENTORNVGI_USE_NFD_EXTENDED)
 	set_property(TARGET EntornVGI PROPERTY NO_SYSTEM_FROM_IMPORTED ON)
-	# The repository also contains an older include/ImGui/nfd.h. Resolve the
+	# The repository also contains an older third_party/imgui/nfd.h. Resolve the
 	# Extended header path from its imported target instead of assuming vcpkg
 	# toolchain variables are set by every CMake caller.
 	get_target_property(ENTORNVGI_NFD_INCLUDE_DIRS
@@ -178,6 +180,7 @@ add_library(EntornVGI_scene_loader STATIC
 )
 target_include_directories(EntornVGI_scene_loader PUBLIC
 	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}/third_party
 )
 target_link_libraries(EntornVGI_scene_loader PUBLIC ${ENTORNVGI_GLM_TARGET})
 target_compile_features(EntornVGI_scene_loader PUBLIC cxx_std_20)

@@ -9,7 +9,7 @@
 #include <algorithm>
 #include <array>
 #include "SceneLoader.h"
-#include "third_party/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 using nlohmann::json;
 

@@ -125,7 +125,7 @@ EntornVGI/objLoader.*         Importador OBJ/MTL del profesor
 EntornVGI/assets/models/     Modelos y materiales
 EntornVGI/assets/scenes/     Escenas JSON
 EntornVGI/shaders/           Shaders GLSL
-include/ImGui/                Dear ImGui
+third_party/imgui/            Dear ImGui
 third_party/SOIL2/           Carga de texturas
 third_party/nativefiledialog/ Backend GTK3 para Linux
 lib/                          Bibliotecas Windows heredadas

@@ -33,6 +33,7 @@ add_executable(EditorPersistenceTests
 )
 target_include_directories(EditorPersistenceTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/third_party
 )
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/EditorPersistenceRuntimeAssets" EDITOR_PERSISTENCE_RUNTIME_ASSETS)
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/EditorPersistenceSourceAssets" EDITOR_PERSISTENCE_SOURCE_ASSETS)
@@ -54,6 +55,7 @@ add_executable(EditorTests
 )
 target_include_directories(EditorTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/third_party
 )
 target_compile_definitions(EditorTests PRIVATE GLM_ENABLE_EXPERIMENTAL)
 target_compile_features(EditorTests PRIVATE cxx_std_20)
@@ -80,16 +82,16 @@ add_test(NAME EditorPlacementTests COMMAND EditorPlacementTests)
 # para comprobar que el gesto que selecciona nunca se convierte en un arrastre.
 add_executable(EditorGizmoInteractionTests
 	EditorGizmoInteractionTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/third_party/ImGuizmo.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_draw.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_tables.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_widgets.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imguizmo/ImGuizmo.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui_draw.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui_tables.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui_widgets.cpp
 )
 target_include_directories(EditorGizmoInteractionTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/EntornVGI/third_party
-	${PROJECT_SOURCE_DIR}/include/ImGui
+	${PROJECT_SOURCE_DIR}/third_party/imguizmo
+	${PROJECT_SOURCE_DIR}/third_party/imgui
 )
 target_compile_features(EditorGizmoInteractionTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
@@ -155,7 +157,7 @@ add_executable(ObjLoaderTests
 )
 target_include_directories(ObjLoaderTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/include/ImGui
+	${PROJECT_SOURCE_DIR}/third_party/imgui
 	${PROJECT_SOURCE_DIR}/third_party/SOIL2/src
 )
 target_compile_definitions(ObjLoaderTests PRIVATE

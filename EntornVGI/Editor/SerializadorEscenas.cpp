@@ -1,6 +1,6 @@
 #include "SerializadorEscenas.h"
 
-#include "../third_party/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 #include <atomic>
 #include <algorithm>

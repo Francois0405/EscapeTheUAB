@@ -2,7 +2,7 @@
 
 #include "SelectorObjetos.h"
 #include "imgui.h"
-#include "../third_party/ImGuizmo.h"
+#include <ImGuizmo.h>
 #include "../EscenaFisica.h"
 #include "../EscalaUI.h"
 

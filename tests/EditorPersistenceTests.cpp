@@ -1,6 +1,6 @@
 #include "Editor/SerializadorEscenas.h"
 #include "SceneLoader.h"
-#include "third_party/nlohmann/json.hpp"
+#include <nlohmann/json.hpp>
 
 #include <chrono>
 #include <cmath>

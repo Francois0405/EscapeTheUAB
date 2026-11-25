@@ -74,7 +74,7 @@ inline void NFD_QuitCompat()
 #define NFD_OpenDialog(filterList, defaultPath, outPath) \
 	NFD_OpenDialogCompat(filterList, defaultPath, outPath)
 #else
-#include "../include/ImGui/nfd.h"
+#include "../third_party/imgui/nfd.h"
 inline bool NFD_InitCompat()
 {
 	return true;

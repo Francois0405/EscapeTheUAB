@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\include;..\include\ImGui;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framdework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -128,7 +128,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>..\include;..\include\ImGui;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -141,13 +141,13 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\include\ImGui\imgui.cpp" />
-    <ClCompile Include="..\include\ImGui\imgui_demo.cpp" />
-    <ClCompile Include="..\include\ImGui\imgui_draw.cpp" />
-    <ClCompile Include="..\include\ImGui\imgui_impl_glfw.cpp" />
-    <ClCompile Include="..\include\ImGui\imgui_impl_opengl3.cpp" />
-    <ClCompile Include="..\include\ImGui\imgui_tables.cpp" />
-    <ClCompile Include="..\include\ImGui\imgui_widgets.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_demo.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_impl_glfw.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_impl_opengl3.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp" />
+    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp" />
     <ClCompile Include="DibujoColisionadores.cpp" />
     <ClCompile Include="DibujoGLB.cpp" />
     <ClCompile Include="Editor\EditorEscenas.cpp" />
@@ -158,7 +158,7 @@
     <ClCompile Include="EscenaFisica.cpp" />
     <ClCompile Include="escena.cpp" />
     <ClCompile Include="glut_geometry.cpp" />
-    <ClCompile Include="third_party\ImGuizmo.cpp" />
+    <ClCompile Include="..\third_party\imguizmo\ImGuizmo.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="material.cpp" />
     <ClCompile Include="ModeloGLB.cpp" />
@@ -172,33 +172,33 @@
     <ClCompile Include="visualitzacio.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\include\ImGui\imconfig.h" />
-    <ClInclude Include="..\include\ImGui\imgui.h">
+    <ClInclude Include="..\third_party\imgui\imconfig.h" />
+    <ClInclude Include="..\third_party\imgui\imgui.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_impl_glfw.h">
+    <ClInclude Include="..\third_party\imgui\imgui_impl_glfw.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_impl_opengl3.h">
+    <ClInclude Include="..\third_party\imgui\imgui_impl_opengl3.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_impl_opengl3_loader.h">
+    <ClInclude Include="..\third_party\imgui\imgui_impl_opengl3_loader.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_internal.h">
+    <ClInclude Include="..\third_party\imgui\imgui_internal.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imstb_rectpack.h">
+    <ClInclude Include="..\third_party\imgui\imstb_rectpack.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
       </ExcludedFromBuild>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imstb_textedit.h" />
-    <ClInclude Include="..\include\ImGui\nfd.h" />
+    <ClInclude Include="..\third_party\imgui\imstb_textedit.h" />
+    <ClInclude Include="..\third_party\imgui\nfd.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="file_dialog_compat.h" />
     <ClInclude Include="Editor\EditorEscenas.h" />
@@ -207,8 +207,8 @@
     <ClInclude Include="Editor\SelectorObjetos.h" />
     <ClInclude Include="Editor\SerializadorEscenas.h" />
     <ClInclude Include="Editor\VisibilidadEditor.h" />
-    <ClInclude Include="third_party\nlohmann\json.hpp" />
-    <ClInclude Include="third_party\ImGuizmo.h" />
+    <ClInclude Include="..\third_party\nlohmann\json.hpp" />
+    <ClInclude Include="..\third_party\imguizmo\ImGuizmo.h" />
     <ClInclude Include="escena.h" />
     <ClInclude Include="framework.h" />
     <ClInclude Include="glut_geometry.h" />

@@ -45,25 +45,25 @@
     <ClCompile Include="visualitzacio.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\ImGui\imgui.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui.cpp">
       <Filter>Archivos de origen\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\ImGui\imgui_demo.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_demo.cpp">
       <Filter>Archivos de origen\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\ImGui\imgui_draw.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp">
       <Filter>Archivos de origen\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\ImGui\imgui_impl_glfw.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_impl_glfw.cpp">
       <Filter>Archivos de origen\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\ImGui\imgui_impl_opengl3.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_impl_opengl3.cpp">
       <Filter>Archivos de origen\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\ImGui\imgui_tables.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp">
       <Filter>Archivos de origen\ImGui</Filter>
     </ClCompile>
-    <ClCompile Include="..\include\ImGui\imgui_widgets.cpp">
+    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp">
       <Filter>Archivos de origen\ImGui</Filter>
     </ClCompile>
     <ClCompile Include="SceneLoader.cpp">
@@ -98,7 +98,7 @@
     <ClInclude Include="file_dialog_compat.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="third_party\nlohmann\json.hpp">
+    <ClInclude Include="..\third_party\nlohmann\json.hpp">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="escena.h">
@@ -137,31 +137,31 @@
     <ClInclude Include="visualitzacio.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\nfd.h">
+    <ClInclude Include="..\third_party\imgui\nfd.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imconfig.h">
+    <ClInclude Include="..\third_party\imgui\imconfig.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui.h">
+    <ClInclude Include="..\third_party\imgui\imgui.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_impl_glfw.h">
+    <ClInclude Include="..\third_party\imgui\imgui_impl_glfw.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_impl_opengl3.h">
+    <ClInclude Include="..\third_party\imgui\imgui_impl_opengl3.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_impl_opengl3_loader.h">
+    <ClInclude Include="..\third_party\imgui\imgui_impl_opengl3_loader.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imgui_internal.h">
+    <ClInclude Include="..\third_party\imgui\imgui_internal.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imstb_rectpack.h">
+    <ClInclude Include="..\third_party\imgui\imstb_rectpack.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
-    <ClInclude Include="..\include\ImGui\imstb_textedit.h">
+    <ClInclude Include="..\third_party\imgui\imstb_textedit.h">
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="SceneLoader.h">

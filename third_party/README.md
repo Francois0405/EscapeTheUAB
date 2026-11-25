@@ -1,7 +1,9 @@
-# Dependencias vendorizadas (Linux)
+# Dependencias vendorizadas
 
-Estas copias se usan únicamente en la compilación Linux con CMake. Windows
-sigue usando las cabeceras y bibliotecas ya incluidas en `include/` y `lib/x64/`.
+SOIL2, Dear ImGui, ImGuizmo, nlohmann/json y cgltf se compilan desde
+`third_party/` en todas las plataformas. Native File Dialog con GTK3 se usa
+en Linux; Windows y macOS obtienen el resto de dependencias del toolchain
+configurado por CMake.
 
 ## SOIL2
 
@@ -30,3 +32,18 @@ sigue usando las cabeceras y bibliotecas ya incluidas en `include/` y `lib/x64/`
   los archivos `.glb` de `EntornVGI/assets/animations/`. Es una biblioteca de un
   solo archivo: `CGLTF_IMPLEMENTATION` se define únicamente en `ModeloGLB.cpp`.
 - Se usa en todas las plataformas (Windows, Linux y macOS) y no depende de vcpkg.
+
+## Dear ImGui
+
+- Ubicación: `third_party/imgui/`; versión indicada en `third_party/imgui/Version.txt`.
+- Licencia: MIT, conservada en el encabezado de los archivos fuente.
+
+## ImGuizmo
+
+- Ubicación: `third_party/imguizmo/`.
+- Licencia: texto conservado en `third_party/imguizmo/LICENSE-ImGuizmo`.
+
+## nlohmann/json
+
+- Ubicación: `third_party/nlohmann/`.
+- Licencia: MIT, conservada en el encabezado de `json.hpp`.
