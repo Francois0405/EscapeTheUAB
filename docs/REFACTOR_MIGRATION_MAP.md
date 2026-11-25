@@ -2,7 +2,7 @@
 
 Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fechado el 2026-11-25. El contexto, los contratos, los no objetivos y las marcas de evidencia ([C], [H], [D], [P]) están en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas. P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
+**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas; P3 iniciada, con el corte S3 integrado en `0ccaea3` (§9). P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
 
 ## 1. Estado de partida
 
@@ -11,6 +11,7 @@ Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fec
 - El **GO funcional** sigue pendiente y no se consolida ni se publica en `master` mientras falte.
 - La extracción de bibliotecas de P2 está integrada en la rama local `refactor/project-architecture` como `4418c2d08c1186ce896309c9487315a9e3ec4a21`, a partir de `0aa6329` en `itsCarlosDev/cmake-core-libraries-codex` [C]. Detalle, evidencia y límites en §6.4.
 - **Las líneas base de P1 siguen incompletas**, en particular las capturas y las referencias de ejecución. La puerta de P2 compara contra ellas.
+- P3 se ha iniciado, al amparo de la autorización provisional, con la puerta de P2 abierta y P1 incompleta: el corte S3 (`RemotePhysicsTimeline`) está integrado como `0ccaea3` (§9).
 - Conviene coordinar antes de editar CMake o `main.cpp`.
 
 ## 2. Reglas
@@ -31,7 +32,7 @@ Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fec
 Procedimiento [P]:
 
 - Antes de abrir una etapa, anotar el SHA de partida.
-- Para deshacer, usar `git revert` de los commits de la etapa en orden inverso. No usar `reset --hard` ni reescribir ramas compartidas. Para el cambio de P2: `git revert 4418c2d` en `refactor/project-architecture` (SHA de partida: `8dc63b5`).
+- Para deshacer, usar `git revert` de los commits de la etapa en orden inverso. No usar `reset --hard` ni reescribir ramas compartidas. Para el cambio de P2: `git revert 4418c2d` en `refactor/project-architecture` (SHA de partida: `8dc63b5`). Para el corte S3: `git revert 0ccaea3` (SHA de partida: `f9cd52b`), antes de revertir `4418c2d`.
 - Si ya hay etapas posteriores encima, revertir primero las posteriores.
 - Tras revertir, configurar en un directorio de build limpio y repetir la puerta común.
 - El editor puede escribir en `EntornVGI/assets` (copia al árbol fuente). Revertir código no revierte escenas guardadas: revisar `git status` sobre `assets/` después de cada sesión de QA.
@@ -192,3 +193,37 @@ Commit `4418c2d08c1186ce896309c9487315a9e3ec4a21` en `refactor/project-architect
 | P0 | Sin commit de superación | **No superada.** Dispensada solo para iniciar el refactor provisional y aislado | Agarre y lanzamiento de objeto normal desde el cliente, paridad visual host/cliente, reanudación de Hirity y el resto de la QA de ARCHITECTURE.md §2 |
 | P1 | Sin commit | **Incompleta** | Líneas base completas de capturas y ejecución, y el resto de referencias de §5 sin registrar |
 | P2 | `4418c2d` (origen `0aa6329`) | Extracción de bibliotecas completada e integrada; Debug y Release compilan y CTest 21/21 en ambas, según el supervisor (§6.4) | Build limpio, arranque desde `bin/`, guardado del editor y comparación con P1 |
+| P3 | `0ccaea3` (origen `7c8b174`), solo corte S3 | **Parcial.** `RemotePhysicsTimeline` integrado; Debug y Release PASS y CTest 21/21 en ambas, según el coordinador (§9) | Autoridad de agarre, resto de la aplicación de réplicas, `identificadorEscenaRed`, máquina de Hirity, pruebas de enlace de shaders, repeticiones de red y QA de gameplay |
+
+## 9. P3, corte S3: `RemotePhysicsTimeline` (2026-11-25)
+
+S3 es la etiqueta de coordinación de este corte; no implica que existan otros cortes terminados. Commit `0ccaea3b7667521ea83d6fc74572933fc9683d16` en `refactor/project-architecture`; commit de origen `7c8b174`, con el mismo árbol y el mismo parche [C].
+
+**Cambios [C]**
+
+| Fichero | Cambio |
+|---|---|
+| `EntornVGI/Network/Game/RemotePhysicsTimeline.h` (nuevo) | Solo cabecera, espacio de nombres `netjuego::timeline`: tipos de muestra y buffer, y las funciones `StoreRemotePhysicsSample`, `InterpolateRemotePhysicsState` y `ApplyReliableFinalPhysicsState` |
+| `EntornVGI/main.cpp` | La estructura local, las dos funciones de buffer e interpolación y el tratamiento del estado final fiable se sustituyen por llamadas a la cabecera |
+| `tests/NetJuegoTests.cpp` | Comprobaciones nuevas: muestras inválidas o antiguas, tiempo reconstruido desde el tick, desbordamiento del contador, límite de 8 muestras, interpolación sin extrapolar y estado final fiable |
+
+- No cambia ningún fichero CMake. La cabecera no pertenece a ningún target propio, tampoco a `EntornVGI_network`, y depende de `NetJuegoLogica.h`: aunque está bajo `Network/`, es de la capa de red del juego.
+- Las comprobaciones nuevas viven dentro de `NetJuegoTests`, así que CTest sigue en 21 pruebas.
+- El buffer, su vaciado, el suavizado y la aplicación a la física siguen en `main.cpp`.
+- Los nombres en inglés son de identificadores nuevos; no renombran contratos ni adelantan P12.
+
+**Equivalencia:** este corte sí modifica código fuente. Por lectura del diff, la lógica se traslada con los mismos pasos y constantes (retardo de 0,12 s, 8 muestras, sin extrapolación) y la llamada conserva la guarda de buffer no vacío [C]. No se ha verificado en ejecución del juego. Las pruebas nuevas llegan en el mismo commit y cubren la cabecera extraída, no el código anterior de `main.cpp`, por lo que no se cumple para este corte el «verde antes y después» de la puerta de P3.
+
+**Validación sobre el SHA integrado `0ccaea3`, informada por el coordinador**; no reejecutada al redactar este documento:
+
+| Comprobación | Resultado informado |
+|---|---|
+| `.\run-windows.cmd -NoRun` (Debug) | PASS |
+| `.\run-windows.cmd -Configuration Release -NoRun` | PASS |
+| CTest Debug | 21/21 |
+| CTest Release | 21/21 |
+| Revisión estática de Claude | Sin bloqueos, más ajustes de cobertura |
+
+**Sin evidencia registrada:** `NetJuegoTests --repeat until-fail:20` y `ENetLoopbackTests --repeat until-fail:10` (§4 los pide para cambios de red), arranque del juego desde `bin/` y comparación con las líneas base de P1.
+
+**Pendiente:** pruebas gráficas y de gameplay, incluida la réplica en cliente; compilación y prueba en Linux y macOS; OpenXR con hardware. **Es un avance arquitectónico provisional: no es un GO funcional ni autoriza consolidar o publicar en `master`.**
