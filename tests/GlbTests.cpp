@@ -679,16 +679,16 @@ int main()
 	ProbarReproductorHaciaAtras();
 	ProbarConversionDeCoordenadas();
 
-	ProbarPuertaReal(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI" / "assets" / "animations" / "Puerta.glb");
-	ProbarPuertaLaboratorio(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI" / "assets" / "animations" / "Puerta_Lab.glb");
+	ProbarPuertaReal(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets" / "animations" / "Puerta.glb");
+	ProbarPuertaLaboratorio(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets" / "animations" / "Puerta_Lab.glb");
 
 	const auto unico = std::chrono::steady_clock::now().time_since_epoch().count();
 	const fs::path carpeta = fs::temp_directory_path() / ("EscapeTheUAB-GlbTests-" + std::to_string(unico));
 	fs::create_directories(carpeta);
 	ProbarGlbInventado(carpeta);
-	ProbarObjetosAnimados(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI" / "assets" / "animations" / "Puerta.glb", carpeta);
+	ProbarObjetosAnimados(fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets" / "animations" / "Puerta.glb", carpeta);
 	{
-		const fs::path puerta = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "EntornVGI" / "assets" / "animations" / "Puerta.glb";
+		const fs::path puerta = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets" / "animations" / "Puerta.glb";
 		ProbarCentroDelModelo(puerta);
 		ProbarEstadosDePuerta(puerta);
 		ProbarInteraccion(puerta);
