@@ -30,7 +30,7 @@
     <ClCompile Include="..\src\rendering\material.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="objLoader.cpp">
+    <ClCompile Include="..\src\scene\objLoader.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
     <ClCompile Include="..\src\vr\OpenXRManager.cpp">
@@ -113,6 +113,9 @@
     <ClInclude Include="..\src\scene\escena.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\platform\platform_compat.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
     <ClInclude Include="framework.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
@@ -125,7 +128,7 @@
     <ClInclude Include="..\src\rendering\material.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="objLoader.h">
+    <ClInclude Include="..\src\scene\objLoader.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\vr\OpenXRManager.h">

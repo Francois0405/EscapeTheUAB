@@ -108,7 +108,7 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framdework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -128,7 +128,7 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <PrecompiledHeaderFile>framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
@@ -164,7 +164,7 @@
     <ClCompile Include="..\src\rendering\ModeloGLB.cpp" />
     <ClCompile Include="..\src\physics\MundoFisico.cpp" />
     <ClCompile Include="..\src\animation\ObjetosAnimadosGLB.cpp" />
-    <ClCompile Include="objLoader.cpp" />
+    <ClCompile Include="..\src\scene\objLoader.cpp" />
     <ClCompile Include="..\src\vr\OpenXRManager.cpp" />
     <ClCompile Include="..\src\rendering\quatern.cpp" />
     <ClCompile Include="..\src\rendering\LegacyVgiGeometryControls.cpp" />
@@ -218,6 +218,7 @@
     <ClInclude Include="..\third_party\imguizmo\ImGuizmo.h" />
     <ClInclude Include="..\src\scene\escena.h" />
     <ClInclude Include="framework.h" />
+    <ClInclude Include="..\src\platform\platform_compat.h" />
     <ClInclude Include="..\src\rendering\glut_geometry.h" />
     <ClInclude Include="..\src\animation\AnimacionGLB.h" />
     <ClInclude Include="..\src\animation\AnimacionPuerta.h" />
@@ -230,7 +231,7 @@
     <ClInclude Include="..\src\physics\MundoFisico.h" />
     <ClInclude Include="..\src\animation\ObjetosAnimadosGLB.h" />
     <ClInclude Include="..\src\vr\VistaEstereo.h" />
-    <ClInclude Include="objLoader.h" />
+    <ClInclude Include="..\src\scene\objLoader.h" />
     <ClInclude Include="..\src\vr\OpenXRManager.h" />
     <ClInclude Include="..\src\vr\VistaVR.h" />
     <ClInclude Include="..\src\gameplay\player\MovimientoFPS.h" />

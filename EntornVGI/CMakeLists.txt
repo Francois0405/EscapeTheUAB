@@ -72,7 +72,7 @@ set(ENTORNVGI_SOURCES
 	main.cpp
 	${REPO_ROOT}/src/rendering/material.cpp
 	${REPO_ROOT}/src/networking/replication/NetAvatar.cpp
-	objLoader.cpp
+	${REPO_ROOT}/src/scene/objLoader.cpp
 	${REPO_ROOT}/src/rendering/ObjMeshOptimization.cpp
 	${REPO_ROOT}/src/vr/OpenXRManager.cpp
 	${REPO_ROOT}/src/rendering/quatern.cpp
@@ -106,6 +106,8 @@ endif()
 target_include_directories(EntornVGI PRIVATE
 	${REPO_ROOT}
 	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}/src/scene
+	${REPO_ROOT}/src/platform
 	${IMGUI_DIR}
 	${CMAKE_CURRENT_SOURCE_DIR}/third_party
 	${REPO_ROOT}/third_party

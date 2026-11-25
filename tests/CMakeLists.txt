@@ -151,13 +151,15 @@ endif()
 
 add_executable(ObjLoaderTests
 	ObjLoaderTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/objLoader.cpp
+	${PROJECT_SOURCE_DIR}/src/scene/objLoader.cpp
 	${PROJECT_SOURCE_DIR}/src/rendering/ObjMeshOptimization.cpp
 	${PROJECT_SOURCE_DIR}/src/rendering/glut_geometry.cpp
 	${PROJECT_SOURCE_DIR}/src/rendering/material.cpp
 )
 target_include_directories(ObjLoaderTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/src/scene
+	${PROJECT_SOURCE_DIR}/src/platform
 	${PROJECT_SOURCE_DIR}/third_party/imgui
 	${PROJECT_SOURCE_DIR}/third_party/SOIL2/src
 )
