@@ -41,8 +41,7 @@ bool AudioManager::init() {
             ++pasosCargados;
     }
     if (pasosCargados == 0)
-        std::clog << "[AudioManager] Sin sonidos de pasos en assets/audio; el juego continua sin ellos.
-";
+        std::clog << "[AudioManager] Sin sonidos de pasos en assets/audio; el juego continua sin ellos.\n";
 
     return true;
 }
