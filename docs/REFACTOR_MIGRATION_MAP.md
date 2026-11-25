@@ -2,16 +2,16 @@
 
 Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fechado el 2026-11-25. El contexto, los contratos, los no objetivos y las marcas de evidencia ([C], [H], [D], [P]) están en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Estado a 2026-11-25: inventario y diseño completos; primer cambio de P2 en validación. Ninguna etapa está superada, tampoco P0.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
+**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas. P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
 
 ## 1. Estado de partida
 
 - **P0 no está superada.** La QA manual de gameplay sigue **PENDIENTE**, incluidos el agarre y lanzamiento de un objeto normal desde el cliente y la paridad visual entre host y cliente (ARCHITECTURE.md §2).
 - La autorización explícita del usuario del 2026-11-25 dispensa esa puerta **solo para iniciar un refactor provisional y aislado**. No permite declarar P0 superada, no es un GO funcional y no autoriza publicar en `master`.
 - El **GO funcional** sigue pendiente y no se consolida ni se publica en `master` mientras falte.
-- Primer cambio de P2, observado el 2026-11-25: en el worktree de `itsCarlosDev/cmake-core-libraries-codex`, sobre `62a7018`, hay un diff **sin commit** en `EntornVGI/CMakeLists.txt` y `tests/CMakeLists.txt` que define las bibliotecas estáticas `EntornVGI_scene_loader` y `EntornVGI_editor_core` [C]. Separa targets de CMake; no mueve ni extrae código fuente. Aquí no hay resultados de compilación ni de pruebas registrados para ese diff.
-- **P1 no tiene líneas base registradas.** La puerta de P2 compara contra ellas, así que P2 no puede darse por superada hasta fijarlas; la única referencia actual es el 21/21 histórico [D].
-- La rama local `refactor/project-architecture` sigue en la base, sin commits propios [C]. Conviene coordinar antes de editar CMake o `main.cpp`.
+- La extracción de bibliotecas de P2 está integrada en la rama local `refactor/project-architecture` como `4418c2d08c1186ce896309c9487315a9e3ec4a21`, a partir de `0aa6329` en `itsCarlosDev/cmake-core-libraries-codex` [C]. Detalle, evidencia y límites en §6.4.
+- **Las líneas base de P1 siguen incompletas**, en particular las capturas y las referencias de ejecución. La puerta de P2 compara contra ellas.
+- Conviene coordinar antes de editar CMake o `main.cpp`.
 
 ## 2. Reglas
 
@@ -31,7 +31,7 @@ Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fec
 Procedimiento [P]:
 
 - Antes de abrir una etapa, anotar el SHA de partida.
-- Para deshacer, usar `git revert` de los commits de la etapa en orden inverso. No usar `reset --hard` ni reescribir ramas compartidas.
+- Para deshacer, usar `git revert` de los commits de la etapa en orden inverso. No usar `reset --hard` ni reescribir ramas compartidas. Para el cambio de P2: `git revert 4418c2d` en `refactor/project-architecture` (SHA de partida: `8dc63b5`).
 - Si ya hay etapas posteriores encima, revertir primero las posteriores.
 - Tras revertir, configurar en un directorio de build limpio y repetir la puerta común.
 - El editor puede escribir en `EntornVGI/assets` (copia al árbol fuente). Revertir código no revierte escenas guardadas: revisar `git status` sobre `assets/` después de cada sesión de QA.
@@ -92,7 +92,7 @@ Patrón: el de `EntornVGI_network`. Todas **STATIC**, definidas sin mover fuente
 
 ### 6.1 Agrupación propuesta según dependencias actuales
 
-Los nombres son orientativos. Conviene un commit por biblioteca, empezando por las de menos dependencias.
+Propuesta original sobre la base; lo integrado se describe en §6.4. Los nombres son orientativos. Conviene un commit por biblioteca, empezando por las de menos dependencias.
 
 | Biblioteca | Fuentes | Depende de | Notas |
 |---|---|---|---|
@@ -110,7 +110,7 @@ Los nombres son orientativos. Conviene un commit por biblioteca, empezando por l
 
 ### 6.2 Trampas conocidas
 
-- **Las definiciones no siguen a las fuentes.** Hoy son `PRIVATE` de `EntornVGI` [C]: `GLM_ENABLE_EXPERIMENTAL`, `NOMINMAX`, `ENTORNVGI_HAS_MESHOPTIMIZER`, `ENTORNVGI_USE_NFD_EXTENDED`/`..._LEGACY_NFD`, `ENTORNVGI_RUNTIME_ASSETS_DIR`, `ENTORNVGI_SOURCE_ASSETS_DIR` y los avisos (`/W3`, `-Wall -Wextra`). Cada biblioteca debe declarar las que necesite.
+- **Las definiciones no siguen a las fuentes.** En la base `62a7018` eran `PRIVATE` de `EntornVGI` [C]: `GLM_ENABLE_EXPERIMENTAL`, `NOMINMAX`, `ENTORNVGI_HAS_MESHOPTIMIZER`, `ENTORNVGI_USE_NFD_EXTENDED`/`..._LEGACY_NFD`, `ENTORNVGI_RUNTIME_ASSETS_DIR`, `ENTORNVGI_SOURCE_ASSETS_DIR` y los avisos (`/W3`, `-Wall -Wextra`). Cada biblioteca debe declarar las que necesite.
 - Sin `ENTORNVGI_HAS_MESHOPTIMIZER`, el cargador OBJ vuelve en silencio a la ruta sin optimizar [H].
 - **Rutas del serializador.** Sin las dos definiciones de directorios, el guardado deja de copiar al árbol fuente, sin error de compilación [C]. `EditorPersistenceTests` inyecta directorios temporales y `EditorTests` compila el serializador sin definirlas. Una sola biblioteca con las rutas reales cambiaría ambas pruebas, y una prueba que guardara bajo `bin/assets` escribiría en el árbol fuente [H]. Mantener el aislamiento: seguir compilando el `.cpp` en esas pruebas o usar una variante por configuración.
 - `OpenXRManager.cpp` obtiene `ENTORNVGI_HAS_OPENXR` de `EntornVGI_openxr`; la biblioteca debe enlazarlo.
@@ -128,6 +128,46 @@ Los nombres son orientativos. Conviene un commit por biblioteca, empezando por l
 - El guardado del editor sigue copiando al árbol fuente (comprobar y descartar el cambio).
 - El juego arranca desde `bin/`.
 - Sin cambios en `.cpp`/`.h`; si alguno es imprescindible, va en un commit separado y justificado.
+
+### 6.4 Cambio integrado (2026-11-25)
+
+Commit `4418c2d08c1186ce896309c9487315a9e3ec4a21` en `refactor/project-architecture`; commit de origen `0aa6329`, con el mismo parche [C].
+
+**Contenido [C]**
+
+| Target estático | Fuentes | Enlaza |
+|---|---|---|
+| `EntornVGI_scene_loader` | `SceneLoader.cpp` | GLM |
+| `EntornVGI_glb_model` | `ModeloGLB.cpp` | GLM (cgltf como include privado) |
+| `EntornVGI_editor_core` | `LimitesModelo.cpp`, `SelectorObjetos.cpp`, `ValidadorColocacion.cpp`, `VisibilidadEditor.cpp` | GLM, `EntornVGI_glb_model`, `EntornVGI_scene_loader` |
+
+- `EntornVGI_editor_core` declara su cierre de dependencias de GLB y escena.
+- Los avisos (`/W3`, o `-Wall -Wextra -Wno-unused-parameter`) se conservan y se aplican al ejecutable y a las tres bibliotecas.
+- Se conservan las dos variantes de prueba del serializador: `EditorPersistenceTests` con directorios temporales y `EditorTests` sin directorios. `SerializadorEscenas.cpp` sigue compilándose en el ejecutable y en esas dos pruebas.
+- Solo cambian `EntornVGI/CMakeLists.txt` y `tests/CMakeLists.txt`. **No se ha movido ni modificado ningún fichero fuente.**
+- **Sin cambio de comportamiento:** no cambia el código fuente [C]; la verificación aportada es de compilación y CTest, no de juego.
+
+**Alcance:** las demás agrupaciones de §6.1 (animación de objetos, física, serializador, red de juego, diagnóstico, VR, geometría VGI) no se han creado como bibliotecas. `PhysicsTests` sigue compilando `ModeloGLB.cpp` directamente [C].
+
+**Validación informada por el supervisor** sobre el diff exacto validado; no reejecutada ni verificada al redactar este documento:
+
+| Comprobación | Resultado informado |
+|---|---|
+| `.\run-windows.cmd -NoRun` (Debug) | Salida 0 |
+| CTest completo Debug | 21/21 |
+| `.\run-windows.cmd -Configuration Release -NoRun` | Salida 0 |
+| CTest completo Release | 21/21 |
+| Dependencias | ENet, Bullet, meshoptimizer y OpenXR habilitados |
+| Entorno | Raíz de vcpkg `D:\Visual Studio\VC\vcpkg`; descargas locales al worktree de validación |
+| Revisión de Claude (segunda ronda) | Sin bloqueos; dos observaciones menores opcionales |
+| Revisión de Codex | Sin bloqueos |
+
+**Puerta de P2 (§4 y §6.3): no cerrada.**
+
+- Cubierto por lo informado: compilación y CTest en Debug y Release, y dependencias habilitadas.
+- Sin evidencia registrada: directorio de build limpio, arranque del juego desde `bin/`, copia al árbol fuente al guardar desde el editor y comparación con las líneas base de P1.
+
+**Limitaciones:** sin compilación nueva en macOS ni Linux; sin QA manual visual ni de gameplay; sin prueba con hardware OpenXR; líneas base completas de capturas y ejecución de P1 pendientes. **Esto no constituye un GO funcional.**
 
 ## 7. Riesgos
 
@@ -150,5 +190,5 @@ Los nombres son orientativos. Conviene un commit por biblioteca, empezando por l
 | Etapa | Commit | Resultados | Pendiente |
 |---|---|---|---|
 | P0 | Sin commit de superación | **No superada.** Dispensada solo para iniciar el refactor provisional y aislado | Agarre y lanzamiento de objeto normal desde el cliente, paridad visual host/cliente, reanudación de Hirity y el resto de la QA de ARCHITECTURE.md §2 |
-| P1 | Sin commit | Sin líneas base registradas | Todas las referencias de §5 |
-| P2 | Sin commit | Primer cambio en validación (§1); sin resultados registrados | Commit, validación y puerta de §6.3 |
+| P1 | Sin commit | **Incompleta** | Líneas base completas de capturas y ejecución, y el resto de referencias de §5 sin registrar |
+| P2 | `4418c2d` (origen `0aa6329`) | Extracción de bibliotecas completada e integrada; Debug y Release compilan y CTest 21/21 en ambas, según el supervisor (§6.4) | Build limpio, arranque desde `bin/`, guardado del editor y comparación con P1 |
