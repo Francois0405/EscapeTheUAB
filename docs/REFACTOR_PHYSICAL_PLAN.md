@@ -4,27 +4,25 @@
 
 Complementa a [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md) (etapas y registro de ejecución) y a [ARCHITECTURE.md](ARCHITECTURE.md) (arquitectura actual y contratos).
 
-## 0. Base, evidencia y conflictos con la documentación previa
+## 0. Base, evidencia y alineación con la documentación
 
 | Dato | Valor |
 |---|---|
 | Base de la auditoría física y de este documento | `7ace570` |
-| Estado de `refactor/project-architecture` al redactar | `fe4d7da` (`7ace570` más el corte S4, [mapa §10](REFACTOR_MIGRATION_MAP.md)) |
+| Estado de `refactor/project-architecture` | `2d83c7d`: `fe4d7da` (corte S4, [mapa §10](REFACTOR_MIGRATION_MAP.md)) más el commit documental de este plan |
 | Método | Lectura estática y de objetos git. No se compiló ni se probó nada para este documento |
 
 Marcas: **[C]** confirmado leyendo ficheros o git; **[H]** inferencia o aproximación no ejecutada; **[D]** afirmación histórica no reverificada; **[P]** propuesta. Las secciones 1 a 8 son [P] salvo marca contraria.
 
 **Objetivo del usuario (transmitido por el coordinador):** reorganizar físicamente fuentes, cabeceras, recursos, shaders, pruebas, documentación, scripts y terceros; modularizar `main.cpp`; unificar en inglés los nombres del código propio; reducir globales y acoplamiento; permitir propiedad independiente por equipos. Extraer targets CMake es solo un paso intermedio.
 
-**Enmiendas que este plan necesita:**
+**Enmiendas aplicadas** (decisiones transmitidas por el coordinador, 2026-11-25):
 
 | Documento | Texto previo | Enmienda | Estado |
 |---|---|---|---|
-| Mapa §2 y §5 (P11) | Los ficheros se mueven al final; los recursos no se mueven | Un módulo con target y pruebas puede moverse antes (B2 a B5); los recursos se mueven en B4 | Anotada en el mapa como propuesta, pendiente de aprobación |
-| Mapa §5 (P12) | Nombres: opcional | Obligatorio para el código propio | Anotada en el mapa |
-| ARCHITECTURE §1.2, §1.4 y §7 | Los ficheros se quedan donde están en las primeras etapas y se mueven tras las costuras; no se renombran ni mueven assets, shaders ni texturas | Permitir los movimientos de §3 sin cambiar nombres de recursos ni la disposición de ejecución | **PENDIENTE: ARCHITECTURE.md no se ha editado** |
-
-Hasta que ARCHITECTURE.md se enmiende, contradice a este plan en esos puntos.
+| Mapa §2 y §5 (P11) | Los ficheros se mueven al final; los recursos no se mueven | Un módulo con target y pruebas se mueve antes (B2 a B5); los recursos se mueven en B4 | Hecha |
+| Mapa §5 (P12) | Nombres: opcional | Obligatorio para el código propio | Hecha |
+| ARCHITECTURE §1 y §7 | Los ficheros se quedan donde están en las primeras etapas; no se renombran ni mueven assets, shaders ni texturas | Movimiento físico obligatorio; se mantienen nombres de recursos, ejecutable único, `bin/` y contrato de recursos en ejecución | Hecha |
 
 ## 1. Árbol destino del repositorio
 
@@ -60,7 +58,7 @@ EscapeTheUAB/
 │  ├─ unit/
 │  ├─ integration/
 │  └─ graphics/
-├─ tools/                      exportar_glb.py, medir_obj.py
+├─ tools/                      export_glb.py, measure_obj.py
 │  └─ assets/                  scripts de preparación de assets
 ├─ docs/
 ├─ third_party/                imgui/ imguizmo/ nlohmann/ stb_compat/ cgltf/ miniaudio/ SOIL2/ nativefiledialog/
@@ -129,10 +127,21 @@ Columna **Sec.**: lote en que se mueve (§3). Los ficheros se renombran al ingl�
 | `EntornVGI/third_party/nlohmann/` | `third_party/nlohmann/` | B3 |
 | `EntornVGI/third_party/stb_vorbis_compat.h`, `stb_vorbis_impl.c` | `third_party/stb_compat/` | B3 |
 | `include/ImGui/`, `include/ImGui Version.txt` | `third_party/imgui/` | B3, **I5** |
-| `aplicar_tiling_escapeuab.py`, `instalar_assets_laboratorio_escapeuab.py`, `preparar_sector_laboratorio.py`, `preparar_texturas_escapeuab.py` | `tools/assets/` | B2b, **I6** |
-| `tools/exportar_glb.py`, `tools/medir_obj.py` | Se quedan | — (un mensaje de `ModeloGLB.cpp` cita la ruta [C]) |
-| Guías de `docs/` distintas de las tres de arquitectura y plan | `docs/{multiplayer,gameplay,world,editor,vr}/` | B2b, **I7** |
+| `instalar_assets_laboratorio_escapeuab.py` | `tools/assets/install_lab_assets.py` | B2b |
+| `preparar_sector_laboratorio.py` | `tools/assets/prepare_lab_sector.py` | B2b, **I6** |
+| `preparar_texturas_escapeuab.py` | `tools/assets/prepare_textures.py` | B2b |
+| `aplicar_tiling_escapeuab.py` | `tools/assets/apply_tiling.py` | B2b, **I6** |
+| `tools/exportar_glb.py`, `tools/medir_obj.py` | `tools/export_glb.py`, `tools/measure_obj.py` | P12: `ModeloGLB.cpp` cita el primero en un mensaje y `EscenaFisica.h` el segundo en un comentario [C], así que renombrar toca código |
+| `docs/ANIMACIONES_GLB.md`, `FISICAS_BULLET.md` | `docs/world/GLB_ANIMATIONS.md`, `BULLET_PHYSICS.md` | B2b, **I7** |
+| `docs/CAMBIOS_FPS_JSON.md`, `LINTERNA_Y_BRAZO_INTERACCION.md` | `docs/gameplay/FPS_AND_JSON_SCENES.md`, `FLASHLIGHT_AND_INTERACTION_ARM.md` | B2b, **I7** |
+| `docs/EDITOR_PAREDES_PUERTAS.md` | `docs/editor/WALLS_AND_DOORS.md` | B2b, **I7** |
+| `docs/MULTIJUGADOR_LAN.md`, `VALIDACION_TAILSCALE.md` | `docs/multiplayer/LAN_MULTIPLAYER.md`, `TAILSCALE_VALIDATION.md` | B2b, **I7** |
+| `docs/MULTIPLAYER_SYNC.md`, `MULTIPLAYER_DEBUG_GRAB.md`, `AVATAR_CHEMICAL_PROTECTION.md` | `docs/multiplayer/`, mismos nombres | B2b, **I7** |
+| `docs/OPENXR.md` | `docs/vr/OPENXR.md` | B2b |
+| `docs/ESTABILIZACION_PRE_REFACTOR.md` | `docs/PRE_REFACTOR_STABILIZATION.md` | B2b |
 | `docs/ARCHITECTURE.md`, `REFACTOR_MIGRATION_MAP.md`, `REFACTOR_PHYSICAL_PLAN.md` | Se quedan en `docs/` | No mover mientras haya cortes en curso |
+
+Los nombres de destino son [P]. Renombrar o mover guías obliga a actualizar, en el mismo commit, los enlaces entre ellas y desde `ARCHITECTURE.md`, y las citas de `README.md`, `tests/CMakeLists.txt`, `tests/OpenXRTests.cpp` y `tools/exportar_glb.py` [C]: B2b no es solo documentación y `tests/CMakeLists.txt` tiene propietario en serie.
 
 ### 2.3 Pruebas
 
@@ -144,7 +153,7 @@ Los nombres de `add_test` no cambian durante los movimientos, para poder compara
 | `tests/integration/` | `SceneLoaderTests`, `GlbTests`, `PhysicsTests`, `AudioDecoderTests`, `NetJuegoTests`, `ENetLoopbackTests`, `EditorGizmoInteractionTests`, `WindowsLauncherDoesNotRunStaleBuild` | sus `.cpp`, `LauncherTestStub.cpp`, `WindowsLauncherFailureTest.ps1` |
 | `tests/unit/` | `GrabDiagnosticsTests`, `EditorPersistenceTests`, `EditorTests`, `EditorPlacementTests`, `ObjMeshOptimizationTests`, `OpenXRTests`, `VistaVRTests`, `MovimientoFPSTests`, `EscalaUITests`, `AnimacionHiritiTests`, `NetworkTests`, `NetworkPreferencesTests` | sus `.cpp` |
 
-Se mueven en P11.
+Se mueven en P11. En ese movimiento, los ficheros fuente con nombre en español pasan a inglés (`AnimacionHiritiTests` → `HiritiBehaviorTests`, `EscalaUITests` → `UiScaleTests`, `MovimientoFPSTests` → `PlayerMovementTests`, `VistaVRTests` → `VrViewTests`, `NetJuegoTests` → `NetGameTests` [P]); los nombres de target y de `add_test` cambian en P12.
 
 ### 2.4 Incertidumbres: inventario final antes de mover
 
@@ -153,13 +162,30 @@ Se mueven en P11.
 | I1 | El serializador, ¿va en `scene` o en `editor`? Hoy se compila tres veces con definiciones distintas [C] |
 | I2 | ¿Qué hacer con las demos (`DemoCuboCaida`, puerta de demostración) mezcladas con producción? |
 | I3 | `objLoader`, `glut_geometry` y `visualitzacio` incluyen `RenderMetrics.h` o `UniformCache.h` [C]: `legacy_vgi` quedaría dependiendo de `rendering`. Decidir dónde va `UniformCache` |
-| I4 | `objLoader` es del profesorado según el README [D]; `ObjMeshOptimization` parece propio [H] |
-| I5 | ImGui puede tener parches locales: `origin/Issue#5` modifica `imgui_impl_opengl3.cpp` [C]. Comparar con la versión original. `include/ImGui/nfd.h` es la cabecera NFD antigua |
+| I4 | `objLoader` es del profesorado según el README [D] y llegó en la importación inicial, como `glut_geometry` y `escena` [C]. `ObjMeshOptimization`, `UniformCache.h` y `RenderMetrics.h` se añadieron después en commits del equipo [C], luego se tratan como código propio [H]. Abierto: dónde va `ObjMeshOptimization` y qué hacer con las llamadas del equipo dentro de ficheros académicos (propuesta: dejarlas donde están sin renombrar y envolverlas con adaptadores en inglés) |
+| I5 | Comparar `include/ImGui` con la versión original para detectar parches locales. El cambio de `origin/Issue#5` en `imgui_impl_opengl3.cpp` es solo de espaciado [C]. `include/ImGui/nfd.h` es la cabecera NFD antigua |
 | I6 | `preparar_sector_laboratorio.py` calcula la raíz con `Path(__file__)` [C]: **moverlo lo rompe** sin editarlo. Los otros tres usan el directorio de trabajo. `aplicar_tiling_escapeuab.py` parchea `main.cpp` y quedará obsoleto |
 | I7 | Reparto exacto de las guías y revisión de enlaces y rutas citadas |
 | I8 | Decidir (borrar o conservar, en commits propios): `.slnx`, `.vcxproj*`, `include/{GLFW,gl,glm}`, `include/glfw Version.txt`, `lib/`, `x64/`, `third_party/OpenXR-SDK-main` (428 ficheros sin referencia en CMake [C]), `res/` salvo `ui/`, `.bak`, `.TMP`, `imgui.ini*`, `GLSL_Error.VERT`, `ModelLoader.cpp` (fuera de todo target [C]), `tree.txt`, gitlink `ImDesignManager`. Mover rompe el `.vcxproj` [H] |
-| I9 | `origin/Issue#5` (`469e822`) sin integrar toca `main.cpp`, `main.h`, `MundoFisico.{h,cpp}`, `EscenaFisica.cpp`, `ObjetosAnimadosGLB.cpp`, ImGui y añade `assets/mano.png` [C]. Integrarlo, portarlo o descartarlo antes de mover esos ficheros |
-| I10 | Alcance de «código propio» (§6): requiere confirmación del usuario |
+| I11 | La decisión sobre nombres en inglés incluye la documentación. Aquí se aplica a nombres de fichero y carpeta; **no está decidido si también se traduce el contenido**, hoy en español en su mayor parte |
+
+### 2.5 Decisiones resueltas
+
+Decididas por el coordinador el 2026-11-25. La numeración I9 e I10 se conserva como referencia.
+
+**I9. `origin/Issue#5` (`469e822`): redundante, no se integra.** La rama se conserva como respaldo; no se porta nada. Evidencia, comprobada contra `2d83c7d`:
+
+| Contenido de la rama | Situación en el árbol actual |
+|---|---|
+| Icono `assets/mano.png` al mirar un cuerpo marcado como interactuable | Sustituido funcionalmente: `dibujarHUDInteraccion` dibuja `res/ui/hand.png` a partir de `ObjetivoInteraccion`, también para puertas [C]. Son imágenes distintas (100 359 y 20 974 bytes) [C] |
+| `MundoFisico::setInteractuable` / `getInteractuable` y su uso en `EscenaFisica.cpp` | Sin referencias en el árbol actual [C] (`BuscarObjetoInteractuable` es otra función) |
+| `cargarTexturaPNG` llamada desde `draw_Menu_ImGui` | Crea una textura en cada fotograma sin liberarla [C]; fuga de memoria de GPU [H] |
+| Se comenta la llamada `glfwSetErrorCallback(error_callback)` | Desactiva el callback de errores de GLFW. El árbol actual la mantiene [C]; integrarlo sería una regresión |
+| Reordenación del `if` de la tecla E | Equivalente [H] |
+| `main.h` | Conversión de ISO-8859 a UTF-8; sin comentarios ni espacios, no hay diferencias de contenido [C] |
+| `imgui_impl_opengl3.cpp`, `ObjetosAnimadosGLB.cpp` | Solo espaciado [C] |
+
+**I10. Alcance de los nombres en inglés** (política en §6): código y módulos del equipo, pruebas, herramientas y documentación. La base académica VGI conserva identificadores y API originales en `legacy_vgi`, sin traducir. El código de terceros tampoco se traduce y permanece en `third_party/`, como en el árbol de §1. Los contratos persistentes no cambian. Los adaptadores nuevos del equipo sobre API heredadas llevan nombres en inglés.
 
 ## 3. Lotes, orden y dependencias
 
@@ -170,12 +196,12 @@ Se mueven en P11.
 | 1 | **B0** (P1 mecánica) | Línea base: lista de pruebas, líneas de configuración, hashes de `bin/`, `compile_commands.json`, métricas de §8. Capturar del ejecutable valores `ET2-`/`HashId` | — | V, N, R, S |
 | 2 | **B1** | Prerrequisitos de movimiento (§3.2) | B0 | V, N, R |
 | — | **G1** | Revisión Claude de B1 sobre su SHA exacto (§3.3) | B1 | — |
-| 3 | **B2** | Transporte a `src/networking/transport/` | G1 | V, N, R, M |
-| 4 | **B2b** | Scripts a `tools/assets/` y guías en subcarpetas | G1, I6, I7 | Enlaces, rutas de scripts |
-| 5 | **B3** | `third_party/` consolidado | G1, I5, I8, I9 | V, R, M, S |
-| 6 | **B4** | Recursos a `resources/` | G1, I9, enmienda de §0 | V, R, M, S |
+| 3 | **B2** | Transporte a `src/networking/transport/` | G1. **En serie con S1, S2 y S5** (`NetJuegoLogica.h`) | V, N, R, M |
+| 4 | **B2b** | Scripts a `tools/assets/` y guías en subcarpetas, con nombres en inglés | G1, I6, I7; propietario de `tests/CMakeLists.txt` | Enlaces, rutas de scripts, V |
+| 5 | **B3** | `third_party/` consolidado | G1, I5, I8 | V, R, M, S |
+| 6 | **B4** | Recursos a `resources/` | G1 | V, R, M, S |
 | en paralelo | **P3** | S1, S2, S5, S6, S7, S8, S9 y enlace de shaders (§3.4) | S3 y S4 cerradas | V, N, S |
-| 7 | **B5** | Mover escena, animación, física y editor | G1, I9, S1 y S2, y una ventana exclusiva de `main.cpp` entre cortes | V, N, R, M, S |
+| 7 | **B5** | Mover escena, animación, física y editor | G1, S1 y S2, y una ventana exclusiva de `main.cpp` entre cortes | V, N, R, M, S |
 | 8 | **P4** | `main.h`: de definiciones en cabecera a estado explícito | S1, S2 y S5 a S9 (el mapa ordena P3 antes de P4); va tras B5 solo por turno | V, S |
 | 9 | **P5** | Hojas: audio, escala UI, cabeceras de gameplay, diagnóstico, paneles, HUD | P4 | V, N, S |
 | 10 | **P6** | a) sacar la lógica de juego del bloque VGI; b) mover el bloque a `legacy_vgi/` | P4 | V, R, M, S |
@@ -185,11 +211,10 @@ Se mueven en P11.
 | 14 | **P9** | Red de juego, sin tocar el formato en cable | P8 | V, N, S |
 | 15 | **P10** | `app` como raíz de composición; RAII con el mismo orden de limpieza | P9 | V, N, S |
 | 16 | **P11** | Remanentes: pruebas por categoría, CMake por módulo, vaciar `EntornVGI/` | P10 | V, N, R, M, S |
-| 17 | **P12** | Identificadores en inglés, un módulo por commit | P11 | V, N, R, M, S |
+| 17 | **P12** (obligatorio) | Identificadores en inglés, un módulo por commit | P11 | V, N, R, M, S |
 
-Ajustes respecto al orden anterior, pendientes de aprobación:
+Respecto al orden anterior del mapa, B2 a B5 adelantan movimientos de módulos que ya tienen target y pruebas, según el orden de lotes encargado por el coordinador. Ajuste **todavía pendiente de aprobación**:
 
-- B2 a B4 adelantan movimientos de módulos que ya tienen target y pruebas.
 - El mapa exige P3 en verde antes de P6 a P9. Aquí S1, S2 y S5 a S9 bastan para P4 a P7; S10 solo bloquea P8 en adelante.
 - B5 **no** depende técnicamente de S5 a S9: puede intercalarse entre dos cortes. El orden de la tabla entre B5, los cortes de P3 y P4 es **serialización** (un solo propietario de `main.cpp` y CMake), no dependencia.
 
@@ -204,7 +229,9 @@ Rollback de cualquier lote: anotar el SHA de partida; un commit o serie corta co
 3. En un commit aparte: sustituir en `GlbTests`, `PhysicsTests`, `SceneLoaderTests` y `ObjLoaderTests` las rutas literales `EntornVGI/...` por las macros.
 4. `.gitignore`: añadir `!resources/assets/models/**/*.obj` sin quitar la excepción actual.
 
-**B2:** `git mv` de los nueve ficheros de transporte y su `CMakeLists.txt`; `add_subdirectory` con directorio binario explícito, después de definir `ENTORNVGI_ENABLE_NETWORK`; `EntornVGI_network` añade `src/` a su include público y **conserva** `EntornVGI/` (estrecharlo es otro cambio). Includes a actualizar [C]: `NetJuegoLogica.h`, `NetJuego.h`, `NetJuego.cpp`, `NetworkTests.cpp`, `ENetLoopbackTests.cpp`. No toca `main.cpp`. **B2 y S1 editan `NetJuegoLogica.h`: van en serie.**
+**B2:** `git mv` de los nueve ficheros de transporte y su `CMakeLists.txt`; `add_subdirectory` con directorio binario explícito, después de definir `ENTORNVGI_ENABLE_NETWORK`; `EntornVGI_network` añade `src/` a su include público y **conserva** `EntornVGI/` (estrecharlo es otro cambio). Includes a actualizar [C]: `NetJuegoLogica.h`, `NetJuego.h`, `NetJuego.cpp`, `NetworkTests.cpp`, `ENetLoopbackTests.cpp`. No toca `main.cpp`.
+
+**B2 y S1 editan `NetJuegoLogica.h`: van en serie, con un solo propietario del fichero cada vez** (también S2 y S5 si lo tocan). Orden recomendado [P]: primero S1, que puede avanzar durante B1 mientras B2 espera a G1; el que vaya segundo parte del SHA ya integrado y repite su validación.
 
 ### 3.3 G1: revisión independiente antes del primer `git mv`
 
@@ -275,6 +302,8 @@ QA de agarre en cliente ──> S10 ──> P8
 B2, B3, B4, B5, P5 ──> P11
 ```
 
+Pares en serie sin dependencia fija de orden: **B2 ↔ S1** (y S2, S5) por `NetJuegoLogica.h`; **B2b ↔ B1** por `tests/CMakeLists.txt`.
+
 ### 4.3 Comandos de validación (propuestos, no ejecutados para este documento)
 
 Requieren PowerShell 7 en una consola x64 de Visual Studio con `$env:VCPKG_ROOT` y `$env:NINJA` definidos (el lanzador los fija solo en su propio proceso). No hay `testPresets` [C]. Usar un worktree limpio. La validación es por SHA: tras un rebase se repite.
@@ -320,7 +349,7 @@ git status --short --ignored -- src resources tools tests
 
 La ruta NFD antigua (`file_dialog_compat.h`) solo se compila en Linux con dependencias del sistema [C]: B3 exige una configuración en Linux o declarar el hueco.
 
-Pueden empezar sin QA manual: las decisiones de §2.4, B0, B1, G1, B2, B2b y los cortes S1 y S2.
+Pueden empezar sin QA manual: resolver las incertidumbres abiertas de §2.4, B0, B1, G1, B2, B2b y los cortes S1 y S2.
 
 ## 5. Roles y propiedad
 
@@ -345,9 +374,12 @@ Propiedad por equipos tras los movimientos: integración (`app`, `core`, `third_
 ## 6. Política de nombres en inglés
 
 - Identificadores **nuevos**: en inglés (práctica de S3 y S4). El análisis de cortes recomendaba conservar el español en las extracciones; **este plan adopta el inglés** y deja constancia de la discrepancia.
-- Ficheros: se renombran en el commit que los mueve. Identificadores existentes: en P12, un módulo por commit, sin cambios de comportamiento.
+- **Alcance obligatorio (decidido, §2.5):** código y módulos del equipo, pruebas, herramientas y documentación.
+- **No se traduce:** identificadores y API originales de la base académica VGI, incluido el bloque VGI de `main.cpp`, que quedan en `legacy_vgi`; el cargador OBJ del profesorado; el código de terceros, que permanece en `third_party/`.
+- **Adaptadores nuevos** del equipo sobre API heredadas: nombres en inglés.
+- Ficheros: se renombran en el commit que los mueve, salvo los casos que obligan a tocar código (§2.2). Identificadores existentes: en P12, un módulo por commit, sin cambios de comportamiento.
 - Espacios de nombres [P]: `netjuego` → `netgame`, `fisica` → `physics`, `juego` → `gameplay`, `fps` → `movement`, `animacion` → `animation`.
-- «Código propio» (a confirmar, I10): el escrito por el equipo. La base VGI, el cargador OBJ del profesorado, el bloque VGI de `main.cpp` y los terceros se mueven pero **no se renombran**.
+- Abierto: autoría en casos límite (I4) y si el contenido de la documentación se traduce (I11).
 
 **Contratos que no se renombran:** `id` de escena (incluido `"hiriti"`) y nombres de fichero de escena, que alimentan `ET2-`; claves JSON; tipos, eventos y formato del protocolo; rutas y nombres de assets y shaders; argumentos de línea de comandos; variables de entorno; claves de `multijugador.ini`; nombres de evento y textos de los registros de agarre; textos visibles para el jugador; target y ejecutable `EntornVGI`; opciones CMake `ENTORNVGI_*`; nombres de `add_test` hasta P12.
 
@@ -402,7 +434,8 @@ El bloque 4136–9591 (5.456 líneas) **no es solo VGI**: contiene teclas de jue
 Restricciones al partir el fichero:
 
 - Los objetos globales con constructor (`mundoFisico`, `escenaFisica`, `redJuego`, `audioManager`, `editorEscenas`, `serializadorEscena`, `gestorOpenXR` y el resto) permanecen en un mismo fichero y en su orden hasta P10: el orden de construcción y destrucción importa.
-- Los globales de `main.h` hoy se inicializan a cero: inicializar por valor cualquier estructura que los agrupe, y poner en un espacio de nombres los nombres genéricos (`n`, `t`, `w`, `h`, `mode`, `window`, `shader`, `buffer`) antes de hacerlos `extern`.
+- Los globales de `main.h` hoy se inicializan a cero: inicializar por valor cualquier estructura que los agrupe.
+- Varios son globales de la base VGI con nombres muy genéricos (`n`, `t`, `w`, `h`, `mode`, `window`, `shader`, `buffer`): al hacerlos `extern` pueden colisionar. **No se renombran.** Si se agrupan o se acota su visibilidad, las unidades de `legacy_vgi` deben seguir usándolos sin calificar.
 - Subir antes `texturaFondoMenu` y `EstadoJuego`/`estadoActual`, definidos en mitad del fichero.
 - Conservar la vida de los `static` locales y el orden del fotograma y de la limpieza.
 - Prueba de movimiento puro: las líneas quitadas y añadidas coinciden salvo includes, declaraciones y espacios de nombres. Todo lo demás es cambio de comportamiento.

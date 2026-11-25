@@ -4,7 +4,7 @@ Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fec
 
 **Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas; P3 iniciada, con los cortes S3 (`0ccaea3`, §9) y S4 (`fe4d7da`, §10) integrados. P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
 
-El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cortes S1 a S10 están en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md). Es un objetivo, no está realizado. **Enmienda pendiente:** [ARCHITECTURE.md](ARCHITECTURE.md) (§1.2, §1.4 y §7) todavía dice que los ficheros y recursos no se mueven en las primeras etapas; no se ha editado.
+El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cortes S1 a S10 están en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md). Es un objetivo, no está realizado. [ARCHITECTURE.md](ARCHITECTURE.md) (§1 y §7) está alineado con él: la reorganización física y los nombres en inglés del código propio son resultados obligatorios.
 
 ## 1. Estado de partida
 
@@ -15,12 +15,13 @@ El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cort
 - **Las líneas base de P1 siguen incompletas**, en particular las capturas y las referencias de ejecución. La puerta de P2 compara contra ellas.
 - P3 se ha iniciado, al amparo de la autorización provisional, con la puerta de P2 abierta y P1 incompleta: el corte S3 (`RemotePhysicsTimeline`) está integrado como `0ccaea3` (§9).
 - El corte S4 (mezcla de réplica y transición a dormido) está integrado como `fe4d7da` (§10).
+- `origin/Issue#5` (`469e822`) **no se integra**: es redundante con el árbol actual. La rama se conserva como respaldo ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §2.5).
 - Conviene coordinar antes de editar CMake o `main.cpp`.
 
 ## 2. Reglas
 
 1. Un solo ejecutable; el target sigue llamándose `EntornVGI` y la salida sigue en `build/<preset>/bin/`.
-2. Primero bibliotecas con los ficheros en su sitio; después costuras y pruebas; **mover ficheros al final**. Enmienda propuesta, pendiente de aprobación: un módulo que ya tenga target y pruebas puede moverse antes ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §3).
+2. Primero bibliotecas con los ficheros en su sitio; después costuras y pruebas; **mover ficheros al final**. Enmienda (2026-11-25): un módulo que ya tenga target y pruebas se mueve antes, en los lotes B2 a B5 del [plan físico](REFACTOR_PHYSICAL_PLAN.md) §3; al final quedan los remanentes.
 3. Un commit (o una serie corta y contigua) por etapa, revertible, sin arreglos funcionales mezclados.
 4. Un único propietario de `main.cpp`, `main.h`, `EntornVGI/CMakeLists.txt` y `tests/CMakeLists.txt` por etapa.
 5. No se avanza con una puerta en rojo. Lo que no se ejecuta se declara como no ejecutado.
@@ -69,11 +70,13 @@ macOS, Linux y VR se declaran **no validados** mientras no se ejecuten en esas p
 | **P8. Gameplay** | Control del jugador, después interacción y agarre, después Hirity | Pruebas de P3 y QA offline |
 | **P9. Red** | Sincronización de escena, réplica cliente, autoridad del host. **Sin tocar el formato en cable** | Bytes e identidades de P1 idénticos; QA host/cliente |
 | **P10. Aplicación** | `main()` queda como composición; RAII conservando el orden de limpieza | Cierre limpio; editor con cambios sin guardar |
-| **P11. Mover ficheros** | `git mv` por módulo solo cuando su target y sus pruebas existan; actualizar CMake, pruebas, `.vscode` y documentación. Enmienda (objetivo del usuario): los recursos **sí** se mueven en el árbol fuente, sin cambiar nombres ni la disposición de `bin/`; parte de los movimientos se adelanta como lotes B2 a B5 del [plan físico](REFACTOR_PHYSICAL_PLAN.md). El calendario y la enmienda de ARCHITECTURE.md están pendientes | Build desde cero; revisar mayúsculas y Unicode |
-| **P12. Nombres** | Último, por módulo. Enmienda (objetivo del usuario): deja de ser opcional para el código propio. Excluye IDs, claves JSON, protocolo, rutas de assets, textos de jugador y base VGI | Bytes e identidades sin cambios |
+| **P11. Mover ficheros** | `git mv` por módulo solo cuando su target y sus pruebas existan; actualizar CMake, pruebas, `.vscode` y documentación. Enmienda (decisión del usuario): el movimiento físico es obligatorio y los recursos **sí** se mueven en el árbol fuente, sin cambiar nombres ni la disposición de `bin/`; parte se adelanta como lotes B2 a B5 del [plan físico](REFACTOR_PHYSICAL_PLAN.md) | Build desde cero; revisar mayúsculas y Unicode |
+| **P12. Nombres** | Último, por módulo. **Obligatorio** para el código propio (decisión del usuario): código y módulos del equipo, pruebas, herramientas y documentación. Excluye IDs persistentes, claves JSON, protocolo, nombres de escena, rutas de assets, textos de jugador, base VGI y terceros | Bytes e identidades sin cambios |
 | **Aparte** | Reorganizar el contenido de assets, limpiar artefactos versionados, decidir sobre `.slnx`/`.vcxproj` | Decisión y rama propias |
 
 P6 a P9 no empiezan sin las pruebas de P3 en verde y sin P4. Ajuste propuesto, pendiente de aprobación: P6 y P7 solo esperan a los cortes S1, S2 y S5 a S9; S10 va tras la QA de agarre en cliente y bloquea P8 en adelante ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §3).
+
+**Propietario en serie de `NetJuegoLogica.h`:** B2 (cambia sus includes) y los cortes S1, S2 y S5 no lo editan a la vez; quien vaya segundo parte del SHA ya integrado.
 
 ### Correspondencia de origen a destino
 

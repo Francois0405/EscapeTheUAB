@@ -1,6 +1,6 @@
 # Arquitectura de EscapeTheUAB
 
-Documento inicial. Describe la arquitectura **actual** y propone una dirección. La arquitectura propuesta **todavía no existe** en el código. El plan por etapas está en [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md).
+Documento inicial. Describe la arquitectura **actual** y propone una dirección. La arquitectura propuesta **todavía no existe** en el código. El plan por etapas está en [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md) y el árbol destino con sus lotes de movimiento en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md).
 
 ## 0. Base, método y evidencia
 
@@ -27,9 +27,16 @@ Las tablas descriptivas sin marca son [C] según la auditoría. Al redactar este
 Las conclusiones de viabilidad de Codex fijan el marco:
 
 1. Se conserva **un único ejecutable** (`EntornVGI`).
-2. Las rutas de recursos siguen **ancladas a la raíz de recursos** y los ficheros actuales se quedan donde están en las primeras etapas.
+2. En ejecución, las rutas de recursos siguen **ancladas a la raíz de recursos**. En el árbol fuente, los ficheros se mueven por lotes según el plan físico.
 3. La **primera migración son bibliotecas CMake** sobre los ficheros en su sitio.
-4. Los ficheros se mueven **después**, cuando existan las costuras entre targets y sus pruebas.
+4. Los ficheros se mueven **después** de que existan las costuras entre targets y sus pruebas; un módulo que ya las tenga no espera al resto.
+
+Decisiones del usuario, transmitidas por el coordinador el 2026-11-25 (los puntos 2 y 4 se enmendaron para alinearse con ellas):
+
+5. La **reorganización física es un resultado obligatorio**. Extraer targets CMake es solo un paso intermedio.
+6. El alcance incluye fuentes y cabeceras, recursos, shaders, pruebas, documentación, herramientas y terceros.
+7. Los **nombres en inglés son obligatorios para el código propio** (etapa P12): código y módulos del equipo, pruebas, herramientas y documentación. La base académica VGI conserva sus identificadores y API originales en `legacy_vgi`, y el código de terceros no se traduce. Los adaptadores nuevos del equipo sobre API heredadas usan nombres en inglés. Los contratos de §4 y los textos visibles para el jugador no cambian.
+8. Se mantienen el **ejecutable único**, la disposición `build/<preset>/bin/` y el contrato de recursos en ejecución, incluida la comprobación de la raíz (§4.2).
 
 ## 2. Autorización y estado de aprobación
 
@@ -236,7 +243,7 @@ Esta es la dirección **objetivo**. La primera etapa de bibliotecas sigue las de
 ## 7. No objetivos
 
 - Sin cambios de gameplay, equilibrio, controles, arte, audio ni iluminación.
-- Sin renombrar ni mover assets, shaders ni texturas; sin borrar los que parezcan no usados (el editor enumera `assets/models` y el audio se referencia desde código).
+- Sin renombrar assets, shaders ni texturas: sus nombres y rutas relativas son contratos. Sí se mueven dentro del árbol fuente (lote B4 del [plan físico](REFACTOR_PHYSICAL_PLAN.md)) sin cambiar las rutas en ejecución. Sin borrar los que parezcan no usados (el editor enumera `assets/models` y el audio se referencia desde código).
 - Sin cambios de protocolo ni de contrato JSON, IDs o nombres de escena.
 - Sin sustituir bibliotecas, motor de render ni sistema de build.
 - Sin corregir dentro del refactor las observaciones de §10.
