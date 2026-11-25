@@ -403,6 +403,10 @@ namespace
 			comprobar(Cerca(pose.posicion, { 3, 2, 4 }), "pose replicada actualiza el AABB de Bullet");
 			comprobar(Cerca(glm::vec3(escena.MatrizVisualDe(0, objeto)[3]), { 3, 2, 4 }),
 				"la representacion visual toma la misma pose del cuerpo replicado");
+			const IdCuerpo cuerpoMirado = cliente.CuerpoAlFinalDelRayo({ 3, 0, 4 }, { 0, 1, 0 }, 3.0f);
+			comprobar(escena.ObjetoDinamicoDeCuerpo(cuerpoMirado) == 0 &&
+				cliente.CajasDeColision()[static_cast<std::size_t>(cuerpoMirado)].tipo == TipoCuerpo::Cinematico,
+				"el raycast del cliente selecciona su réplica cinemática de objeto dynamic o Rebotador");
 		}
 	}
 
