@@ -35,6 +35,7 @@
 #include "NetAdaptadores.h"
 #include "NetAvatar.h"
 #include "Network/PreferenciasRed.h"
+#include "Network/GrabDiagnostics.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include "EscalaUI.h"
@@ -47,6 +48,7 @@
 #include <random>
 #include <limits>
 #include <chrono>
+#include <sstream>
 #include "UniformCache.h"
 #include "FrustumCulling.h"
 #include "RenderMetrics.h"
@@ -664,13 +666,40 @@ namespace
 		return activo;
 	}
 
+	net::GrabDiagnosticRole rolDiagnosticoAgarre()
+	{
+		return redJuego.EsHost() ? net::GrabDiagnosticRole::Host :
+			redJuego.EsCliente() ? net::GrabDiagnosticRole::Client : net::GrabDiagnosticRole::Offline;
+	}
+
+	void persistirDiagnosticoAgarre(const std::string& registro)
+	{
+		if (!net::GrabPersistenceEnabledFromEnvironment()) return;
+		static std::array<std::unique_ptr<net::GrabDiagnostics>, 3> sinks;
+		const auto rol = rolDiagnosticoAgarre();
+		const auto indice = static_cast<std::size_t>(rol);
+		auto& sink = sinks[indice];
+		if (!sink)
+			sink = std::make_unique<net::GrabDiagnostics>(net::DefaultGrabDiagnosticsDirectory(),
+				rol, net::CurrentProcessId());
+		sink->Write(registro);
+	}
+
+	void emitirDiagnosticoAgarre(const std::string& registro)
+	{
+		std::clog << registro << '\n';
+		persistirDiagnosticoAgarre(registro);
+	}
+
 	void trazarAgarre(const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
 		const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
 	{
 		if (!diagnosticoAgarreActivo()) return;
-		std::clog << "[grab] " << evento << " id=" << id << " peer=" << peer << " owner=" << propietario
+		std::ostringstream registro;
+		registro << "[grab] " << evento << " id=" << id << " peer=" << peer << " owner=" << propietario
 			<< " detail=" << detalle << " pos=(" << posicion.x << ',' << posicion.y << ',' << posicion.z
-			<< ") point=(" << punto.x << ',' << punto.y << ',' << punto.z << ")\n";
+			<< ") point=(" << punto.x << ',' << punto.y << ',' << punto.z << ')';
+		emitirDiagnosticoAgarre(registro.str());
 	}
 
 	bool jugadorTieneAgarre()
@@ -876,14 +905,16 @@ namespace
 			{
 				const net::PeerId propietario = redJuego.Activa()
 					? redJuego.PropietarioDinamico(idHiriti) : netjuego::kSinDueno;
-				std::clog << "[grab] hiriti id=" << idHiriti << " owner=" << propietario
+				std::ostringstream registro;
+				registro << "[grab] hiriti id=" << idHiriti << " owner=" << propietario
 					<< " body=" << (redJuego.EsCliente() ? "kinematic-replica" : "authoritative-dynamic")
 					<< " held=" << (jugadorManipulaHiriti ? "yes" : "no")
 					<< " tracking=" << (puedeSeguir ? "eligible" : "suspended-or-stabilizing")
 					<< " followTarget=" << (redJuego.EsHost() ? "host-local-player" : (redJuego.EsCliente() ? "host-authoritative" : "offline-local-player"))
 					<< " respawnElapsed=" << animacionHiriti.TiempoDesdeReaparicion()
 					<< " pos=(" << centro.x << ',' << centro.y << ',' << centro.z << ") velocity=("
-					<< velocidadHiriti.x << ',' << velocidadHiriti.y << ',' << velocidadHiriti.z << ")\n";
+					<< velocidadHiriti.x << ',' << velocidadHiriti.y << ',' << velocidadHiriti.z << ')';
+				emitirDiagnosticoAgarre(registro.str());
 				ultimaMuestraHiriti = glfwGetTime();
 			}
 		}
@@ -1599,8 +1630,15 @@ namespace
 					auto& ultima = ultimaMuestraReplica[par.first];
 					if (ahora - ultima >= 0.5)
 					{
+						const auto& rotacion = aplicado.pose.rotacion;
+						const auto rotacionObjetivo = netjuego::RotDe(objetivo.transform);
+						std::ostringstream detalle;
+						detalle << "client-kinematic;position-is-interpolated-from-host;rotation=("
+							<< rotacion.x << ',' << rotacion.y << ',' << rotacion.z << ',' << rotacion.w
+							<< ");host-target-rotation=(" << rotacionObjetivo.x << ',' << rotacionObjetivo.y << ','
+							<< rotacionObjetivo.z << ',' << rotacionObjetivo.w << ')';
 						trazarAgarre("replica", par.first, propietario, propietario, aplicado.pose.posicion,
-							netjuego::PosDe(objetivo.transform), "client-kinematic;position-is-interpolated-from-host");
+							netjuego::PosDe(objetivo.transform), detalle.str().c_str());
 						ultima = ahora;
 					}
 				}
@@ -6806,7 +6844,8 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			if (indiceCuerpoDinamico >= 0 && indiceCuerpoDinamico < static_cast<int>(objetosEscena.size()))
 				idCuerpoRayo = objetosEscena[indiceCuerpoDinamico].id;
 			const char* rol = redJuego.EsHost() ? "host" : redJuego.EsCliente() ? "client" : "offline";
-			std::clog << "[grab] input key=E role=" << rol
+			std::ostringstream registro;
+			registro << "[grab] input key=E role=" << rol
 				<< " game=" << (estadoActual == ESTADO_JUGANDO)
 				<< " allowed=" << (gateJuego && gateInterfaz)
 				<< " paused=" << fpsPausado << " focused=" << ventanaConFoco
@@ -6822,7 +6861,8 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 				<< " rayAnimatedIndex=" << indiceCuerpoAnimado << " rayObjectId=" << idCuerpoRayo
 				<< " rayDistance=" << distanciaRayo
 				<< " rayOrigin=(" << origenRayo.x << ',' << origenRayo.y << ',' << origenRayo.z
-				<< ") rayDirection=(" << direccionRayo.x << ',' << direccionRayo.y << ',' << direccionRayo.z << ")\n";
+				<< ") rayDirection=(" << direccionRayo.x << ',' << direccionRayo.y << ',' << direccionRayo.z << ')';
+			emitirDiagnosticoAgarre(registro.str());
 		}
 		if (gateJuego && gateInterfaz)
 		{

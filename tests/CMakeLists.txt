@@ -1,4 +1,12 @@
 find_package(glm CONFIG REQUIRED)
+
+add_executable(GrabDiagnosticsTests
+	GrabDiagnosticsTests.cpp
+	${PROJECT_SOURCE_DIR}/EntornVGI/Network/GrabDiagnostics.cpp
+)
+target_include_directories(GrabDiagnosticsTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI/Network)
+target_compile_features(GrabDiagnosticsTests PRIVATE cxx_std_20)
+add_test(NAME GrabDiagnosticsTests COMMAND GrabDiagnosticsTests)
 file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}" ESCAPETHEUAB_SOURCE_PATH)
 
 add_executable(SceneLoaderTests

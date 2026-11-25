@@ -66,6 +66,7 @@ set(ENTORNVGI_SOURCES
 	MundoFisico.cpp
 	NetAvatar.cpp
 	NetJuego.cpp
+	Network/GrabDiagnostics.cpp
 	Network/PreferenciasRed.cpp
 	ObjetosAnimadosGLB.cpp
 	objLoader.cpp
