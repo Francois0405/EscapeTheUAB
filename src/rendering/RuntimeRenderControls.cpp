@@ -48,7 +48,7 @@ void RuntimeRenderControls::OnIluminacioPlana()
 {
 // TODO: Agregue aquí su código de controlador de comandos
 	test_vis = false;		oculta = true;
-	if (ilumina != PLANA) 
+	if (ilumina != PLANA)
 		{	ilumina = PLANA;	shader = FLAT_SHADER; oIlumina = 2;
 			// Elimina shader anterior
 			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
@@ -63,7 +63,7 @@ void RuntimeRenderControls::OnIluminacioSuau()
 {
 // TODO: Agregue aquí su código de controlador de comandos
 	test_vis = false;		oculta = true;
-	if (ilumina != SUAU) 
+	if (ilumina != SUAU)
 		{	ilumina = SUAU;		shader = GOURAUD_SHADER;
 			// Elimina shader anterior
 			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
@@ -149,14 +149,14 @@ void RuntimeRenderControls::OnIluminacioTexturaFitxerimatge()
 	t_textura = TEXTURA_FITXERIMA;		tFlag_invert_Y = true;
 	textura = true;
 
-	if (result == NFD_OKAY) 
+	if (result == NFD_OKAY)
 		{	// Entorn VGI: Variable de tipus nfdchar_t* 'nomFitxer' conté el nom del fitxer seleccionat
 			puts("Success!");
 			puts(nomFitxer);
 
 			// Entorn VGI: Eliminar buffers de textures previs del vector texturesID[].
-			for (int i = 0; i < NUM_MAX_TEXTURES; i++) 
-				{	if (texturesID[i]) 
+			for (int i = 0; i < NUM_MAX_TEXTURES; i++)
+				{	if (texturesID[i])
 					{	//err = glIsTexture(texturesID[i]);
 						glDeleteTextures(1, &texturesID[i]);
 						//err = glIsTexture(texturesID[i]);
@@ -175,7 +175,7 @@ void RuntimeRenderControls::OnIluminacioTexturaFitxerimatge()
 }
 
 
-// ILUMINACIÓ --> TEXTURA: FLAG_INVERT_Y Inversió coordenada t de textura (1-cty) per a textures SOIL (TRUE) 
+// ILUMINACIÓ --> TEXTURA: FLAG_INVERT_Y Inversió coordenada t de textura (1-cty) per a textures SOIL (TRUE)
 //			o no (FALSE) per a objectes 3DS i OBJ.
 void RuntimeRenderControls::OnIluminacioTexturaFlagInvertY()
 {
@@ -190,7 +190,7 @@ void RuntimeRenderControls::OnIluminacioTexturaFlagInvertY()
 /*					11. LLUMS												 */
 /* ------------------------------------------------------------------------- */
 
-// LLUMS: Activació / Desactivació llum ambient 
+// LLUMS: Activació / Desactivació llum ambient
 void RuntimeRenderControls::OnLlumsLlumAmbient()
 {
 // TODO: Agregue aquí su código de controlador de comandos
@@ -336,7 +336,7 @@ void RuntimeRenderControls::OnShaderGouraud()
 
 // Elimina shader anterior
 	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
-// Càrrega Gouraud shader 
+// Càrrega Gouraud shader
 	newShaderID = shaderLighting.loadFileShaders("./assets/shaders/gouraud_shdrML.vert", "./assets/shaders/gouraud_shdrML.frag");
 
 // Càrrega shaders dels fitxers
@@ -390,11 +390,11 @@ void RuntimeRenderControls::OnShaderLoadFiles()
 // Entorn VGI: Obrir diàleg de lectura de fitxer (fitxers (*.VERT)
 	nfdresult_t resultVS = NFD_OpenDialog("vert,vrt,vs", NULL, &nomVertS);
 
-	if (resultVS == NFD_OKAY) 
+	if (resultVS == NFD_OKAY)
 		{	puts("Fitxer .vert llegit!");
 			puts(nomVertS);
 		}
-		else if (resultVS == NFD_CANCEL) 
+		else if (resultVS == NFD_CANCEL)
 			{	puts("User pressed cancel.");
 				return;
 			}
@@ -406,11 +406,11 @@ void RuntimeRenderControls::OnShaderLoadFiles()
 // Entorn VGI: Obrir diàleg de lectura de fitxer (fitxers (*.FRAG)
 	nfdresult_t resultFS = NFD_OpenDialog("frag,frg,fs", NULL, &nomFragS);
 
-	if (resultVS == NFD_OKAY) 
+	if (resultVS == NFD_OKAY)
 		{	puts("Fitxer .FRAG llegit!");
 			puts(nomFragS);
 		}
-		else if (resultVS == NFD_CANCEL) 
+		else if (resultVS == NFD_CANCEL)
 			{	puts("User pressed cancel.");
 				return;
 			}
@@ -424,7 +424,7 @@ void RuntimeRenderControls::OnShaderLoadFiles()
 	newShaderID = shaderLighting.loadFileShaders(nomVertS, nomFragS);
 
 // Càrrega shaders dels fitxers
-	if (newShaderID) 
+	if (newShaderID)
 		{	shader_programID = newShaderID;
 			// Activa shader.
 			glUseProgram(shader_programID); // shaderLighting.use();
@@ -443,7 +443,7 @@ void RuntimeRenderControls::OnShaderPBinaryWrite()
 // Entorn VGI: Obrir diàleg d'escriptura de fitxer (fitxers (*.bin)
 	nfdresult_t resultBS = NFD_OpenDialog(NULL, NULL, &nomPBinary);
 
-	if (resultBS == NFD_OKAY) 
+	if (resultBS == NFD_OKAY)
 	{	// Entorn VGI: Variable de tipus nfdchar_t* 'nomFitxer' conté el nom del fitxer seleccionat
 		puts("Success!");
 		puts(nomPBinary);
@@ -489,7 +489,7 @@ void RuntimeRenderControls::OnShaderPBinaryRead()
 	// Entorn VGI: Obrir diàleg de lectura de fitxer (fitxers (*.bin)
 	nfdresult_t resultBS = NFD_OpenDialog(NULL, NULL, &nomPBinary);
 
-	if (resultBS == NFD_OKAY) 
+	if (resultBS == NFD_OKAY)
 	{	// Entorn VGI: Variable de tipus nfdchar_t* 'nomFitxer' conté el nom del fitxer seleccionat
 		puts("Success!");
 		puts(nomPBinary);
