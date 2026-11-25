@@ -26,7 +26,7 @@ void ShutdownApplication(Ps1Framebuffer& ps1)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-	networkGame.StopSessionGame();           // cierra la red (si la hay) antes que la ventana
+	networkGame.Stop();           // cierra la red (si la hay) antes que la ventana
 	openXrManager.Deactivate();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
 	NFD_QuitCompat();
 

@@ -20,7 +20,7 @@
 
 namespace editor
 {
-	enum class Herramienta { MoveView, Rotar, Escalar };
+	enum class Herramienta { Move, Rotar, Escalar };
 
 	// Lo que el editor puede modificar. Los objetos OBJ (arquitectura y objetos) y las instancias GLB animadas (puertas)
 	// viven en listas distintas; el editor las presenta como una sola jerarquía.
@@ -60,7 +60,7 @@ namespace editor
 		void NewScene();
 
 		void Shortcut(int tecla, int accion, int modificadores, bool escribiendoTexto);
-		void Advance(GLFWwindow* ventana, float delta);
+		void Update(GLFWwindow* ventana, float delta);
 		void DrawEditorInterface(EditorSceneContext contexto, int ancho, int alto);
 		// Rueda del ratón: solo hace zoom si el cursor está sobre el viewport (ni sobre un panel ImGui, ni arrastrando un gizmo,
 		// ni navegando con otro botón).
@@ -166,10 +166,10 @@ namespace editor
 		bool seleccionCambiada = false;
 		bool mensajeEsError = false;
 		int seleccionado = -1;
-		Herramienta herramienta = Herramienta::MoveView;
+		Herramienta herramienta = Herramienta::Move;
 
 		// --- Cámara estilo Unity y arbitraje de la entrada ---
-		enum class CameraMode { Ninguno, LookAround, Pan, OrbitView };
+		enum class CameraMode { Ninguno, Look, Pan, Orbit };
 		CamaraEditor camara;
 		CameraOptions opciones;
 		CameraMode modoCamara = CameraMode::Ninguno;

@@ -31,7 +31,7 @@ namespace
 		}
 		~VentanaImGuiSinVentana() { ImGui::DestroyContext(); }
 
-		void BeginPlayback(ImVec2 cursor, bool botonIzquierdo)
+		void Start(ImVec2 cursor, bool botonIzquierdo)
 		{
 			ImGuiIO& io = ImGui::GetIO();
 			io.MousePos = cursor;
@@ -67,16 +67,16 @@ int main()
 	// El objeto recién seleccionado queda bajo el puntero. Se simula el clic y su
 	// continuación con un movimiento grande que, sin arbitraje, podría iniciar el gizmo.
 	bloqueo.Lock();
-	imgui.BeginPlayback(ImVec2(400.0f, 300.0f), true);
+	imgui.Start(ImVec2(400.0f, 300.0f), true);
 	const bool cambioAlSeleccionar = DibujarGizmoSiPermitido(bloqueo, objeto, vista, proyeccion);
 	imgui.Terminar();
-	imgui.BeginPlayback(ImVec2(610.0f, 70.0f), true);
+	imgui.Start(ImVec2(610.0f, 70.0f), true);
 	const bool cambioAlArrastrarElClicDeSeleccion = DibujarGizmoSiPermitido(bloqueo, objeto, vista, proyeccion);
 	imgui.Terminar();
 	comprobar(!cambioAlSeleccionar && !cambioAlArrastrarElClicDeSeleccion && objeto == original,
 		"ImGuizmo no recibe ni modifica la matriz durante el clic de seleccion");
 
-	imgui.BeginPlayback(ImVec2(610.0f, 70.0f), false);
+	imgui.Start(ImVec2(610.0f, 70.0f), false);
 	comprobar(!DibujarGizmoSiPermitido(bloqueo, objeto, vista, proyeccion), "el fotograma que suelta el clic sigue bloqueado");
 	imgui.Terminar();
 	comprobar(!bloqueo.IsLocked(), "al soltar se rearma la siguiente interaccion");

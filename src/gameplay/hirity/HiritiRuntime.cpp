@@ -129,7 +129,7 @@ namespace game::hiriti
 			[](const SceneObject& objeto) { return objeto.id == "hiriti"; });
 		if (hiriti == sceneObjects.end())
 		{
-			hiritiAnimator.ResetState();
+			hiritiAnimator.Reset();
 			return;
 		}
 
@@ -237,7 +237,7 @@ namespace game::hiriti
 				indice, aceleracion, std::min(delta, 0.05f));
 		}
 		// La primera mirada dispara el saludo y el impulso inicial.
-		if (hiritiAnimator.Advance(puedeDescubrir, origen, direccion, centro, radioHiriti(*hiriti)))
+		if (hiritiAnimator.Update(puedeDescubrir, origen, direccion, centro, radioHiriti(*hiriti)))
 		{
 			static std::mt19937 generador(std::random_device{}());
 			static std::uniform_int_distribution<int> probabilidadGallego(1, 5);
@@ -263,7 +263,7 @@ namespace game::hiriti
 		static std::uniform_int_distribution<int> tipoAmbiente(0, 1);
 		static std::uniform_int_distribution<int> tipoBuscando(0, 1);
 		if (!activo) hiritiFollowPlayerEnabled = false;
-		switch (hiritiAudioTimer.Advance(activo, delta))
+		switch (hiritiAudioTimer.Update(activo, delta))
 		{
 		case game::HiritiAudioTimer::Evento::Ambiente:
 			hiritiFollowPlayerEnabled = false;

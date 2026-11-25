@@ -106,7 +106,7 @@ namespace fisica
 		RemoveAllBodies();   // los cuerpos se sacan del mundo antes de destruirlo
 	}
 
-	int PhysicsWorld::Advance(float deltaSegundos)
+	int PhysicsWorld::Update(float deltaSegundos)
 	{
 		// En pausa el tiempo se descarta: al reanudar no hay "salto" de golpe.
 		if (pausa || deltaSegundos <= 0.0f) return 0;
@@ -864,9 +864,9 @@ namespace fisica
 
 	// ---- DemoCuboCaida -------------------------------------------------------
 
-	void FallingCubeDemo::BeginPlayback()
+	void FallingCubeDemo::Start()
 	{
-		StopSessionGame();   // quita SOLO los cuerpos de la demo anterior (los de la habitación no se tocan)
+		Stop();   // quita SOLO los cuerpos de la demo anterior (los de la habitación no se tocan)
 
 		// Suelo estático: una caja grande y fina (masa 0). Su cara superior queda en
 		// AlturaSuperiorSuelo, igual que el suelo visible de la habitación.
@@ -880,7 +880,7 @@ namespace fisica
 		activa = true;
 	}
 
-	void FallingCubeDemo::StopSessionGame()
+	void FallingCubeDemo::Stop()
 	{
 		mundo.RemoveBody(suelo);
 		mundo.RemoveBody(cubo);

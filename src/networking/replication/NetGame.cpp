@@ -40,10 +40,10 @@ namespace netgame
 		return net::CreateENetTransport(o) != nullptr;   // solo construye; enet_initialize ocurre en Start()
 	}
 
-	bool NetworkGame::BeginPlayback(const NetworkConfig& cfg, const std::string& escenaId, ISceneDoors* puertas, const glm::vec3& posObjeto)
+	bool NetworkGame::Start(const NetworkConfig& cfg, const std::string& escenaId, ISceneDoors* puertas, const glm::vec3& posObjeto)
 	{
 		if (cfg.rol == net::Role::Offline) return true;          // OFFLINE: ni servicio, ni hilo, ni ENet
-		if (fase_ == NetworkPhase::Arrancando || fase_ == NetworkPhase::IsActive) return false;
+		if (fase_ == NetworkPhase::Arrancando || fase_ == NetworkPhase::Active) return false;
 		if (arranque_.joinable()) arranque_.join();
 		if (servicio_) { servicio_->Stop(); servicio_.reset(); }
 		if (escenaId.empty() || escenaId.size() > net::kMaxSceneIdLength) { FailSession("Identificador de escena no valido para la red"); return false; }
@@ -85,13 +85,13 @@ namespace netgame
 
 	void NetworkGame::ResetRemoteState()
 	{
-		interp_.ClearState(); vista_.ResetState(); hayPoseLocal_ = false; ignorados_ = 0;
+		interp_.ClearState(); vista_.Reset(); hayPoseLocal_ = false; ignorados_ = 0;
 		recuperacionEnviada_.clear(); estadosRecibidos_.clear(); recuperacionSucia_ = true; ultimaSubida_ = -1e9; ultimoAcarreo_ = -1e9;
 		estadosFisicosHost_.clear(); estadosFisicosFiables_.clear(); solicitudesFisicas_.clear(); propietariosDinamicos_.clear();
 		estadoConexion_ = net::ConnectionState::Idle;
 	}
 
-	void NetworkGame::StopSessionGame()
+	void NetworkGame::Stop()
 	{
 		if (fase_ == NetworkPhase::Arrancando) { pendienteDetener_ = true; return; }   // se completa en Actualizar, sin bloquear
 		if (arranque_.joinable()) arranque_.join();
@@ -124,7 +124,7 @@ namespace netgame
 
 	bool NetworkGame::SetSceneState(const std::vector<SceneObjectState>& estado, bool difundir)
 	{
-		if (difundir && (cfg_.rol != net::Role::Host || fase_ != NetworkPhase::IsActive || estado.size() != estadoEscena_.size())) return false;
+		if (difundir && (cfg_.rol != net::Role::Host || fase_ != NetworkPhase::Active || estado.size() != estadoEscena_.size())) return false;
 		std::map<uint32_t, SceneObjectState> validados;
 		for (const auto& objeto : estado)
 			if (!IsValidSceneObjectState(objeto) || !validados.emplace(objeto.id, objeto).second) return false;
@@ -253,7 +253,7 @@ namespace netgame
 		out = PositionOfPose(it->second.head); return true;
 	}
 
-	void NetworkGame::Advance(double ahora, const net::PoseEntry* pose)
+	void NetworkGame::Update(double ahora, const net::PoseEntry* pose)
 	{
 		if (fase_ == NetworkPhase::Offline || fase_ == NetworkPhase::Error) return;
 		const double dt = std::clamp(ahora - ultimoAhora_, 0.0, 0.25);
@@ -263,7 +263,7 @@ namespace netgame
 		{
 			if (arrancando_.load(std::memory_order_acquire)) return;   // el render sigue sin esperar
 			if (arranque_.joinable()) arranque_.join();
-			if (pendienteDetener_) { StopSessionGame(); return; }
+			if (pendienteDetener_) { Stop(); return; }
 			if (!arranqueOk_.load())
 			{
 				FailSession(sinTransporte_.load() ? "ENet no esta incluido en esta compilacion: sin transporte de red. Se sigue offline."
@@ -272,7 +272,7 @@ namespace netgame
 						: "No se pudo iniciar la conexion a " + cfg_.host + ":" + std::to_string(cfg_.puerto) + ". Comprueba la direccion, el puerto y que ENet pueda abrir UDP."));
 				return;
 			}
-			fase_ = NetworkPhase::IsActive; recuperacionSucia_ = true;
+			fase_ = NetworkPhase::Active; recuperacionSucia_ = true;
 		}
 
 		// 1) Subida de la pose local (solo se LEE: la red nunca escribe en la camara ni en el jugador).
@@ -286,7 +286,7 @@ namespace netgame
 		const auto poses = servicio_->RemotePoses();
 		std::vector<net::NetEvent> evs;
 		servicio_->PollEvents(evs);
-		for (const auto& e : evs) { ProcessRequests(e, ahora, poses); if (fase_ != NetworkPhase::IsActive) return; }
+		for (const auto& e : evs) { ProcessRequests(e, ahora, poses); if (fase_ != NetworkPhase::Active) return; }
 
 		if (cfg_.rol == net::Role::Client)
 		{
@@ -307,7 +307,7 @@ namespace netgame
 		}
 		else BroadcastFromHost(ahora);
 
-		interp_.Advance(poses, servicio_->LocalPeer(), ahora);
+		interp_.Update(poses, servicio_->LocalPeer(), ahora);
 		const float k = 1.0f - std::exp(-15.0f * static_cast<float>(dt));
 		posVisual_ = vista_.conocido ? glm::mix(posVisual_, vista_.pos, k) : posVisual_;
 		if (vista_.conocido && glm::distance(posVisual_, vista_.pos) > 3.0f) posVisual_ = vista_.pos;
@@ -386,7 +386,7 @@ namespace netgame
 		case kEvPropMover:
 		{
 			glm::vec3 p;
-			if (DecodeVec3(ev.payload, p)) r = arbitro_.MoveView(ev.targetId, e.peer, p, hay ? &cabeza : nullptr, ahora);
+			if (DecodeVec3(ev.payload, p)) r = arbitro_.Move(ev.targetId, e.peer, p, hay ? &cabeza : nullptr, ahora);
 			break;
 		}
 		case kEvSolicitarAgarreDinamico:
@@ -471,7 +471,7 @@ namespace netgame
 	bool NetworkGame::InterceptDoor(size_t idx)
 	{
 		if (!IsClient() || fase_ == NetworkPhase::Error) return false;   // offline o host: la alterna el llamante
-		if (fase_ == NetworkPhase::IsActive && sincroPuertas_.IsOnline(idx)) Enqueue(DoorSync::PendingRequest(sincroPuertas_.NetworkId(idx)));
+		if (fase_ == NetworkPhase::Active && sincroPuertas_.IsOnline(idx)) Enqueue(DoorSync::PendingRequest(sincroPuertas_.NetworkId(idx)));
 		return true;   // el cliente jamas cambia la puerta por su cuenta: espera el estado del host
 	}
 
@@ -479,7 +479,7 @@ namespace netgame
 
 	bool NetworkGame::ToggleAnimatedObject(const glm::vec3& origen, const glm::vec3& dir, double ahora)
 	{
-		if (fase_ != NetworkPhase::IsActive || !vista_.conocido) return false;
+		if (fase_ != NetworkPhase::Active || !vista_.conocido) return false;
 		const bool host = cfg_.rol == net::Role::Host;
 		glm::vec3 cabeza(0.0f); const bool hay = hayPoseLocal_;
 		if (hay) cabeza = PositionOfPose(poseLocal_.head);
@@ -497,7 +497,7 @@ namespace netgame
 
 	void NetworkGame::UpdateCarry(const glm::vec3& origen, const glm::vec3& dir, double ahora)
 	{
-		if (fase_ != NetworkPhase::IsActive || !OwnsObject() || !(glm::length(dir) > 1e-6f)) return;
+		if (fase_ != NetworkPhase::Active || !OwnsObject() || !(glm::length(dir) > 1e-6f)) return;
 		const glm::vec3 destino = origen + glm::normalize(dir) * 1.5f;
 		if (!IsValidCoordinate(destino)) return;
 		destinoAcarreo_ = destino;
@@ -507,7 +507,7 @@ namespace netgame
 		if (cfg_.rol == net::Role::Host)
 		{
 			const glm::vec3 cabeza = hayPoseLocal_ ? PositionOfPose(poseLocal_.head) : origen;
-			arbitro_.MoveView(kObjetoPrueba, net::kHostPeerId, destino, &cabeza, ahora);
+			arbitro_.Move(kObjetoPrueba, net::kHostPeerId, destino, &cabeza, ahora);
 		}
 		else { OutputEvent e; e.tipo = kEvPropMover; e.objetivo = kObjetoPrueba; e.payload = EncodeVec3(destino); Enqueue(e); }
 	}
@@ -515,7 +515,7 @@ namespace netgame
 	std::vector<net::PoseEntry> NetworkGame::RemotePlayersToDraw(double ahora) const
 	{
 		std::vector<net::PoseEntry> v;
-		if (fase_ != NetworkPhase::IsActive) return v;
+		if (fase_ != NetworkPhase::Active) return v;
 		for (net::PeerId p : interp_.Peers())
 		{
 			net::PoseEntry pe;

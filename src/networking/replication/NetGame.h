@@ -22,7 +22,7 @@
 
 namespace netgame
 {
-	enum class NetworkPhase { Offline, Arrancando, IsActive, Error };
+	enum class NetworkPhase { Offline, Arrancando, Active, Error };
 
 	struct Diagnostico
 	{
@@ -52,12 +52,12 @@ namespace netgame
 
 		// Offline: devuelve true sin hacer nada. 'puertas' debe sobrevivir a la sesion (o llamar a Detener antes).
 		// 'posObjetoCompartido' solo lo usa el host: donde nace el objeto de prueba.
-		bool BeginPlayback(const NetworkConfig& cfg, const std::string& escenaId, ISceneDoors* puertas, const glm::vec3& posObjetoCompartido);
-		void StopSessionGame();
+		bool Start(const NetworkConfig& cfg, const std::string& escenaId, ISceneDoors* puertas, const glm::vec3& posObjetoCompartido);
+		void Stop();
 		void ChangedDoors();   // tras recargar la escena: reconstruye la tabla de IDs
 
 		// Una vez por fotograma. 'poseLocal' = pose del jugador local (nullptr si no hay): solo se LEE.
-		void Advance(double ahora, const net::PoseEntry* poseLocal);
+		void Update(double ahora, const net::PoseEntry* poseLocal);
 		// Registro de estado de escena: se llama al iniciar red y al confirmar una edicion del host.
 		bool SetSceneState(const std::vector<SceneObjectState>& estado, bool difundir);
 		void TakeSceneStates(std::vector<SceneObjectState>& salida);
@@ -74,9 +74,9 @@ namespace netgame
 		uint32_t DynamicObjectOfPeer(net::PeerId peer) const;
 		bool PoseOfPeer(net::PeerId peer, net::PoseEntry& salida) const;
 
-		bool IsActive() const { return fase_ == NetworkPhase::IsActive; }
+		bool IsActive() const { return fase_ == NetworkPhase::Active; }
 		bool IsConnecting() const { return fase_ == NetworkPhase::Arrancando; }
-		bool IsOnline() const { return fase_ == NetworkPhase::IsActive || fase_ == NetworkPhase::Arrancando; }
+		bool IsOnline() const { return fase_ == NetworkPhase::Active || fase_ == NetworkPhase::Arrancando; }
 		bool IsHosting() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Host; }
 		bool IsClient() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Client; }
 		net::PeerId LocalPeerId() const { return servicio_ ? servicio_->LocalPeer() : net::kUnassignedPeerId; }

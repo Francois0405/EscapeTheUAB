@@ -60,7 +60,7 @@ namespace animation
 		float duracion = 0.0f;         // segundos totales de la animación
 		bool reproduciendo = false;
 
-		void BeginPlayback(float duracionSegundos)
+		void Start(float duracionSegundos)
 		{
 			tiempo = 0.0f;
 			duracion = duracionSegundos;
@@ -68,7 +68,7 @@ namespace animation
 		}
 
 		// Se llama una vez por fotograma con el tiempo que ha pasado desde el anterior.
-		void Advance(float deltaSegundos)
+		void Update(float deltaSegundos)
 		{
 			if (!reproduciendo) return;
 			tiempo += deltaSegundos;

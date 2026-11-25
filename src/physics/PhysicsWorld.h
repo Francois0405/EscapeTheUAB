@@ -93,7 +93,7 @@ namespace fisica
 		// Avanza la simulación 'deltaSegundos' de tiempo real. Acumula el tiempo y ejecuta
 		// 0, 1 o varios pasos fijos. Con pausa activa no simula ni acumula nada.
 		// Devuelve cuántos pasos fijos se han ejecutado.
-		int Advance(float deltaSegundos);
+		int Update(float deltaSegundos);
 
 		void SetPaused(bool pausado) { pausa = pausado; }
 		bool IsPaused() const { return pausa; }
@@ -253,7 +253,7 @@ namespace fisica
 		// La demo NO tiene mundo propio: usa el mundo único del juego y solo es dueña de
 		// su suelo y su cubo (los quita con Detener(), sin tocar los cuerpos de la habitación).
 		explicit FallingCubeDemo(PhysicsWorld& mundoCompartido) : mundo(mundoCompartido) {}
-		~FallingCubeDemo() { StopSessionGame(); }
+		~FallingCubeDemo() { Stop(); }
 		FallingCubeDemo(const FallingCubeDemo&) = delete;
 		FallingCubeDemo& operator=(const FallingCubeDemo&) = delete;
 
@@ -264,9 +264,9 @@ namespace fisica
 		static constexpr float AlturaInicialCentro = 1.20f;        // desde donde se suelta
 
 		// (Re)crea suelo y cubo en su posición inicial y vuelve a empezar.
-		void BeginPlayback();
+		void Start();
 		// Quita suelo y cubo (la demo deja de existir y de dibujarse).
-		void StopSessionGame();
+		void Stop();
 		bool IsRunningNow() const { return activa; }
 
 		BodyPose CubePose() const { return mundo.PoseOf(cubo); }

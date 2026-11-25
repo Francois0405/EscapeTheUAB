@@ -40,7 +40,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 		// 2. Sincronizar la pausa interna del motor (libera/captura el ratón automáticamente)
 		fpsPaused = (currentGameState != ESTADO_JUGANDO);
 
-		sceneEditor.Advance(window, static_cast<float>(delta));
+		sceneEditor.Update(window, static_cast<float>(delta));
 		syncFpsCursor(window);
 		updateThrowChargeInput(window, static_cast<float>(delta));
 
@@ -63,10 +63,10 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 					glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 				entrada.enSuelo = physicsWorld.IsPlayerGrounded();
 				entrada.fraccionAgachado = physicsWorld.CrouchFraction();
-				const float velocidad = playerMovement.Advance(static_cast<float>(delta), entrada);
+				const float velocidad = playerMovement.Update(static_cast<float>(delta), entrada);
 				if (entrada.activo)
 					moveFirstPersonPlayer(window, velocidad);
-				staminaBar.Advance(static_cast<float>(delta), playerMovement.StaminaFraction(), playerMovement.IsSprinting());
+				staminaBar.Update(static_cast<float>(delta), playerMovement.StaminaFraction(), playerMovement.IsSprinting());
 			}
 
 			updatePhoneMotion(window, static_cast<float>(delta));
@@ -99,7 +99,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 				(!networkGame.IsHosting() || fpsInputActive()));
 			physicsWorld.SetPaused(animacionPausada);
 			const auto inicioFisica = std::chrono::steady_clock::now();
-			physicsWorld.Advance(static_cast<float>(delta));
+			physicsWorld.Update(static_cast<float>(delta));
 			if (renderMetrics::enabled) renderMetrics::fisicaMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioFisica).count();
 			syncPlayerWithCamera();
 			updateCameraBobbing(static_cast<float>(delta));

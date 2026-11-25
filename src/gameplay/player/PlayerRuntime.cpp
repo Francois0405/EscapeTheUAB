@@ -165,7 +165,7 @@ namespace gameplay::player
 		if (distance > 1.0f) distance = 0.0f;
 
 		const float crouchFraction = context.physics.CrouchFraction();
-		context.cameraBob.Advance(deltaTime, distance, context.physics.IsPlayerGrounded(), context.fpsInputActive() && context.physics.HasPlayerBody(),
+		context.cameraBob.Update(deltaTime, distance, context.physics.IsPlayerGrounded(), context.fpsInputActive() && context.physics.HasPlayerBody(),
 			context.movement.VelocityValue(), context.movement.parametros, crouchFraction);
 		context.walkWeight = context.cameraBob.WeightValue() * context.cameraBob.AmplitudeFactor();
 		context.walkPhase = context.cameraBob.CurrentPhase();

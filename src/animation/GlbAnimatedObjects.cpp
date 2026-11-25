@@ -27,7 +27,7 @@ namespace glb
 		void PasarAlEstadoFinalSiHaTerminado(AnimatedObject& objeto)
 		{
 			if (objeto.reproductor.reproduciendo) return;
-			if (objeto.estado == DoorState::Abriendo) objeto.estado = DoorState::IsOpen;
+			if (objeto.estado == DoorState::Abriendo) objeto.estado = DoorState::Open;
 			if (objeto.estado == DoorState::Cerrando) objeto.estado = DoorState::Cerrada;
 		}
 
@@ -105,7 +105,7 @@ namespace glb
 	{
 		if (!TieneAnimacion(objeto)) return;
 		RestoreRestPose(*objeto.modelo, objeto.pose);
-		objeto.reproductor.BeginPlayback(objeto.modelo->animaciones[objeto.indiceAnimacion].duracion);
+		objeto.reproductor.Start(objeto.modelo->animaciones[objeto.indiceAnimacion].duracion);
 		objeto.estado = DoorState::Abriendo;
 	}
 
@@ -119,7 +119,7 @@ namespace glb
 			objeto.estado = DoorState::Abriendo;
 			objeto.reproductor.PlayAnimation(+1.0f);
 			break;
-		case DoorState::IsOpen:
+		case DoorState::Open:
 		case DoorState::Abriendo:    // si se estaba abriendo, empieza a cerrarse desde donde esté
 			objeto.estado = DoorState::Cerrando;
 			objeto.reproductor.PlayAnimation(-1.0f);
@@ -133,7 +133,7 @@ namespace glb
 		{
 		case DoorState::Cerrada:  return "Cerrada";
 		case DoorState::Abriendo: return "Abriendo";
-		case DoorState::IsOpen:  return "Abierta";
+		case DoorState::Open:  return "Abierta";
 		case DoorState::Cerrando: return "Cerrando";
 		}
 		return "?";
@@ -144,7 +144,7 @@ namespace glb
 		for (AnimatedObject& objeto : escena.objetos)
 		{
 			if (!TieneAnimacion(objeto)) continue;
-			objeto.reproductor.Advance(deltaSegundos);
+			objeto.reproductor.Update(deltaSegundos);
 			PasarAlEstadoFinalSiHaTerminado(objeto);
 			ApplyAnimation(objeto.pose, objeto.modelo->animaciones[objeto.indiceAnimacion], objeto.reproductor.tiempo);
 		}

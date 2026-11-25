@@ -26,15 +26,15 @@ int main()
 	const glm::vec3 haciaHiriti(0.0f, 1.0f, 0.0f);
 	game::HiritiAnimator hiriti;
 
-	comprobar(!hiriti.Advance(false, origen, haciaHiriti, centro, 0.2f),
+	comprobar(!hiriti.Update(false, origen, haciaHiriti, centro, 0.2f),
 		"no se descubre mientras no se permite descubrir");
-	comprobar(!hiriti.Advance(true, origen, glm::vec3(1.0f, 0.0f, 0.0f), centro, 0.2f),
+	comprobar(!hiriti.Update(true, origen, glm::vec3(1.0f, 0.0f, 0.0f), centro, 0.2f),
 		"mirar a otro lado no descubre a Hiriti");
-	comprobar(!hiriti.Advance(true, origen, glm::vec3(0.0f), centro, 0.2f),
+	comprobar(!hiriti.Update(true, origen, glm::vec3(0.0f), centro, 0.2f),
 		"una direccion nula no descubre a Hiriti");
-	comprobar(hiriti.Advance(true, origen, haciaHiriti, centro, 0.2f),
+	comprobar(hiriti.Update(true, origen, haciaHiriti, centro, 0.2f),
 		"la primera mirada descubre a Hiriti");
-	comprobar(!hiriti.Advance(true, origen, haciaHiriti, centro, 0.2f),
+	comprobar(!hiriti.Update(true, origen, haciaHiriti, centro, 0.2f),
 		"el evento de descubrimiento solo ocurre una vez");
 	comprobar(!hiriti.UpdateGrabMe(4.9f),
 		"el sonido para agarrarlo espera cinco segundos");
@@ -43,8 +43,8 @@ int main()
 	comprobar(!hiriti.UpdateGrabMe(1.0f),
 		"el sonido para agarrarlo solo se activa una vez");
 
-	hiriti.ResetState();
-	comprobar(hiriti.Advance(true, origen, haciaHiriti, centro, 0.2f),
+	hiriti.Reset();
+	comprobar(hiriti.Update(true, origen, haciaHiriti, centro, 0.2f),
 		"reiniciar permite descubrir de nuevo al cargar otra escena");
 	comprobar(hiriti.MarkGrabbed(),
 		"agarrar a Hiriti despues de descubrirlo activa el evento de exito");
@@ -57,7 +57,7 @@ int main()
 		"un agarre físico validado descubre a Hiriti aunque otra réplica no detectara su mirada");
 	comprobar(!agarreValidado.MarkGrabbed(),
 		"el estado remoto de Hiriti no duplica el evento de agarre");
-	hiriti.ResetState();
+	hiriti.Reset();
 	comprobar(!hiriti.MarkGrabbed(),
 		"no se registra el agarre antes de descubrir a Hiriti");
 	hiriti.MarkThrownByPlayer(0.7f);
@@ -70,16 +70,16 @@ int main()
 	comprobar(hiriti.UpdateContact(false) == -1 &&
 		hiriti.UpdateContact(true) == -1,
 		"un solo lanzamiento no repite el sonido en impactos posteriores");
-	hiriti.ResetState();
+	hiriti.Reset();
 	hiriti.MarkThrownByPlayer(0.3f);
 	comprobar(hiriti.UpdateContact(true) == -1,
 		"una patada con el 30% de potencia no reproduce audio de impacto");
-	hiriti.ResetState();
+	hiriti.Reset();
 	hiriti.MarkThrownByPlayer(0.5f);
 	comprobar(hiriti.UpdateContact(true) == -1,
 		"una patada con exactamente el 50% de potencia no reproduce audio de impacto");
 
-	hiriti.ResetState();
+	hiriti.Reset();
 	hiriti.MarkThrownByPlayer(0.7f);
 	comprobar(hiriti.UpdateContact(true) == 0,
 		"una patada con el 70% de potencia reproduce audio de impacto");
@@ -133,30 +133,30 @@ int main()
 	comprobar(!reaparicion.UpdateRespawnTimer(true, false, 29.0f) &&
 		reaparicion.UpdateRespawnTimer(true, false, 1.0f),
 		"cada reaparicion inicia un nuevo cooldown de 30 segundos");
-	reaparicion.ResetState();
+	reaparicion.Reset();
 	comprobar(!reaparicion.UpdateRespawnTimer(false, false, 30.0f),
 		"estar a 10 metros o menos impide reaparecer");
-	reaparicion.ResetState();
+	reaparicion.Reset();
 	comprobar(!reaparicion.UpdateRespawnTimer(true, false, 29.0f) &&
 		reaparicion.UpdateRespawnTimer(true, false, 1.0f),
 		"reiniciar Hiriti limpia el cooldown antes de cambiar o reinicializar la escena");
 
 	game::HiritiAudioTimer temporizadorAudio;
-	comprobar(temporizadorAudio.Advance(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Advance(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
+	comprobar(temporizadorAudio.Update(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
 		"el sonido ambiente se activa al cumplirse treinta segundos de PLAY");
-	comprobar(temporizadorAudio.Advance(true, 14.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Advance(true, 1.0f) == game::HiritiAudioTimer::Evento::Buscando,
+	comprobar(temporizadorAudio.Update(true, 14.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Buscando,
 		"el sonido searching alterna quince segundos despues del ambiente");
-	comprobar(temporizadorAudio.Advance(true, 15.0f) == game::HiritiAudioTimer::Evento::Ambiente &&
-		temporizadorAudio.Advance(true, 15.0f) == game::HiritiAudioTimer::Evento::Buscando,
+	comprobar(temporizadorAudio.Update(true, 15.0f) == game::HiritiAudioTimer::Evento::Ambiente &&
+		temporizadorAudio.Update(true, 15.0f) == game::HiritiAudioTimer::Evento::Buscando,
 		"cada categoria de sonido se repite con treinta segundos de diferencia");
-	comprobar(temporizadorAudio.Advance(false, 30.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Advance(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Advance(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
+	comprobar(temporizadorAudio.Update(false, 30.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Update(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
 		"salir de PLAY reinicia la secuencia empezando por ambiente");
 
-	comprobar(!hiriti.Advance(true, origen, haciaHiriti,
+	comprobar(!hiriti.Update(true, origen, haciaHiriti,
 		glm::vec3(0.0f, game::HiritiAnimator::AlcanceDescubrimiento + 1.0f, 0.0f), 0.2f),
 		"no se descubre fuera del alcance");
 

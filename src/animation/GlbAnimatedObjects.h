@@ -31,7 +31,7 @@ namespace glb
 	//   Abierta  --E-->  Cerrando  --(llega al principio)--> Cerrada
 	// Si se pulsa E mientras se mueve, el sentido se invierte desde donde esté:
 	//   Abriendo --E--> Cerrando      Cerrando --E--> Abriendo
-	enum class DoorState { Cerrada, Abriendo, IsOpen, Cerrando };
+	enum class DoorState { Cerrada, Abriendo, Open, Cerrando };
 
 	// Una puerta (o cajón...) concreta dentro de la habitación.
 	struct AnimatedObject

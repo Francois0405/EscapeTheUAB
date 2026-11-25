@@ -107,12 +107,12 @@ namespace editor
 
 	void SceneEditor::NewScene()
 	{
-		historial.ResetState();
+		historial.Reset();
 		glbEliminados.clear();
 		reconstruirFisicaSolicitada = false;
 		hayRespaldo = false;
 		seleccionado = -1;
-		bloqueoGizmoTrasSeleccion.ResetState();
+		bloqueoGizmoTrasSeleccion.Reset();
 		modificada = false;
 		cajasObj.clear();
 		cajasGlb.clear();
@@ -136,14 +136,14 @@ namespace editor
 		if (!activo) return;
 
 		// Flechas / RePag / AvPag: mover el objeto seleccionado (o la cámara si no hay selección). Admiten repetición del teclado.
-		ArrowKey flecha = ArrowKey::UpVector;
+		ArrowKey flecha = ArrowKey::Up;
 		bool esFlecha = true;
 		switch (tecla)
 		{
-		case GLFW_KEY_UP: flecha = ArrowKey::UpVector; break;
+		case GLFW_KEY_UP: flecha = ArrowKey::Up; break;
 		case GLFW_KEY_DOWN: flecha = ArrowKey::Abajo; break;
 		case GLFW_KEY_LEFT: flecha = ArrowKey::Izquierda; break;
-		case GLFW_KEY_RIGHT: flecha = ArrowKey::RightVector; break;
+		case GLFW_KEY_RIGHT: flecha = ArrowKey::Right; break;
 		case GLFW_KEY_PAGE_UP: flecha = ArrowKey::Subir; break;
 		case GLFW_KEY_PAGE_DOWN: flecha = ArrowKey::Bajar; break;
 		default: esFlecha = false; break;
@@ -172,7 +172,7 @@ namespace editor
 		}
 		switch (tecla)
 		{
-		case GLFW_KEY_1: herramienta = Herramienta::MoveView; break;
+		case GLFW_KEY_1: herramienta = Herramienta::Move; break;
 		case GLFW_KEY_2: herramienta = Herramienta::Rotar; break;
 		case GLFW_KEY_3: herramienta = Herramienta::Escalar; break;
 		case GLFW_KEY_F: enfocarSolicitado = true; break;
@@ -194,7 +194,7 @@ namespace editor
 	//   1. widget de ImGui en uso  2. arrastre de ImGuizmo  3. navegación explícita (botón derecho/central, Alt+izquierdo)
 	//   4. selección por clic  5. atajos de teclado.
 	// La navegación solo puede EMPEZAR con el cursor en el viewport y sin 1 ni 2; una vez empezada sigue hasta soltar el botón.
-	void SceneEditor::Advance(GLFWwindow* ventana, float delta)
+	void SceneEditor::Update(GLFWwindow* ventana, float delta)
 	{
 		if (!activo || ventana == nullptr) return;
 		const ImGuiIO& io = ImGui::GetIO();
@@ -218,16 +218,16 @@ namespace editor
 		{
 			if (entrada.viewportLibre)
 			{
-				if (derecho) modoCamara = ortografica ? CameraMode::Pan : CameraMode::LookAround;
+				if (derecho) modoCamara = ortografica ? CameraMode::Pan : CameraMode::Look;
 				else if (medio) modoCamara = CameraMode::Pan;
-				else if (izquierdo && alt) modoCamara = ortografica ? CameraMode::Pan : CameraMode::OrbitView;
+				else if (izquierdo && alt) modoCamara = ortografica ? CameraMode::Pan : CameraMode::Orbit;
 			}
 			if (modoCamara != CameraMode::Ninguno)
 			{
 				pivoteOrbita = camara.PivotPoint();
 				reiniciarDelta = true;
 				dx = dy = 0.0f;
-				if (modoCamara == CameraMode::LookAround || modoCamara == CameraMode::OrbitView)
+				if (modoCamara == CameraMode::Look || modoCamara == CameraMode::Orbit)
 				{	// cursor capturado: deltas ilimitados y sin salirse de la ventana
 					cursorGuardadoX = x;
 					cursorGuardadoY = y;
@@ -238,27 +238,27 @@ namespace editor
 		}
 		else
 		{
-			const bool sigue = (modoCamara == CameraMode::LookAround) ? derecho
-				: (modoCamara == CameraMode::OrbitView) ? izquierdo
+			const bool sigue = (modoCamara == CameraMode::Look) ? derecho
+				: (modoCamara == CameraMode::Orbit) ? izquierdo
 				: (derecho || medio || (izquierdo && alt));
 			if (!sigue) { EndCapture(); modoCamara = CameraMode::Ninguno; return; }
 		}
 
 		switch (modoCamara)
 		{
-		case CameraMode::LookAround:
+		case CameraMode::Look:
 		{
-			camara.LookAround(dx, dy, opciones);
+			camara.Look(dx, dy, opciones);
 			if (!io.WantTextInput)
 			{
 				const float mult = SpeedMultiplier(ctrl, mayus, opciones);   // Ctrl prevalece sobre Shift
 				const auto tecla = [ventana](int k) { return glfwGetKey(ventana, k) == GLFW_PRESS ? 1.0f : 0.0f; };
-				camara.MoveView(tecla(GLFW_KEY_W) - tecla(GLFW_KEY_S), tecla(GLFW_KEY_D) - tecla(GLFW_KEY_A),
+				camara.Move(tecla(GLFW_KEY_W) - tecla(GLFW_KEY_S), tecla(GLFW_KEY_D) - tecla(GLFW_KEY_A),
 					tecla(GLFW_KEY_E) - tecla(GLFW_KEY_Q), delta, mult, opciones);
 			}
 			break;
 		}
-		case CameraMode::OrbitView: camara.OrbitView(pivoteOrbita, dx, dy, opciones); break;
+		case CameraMode::Orbit: camara.Orbit(pivoteOrbita, dx, dy, opciones); break;
 		case CameraMode::Pan: camara.Pan(dx, dy, io.DisplaySize.y, opciones); break;
 		default: break;
 		}
@@ -958,7 +958,7 @@ namespace editor
 				camara.posicion += ArrowDirection(pulsacion.flecha, camara) * paso;
 				continue;
 			}
-			if (herramienta != Herramienta::MoveView) continue;
+			if (herramienta != Herramienta::Move) continue;
 			if (!IsAnimated(contexto, seleccionado))
 			{
 				SceneObject& objeto = contexto.objetos[static_cast<std::size_t>(seleccionado)];
@@ -1121,7 +1121,7 @@ namespace editor
 			if (ImGui::Button(texto)) herramienta = h;
 			if (actual) ImGui::PopStyleColor();
 		};
-		herramientaBoton("Move [1]", Herramienta::MoveView); ImGui::SameLine();
+		herramientaBoton("Move [1]", Herramienta::Move); ImGui::SameLine();
 		herramientaBoton("Rotate [2]", Herramienta::Rotar); ImGui::SameLine();
 		herramientaBoton("Scale [3]", Herramienta::Escalar);
 		ImGui::SameLine(); ImGui::Checkbox("Local", &local);
@@ -1133,7 +1133,7 @@ namespace editor
 		ImGui::SameLine();
 		if (ImGui::Button("Front")) camara.ChangeView(Vista::Frontal);
 		ImGui::SameLine();
-		if (ImGui::Button("Right")) camara.ChangeView(Vista::RightVector);
+		if (ImGui::Button("Right")) camara.ChangeView(Vista::Right);
 		ImGui::SameLine();
 		ImGui::Checkbox("Camera", &mostrarOpcionesCamara);
 		ImGui::SameLine();
@@ -1700,7 +1700,7 @@ namespace editor
 		}
 
 		const glm::mat4 matrizAceptada = ElementAt(contexto, seleccionado).modelo;
-		KeepHeightInTopView(matriz, matrizAceptada, camara.vista == Vista::Superior, herramienta == Herramienta::MoveView);
+		KeepHeightInTopView(matriz, matrizAceptada, camara.vista == Vista::Superior, herramienta == Herramienta::Move);
 		PlacementResult resultado;
 		if (!MatrizGizmoValida(matriz)) resultado = { false, "invalid transform matrix" };
 		else if (!animado)

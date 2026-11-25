@@ -109,8 +109,8 @@ namespace
 		size_t Count() const override { return v.size(); }
 		std::string Id(size_t i) const override { return v[i].id; }
 		bool IsOpen(size_t i) const override { return v[i].abierta; }
-		void SetOpenState(size_t i, bool a) override { v[i].abierta = a; }
-		glm::vec3 PointAt(size_t i) const override { return v[i].punto; }
+		void SetOpen(size_t i, bool a) override { v[i].abierta = a; }
+		glm::vec3 Point(size_t i) const override { return v[i].punto; }
 	};
 	std::unique_ptr<PuertasFalsas> NuevasPuertas()
 	{
@@ -130,7 +130,7 @@ namespace
 	struct Nodo
 	{
 		std::unique_ptr<NetworkGame> red; std::unique_ptr<PuertasFalsas> puertas; PoseEntry pose;
-		void Paso() { red->Advance(Reloj(), &pose); }
+		void Paso() { red->Update(Reloj(), &pose); }
 	};
 	template <class F> bool Esperar(std::vector<Nodo*> nodos, F cond, double seg = 5.0)
 	{
@@ -144,7 +144,7 @@ namespace
 		return false;
 	}
 
-	std::unique_ptr<Nodo> CreatePlayback(std::shared_ptr<Hub> hub, Role rol, const std::string& escena, const glm::vec3& cabeza, int* llamadasFabrica = nullptr)
+	std::unique_ptr<Nodo> Create(std::shared_ptr<Hub> hub, Role rol, const std::string& escena, const glm::vec3& cabeza, int* llamadasFabrica = nullptr)
 	{
 		auto n = std::make_unique<Nodo>();
 		n->puertas = NuevasPuertas(); n->pose = PoseEn(cabeza);
@@ -155,7 +155,7 @@ namespace
 			return std::make_unique<ClientEnd>(hub);
 		});
 		NetworkConfig cfg; cfg.rol = rol; cfg.nombre = rol == Role::Host ? "host" : "cliente";
-		ok(n->red->BeginPlayback(cfg, escena, n->puertas.get(), glm::vec3(0, 1, 1)), "Iniciar acepta la configuracion");
+		ok(n->red->Start(cfg, escena, n->puertas.get(), glm::vec3(0, 1, 1)), "Iniciar acepta la configuracion");
 		return n;
 	}
 }
@@ -501,9 +501,9 @@ int main()
 		int llamadas = 0;
 		NetworkGame red([&llamadas](const NetworkConfig&) -> std::unique_ptr<ITransport> { ++llamadas; return nullptr; });
 		auto pu = NuevasPuertas();
-		ok(red.BeginPlayback(NetworkConfig{}, "escena", pu.get(), glm::vec3(0)), "offline: Iniciar devuelve true");
+		ok(red.Start(NetworkConfig{}, "escena", pu.get(), glm::vec3(0)), "offline: Iniciar devuelve true");
 		PoseEntry p = PoseEn(glm::vec3(0, 0, 1.7f));
-		for (int i = 0; i < 10; ++i) red.Advance(i * 0.016, &p);
+		for (int i = 0; i < 10; ++i) red.Update(i * 0.016, &p);
 		ok(llamadas == 0, "offline: la fabrica de transporte (ENet) NO se invoca");
 		ok(!red.IsOnline() && !red.IsActive() && !red.IsHosting() && !red.IsClient(), "offline: sin fase de red");
 		ok(red.RemotePlayersToDraw(1.0).empty(), "offline: sin remotos");
@@ -515,10 +515,10 @@ int main()
 	{
 		NetworkGame red([](const NetworkConfig&) -> std::unique_ptr<ITransport> { return nullptr; });
 		auto pu = NuevasPuertas(); NetworkConfig c; c.rol = Role::Host;
-		ok(red.BeginPlayback(c, "escena", pu.get(), glm::vec3(0)), "sin transporte: arranca asincrono");
+		ok(red.Start(c, "escena", pu.get(), glm::vec3(0)), "sin transporte: arranca asincrono");
 		PoseEntry p = PoseEn(glm::vec3(0));
 		bool error = false; const double fin = Reloj() + 3;
-		while (Reloj() < fin && !error) { red.Advance(Reloj(), &p); error = red.GetDiagnosticInfo().fase == NetworkPhase::Error; std::this_thread::sleep_for(std::chrono::milliseconds(2)); }
+		while (Reloj() < fin && !error) { red.Update(Reloj(), &p); error = red.GetDiagnosticInfo().fase == NetworkPhase::Error; std::this_thread::sleep_for(std::chrono::milliseconds(2)); }
 		ok(error && !red.IsOnline(), "sin transporte: queda en Error y offline");
 		ok(!red.GetDiagnosticInfo().mensaje.empty(), "sin transporte: mensaje de diagnostico");
 		ok(!red.InterceptDoor(0), "tras el error el juego vuelve a controlar las puertas");
@@ -567,29 +567,29 @@ int main()
 		std::map<PeerId, PoseEntry> s;
 		s[0] = PoseEn(glm::vec3(0, 0, 1)); s[0].peer = 0;     // el local (2) no debe aparecer; el peer 0 es otro jugador
 		s[2] = PoseEn(glm::vec3(9, 9, 9)); s[2].peer = 2;
-		ip.Advance(s, 2, 10.0);
+		ip.Update(s, 2, 10.0);
 		ok(ip.Count() == 1 && ip.SampleAt(0, 10.0, s[0]), "el jugador local nunca se interpola");
 		PoseEntry out;
 		ok(!ip.SampleAt(2, 10.0, out), "el local no se muestrea");
 		s.erase(2);
 		s[0] = PoseEn(glm::vec3(2, 0, 1)); s[0].peer = 0;
-		ip.Advance(s, 2, 10.05);   // llega 50 ms despues
+		ip.Update(s, 2, 10.05);   // llega 50 ms despues
 		ok(ip.SampleAt(0, 10.0 + kRetardoInterpolacion + 0.025, out) && cerca(PositionOfPose(out.head).x, 1.0f, 0.02f), "interpolacion lineal a mitad de camino");
 		ok(ip.SampleAt(0, 100.0, out) && cerca(PositionOfPose(out.head).x, 2.0f), "sin extrapolar: se mantiene la ultima");
 		ok(ip.SampleAt(0, 0.0, out) && cerca(PositionOfPose(out.head).x, 0.0f), "antes de la primera: primera muestra");
 		// rotacion: slerp
 		std::map<PeerId, PoseEntry> r; r[3] = PoseEn(glm::vec3(0), glm::vec3(0, 1, 0)); r[3].peer = 3;
-		RemoteInterpolator ir; ir.Advance(r, 1, 0.0);
+		RemoteInterpolator ir; ir.Update(r, 1, 0.0);
 		r[3] = PoseEn(glm::vec3(0), glm::vec3(-1, 0, 0)); r[3].peer = 3;   // gira 90 grados
-		ir.Advance(r, 1, 0.05);
+		ir.Update(r, 1, 0.05);
 		ir.SampleAt(3, kRetardoInterpolacion + 0.025, out);
 		const glm::vec3 f = RotationOfPose(out.head) * glm::vec3(0, 1, 0);
 		ok(cerca(glm::length(f), 1.0f) && cerca(glm::degrees(std::acos(glm::dot(f, glm::vec3(0, 1, 0)))), 45.0f, 1.0f), "slerp: 45 grados a mitad de camino");
 		std::map<PeerId, PoseEntry> mala; mala[4] = PoseEn(glm::vec3(0)); mala[4].head.pos[0] = NAN;
-		RemoteInterpolator im; im.Advance(mala, 1, 0.0);
+		RemoteInterpolator im; im.Update(mala, 1, 0.0);
 		ok(im.Count() == 0, "snapshot con NaN descartado");
-		im.Advance({}, 1, 1.0);
-		s.clear(); ip.Advance(s, 2, 11.0);
+		im.Update({}, 1, 1.0);
+		s.clear(); ip.Update(s, 2, 11.0);
 		ok(ip.Count() == 0, "peers ausentes del snapshot se descartan");
 	}
 
@@ -632,10 +632,10 @@ int main()
 		ok(a.RequestToggle(kObjetoPrueba, 1, nullptr, 0) == RequestResult::SinPose, "sin pose no concede");
 		ok(a.RequestToggle(kObjetoPrueba, 1, &cerca1, 0) == RequestResult::Aplicada && a.Buscar(kObjetoPrueba)->dueno == 1, "concede al primero");
 		ok(a.RequestToggle(kObjetoPrueba, 2, &cerca1, 1) == RequestResult::Ocupado, "segundo solicitante: ocupado");
-		ok(a.MoveView(kObjetoPrueba, 2, glm::vec3(0, 1, 1), &cerca1, 1) == RequestResult::NoEsDueno, "solo el dueno mueve");
-		ok(a.MoveView(kObjetoPrueba, 1, glm::vec3(0, 1.5f, 1.5f), &cerca1, 1) == RequestResult::Aplicada && cerca(a.Buscar(kObjetoPrueba)->pos, glm::vec3(0, 1.5f, 1.5f)), "dueno mueve");
-		ok(a.MoveView(kObjetoPrueba, 1, glm::vec3(NAN, 0, 0), &cerca1, 1) == RequestResult::Invalida, "posicion NaN rechazada");
-		ok(a.MoveView(kObjetoPrueba, 1, glm::vec3(0, 40, 1), &cerca1, 1) == RequestResult::FueraDeAlcance, "teletransporte rechazado");
+		ok(a.Move(kObjetoPrueba, 2, glm::vec3(0, 1, 1), &cerca1, 1) == RequestResult::NoEsDueno, "solo el dueno mueve");
+		ok(a.Move(kObjetoPrueba, 1, glm::vec3(0, 1.5f, 1.5f), &cerca1, 1) == RequestResult::Aplicada && cerca(a.Buscar(kObjetoPrueba)->pos, glm::vec3(0, 1.5f, 1.5f)), "dueno mueve");
+		ok(a.Move(kObjetoPrueba, 1, glm::vec3(NAN, 0, 0), &cerca1, 1) == RequestResult::Invalida, "posicion NaN rechazada");
+		ok(a.Move(kObjetoPrueba, 1, glm::vec3(0, 40, 1), &cerca1, 1) == RequestResult::FueraDeAlcance, "teletransporte rechazado");
 		ok(a.ReleaseGpu(kObjetoPrueba, 2) == RequestResult::NoEsDueno, "otro no puede soltar");
 		a.TakeChanges();
 		a.Tick(5.0);
@@ -664,12 +664,12 @@ int main()
 	{
 		auto hub = std::make_shared<Hub>();
 		int fabricas = 0;
-		auto host = CreatePlayback(hub, Role::Host, "aula", glm::vec3(0, 0, 1.7f), &fabricas);
+		auto host = Create(hub, Role::Host, "aula", glm::vec3(0, 0, 1.7f), &fabricas);
 		SceneObjectState caja;
 		caja.id = HashId("caja_sobre_mesa"); caja.posicion = glm::vec3(2, 1, 0.5f);
 		caja.colisionPresente = true; caja.tipoColision = 2; caja.masa = 2.0f;
 		ok(host->red->SetSceneState({ caja }, false), "host registra el estado inicial de la escena");
-		auto c1 = CreatePlayback(hub, Role::Client, "aula", glm::vec3(0, -0.5f, 1.7f), &fabricas);
+		auto c1 = Create(hub, Role::Client, "aula", glm::vec3(0, -0.5f, 1.7f), &fabricas);
 		std::vector<Nodo*> hostYC1 = { host.get(), c1.get() };
 		ok(Esperar(hostYC1, [&] { return host->red->IsActive() && c1->red->IsActive() && host->red->GetDiagnosticInfo().remotos == 1; }), "host y primer cliente conectan");
 		std::vector<SceneObjectState> estadosEscena;
@@ -754,7 +754,7 @@ int main()
 		host->red->TakePhysicsRequests(solicitudes);
 		ok(excesoRechazado && solicitudes.empty(),
 			"la ruta real de recepción del host rechaza el exceso fuera del margen y no crea una solicitud de lanzamiento");
-		auto c2 = CreatePlayback(hub, Role::Client, "aula", glm::vec3(1, -0.5f, 1.7f), &fabricas);
+		auto c2 = Create(hub, Role::Client, "aula", glm::vec3(1, -0.5f, 1.7f), &fabricas);
 		std::vector<Nodo*> todos = { host.get(), c1.get(), c2.get() };
 		ok(Esperar(todos, [&] { return host->red->IsActive() && c1->red->IsActive() && c2->red->IsActive() && host->red->GetDiagnosticInfo().remotos == 2 && c1->red->GetDiagnosticInfo().remotos >= 1; }), "los tres se conectan y se ven");
 		ok(fabricas == 3, "una fabrica de transporte por participante, solo al iniciar");
@@ -825,7 +825,7 @@ int main()
 		c1->red->UpdateCarry(desde, dir, Reloj());
 		ok(Esperar(todos, [&] { return cerca(host->red->Objeto().pos, destino, 0.01f); }), "el dueno mueve el objeto y el host lo acepta");
 		ok(Esperar(todos, [&] { return cerca(c2->red->Objeto().pos, destino, 0.01f); }), "los demas ven el movimiento");
-		c1->red->StopSessionGame();   // c1 se desconecta con el objeto en la mano
+		c1->red->Stop();   // c1 se desconecta con el objeto en la mano
 		std::vector<Nodo*> resto = { host.get(), c2.get() };
 		ok(Esperar(resto, [&] { return host->red->Objeto().dueno == kSinDueno && c2->red->Objeto().dueno == kSinDueno; }), "al desconectar el dueno se libera la propiedad");
 		ok(Esperar(resto, [&] { return host->red->GetDiagnosticInfo().remotos == 1; }), "el host deja de interpolar al desconectado");
@@ -837,27 +837,27 @@ int main()
 		// llegada tardia: recibe el estado actual
 		host->puertas->v[1].abierta = true; host->puertas->v[1].punto = glm::vec3(0, 2, 1);
 		ok(Esperar(resto, [&] { return c2->puertas->v[1].abierta; }), "puerta abierta replicada");
-		auto c3 = CreatePlayback(hub, Role::Client, "aula", glm::vec3(0, -1, 1.7f), &fabricas);
+		auto c3 = Create(hub, Role::Client, "aula", glm::vec3(0, -1, 1.7f), &fabricas);
 		resto.push_back(c3.get());
 		ok(Esperar(resto, [&] { return c3->puertas->v[1].abierta && !c3->puertas->v[0].abierta && c3->red->Objeto().conocido; }), "quien llega tarde recibe el estado de puertas y objeto");
 
 		// el host cae: los clientes pasan a Error y vuelven a controlar sus puertas
-		host->red->StopSessionGame();
+		host->red->Stop();
 		std::vector<Nodo*> clientes = { c2.get(), c3.get() };
 		ok(Esperar(clientes, [&] { return c2->red->GetDiagnosticInfo().fase == NetworkPhase::Error && c3->red->GetDiagnosticInfo().fase == NetworkPhase::Error; }), "si cae el host el cliente lo detecta");
 		ok(!c2->red->InterceptDoor(0) && c2->red->RemotePlayersToDraw(Reloj()).empty(), "tras caer el host: control local y sin fantasmas");
-		for (auto* n : { c2.get(), c3.get() }) n->red->StopSessionGame();
+		for (auto* n : { c2.get(), c3.get() }) n->red->Stop();
 	}
 
 	// ---------------- escena distinta: el host rechaza ----------------
 	{
 		auto hub = std::make_shared<Hub>();
-		auto host = CreatePlayback(hub, Role::Host, "aula", glm::vec3(0, 0, 1.7f));
-		auto c = CreatePlayback(hub, Role::Client, "otra_escena", glm::vec3(0, 0, 1.7f));
+		auto host = Create(hub, Role::Host, "aula", glm::vec3(0, 0, 1.7f));
+		auto c = Create(hub, Role::Client, "otra_escena", glm::vec3(0, 0, 1.7f));
 		std::vector<Nodo*> v = { host.get(), c.get() };
 		ok(Esperar(v, [&] { return c->red->GetDiagnosticInfo().fase == NetworkPhase::Error; }), "escena distinta: el cliente queda en error");
 		ok(c->red->GetDiagnosticInfo().mensaje.find("escena") != std::string::npos, "el mensaje explica el rechazo");
-		host->red->StopSessionGame();
+		host->red->Stop();
 	}
 
 	// ---------------- scene network fingerprint (ET2) ----------------

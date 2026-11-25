@@ -68,7 +68,7 @@ namespace fps
 		MovementParameters parametros;
 
 		// Avanza el estado un fotograma. Devuelve la velocidad (m/s) con la que mover al jugador si hay teclas.
-		float Advance(float deltaSinLimitar, const MovementInput& entrada)
+		float Update(float deltaSinLimitar, const MovementInput& entrada)
 		{
 			const float delta = ClampDelta(deltaSinLimitar);
 			if (!entrada.activo)
@@ -113,7 +113,7 @@ namespace fps
 		float StaminaFraction() const { return parametros.estaminaMaxima > 0.0f ? estamina / parametros.estaminaMaxima : 0.0f; }
 		float TimeWithoutSprint() const { return tiempoSinSprint; }
 
-		void ResetState()
+		void Reset()
 		{
 			estamina = parametros.estaminaMaxima;
 			velocidadActual = parametros.velocidadCaminar;
@@ -159,7 +159,7 @@ namespace fps
 
 		// 'distanciaHorizontal': metros REALES recorridos por la cápsula en este fotograma (no la velocidad pedida:
 		// si se choca con una pared, la cámara no se balancea). 'velocidadObjetivo' = MovimientoJugador::Velocidad().
-		void Advance(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo,
+		void Update(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo,
 			float velocidadObjetivo, const MovementParameters& mov, float fraccionAgachado)
 		{
 			const float delta = ClampDelta(deltaSinLimitar);
@@ -200,7 +200,7 @@ namespace fps
 			const float base = parametros.amplitudCaminar * parametros.multiplicador;
 			return base > 1e-6f ? amplitud / base : 0.0f;
 		}
-		void ResetState() { fase = 0.0f; peso = 0.0f; amplitud = 0.0f; }
+		void Reset() { fase = 0.0f; peso = 0.0f; amplitud = 0.0f; }
 
 	private:
 		float fase = 0.0f;
@@ -235,7 +235,7 @@ namespace fps
 
 		// Devuelve true en el fotograma exacto en que toca reproducir un paso.
 		// 'distanciaHorizontal' es la misma distancia real de la cápsula que usa BalanceoCamara.
-		bool Advance(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo, StepState estado)
+		bool Update(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo, StepState estado)
 		{
 			const float delta = ClampDelta(deltaSinLimitar);
 
@@ -268,7 +268,7 @@ namespace fps
 			return false;
 		}
 
-		void ResetState()
+		void Reset()
 		{
 			distanciaAcumulada = 0.0f;
 		}
@@ -286,7 +286,7 @@ namespace fps
 		float visible = 0.0f;   // opacidad 0..1
 		float mostrada = 1.0f;  // fracción mostrada 0..1
 
-		void Advance(float deltaSinLimitar, float fraccionReal, bool sprintando)
+		void Update(float deltaSinLimitar, float fraccionReal, bool sprintando)
 		{
 			const float delta = ClampDelta(deltaSinLimitar);
 			mostrada = DollyIn(mostrada, fraccionReal, 10.0f, delta);

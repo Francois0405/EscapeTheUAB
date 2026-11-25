@@ -74,7 +74,7 @@ namespace fisica
 			glm::length(glm::vec3(mundoNodo[1])), glm::length(glm::vec3(mundoNodo[2])));
 	}
 
-	bool PhysicsScene::CreatePlayback(const std::vector<SceneObject>& objetos, const glb::AnimatedScene& animados,
+	bool PhysicsScene::Create(const std::vector<SceneObject>& objetos, const glb::AnimatedScene& animados,
 		const std::vector<SceneAnimatedObject>& datosAnimados, std::string& error, bool autoridadFisica)
 	{
 		Empty();   // esta EscenaFisica solo gestiona SU escena

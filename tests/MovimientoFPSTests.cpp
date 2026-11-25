@@ -27,7 +27,7 @@ namespace
 	void Simular(PlayerMovement& m, const MovementInput& e, float segundos, int fpsSimulados)
 	{
 		const int pasos = static_cast<int>(std::lround(segundos * fpsSimulados));
-		for (int i = 0; i < pasos; ++i) m.Advance(1.0f / fpsSimulados, e);
+		for (int i = 0; i < pasos; ++i) m.Update(1.0f / fpsSimulados, e);
 	}
 }
 
@@ -125,7 +125,7 @@ int main()
 		Simular(m, caminar, 2.0f, 60);
 		comprobar(casi(m.VelocityValue(), 3.0f, 0.01f), "caminando va a 3 m/s");
 
-		m.Advance(1.0f / 60.0f, corriendo());
+		m.Update(1.0f / 60.0f, corriendo());
 		comprobar(m.VelocityValue() > 3.0f && m.VelocityValue() < 3.5f, "al empezar a correr acelera poco a poco (no salta a 5,2)");
 		Simular(m, corriendo(), 1.0f, 60);
 		comprobar(casi(m.VelocityValue(), 5.2f, 0.05f), "tras ~1 s corre a 5,2 m/s");
@@ -151,7 +151,7 @@ int main()
 	// 7) Un fotograma gigante no dispara nada.
 	{
 		PlayerMovement m;
-		m.Advance(10.0f, corriendo());
+		m.Update(10.0f, corriendo());
 		comprobar(m.StaminaValue() > 98.0f, "un delta enorme se limita a 0,05 s");
 		comprobar(ClampDelta(-1.0f) == 0.0f, "un delta negativo se ignora");
 	}
@@ -172,7 +172,7 @@ int main()
 		// Camina 4 s a 3 m/s con 60 FPS.
 		for (int i = 0; i < 240; ++i)
 		{
-			b.Advance(1.0f / 60.0f, 3.0f / 60.0f, true, true, 3.0f, mov, 0.0f);
+			b.Update(1.0f / 60.0f, 3.0f / 60.0f, true, true, 3.0f, mov, 0.0f);
 			maxVertical = std::max(maxVertical, std::abs(b.Offset().vertical));
 		}
 		comprobar(maxVertical > 0.010f && maxVertical <= 0.016f, "caminar: balanceo vertical entre 1 y 1,6 cm");
@@ -181,9 +181,9 @@ int main()
 		comprobar(casi(b.CurrentPhase(), 8.0f * 6.28318530718f, 0.2f), "la fase depende de la distancia real recorrida");
 
 		// Se detiene: se amortigua, no se corta de golpe.
-		b.Advance(1.0f / 60.0f, 0.0f, true, true, 3.0f, mov, 0.0f);
+		b.Update(1.0f / 60.0f, 0.0f, true, true, 3.0f, mov, 0.0f);
 		comprobar(b.WeightValue() > 0.9f && b.WeightValue() < 1.0f, "al parar el peso baja gradualmente");
-		for (int i = 0; i < 120; ++i) b.Advance(1.0f / 60.0f, 0.0f, true, true, 3.0f, mov, 0.0f);
+		for (int i = 0; i < 120; ++i) b.Update(1.0f / 60.0f, 0.0f, true, true, 3.0f, mov, 0.0f);
 		comprobar(std::abs(b.Offset().vertical) < 5e-4f && std::abs(b.Offset().lateral) < 5e-4f,
 			"tras detenerse unos segundos el balanceo desaparece");
 
@@ -192,7 +192,7 @@ int main()
 		float maxCorrer = 0.0f;
 		for (int i = 0; i < 300; ++i)
 		{
-			c.Advance(1.0f / 60.0f, 5.2f / 60.0f, true, true, 5.2f, mov, 0.0f);
+			c.Update(1.0f / 60.0f, 5.2f / 60.0f, true, true, 5.2f, mov, 0.0f);
 			maxCorrer = std::max(maxCorrer, std::abs(c.Offset().vertical));
 		}
 		comprobar(maxCorrer > 0.030f && maxCorrer <= 0.036f, "correr: balanceo vertical entre 3 y 3,6 cm");
@@ -203,20 +203,20 @@ int main()
 		float maxAgachado = 0.0f;
 		for (int i = 0; i < 300; ++i)
 		{
-			d.Advance(1.0f / 60.0f, 1.4f / 60.0f, true, true, 1.4f, mov, 1.0f);
+			d.Update(1.0f / 60.0f, 1.4f / 60.0f, true, true, 1.4f, mov, 1.0f);
 			maxAgachado = std::max(maxAgachado, std::abs(d.Offset().vertical));
 		}
 		comprobar(maxAgachado < maxVertical && maxAgachado > 0.004f, "agachado: balanceo menor que caminando");
 
 		// Sin avance real (choca con una pared) no hay balanceo aunque se pulse la tecla.
 		CameraBob e;
-		for (int i = 0; i < 120; ++i) e.Advance(1.0f / 60.0f, 0.0f, true, true, 3.0f, mov, 0.0f);
+		for (int i = 0; i < 120; ++i) e.Update(1.0f / 60.0f, 0.0f, true, true, 3.0f, mov, 0.0f);
 		comprobar(e.WeightValue() < 1e-3f && e.CurrentPhase() == 0.0f, "sin desplazamiento real no hay balanceo");
 
 		// En el aire o en pausa tampoco avanza la fase.
 		CameraBob g;
-		g.Advance(1.0f / 60.0f, 0.05f, false, true, 3.0f, mov, 0.0f);
-		g.Advance(1.0f / 60.0f, 0.05f, true, false, 3.0f, mov, 0.0f);
+		g.Update(1.0f / 60.0f, 0.05f, false, true, 3.0f, mov, 0.0f);
+		g.Update(1.0f / 60.0f, 0.05f, true, false, 3.0f, mov, 0.0f);
 		comprobar(g.CurrentPhase() == 0.0f, "ni en el aire ni en pausa avanza la fase");
 	}
 
@@ -228,7 +228,7 @@ int main()
 		for (int f : { 30, 60, 120 })
 		{
 			CameraBob b;
-			for (int i = 0; i < 3 * f; ++i) b.Advance(1.0f / f, 3.0f / f, true, true, 3.0f, mov, 0.0f);
+			for (int i = 0; i < 3 * f; ++i) b.Update(1.0f / f, 3.0f / f, true, true, 3.0f, mov, 0.0f);
 			fases[k++] = b.CurrentPhase();
 		}
 		comprobar(casi(fases[0], fases[1], 0.02f) && casi(fases[1], fases[2], 0.02f), "la fase del balanceo no depende de los FPS");
@@ -237,11 +237,11 @@ int main()
 	// 11) Barra de estamina.
 	{
 		StaminaBar barra;
-		for (int i = 0; i < 120; ++i) barra.Advance(1.0f / 60.0f, 1.0f, false);
+		for (int i = 0; i < 120; ++i) barra.Update(1.0f / 60.0f, 1.0f, false);
 		comprobar(barra.visible < 0.01f, "con la estamina llena la barra esta oculta");
-		for (int i = 0; i < 30; ++i) barra.Advance(1.0f / 60.0f, 0.5f, true);
+		for (int i = 0; i < 30; ++i) barra.Update(1.0f / 60.0f, 0.5f, true);
 		comprobar(barra.visible > 0.9f && barra.mostrada < 0.8f && barra.mostrada > 0.5f, "al correr aparece y baja con suavidad");
-		for (int i = 0; i < 600; ++i) barra.Advance(1.0f / 60.0f, 1.0f, false);
+		for (int i = 0; i < 600; ++i) barra.Update(1.0f / 60.0f, 1.0f, false);
 		comprobar(barra.visible < 0.01f && casi(barra.mostrada, 1.0f, 1e-3f), "al llenarse se desvanece");
 	}
 

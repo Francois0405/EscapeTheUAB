@@ -65,7 +65,7 @@ namespace glb
 		bool reproduciendo = false;
 
 		// Empieza desde el principio y hacia delante.
-		void BeginPlayback(float duracionSegundos)
+		void Start(float duracionSegundos)
 		{
 			tiempo = 0.0f;
 			duracion = duracionSegundos;
@@ -82,7 +82,7 @@ namespace glb
 		}
 
 		// Se llama una vez por fotograma con el tiempo transcurrido desde el anterior.
-		void Advance(float deltaSegundos)
+		void Update(float deltaSegundos)
 		{
 			if (!reproduciendo) return;
 			tiempo += deltaSegundos * sentido;

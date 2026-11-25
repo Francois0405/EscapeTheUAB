@@ -73,7 +73,7 @@ namespace game
 			return glm::vec3(mejorDireccion.x, mejorDireccion.y, 0.0f);
 		}
 
-		bool Advance(bool puedeDescubrir, const glm::vec3& origen,
+		bool Update(bool puedeDescubrir, const glm::vec3& origen,
 			const glm::vec3& direccion, const glm::vec3& centro, float radio)
 		{
 			if (!m_descubierto && puedeDescubrir && IsLookingAt(origen, direccion, centro, radio))
@@ -194,7 +194,7 @@ namespace game
 			return glm::vec3(aceleracion.x, aceleracion.y, 0.0f);
 		}
 
-		void ResetState()
+		void Reset()
 		{
 			m_descubierto = false;
 			m_esperandoAgarrame = false;

@@ -282,7 +282,7 @@ int main()
 			"Top View permite mover XY y preserva Z incluso con ejes locales");
 		KeepHeightInTopView(movida, original, true, false);
 		comprobar(casi(movida[3].z, -3.2f), "la operacion de movimiento en Top mantiene la altura tras filtrar el candidato");
-		const std::array<Vista, 4> vistas = { Vista::Perspectiva, Vista::Superior, Vista::Frontal, Vista::RightVector };
+		const std::array<Vista, 4> vistas = { Vista::Perspectiva, Vista::Superior, Vista::Frontal, Vista::Right };
 		for (int vuelta = 0; vuelta < 3; ++vuelta)
 			for (Vista vista : vistas)
 			{
@@ -311,29 +311,29 @@ int main()
 		CameraOptions o;
 		CamaraEditor c;
 		const glm::vec3 f0 = c.Forward(), r0 = c.RightVector();
-		c.LookAround(40.0f, 0.0f, o);
+		c.Look(40.0f, 0.0f, o);
 		comprobar(glm::dot(c.Forward(), r0) > 0.0f, "raton a la derecha: se mira a la derecha");
 		c = CamaraEditor();
-		c.LookAround(-40.0f, 0.0f, o);
+		c.Look(-40.0f, 0.0f, o);
 		comprobar(glm::dot(c.Forward(), r0) < 0.0f, "raton a la izquierda: se mira a la izquierda");
 		c = CamaraEditor();
-		c.LookAround(0.0f, -40.0f, o);   // raton hacia ARRIBA (dy < 0 en coordenadas de pantalla)
+		c.Look(0.0f, -40.0f, o);   // raton hacia ARRIBA (dy < 0 en coordenadas de pantalla)
 		comprobar(c.Forward().z > f0.z, "raton hacia arriba: se mira hacia arriba");
 		c = CamaraEditor();
-		c.LookAround(0.0f, 40.0f, o);
+		c.Look(0.0f, 40.0f, o);
 		comprobar(c.Forward().z < f0.z, "raton hacia abajo: se mira hacia abajo");
 		o.invertirY = true;
 		c = CamaraEditor();
-		c.LookAround(0.0f, -40.0f, o);
+		c.Look(0.0f, -40.0f, o);
 		comprobar(c.Forward().z < f0.z, "con 'invertir Y' el eje vertical se invierte");
 		o.invertirY = false;
 		c = CamaraEditor();
-		c.LookAround(0.0f, -1.0e6f, o);
+		c.Look(0.0f, -1.0e6f, o);
 		comprobar(casi(c.pitch, LimitePitch, 1e-3f) && std::abs(c.Forward().z) < 1.0f, "el pitch se limita arriba");
-		c.LookAround(0.0f, 1.0e6f, o);
+		c.Look(0.0f, 1.0e6f, o);
 		comprobar(casi(c.pitch, -LimitePitch, 1e-3f), "el pitch se limita abajo");
 		c = CamaraEditor();
-		c.LookAround(123.0f, -57.0f, o);
+		c.Look(123.0f, -57.0f, o);
 		comprobar(casi(glm::dot(c.Forward(), c.RightVector()), 0.0f) && casi(glm::length(c.UpVector()), 1.0f) &&
 			casi(glm::dot(c.UpVector(), c.Forward()), 0.0f), "la base de la camara sigue siendo ortonormal");
 
@@ -372,7 +372,7 @@ int main()
 		comprobar(c.distanciaFoco > 12.0f, "rueda hacia abajo aleja");
 		c = CamaraEditor();
 		const glm::vec3 piv = c.PivotPoint();
-		c.OrbitView(piv, 80.0f, -20.0f, o);
+		c.Orbit(piv, 80.0f, -20.0f, o);
 		comprobar(glm::length(c.PivotPoint() - piv) < 1e-3f && glm::length(c.posicion - piv) > 1.0f, "orbitar mantiene el pivote y mueve la camara");
 
 		// Multiplicadores: Ctrl prevalece sobre Shift.
@@ -385,40 +385,40 @@ int main()
 		c.yaw = 90.0f;
 		c.pitch = 0.0f;
 		c.posicion = glm::vec3(0.0f);
-		c.MoveView(1.0f, 0.0f, 0.0f, 0.05f, 1.0f, o);
+		c.Move(1.0f, 0.0f, 0.0f, 0.05f, 1.0f, o);
 		comprobar(casi(c.posicion.y, o.velocidad * 0.05f, 1e-4f), "W mueve hacia delante");
 
 		// Flechas.
 		c = CamaraEditor();
 		c.yaw = 90.0f;
 		c.pitch = -45.0f;   // mirando a +Y y hacia abajo
-		comprobar(casi(glm::length(ArrowDirection(ArrowKey::UpVector, c) - glm::vec3(0, 1, 0)), 0.0f, 1e-4f), "perspectiva: flecha arriba = hacia delante en XY");
-		comprobar(casi(glm::length(ArrowDirection(ArrowKey::RightVector, c) - glm::vec3(1, 0, 0)), 0.0f, 1e-4f), "perspectiva: flecha derecha = derecha de la camara");
-		comprobar(ArrowDirection(ArrowKey::UpVector, c).z == 0.0f && ArrowDirection(ArrowKey::Izquierda, c).z == 0.0f, "las flechas no cambian la altura en perspectiva");
+		comprobar(casi(glm::length(ArrowDirection(ArrowKey::Up, c) - glm::vec3(0, 1, 0)), 0.0f, 1e-4f), "perspectiva: flecha arriba = hacia delante en XY");
+		comprobar(casi(glm::length(ArrowDirection(ArrowKey::Right, c) - glm::vec3(1, 0, 0)), 0.0f, 1e-4f), "perspectiva: flecha derecha = derecha de la camara");
+		comprobar(ArrowDirection(ArrowKey::Up, c).z == 0.0f && ArrowDirection(ArrowKey::Izquierda, c).z == 0.0f, "las flechas no cambian la altura en perspectiva");
 		comprobar(ArrowDirection(ArrowKey::Subir, c).z == 1.0f && ArrowDirection(ArrowKey::Bajar, c).z == -1.0f, "RePag/AvPag suben y bajan en Z");
 		c.yaw = 0.0f;
-		comprobar(casi(glm::length(ArrowDirection(ArrowKey::UpVector, c) - glm::vec3(1, 0, 0)), 0.0f, 1e-4f), "mirando a +X, flecha arriba = +X");
+		comprobar(casi(glm::length(ArrowDirection(ArrowKey::Up, c) - glm::vec3(1, 0, 0)), 0.0f, 1e-4f), "mirando a +X, flecha arriba = +X");
 		c.pitch = 89.0f;   // casi vertical: no se degenera
-		comprobar(casi(glm::length(ArrowDirection(ArrowKey::UpVector, c)), 1.0f, 1e-3f), "mirando casi recto abajo la direccion sigue siendo valida");
+		comprobar(casi(glm::length(ArrowDirection(ArrowKey::Up, c)), 1.0f, 1e-3f), "mirando casi recto abajo la direccion sigue siendo valida");
 		c = CamaraEditor();
 		c.ChangeView(Vista::Superior);
-		comprobar(ArrowDirection(ArrowKey::UpVector, c) == glm::vec3(0, 1, 0) && ArrowDirection(ArrowKey::RightVector, c) == glm::vec3(1, 0, 0),
+		comprobar(ArrowDirection(ArrowKey::Up, c) == glm::vec3(0, 1, 0) && ArrowDirection(ArrowKey::Right, c) == glm::vec3(1, 0, 0),
 			"vista Top: flechas sobre el plano XY (arriba = +Y, derecha = +X)");
 
 		c = CamaraEditor();
 		c.yaw = 0.0f;
 		c.pitch = 0.0f;   // mirando a +X
 		const glm::vec3 origen(2.0f, 3.0f, 1.0f);
-		comprobar(casi(ApplyArrowKey(origen, ArrowKey::UpVector, c, false, false, o).x, 2.10f, 1e-5f), "flecha: 10 cm");
-		comprobar(casi(ApplyArrowKey(origen, ArrowKey::UpVector, c, true, false, o).x, 2.01f, 1e-5f), "Ctrl + flecha: 1 cm");
-		comprobar(casi(ApplyArrowKey(origen, ArrowKey::UpVector, c, false, true, o).x, 2.50f, 1e-5f), "Shift + flecha: 50 cm");
+		comprobar(casi(ApplyArrowKey(origen, ArrowKey::Up, c, false, false, o).x, 2.10f, 1e-5f), "flecha: 10 cm");
+		comprobar(casi(ApplyArrowKey(origen, ArrowKey::Up, c, true, false, o).x, 2.01f, 1e-5f), "Ctrl + flecha: 1 cm");
+		comprobar(casi(ApplyArrowKey(origen, ArrowKey::Up, c, false, true, o).x, 2.50f, 1e-5f), "Shift + flecha: 50 cm");
 		bool snap = false;
 		comprobar(ArrowStepLength(true, true, o, snap) == o.pasoCuadricula && snap, "Ctrl+Shift = snap a la cuadricula");
-		const glm::vec3 conSnap = ApplyArrowKey(glm::vec3(2.03f, 3.04f, 1.0f), ArrowKey::UpVector, c, true, true, o);
+		const glm::vec3 conSnap = ApplyArrowKey(glm::vec3(2.03f, 3.04f, 1.0f), ArrowKey::Up, c, true, true, o);
 		comprobar(casi(conSnap.x, 2.10f, 1e-4f) && casi(conSnap.y, 3.04f, 1e-5f), "snap: queda en la cuadricula de 10 cm solo en el eje que se mueve");
 		comprobar(casi(ApplyArrowKey(origen, ArrowKey::Subir, c, false, false, o).z, 1.10f, 1e-5f), "RePag: +10 cm en Z");
 		o.pasoCuadricula = 0.25f;
-		comprobar(casi(ApplyArrowKey(glm::vec3(0.0f), ArrowKey::UpVector, c, true, true, o).x, 0.25f, 1e-5f), "la cuadricula es configurable");
+		comprobar(casi(ApplyArrowKey(glm::vec3(0.0f), ArrowKey::Up, c, true, true, o).x, 0.25f, 1e-5f), "la cuadricula es configurable");
 
 		// Estado de captura de la entrada.
 		comprobar(FreeViewport(false, false, false, false), "sin nada activo el viewport esta libre");
@@ -439,7 +439,7 @@ int main()
 		c.pitch = 0.0f;
 		for (int i = 0; i < 30; ++i)
 		{
-			objetos[0].posicion = ApplyArrowKey(objetos[0].posicion, ArrowKey::RightVector, c, false, false, CameraOptions());
+			objetos[0].posicion = ApplyArrowKey(objetos[0].posicion, ArrowKey::Right, c, false, false, CameraOptions());
 			h.BeginTransaction(CurrentState(objetos));
 		}
 		comprobar(casi(objetos[0].posicion.x, 4.0f, 1e-3f), "30 repeticiones de 10 cm = 3 m");
@@ -533,7 +533,7 @@ int main()
 			comprobar(mesa != nullptr, "la mesa del JSON original esta en la lista");
 			if (mesa != nullptr)
 			{
-				mesa->posicion = ApplyArrowKey(mesa->posicion, ArrowKey::UpVector, camara, false, true, CameraOptions());   // +50 cm
+				mesa->posicion = ApplyArrowKey(mesa->posicion, ArrowKey::Up, camara, false, true, CameraOptions());   // +50 cm
 				comprobar(serializador.SaveScene(objetos, animados, error), "guardar tras mover con las flechas");
 				SceneData movida;
 				LoadSceneDataJson(escena, movida, error);

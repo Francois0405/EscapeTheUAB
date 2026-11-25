@@ -102,33 +102,33 @@ namespace
 	void ProbarReproductor()
 	{
 		AnimationPlayer reproductor;
-		reproductor.BeginPlayback(2.0f);
+		reproductor.Start(2.0f);
 		comprobar(reproductor.reproduciendo && reproductor.tiempo == 0.0f, "Iniciar pone el tiempo a 0");
-		reproductor.Advance(1.5f);
+		reproductor.Update(1.5f);
 		comprobar(reproductor.reproduciendo && casi(reproductor.tiempo, 1.5f), "avanza con el delta");
-		reproductor.Advance(1.0f);
+		reproductor.Update(1.0f);
 		comprobar(!reproductor.reproduciendo, "termina al pasar la duracion");
 		comprobar(reproductor.tiempo == 2.0f, "al terminar se queda justo en la duracion");
-		reproductor.Advance(5.0f);
+		reproductor.Update(5.0f);
 		comprobar(reproductor.tiempo == 2.0f, "ya terminado, no sigue avanzando");
 	}
 
 	void ProbarReproductorHaciaAtras()
 	{
 		AnimationPlayer reproductor;
-		reproductor.BeginPlayback(2.0f);
-		reproductor.Advance(0.0f);
+		reproductor.Start(2.0f);
+		reproductor.Update(0.0f);
 		comprobar(reproductor.reproduciendo && reproductor.tiempo == 0.0f, "Iniciar + delta 0 no termina la reproduccion");
 
-		reproductor.Advance(1.0f);                       // t = 1, hacia delante
+		reproductor.Update(1.0f);                       // t = 1, hacia delante
 		reproductor.PlayAnimation(-1.0f);                      // invertir a mitad de camino
 		comprobar(reproductor.reproduciendo && casi(reproductor.tiempo, 1.0f), "invertir no cambia el instante actual (sin saltos)");
-		reproductor.Advance(0.25f);
+		reproductor.Update(0.25f);
 		comprobar(casi(reproductor.tiempo, 0.75f), "hacia atras el tiempo disminuye");
-		reproductor.Advance(5.0f);
+		reproductor.Update(5.0f);
 		comprobar(!reproductor.reproduciendo && reproductor.tiempo == 0.0f, "hacia atras se detiene en 0 y no baja de ahi");
 		reproductor.PlayAnimation(+1.0f);
-		reproductor.Advance(0.5f);
+		reproductor.Update(0.5f);
 		comprobar(reproductor.reproduciendo && casi(reproductor.tiempo, 0.5f), "volver a ir hacia delante desde 0");
 	}
 
@@ -500,7 +500,7 @@ namespace
 		UpdateAnimatedObjects(escena, 0.1f);
 		comprobar(p1.estado == DoorState::Abriendo && AnguloDeLaHoja(p1) > 5.0f, "a los 0.1 s sigue Abriendo y ya se ha movido");
 		UpdateAnimatedObjects(escena, duracion + 1.0f);
-		comprobar(p1.estado == DoorState::IsOpen && p1.reproductor.tiempo == duracion, "al terminar: Abierta, en el ultimo instante");
+		comprobar(p1.estado == DoorState::Open && p1.reproductor.tiempo == duracion, "al terminar: Abierta, en el ultimo instante");
 		const float anguloAbierta = AnguloDeLaHoja(p1);
 		comprobar(anguloAbierta > 80.0f, "Abierta: unos 85 grados");
 
@@ -555,14 +555,14 @@ namespace
 		// --- Estados independientes ---
 		ToggleDoor(p2);
 		UpdateAnimatedObjects(escena, duracion + 1.0f);
-		comprobar(p2.estado == DoorState::IsOpen && p1.estado == DoorState::IsOpen, "cada puerta termina en su propio estado");
+		comprobar(p2.estado == DoorState::Open && p1.estado == DoorState::Open, "cada puerta termina en su propio estado");
 		ToggleDoor(p1);
-		comprobar(p1.estado == DoorState::Cerrando && p2.estado == DoorState::IsOpen, "cerrar una no cierra la otra");
+		comprobar(p1.estado == DoorState::Cerrando && p2.estado == DoorState::Open, "cerrar una no cierra la otra");
 
 		// --- Sin animacion valida no pasa nada ---
 		p2.indiceAnimacion = 99;
 		ToggleDoor(p2);
-		comprobar(p2.estado == DoorState::IsOpen, "una instancia sin animacion valida no cambia de estado");
+		comprobar(p2.estado == DoorState::Open, "una instancia sin animacion valida no cambia de estado");
 	}
 
 	// ----------------------------------------------------------------------

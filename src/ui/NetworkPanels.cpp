@@ -82,7 +82,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 		}
 	}
 	else if (ImGui::Button(d.fase == NetworkPhase::Arrancando ? "Cancelar" : "Desconectar")) context.stopNetwork();
-	if (d.fase == NetworkPhase::IsActive)
+	if (d.fase == NetworkPhase::Active)
 	{
 		ImGui::Separator();
 		ImGui::Text("Escena: %s | peer local: %u", d.escena.c_str(), static_cast<unsigned>(d.peerLocal));

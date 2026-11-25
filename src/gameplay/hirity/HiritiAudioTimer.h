@@ -18,7 +18,7 @@ namespace game
 		static constexpr float IntervaloAmbiente = 30.0f;
 		static constexpr float IntervaloEntreEventos = 15.0f;
 
-		Evento Advance(bool activo, float delta)
+		Evento Update(bool activo, float delta)
 		{
 			if (!activo)
 			{

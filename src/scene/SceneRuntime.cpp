@@ -98,7 +98,7 @@ namespace scene::runtime
 
 		// 4) Cuerpos físicos NUEVOS (los de la habitación anterior siguen en el mundo hasta el final).
 		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
-		if (!nuevaFisica->CreatePlayback(objetosValidos, nuevosAnimados, datos.animados, error))
+		if (!nuevaFisica->Create(objetosValidos, nuevosAnimados, datos.animados, error))
 		{
 			std::cerr << "No se cargo la escena (fisicas): " << error << '\n';
 			liberarModelosTemporales();
@@ -118,7 +118,7 @@ namespace scene::runtime
 		for (auto& entrada : context.objModels) entrada.second->netejaTextures_OBJ();
 		context.objModels = std::move(nuevosModelos);
 		context.sceneObjects = std::move(objetosValidos);
-		context.hiritiAnimation.ResetState();
+		context.hiritiAnimation.Reset();
 		context.phongOccludersDirty = true;
 		ReleaseAnimatedObjects(context);               // libera de la GPU los GLB anteriores
 		context.animatedObjects = std::move(nuevosAnimados);
@@ -179,7 +179,7 @@ namespace scene::runtime
 	bool RebuildPhysicsAfterEdit(const SceneRuntimeContext& context, std::string& error, bool autoridadFisica)
 	{
 		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
-		if (!nuevaFisica->CreatePlayback(context.sceneObjects, context.animatedObjects, context.animatedData, error, autoridadFisica)) return false;
+		if (!nuevaFisica->Create(context.sceneObjects, context.animatedObjects, context.animatedData, error, autoridadFisica)) return false;
 		context.physicsScene->Empty();
 		context.physicsScene = std::move(nuevaFisica);
 		return true;

@@ -72,7 +72,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", playerMovement.VelocityValue(),
 			physicsWorld.CrouchFraction() * 100.0f, physicsWorld.IsPlayerGrounded() ? "si" : "no");
 		ImGui::Checkbox("Porcentaje junto a la barra", &showStaminaPercent);
-		if (ImGui::Button("Rellenar estamina")) playerMovement.ResetState();
+		if (ImGui::Button("Rellenar estamina")) playerMovement.Reset();
 		ImGui::Checkbox("Mostrar FPS en esquina superior derecha", &showFpsCounter);
 		ImGui::Checkbox("Renderizado optimizado (frustum culling)", &optimizedRendering);
 		ImGui::Checkbox("Instrumentacion de render", &renderMetrics::enabled);
@@ -197,13 +197,13 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	ImGui::TextUnformatted("Demo: cubo que cae (independiente de la habitacion)");
 	if (!fallingCubeDemo.IsRunningNow())
 	{
-		if (ImGui::Button("Activar demo cubo")) fallingCubeDemo.BeginPlayback();
+		if (ImGui::Button("Activar demo cubo")) fallingCubeDemo.Start();
 	}
 	else
 	{
-		if (ImGui::Button("Reiniciar demo")) fallingCubeDemo.BeginPlayback();
+		if (ImGui::Button("Reiniciar demo")) fallingCubeDemo.Start();
 		ImGui::SameLine();
-		if (ImGui::Button("Quitar demo")) fallingCubeDemo.StopSessionGame();
+		if (ImGui::Button("Quitar demo")) fallingCubeDemo.Stop();
 		const fisica::BodyPose pose = fallingCubeDemo.CubePose();
 		const glm::vec3 velocidad = fallingCubeDemo.CubeVelocity();
 		const glm::vec3 gravedad = physicsWorld.GravityValue();

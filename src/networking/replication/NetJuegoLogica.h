@@ -517,7 +517,7 @@ namespace netgame
 
 		// 'snapshot' = RemotePoses() del servicio. El jugador local se excluye SIEMPRE (nunca se dibuja ni se
 		// interpola el propio). Los peers que ya no estan en el snapshot se descartan.
-		void Advance(const std::map<net::PeerId, net::PoseEntry>& snapshot, net::PeerId local, double ahora)
+		void Update(const std::map<net::PeerId, net::PoseEntry>& snapshot, net::PeerId local, double ahora)
 		{
 			for (auto it = datos_.begin(); it != datos_.end();)
 				if (snapshot.find(it->first) == snapshot.end()) it = datos_.erase(it); else ++it;
@@ -565,8 +565,8 @@ namespace netgame
 		virtual size_t Count() const = 0;
 		virtual std::string Id(size_t i) const = 0;              // id estable de escena
 		virtual bool IsOpen(size_t i) const = 0;                // abierta o abriendose
-		virtual void SetOpenState(size_t i, bool abrir) = 0;     // idempotente
-		virtual glm::vec3 PointAt(size_t i) const = 0;             // punto de interaccion (mundo, Z arriba)
+		virtual void SetOpen(size_t i, bool abrir) = 0;     // idempotente
+		virtual glm::vec3 Point(size_t i) const = 0;             // punto de interaccion (mundo, Z arriba)
 	};
 
 	enum class RequestResult { Aplicada, IdDesconocido, FueraDeAlcance, SinPose, NoEsDueno, Ocupado, Invalida };
@@ -612,8 +612,8 @@ namespace netgame
 		{
 			size_t i; if (!IndexOf(id, i) || i >= p.Count()) return RequestResult::IdDesconocido;
 			if (!cabeza) return RequestResult::SinPose;
-			if (glm::distance(*cabeza, p.PointAt(i)) > kAlcanceHost) return RequestResult::FueraDeAlcance;
-			p.SetOpenState(i, !p.IsOpen(i));
+			if (glm::distance(*cabeza, p.Point(i)) > kAlcanceHost) return RequestResult::FueraDeAlcance;
+			p.SetOpen(i, !p.IsOpen(i));
 			return RequestResult::Aplicada;
 		}
 		// HOST: emite el estado de las puertas que cambiaron (por E del host, por clientes o por depuracion).
@@ -633,7 +633,7 @@ namespace netgame
 		bool ApplyState(ISceneDoors& p, uint32_t id, const std::vector<uint8_t>& payload)
 		{
 			size_t i; if (payload.size() != 1 || payload[0] > 1 || !IndexOf(id, i) || i >= p.Count()) return false;
-			p.SetOpenState(i, payload[0] == 1);
+			p.SetOpen(i, payload[0] == 1);
 			return true;
 		}
 		void RecoveryState(const ISceneDoors& p, std::vector<net::StateEntry>& out) const
@@ -642,7 +642,7 @@ namespace netgame
 		}
 		void ApplyRecovery(ISceneDoors& p, const std::vector<net::StateEntry>& v)
 		{
-			for (const auto& e : v) { size_t i; if (IndexOf(e.objectId, i) && i < p.Count() && (e.value == 0 || e.value == 1)) p.SetOpenState(i, e.value == 1); }
+			for (const auto& e : v) { size_t i; if (IndexOf(e.objectId, i) && i < p.Count() && (e.value == 0 || e.value == 1)) p.SetOpen(i, e.value == 1); }
 		}
 	private:
 		std::map<uint32_t, size_t> porId_;
@@ -688,7 +688,7 @@ namespace netgame
 			it->second.dueno = kSinDueno; cambios_.push_back(id);
 			return RequestResult::Aplicada;
 		}
-		RequestResult MoveView(uint32_t id, net::PeerId quien, const glm::vec3& nueva, const glm::vec3* cabeza, double ahora)
+		RequestResult Move(uint32_t id, net::PeerId quien, const glm::vec3& nueva, const glm::vec3* cabeza, double ahora)
 		{
 			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::IdDesconocido;
 			SharedObject& o = it->second;
@@ -760,7 +760,7 @@ namespace netgame
 			if (!IsValidCoordinate(p)) return false;
 			conocido = true; dueno = d == 0 ? kSinDueno : net::PeerId(d - 1); pos = p; return true;
 		}
-		void ResetState() { *this = SharedObjectView{}; }
+		void Reset() { *this = SharedObjectView{}; }
 	};
 
 	// Rayo (origen, direccion) contra la esfera del objeto: para elegir el objeto compartido con ratón/mando.

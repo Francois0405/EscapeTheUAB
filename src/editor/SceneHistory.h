@@ -71,7 +71,7 @@ namespace editor
 	public:
 		static constexpr std::size_t LimiteOperaciones = 200;
 
-		void ResetState()
+		void Reset()
 		{
 			deshacer.clear();
 			rehacer.clear();

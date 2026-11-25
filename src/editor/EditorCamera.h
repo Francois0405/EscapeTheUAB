@@ -22,7 +22,7 @@
 
 namespace editor
 {
-	enum class Vista { Perspectiva, Superior, Frontal, RightVector };
+	enum class Vista { Perspectiva, Superior, Frontal, Right };
 
 	struct CameraOptions
 	{
@@ -70,7 +70,7 @@ namespace editor
 		void SetPitch(float grados) { pitch = std::clamp(grados, -LimitePitch, LimitePitch); }
 
 		// Botón derecho: mirar alrededor (la cámara no se desplaza).
-		void LookAround(float dx, float dy, const CameraOptions& o)
+		void Look(float dx, float dy, const CameraOptions& o)
 		{
 			yaw -= dx * o.sensibilidad;
 			SetPitch(pitch + (o.invertirY ? dy : -dy) * o.sensibilidad);
@@ -78,9 +78,9 @@ namespace editor
 		}
 
 		// Alt + botón izquierdo: la cámara orbita alrededor del pivote que tenía delante al empezar.
-		void OrbitView(const glm::vec3& pivote, float dx, float dy, const CameraOptions& o)
+		void Orbit(const glm::vec3& pivote, float dx, float dy, const CameraOptions& o)
 		{
-			LookAround(dx, dy, o);
+			Look(dx, dy, o);
 			posicion = pivote - Forward() * distanciaFoco;
 		}
 
@@ -110,7 +110,7 @@ namespace editor
 		}
 
 		// Botón derecho + WASD/QE (vuelo libre). adelante/derecha/subir en {-1, 0, 1}.
-		void MoveView(float adelante, float derecha, float subir, float dt, float multiplicador, const CameraOptions& o)
+		void Move(float adelante, float derecha, float subir, float dt, float multiplicador, const CameraOptions& o)
 		{
 			const glm::vec3 d = Forward() * adelante + RightVector() * derecha + glm::vec3(0.0f, 0.0f, subir);
 			posicion += d * (o.velocidad * multiplicador * std::clamp(dt, 0.0f, 0.05f));
@@ -130,7 +130,7 @@ namespace editor
 			switch (vista)
 			{
 			case Vista::Frontal: return glm::mat3(glm::vec3(1, 0, 0), glm::vec3(0, 0, 1), glm::vec3(0, -1, 0));
-			case Vista::RightVector: return glm::mat3(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), glm::vec3(1, 0, 0));
+			case Vista::Right: return glm::mat3(glm::vec3(0, 1, 0), glm::vec3(0, 0, 1), glm::vec3(1, 0, 0));
 			default: return glm::mat3(glm::vec3(1, 0, 0), glm::vec3(0, 1, 0), glm::vec3(0, 0, 1));
 			}
 		}
@@ -183,7 +183,7 @@ namespace editor
 			if (!botonIzquierdoPulsado) bloqueado = false;
 			return false;
 		}
-		void ResetState() { bloqueado = false; }
+		void Reset() { bloqueado = false; }
 		bool IsLocked() const { return bloqueado; }
 	private:
 		bool bloqueado = false;
@@ -195,7 +195,7 @@ namespace editor
 	}
 
 	// ------------------------------------------------------------------ Mover objetos con las flechas
-	enum class ArrowKey { UpVector, Abajo, Izquierda, RightVector, Subir, Bajar };
+	enum class ArrowKey { Up, Abajo, Izquierda, Right, Subir, Bajar };
 
 	// Longitud de un paso: 10 cm; Ctrl 1 cm; Shift 50 cm; Ctrl+Shift = "snap" a la cuadrícula (un paso de cuadrícula).
 	inline float ArrowStepLength(bool ctrl, bool shift, const CameraOptions& o, bool& snap)
@@ -225,9 +225,9 @@ namespace editor
 		}
 		switch (f)
 		{
-		case ArrowKey::UpVector: return arriba;
+		case ArrowKey::Up: return arriba;
 		case ArrowKey::Abajo: return -arriba;
-		case ArrowKey::RightVector: return derecha;
+		case ArrowKey::Right: return derecha;
 		default: return -derecha;
 		}
 	}

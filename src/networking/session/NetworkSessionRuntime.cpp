@@ -105,7 +105,7 @@ namespace netgame::session
 		if (cfg.rol == net::Role::Offline)
 		{
 			const bool eraCliente = networkGame.IsClient();
-			networkGame.StopSessionGame();
+			networkGame.Stop();
 			if (eraCliente || fisicaRedEnModoReplica) { std::string error; rebuildPhysicsAfterEditing(error, true); fisicaRedEnModoReplica = false; }
 			return;
 		}
@@ -121,12 +121,12 @@ namespace netgame::session
 		}
 		const std::string escena = netgame::SceneNetworkFingerprint(nombreEscena, estadoEscena);
 		const glm::vec3 posicionObjetoPrueba = SharedObjectSpawnPosition(context.eyePosition(), context.viewForward());
-		if (!networkGame.BeginPlayback(cfg, escena, networkDoors.get(), posicionObjetoPrueba)) return;
+		if (!networkGame.Start(cfg, escena, networkDoors.get(), posicionObjetoPrueba)) return;
 		std::string errorFisica;
 		if (!rebuildPhysicsAfterEditing(errorFisica, cfg.rol != net::Role::Client))
 		{
 			std::cerr << "Red: no se pudo preparar la autoridad fisica de la escena: " << errorFisica << '\n';
-			networkGame.StopSessionGame();
+			networkGame.Stop();
 		}
 		else fisicaRedEnModoReplica = cfg.rol == net::Role::Client;
 	}
@@ -161,7 +161,7 @@ namespace netgame::session
 				networkGame.SetDynamicOwner(par.first, netgame::kSinDueno);
 			}
 		}
-		networkGame.StopSessionGame();
+		networkGame.Stop();
 		bufferFisicaRemota.clear(); objetosDormidosAntes.clear();
 		agarresRemotosDesdeCabeza.clear();
 		if (eraCliente || fisicaRedEnModoReplica)
@@ -199,7 +199,7 @@ namespace netgame::session
 		}
 		net::PoseEntry pose;
 		const bool hayPose = BuildLocalPose(context, pose);
-		networkGame.Advance(ahora, hayPose ? &pose : nullptr);
+		networkGame.Update(ahora, hayPose ? &pose : nullptr);
 		if (networkGame.IsHosting())
 		{
 			std::vector<netgame::DynamicObjectRequest> solicitudes;

@@ -59,7 +59,7 @@ namespace fisica
 		// animados. Es ATÓMICO: si algo falla no queda ningún cuerpo a medias y los cuerpos que
 		// ya existían (escena anterior) no se tocan. Para cambiar de habitación: crear la nueva
 		// en otra EscenaFisica o llamar a Vaciar() antes.
-		bool CreatePlayback(const std::vector<SceneObject>& objetos, const glb::AnimatedScene& animados,
+		bool Create(const std::vector<SceneObject>& objetos, const glb::AnimatedScene& animados,
 			const std::vector<SceneAnimatedObject>& datosAnimados, std::string& error, bool autoridadFisica = true);
 		bool PushDynamicObject(int indiceObjeto, const glm::vec3& impulso);
 		bool DynamicObjectPosition(int indiceObjeto, glm::vec3& posicion) const;

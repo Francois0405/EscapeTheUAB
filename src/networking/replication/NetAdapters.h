@@ -18,13 +18,13 @@ namespace netgame
 		{
 			if (i >= escena_.objetos.size()) return false;
 			const auto e = escena_.objetos[i].estado;
-			return e == glb::DoorState::IsOpen || e == glb::DoorState::Abriendo;
+			return e == glb::DoorState::Open || e == glb::DoorState::Abriendo;
 		}
-		void SetOpenState(size_t i, bool abrir) override
+		void SetOpen(size_t i, bool abrir) override
 		{
 			if (i < escena_.objetos.size() && IsOpen(i) != abrir) glb::ToggleDoor(escena_.objetos[i]);
 		}
-		glm::vec3 PointAt(size_t i) const override
+		glm::vec3 Point(size_t i) const override
 		{
 			return i < escena_.objetos.size() ? glb::InteractionPoint(escena_.objetos[i]) : glm::vec3(0.0f);
 		}
