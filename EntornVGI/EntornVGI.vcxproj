@@ -176,6 +176,7 @@
     <ClCompile Include="..\src\rendering\RuntimeRenderControls.cpp" />
     <ClCompile Include="..\src\rendering\RuntimeRenderer.cpp" />
     <ClCompile Include="..\src\scene\SceneLoader.cpp" />
+    <ClCompile Include="..\src\scene\SceneRuntime.cpp" />
     <ClCompile Include="..\src\rendering\shader.cpp" />
     <ClCompile Include="..\src\rendering\visualitzacio.cpp" />
     <ClCompile Include="..\src\ui\DebugPanels.cpp" />
@@ -249,6 +250,7 @@
     <ClInclude Include="..\src\gameplay\player\PlayerRuntime.h" />
     <ClInclude Include="..\src\rendering\quatern.h" />
     <ClInclude Include="..\src\scene\SceneLoader.h" />
+    <ClInclude Include="..\src\scene\SceneRuntime.h" />
     <ClInclude Include="..\src\rendering\shader.h" />
     <ClInclude Include="..\src\rendering\LegacyVgiGeometryControls.h" />
     <ClInclude Include="..\src\rendering\LegacyVgiViewControls.h" />

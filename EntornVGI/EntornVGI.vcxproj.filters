@@ -81,6 +81,9 @@
     <ClCompile Include="..\src\scene\SceneLoader.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\scene\SceneRuntime.cpp">
+      <Filter>Archivos de origen</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\rendering\DibujoGLB.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
@@ -225,6 +228,9 @@
       <Filter>Archivos de encabezado\ImGui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\scene\SceneLoader.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\scene\SceneRuntime.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\animation\AnimacionGLB.h">

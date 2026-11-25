@@ -22,6 +22,7 @@
 #include "src/scene/escena.h"
 #include "main.h"
 #include "src/scene/SceneLoader.h"
+#include "src/scene/SceneRuntime.h"
 #include "src/animation/AnimacionPuerta.h"
 #include "src/rendering/ModeloGLB.h"
 #include "src/animation/ObjetosAnimadosGLB.h"
@@ -141,13 +142,6 @@ namespace
 		if (id <= 0) return 0;
 		texturasMaterialEscena.emplace(clave, static_cast<GLuint>(id));
 		return static_cast<unsigned int>(id);
-	}
-
-	void liberarTexturasMaterialEscena()
-	{
-		for (const auto& textura : texturasMaterialEscena)
-			if (textura.second != 0) glDeleteTextures(1, &textura.second);
-		texturasMaterialEscena.clear();
 	}
 
 	void aplicarIntensidadMaterial(GLuint programa, bool ambienteActivo = true)
@@ -723,13 +717,6 @@ namespace
 		juego::interaction::UpdatePlayerGrab(contextoInteraccion(), puedeJugar);
 	}
 
-	void liberarObjetosAnimados()
-	{
-		if (objetosAnimadosListos) glb::LiberarEscenaAnimadaDeGPU(objetosAnimados);
-		glb::VaciarEscenaAnimada(objetosAnimados);
-		objetosAnimadosListos = false;
-	}
-
 	gameplay::player::PlayerContext& contextoJugador();
 	bool modoJuegoFPS() { return gameplay::player::isFpsMode(contextoJugador()); }
 
@@ -948,182 +935,41 @@ namespace
 	// fisica, las puertas y el agarre. No se aplica en VR: alli manda la cabeza real.
 	glm::dvec3 desplazamientoVisualDeCamara() { return gameplay::player::visualCameraDisplacement(contextoJugador()); }
 
+	// Contexto prestado a src/scene/SceneRuntime: el estado sigue siendo de main.cpp.
+	const scene::runtime::SceneRuntimeContext& contextoEscena()
+	{
+		static const scene::runtime::SceneRuntimeContext contexto{
+			objetosEscena, modelosHabitacion, texturasMaterialEscena, datosAnimadosEscena, objetosAnimados,
+			objetosAnimadosListos, serializadorEscena, mundoFisico, escenaFisica,
+			nombreEscenaActiva, spawnEscenaActiva, intensidadIndirectaEscena, intensidadAmbientalBaseEscena,
+			escalaLuzDirectaEscena, colorReboteSueloEscena, colorReboteCieloEscena,
+			escenaTieneGeometriaValida, oclusoresPhongInvalidos, editorEscenas, animacionHiriti,
+			objecte, textura, tFlag_invert_Y, shader_programID,
+			[] { return posicionPiesDesdeCamara(); },
+			[] { return glm::vec3(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z)); },
+			[](const SceneSpawn& spawn) { fijarCamaraAlSpawn(spawn); },
+			[] { return crearJugadorFisico(); },
+			[] { return redJuego.EnRed(); },
+			[] { detenerRed(); }
+		};
+		return contexto;
+	}
+
+	void liberarObjetosAnimados() { scene::runtime::ReleaseAnimatedObjects(contextoEscena()); }
+
 	bool cargarYAplicarEscena(const std::filesystem::path& ruta)
 	{
-		// 1) Leer y validar el JSON (si falla, no se ha tocado nada).
-		DatosEscena datos;
-		std::string error;
-		if (!CargarDatosEscenaJSON(ruta, datos, error))
-		{
-			std::cerr << "No se cargo la escena: " << error << '\n';
-			return false;
-		}
-		editor::SerializadorEscenas nuevoSerializador;
-		if (!nuevoSerializador.Cargar(ruta, error))
-		{
-			std::cerr << "No se pudo preparar la persistencia de la escena: " << error << '\n';
-			return false;
-		}
-
-		// 2) Cargar los modelos OBJ en estructuras TEMPORALES.
-		std::unordered_map<std::string, std::unique_ptr<COBJModel>> nuevosModelos;
-		std::vector<SceneObject> objetosValidos;
-		auto liberarModelosTemporales = [&nuevosModelos]()
-		{
-			for (auto& entrada : nuevosModelos) entrada.second->netejaTextures_OBJ();
-		};
-		for (auto& obj : datos.objetos)
-		{
-			const auto rutaObj = std::filesystem::absolute(ruta.parent_path() / obj.modelo).lexically_normal();
-			if (!std::filesystem::exists(rutaObj) || !std::filesystem::is_regular_file(rutaObj))
-			{
-				std::cerr << "No existe el OBJ: " << rutaObj << '\n';
-				liberarModelosTemporales();
-				return false;
-			}
-			const std::string clave = rutaObj.string();
-			if (nuevosModelos.find(clave) == nuevosModelos.end())
-			{
-				auto modelo = std::make_unique<COBJModel>();
-				std::string rutaEditable = clave;
-				const int resultado = modelo->LoadModel(rutaEditable.data());
-				if (resultado != 0)
-				{
-					std::cerr << "Error cargando OBJ " << clave << " (codigo " << resultado << ")\n";
-					modelo->netejaTextures_OBJ();
-					liberarModelosTemporales();
-					return false;
-				}
-				// Todas las instancias de un mismo OBJ comparten el modelo ya cargado.
-				nuevosModelos.emplace(clave, std::move(modelo));
-			}
-			obj.modelo = clave;
-			objetosValidos.push_back(std::move(obj));
-		}
-
-		// 3) Objetos animados GLB de la lista "animated", también temporales.
-		glb::EscenaAnimada nuevosAnimados;
-		if (!fisica::CargarObjetosAnimadosDeEscena(datos.animados, std::filesystem::absolute(ruta.parent_path()),
-			nuevosAnimados, error))
-		{
-			std::cerr << "No se cargo la escena: " << error << '\n';
-			liberarModelosTemporales();
-			return false;
-		}
-		for (const auto& modelo : nuevosAnimados.modelos)
-			for (const std::string& aviso : modelo.second.avisos)
-				std::cerr << modelo.first << ": " << aviso << '\n';
-
-		// 4) Cuerpos físicos NUEVOS (los de la habitación anterior siguen en el mundo hasta el final).
-		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
-		if (!nuevaFisica->Crear(objetosValidos, nuevosAnimados, datos.animados, error))
-		{
-			std::cerr << "No se cargo la escena (fisicas): " << error << '\n';
-			liberarModelosTemporales();
-			return false;
-		}
-		if ((objetosValidos.empty() && datos.animados.empty()) || nuevaFisica->NumeroDeCuerpos() == 0)
-		{
-			std::cerr << "La escena no contiene geometria/colliders fisicos cargables; se cancela el arranque." << std::endl;
-			liberarModelosTemporales();
-			return false;
-		}
-
-		// 5) Todo ha ido bien: AHORA se sustituye la habitación anterior.
-		escenaFisica->Vaciar();                        // retira sus colisiones del mundo
-		escenaFisica = std::move(nuevaFisica);
-		liberarTexturasMaterialEscena();
-		for (auto& entrada : modelosHabitacion) entrada.second->netejaTextures_OBJ();
-		modelosHabitacion = std::move(nuevosModelos);
-		objetosEscena = std::move(objetosValidos);
-		animacionHiriti.Reiniciar();
-		oclusoresPhongInvalidos = true;
-		liberarObjetosAnimados();                      // libera de la GPU los GLB anteriores
-		objetosAnimados = std::move(nuevosAnimados);
-		glb::SubirEscenaAnimadaAGPU(objetosAnimados);  // el contexto OpenGL ya existe en este punto
-		objetosAnimadosListos = true;
-		nombreEscenaActiva = std::move(datos.nombre);
-		datosAnimadosEscena = std::move(datos.animados);
-		serializadorEscena = std::move(nuevoSerializador);
-		spawnEscenaActiva = datos.spawn;
-		intensidadIndirectaEscena = datos.indirectIntensity;
-		intensidadAmbientalBaseEscena = datos.indirectAmbientBase;
-		escalaLuzDirectaEscena = datos.directSceneLightScale;
-		colorReboteSueloEscena = datos.indirectFloorColor;
-		colorReboteCieloEscena = datos.indirectSkyColor;
-		if (!spawnEscenaActiva.presente)
-		{
-			spawnEscenaActiva.presente = true; // escenas antiguas conservan la vista existente como fallback
-			spawnEscenaActiva.pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
-			glm::vec3 mirada(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y),
-				static_cast<float>(n[2] - opvN.z));
-			spawnEscenaActiva.direccion = glm::length(mirada) > 1e-4f ? glm::normalize(mirada) : glm::vec3(1, 0, 0);
-		}
-		escenaTieneGeometriaValida = escenaFisica->NumeroDeCuerpos() > 0;
-		fijarCamaraAlSpawn(spawnEscenaActiva);
-		if (mundoFisico.HayJugador() && !crearJugadorFisico())
-		{
-			mundoFisico.EliminarJugador();
-			escenaTieneGeometriaValida = false;
-			return false;
-		}
-		editorEscenas.NuevaEscena();
-		{
-			std::error_code rutaModelos;
-			const auto raiz = std::filesystem::absolute(ruta.parent_path() / ".." / "models", rutaModelos).lexically_normal();
-			if (!rutaModelos && std::filesystem::is_directory(raiz)) editorEscenas.FijarRaizModelos(raiz);
-			editorEscenas.FijarRaizEscena(std::filesystem::absolute(ruta.parent_path(), rutaModelos).lexically_normal());
-			editorEscenas.FijarRaizAnimaciones(std::filesystem::absolute(ruta.parent_path() / ".." / "animations", rutaModelos).lexically_normal());
-		}
-		objecte = OBJOBJ;
-		textura = true;
-		tFlag_invert_Y = false;
-		glUseProgram(shader_programID);
-		glUniform1i(glcache::UniformLocation(shader_programID, "textur"), textura);
-		glUniform1i(glcache::UniformLocation(shader_programID, "flag_invert_y"), tFlag_invert_Y);
-		std::error_code rutaEscenaError;
-		const auto rutaEscenaAbsoluta = std::filesystem::absolute(ruta, rutaEscenaError).lexically_normal();
-		std::cout << "Escena cargada desde " << (rutaEscenaError ? ruta.string() : rutaEscenaAbsoluta.string()) << ": "
-			<< nombreEscenaActiva << " (" << objetosEscena.size() << " instancias, " << objetosAnimados.objetos.size()
-			<< " animadas, " << escenaFisica->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
-		if (redJuego.EnRed())
-		{
-			std::cerr << "Red: la escena ha cambiado; se detiene la sesion (host y clientes deben usar la misma escena)." << std::endl;
-			detenerRed();
-		}
-		return true;
+		return scene::runtime::LoadAndApplyScene(contextoEscena(), ruta);
 	}
 
 	bool reconstruirFisicaTrasEdicion(std::string& error, bool autoridadFisica)
 	{
-		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
-		if (!nuevaFisica->Crear(objetosEscena, objetosAnimados, datosAnimadosEscena, error, autoridadFisica)) return false;
-		escenaFisica->Vaciar();
-		escenaFisica = std::move(nuevaFisica);
-		return true;
+		return scene::runtime::RebuildPhysicsAfterEdit(contextoEscena(), error, autoridadFisica);
 	}
 
 	bool cargarModeloParaEditor(const std::filesystem::path& ruta, std::string& modeloCargado, std::string& error)
 	{
-		std::error_code ec;
-		const auto absoluta = std::filesystem::absolute(ruta, ec).lexically_normal();
-		if (ec || !std::filesystem::is_regular_file(absoluta, ec))
-		{
-			error = "El archivo OBJ seleccionado no existe.";
-			return false;
-		}
-		modeloCargado = absoluta.string();
-		if (modelosHabitacion.contains(modeloCargado)) return true;
-		auto modelo = std::make_unique<COBJModel>();
-		std::string rutaMutable = modeloCargado;
-		if (modelo->LoadModel(rutaMutable.data()) != 0)
-		{
-			modelo->netejaTextures_OBJ();
-			error = "El cargador OBJ rechazó el modelo seleccionado.";
-			return false;
-		}
-		modelosHabitacion.emplace(modeloCargado, std::move(modelo));
-		return true;
+		return scene::runtime::LoadModelForEditor(contextoEscena(), ruta, modeloCargado, error);
 	}
 }
 

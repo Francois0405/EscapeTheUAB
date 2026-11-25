@@ -78,6 +78,7 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/rendering/material.cpp
 	${REPO_ROOT}/src/networking/replication/NetAvatar.cpp
 	${REPO_ROOT}/src/scene/objLoader.cpp
+	${REPO_ROOT}/src/scene/SceneRuntime.cpp
 	${REPO_ROOT}/src/rendering/ObjMeshOptimization.cpp
 	${REPO_ROOT}/src/vr/OpenXRManager.cpp
 	${REPO_ROOT}/src/rendering/quatern.cpp
