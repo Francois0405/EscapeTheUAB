@@ -95,7 +95,7 @@ namespace
 
 	void TestNetworkStartRequest()
 	{
-		netjuego::ConfigRed config;
+		netgame::NetworkConfig config;
 		std::string error;
 		Check(runtimeui::BuildNetworkStartRequest(1, "", "ignored", 27015, config, error) &&
 			config.rol == net::Role::Host && config.puerto == 27015 && config.nombre == "jugador" && error.empty(),

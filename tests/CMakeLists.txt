@@ -30,7 +30,7 @@ add_test(NAME SceneLoaderTests COMMAND SceneLoaderTests)
 
 add_executable(EditorPersistenceTests
 	EditorPersistenceTests.cpp
-	${PROJECT_SOURCE_DIR}/src/editor/SerializadorEscenas.cpp
+	${PROJECT_SOURCE_DIR}/src/editor/SceneSerializer.cpp
 )
 target_include_directories(EditorPersistenceTests PRIVATE
 	${PROJECT_SOURCE_DIR}
@@ -52,7 +52,7 @@ add_test(NAME EditorPersistenceTests COMMAND EditorPersistenceTests)
 
 add_executable(EditorTests
 	EditorTests.cpp
-	${PROJECT_SOURCE_DIR}/src/editor/SerializadorEscenas.cpp
+	${PROJECT_SOURCE_DIR}/src/editor/SceneSerializer.cpp
 )
 target_include_directories(EditorTests PRIVATE
 	${PROJECT_SOURCE_DIR}

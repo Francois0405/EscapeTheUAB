@@ -39,7 +39,7 @@ void ShutdownApplication(Ps1Framebuffer& ps1)
 	mundoFisico.EliminarJugador();
 	escenaFisica.reset();                       // quita las colisiones de la habitacion antes de cerrar
 	fisica::LiberarDibujoColisionadores();
-	netjuego::LiberarDibujoAvatares();
+	netgame::LiberarDibujoAvatares();
 
 	if (phoneOBJ != nullptr)
 	{

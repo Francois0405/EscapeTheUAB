@@ -1,8 +1,8 @@
 #pragma once
 
-#include "src/gameplay/player/MovimientoFPS.h"
-#include "src/physics/EscenaFisica.h"
-#include "src/physics/MundoFisico.h"
+#include "src/gameplay/player/FpsMovement.h"
+#include "src/physics/PhysicsScene.h"
+#include "src/physics/PhysicsWorld.h"
 #include "src/scene/SceneLoader.h"
 
 #include <functional>
@@ -18,8 +18,8 @@ namespace gameplay::player
 	// Ownership stays in main.cpp; callbacks bridge the legacy camera preset API.
 	struct PlayerContext
 	{
-		fisica::MundoFisico& physics;
-		std::unique_ptr<fisica::EscenaFisica>& scenePhysics;
+		fisica::PhysicsWorld& physics;
+		std::unique_ptr<fisica::PhysicsScene>& scenePhysics;
 		bool& sceneHasValidGeometry;
 		SceneSpawn& activeSpawn;
 		const std::string& activeSceneName;
@@ -45,8 +45,8 @@ namespace gameplay::player
 		std::function<void()> setSkybox;
 		std::function<void()> setPresetLight;
 
-		fps::MovimientoJugador& movement;
-		fps::BalanceoCamara& cameraBob;
+		fps::PlayerMovement& movement;
+		fps::CameraBob& cameraBob;
 		bool& hasPreviousFeet;
 		glm::vec3& previousFeet;
 		float& walkWeight;

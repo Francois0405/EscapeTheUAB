@@ -5,12 +5,12 @@
 // dueno de todo el estado y lo presta mediante este contexto; aqui no se puede incluir main.h
 // (define globales).
 // La API publica va en ingles; main.cpp enlaza cada miembro en contextoSesionRed().
-#include "src/animation/ObjetosAnimadosGLB.h"
+#include "src/animation/GlbAnimatedObjects.h"
 #include "src/networking/replication/Game/RemotePhysicsTimeline.h"
-#include "src/networking/replication/NetAdaptadores.h"
-#include "src/networking/replication/NetJuego.h"
-#include "src/physics/EscenaFisica.h"
-#include "src/physics/MundoFisico.h"
+#include "src/networking/replication/NetAdapters.h"
+#include "src/networking/replication/NetGame.h"
+#include "src/physics/PhysicsScene.h"
+#include "src/physics/PhysicsWorld.h"
 #include "src/scene/SceneLoader.h"
 #include "src/vr/OpenXRManager.h"
 
@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 
-namespace netjuego::session
+namespace netgame::session
 {
 	// Estado que solo usa la sesion; lo instancia main.cpp.
 	struct SessionRuntimeState
@@ -38,14 +38,14 @@ namespace netjuego::session
 		// Estado prestado
 		std::vector<SceneObject>& sceneObjects;
 		// Referencia al unique_ptr: reconstruir la fisica sustituye la escena fisica en mitad de una llamada.
-		std::unique_ptr<fisica::EscenaFisica>& physicsScene;
-		const fisica::MundoFisico& physicsWorld;
-		RedJuego& session;
-		glb::EscenaAnimada& animatedObjects;
-		std::unique_ptr<PuertasGLB>& networkDoors;
+		std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+		const fisica::PhysicsWorld& physicsWorld;
+		NetworkGame& session;
+		glb::AnimatedScene& animatedObjects;
+		std::unique_ptr<GlbDoors>& networkDoors;
 		SessionRuntimeState& state;
-		const vr::GestorOpenXR& xr;
-		const vr::PoseXR& headPose;		// pose del visor del ultimo fotograma VR
+		const vr::OpenXrManager& xr;
+		const vr::XrPose& headPose;		// pose del visor del ultimo fotograma VR
 		const bool& hasHeadPose;
 
 		// Servicios que siguen en main.cpp (camara, escena, entrada, diagnostico y Hirity)
@@ -63,8 +63,8 @@ namespace netjuego::session
 		std::function<void(float charge)> onHiritiThrown;
 	};
 
-	bool CaptureSceneState(const SessionContext& context, std::vector<EstadoObjetoEscena>& output);
-	void StartSession(const SessionContext& context, const ConfigRed& config);
+	bool CaptureSceneState(const SessionContext& context, std::vector<SceneObjectState>& output);
+	void StartSession(const SessionContext& context, const NetworkConfig& config);
 	void StopSession(const SessionContext& context);
 	// Una vez por fotograma, en el hilo de juego. Offline: no hace nada (coste cero).
 	void UpdateSession(const SessionContext& context, double now, bool playing);

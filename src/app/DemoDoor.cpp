@@ -5,7 +5,7 @@
 void actualizarPuertaDemo(float deltaSegundos)
 {
 	reproductorPuertaDemo.Actualizar(deltaSegundos);
-	anguloPuertaDemo = animacion::AnguloEnTiempo(keyframesPuertaDemo, reproductorPuertaDemo.tiempo);
+	anguloPuertaDemo = animation::AnguloEnTiempo(keyframesPuertaDemo, reproductorPuertaDemo.tiempo);
 }
 
 // Arranca la animación desde el principio (la puerta vuelve a estar cerrada).

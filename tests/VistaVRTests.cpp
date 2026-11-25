@@ -1,6 +1,6 @@
 // VistaVRTests.cpp
 // Pruebas de la matemática VR (VistaVR.h) sin visor, ventana ni OpenGL.
-#include "src/vr/VistaVR.h"
+#include "src/vr/VrView.h"
 
 #include <cmath>
 #include <iostream>
@@ -38,10 +38,10 @@ int main()
 	// 2) Anclaje: STAGE en los pies, LOCAL en los ojos; la componente vertical de la cámara se ignora.
 	{
 		const glm::vec3 pies(3, 4, 0.5f);
-		const Anclaje suelo = AnclajeDelJugador(pies, glm::vec3(0, 5, 3), true, 1.7f);
+		const Anchor suelo = AnclajeDelJugador(pies, glm::vec3(0, 5, 3), true, 1.7f);
 		comprobar(casi(suelo.origen, pies), "STAGE: el origen esta en los pies");
 		comprobar(casi(suelo.adelante, glm::vec3(0, 1, 0)), "la direccion vertical se descarta y se normaliza");
-		const Anclaje local = AnclajeDelJugador(pies, glm::vec3(1, 0, 0), false, 1.7f);
+		const Anchor local = AnclajeDelJugador(pies, glm::vec3(1, 0, 0), false, 1.7f);
 		comprobar(casi(local.origen, glm::vec3(3, 4, 2.2f)), "LOCAL: el origen esta a la altura de los ojos");
 		comprobar(casi(AdelanteHorizontal(glm::vec3(0, 0, 1)), glm::vec3(0, 1, 0)), "camara vertical -> +Y (sin base degenerada)");
 		comprobar(casi(AdelanteHorizontal(glm::vec3(0.0f)), glm::vec3(0, 1, 0)), "vector nulo -> +Y");
@@ -49,10 +49,10 @@ int main()
 
 	// 3) La cabeza real mueve la camara: posicion en el motor = origen + base * posicionXR.
 	{
-		Anclaje a;
+		Anchor a;
 		a.origen = glm::vec3(10, 0, 0);
 		a.adelante = glm::vec3(0, 1, 0);
-		PoseXR pose;
+		XrPose pose;
 		pose.posicion = glm::vec3(0.2f, 1.6f, -0.5f);   // 20 cm a la derecha, 1,6 m de altura, 50 cm hacia delante
 		comprobar(casi(PosicionDeOjo(pose, a), glm::vec3(10.2f, 0.5f, 1.6f)), "posicion del ojo en el motor (Z vertical)");
 
@@ -62,9 +62,9 @@ int main()
 
 	// 4) Orientacion: girar la cabeza a la izquierda (+90 grados sobre el eje vertical de OpenXR).
 	{
-		Anclaje a;
+		Anchor a;
 		a.adelante = glm::vec3(0, 1, 0);
-		PoseXR pose;
+		XrPose pose;
 		pose.orientacion = glm::angleAxis(PI / 2.0f, glm::vec3(0, 1, 0));
 		const glm::mat4 mundo = MundoDeOjo(pose, a);
 		const glm::vec3 delanteOjo = glm::vec3(mundo * glm::vec4(0, 0, -1, 0));   // hacia donde mira el ojo
@@ -74,10 +74,10 @@ int main()
 
 	// 5) Vista: lleva el ojo al origen y un punto situado delante queda en -Z de la vista.
 	{
-		Anclaje a;
+		Anchor a;
 		a.origen = glm::vec3(5, 5, 0);
 		a.adelante = glm::vec3(1, 0, 0);
-		PoseXR pose;
+		XrPose pose;
 		pose.posicion = glm::vec3(0, 1.6f, 0);
 		const glm::mat4 vista = VistaDeOjoVR(pose, a);
 		comprobar(casi(transforma(vista, PosicionDeOjo(pose, a)), glm::vec3(0.0f)), "el ojo queda en el origen de la vista");
@@ -92,7 +92,7 @@ int main()
 	// 6) Proyeccion: un FOV simetrico coincide con glm::perspective; uno asimetrico respeta sus bordes.
 	{
 		const float semi = PI / 4.0f;   // 45 grados a cada lado -> 90 grados totales
-		CampoDeVision sim{ -semi, semi, semi, -semi };
+		FieldOfView sim{ -semi, semi, semi, -semi };
 		const glm::mat4 mia = ProyeccionDesdeCampo(sim, 0.1f, 100.0f);
 		const glm::mat4 ref = glm::perspective(PI / 2.0f, 1.0f, 0.1f, 100.0f);
 		bool igual = true;
@@ -101,7 +101,7 @@ int main()
 
 		// Asimetrico: 50 grados a la izquierda, 40 a la derecha, 45 arriba, 35 abajo (como un visor real).
 		const float g = PI / 180.0f;
-		CampoDeVision asi{ -50 * g, 40 * g, 45 * g, -35 * g };
+		FieldOfView asi{ -50 * g, 40 * g, 45 * g, -35 * g };
 		const glm::mat4 p = ProyeccionDesdeCampo(asi, 0.05f, 50.0f);
 		auto ndc = [&](float anguloH, float anguloV) {   // punto a 1 m con esos angulos respecto al eje
 			const glm::vec4 c = p * glm::vec4(std::tan(anguloH), std::tan(anguloV), -1.0f, 1.0f);

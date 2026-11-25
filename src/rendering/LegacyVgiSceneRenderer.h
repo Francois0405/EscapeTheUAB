@@ -10,10 +10,10 @@
 class COBJModel;
 struct SceneMaterial;
 struct SceneObject;
-namespace editor { class EditorEscenas; }
-namespace fisica { class DemoCuboCaida; class EscenaFisica; class MundoFisico; }
-namespace glb { struct EscenaAnimada; }
-namespace netjuego { class RedJuego; }
+namespace editor { class SceneEditor; }
+namespace fisica { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
+namespace glb { struct AnimatedScene; }
+namespace netgame { class NetworkGame; }
 
 // Borrows live scene state, including the current view and projection for each eye.
 struct SceneRenderContext
@@ -63,17 +63,17 @@ struct SceneRenderContext
 	// Scene and live runtime state
 	const std::vector<SceneObject>& objetosEscena;
 	const std::unordered_map<std::string, std::unique_ptr<COBJModel>>& modelosHabitacion;
-	const editor::EditorEscenas& editorEscenas;
-	const std::unique_ptr<fisica::EscenaFisica>& escenaFisica;
+	const editor::SceneEditor& editorEscenas;
+	const std::unique_ptr<fisica::PhysicsScene>& escenaFisica;
 	const glm::vec3& mitadTamanoPuertaDemo;
 	const glm::vec3& bisagraPuertaDemo;
 	const float& anguloPuertaDemo;
-	const fisica::DemoCuboCaida& demoFisica;
+	const fisica::FallingCubeDemo& demoFisica;
 	const bool& objetosAnimadosListos;
-	const glb::EscenaAnimada& objetosAnimados;
+	const glb::AnimatedScene& objetosAnimados;
 	const bool& mostrarColisionadores;
-	const fisica::MundoFisico& mundoFisico;
-	const netjuego::RedJuego& redJuego;
+	const fisica::PhysicsWorld& mundoFisico;
+	const netgame::NetworkGame& redJuego;
 
 	// Services provided by the application
 	void (*iniciarConsultaGpu)();

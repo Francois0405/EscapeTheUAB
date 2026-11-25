@@ -134,17 +134,17 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha();
 		if (diagnosticoAgarreActivo())
 		{
-			const ObjetivoInteraccion& objetivo = objetivoInteraccionActual;
+			const InteractionTarget& objetivo = objetivoInteraccionActual;
 			uint32_t idObjetivo = 0;
-			if (objetivo.accion == AccionInteraccion::Recoger && objetivo.indiceDinamico >= 0 &&
+			if (objetivo.accion == InteractionAction::Recoger && objetivo.indiceDinamico >= 0 &&
 				objetivo.indiceDinamico < static_cast<int>(objetosEscena.size()))
-				idObjetivo = netjuego::HashId(objetosEscena[objetivo.indiceDinamico].id);
+				idObjetivo = netgame::HashId(objetosEscena[objetivo.indiceDinamico].id);
 			glm::vec3 origenRayo(0.0f), direccionRayo(0.0f);
 			origenYDireccionDeLaMirada(origenRayo, direccionRayo);
 			float distanciaRayo = std::numeric_limits<float>::infinity();
 			const fisica::IdCuerpo cuerpoRayo = mundoFisico.CuerpoAlFinalDelRayo(
 				origenRayo, direccionRayo,
-				std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION), &distanciaRayo);
+				std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION), &distanciaRayo);
 			const int indiceCuerpoDinamico = cuerpoRayo == fisica::CuerpoInvalido
 				? -1 : escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoRayo);
 			const int indiceCuerpoAnimado = cuerpoRayo == fisica::CuerpoInvalido

@@ -1,6 +1,6 @@
-#include "src/gameplay/hirity/AnimacionHiriti.h"
-#include "src/gameplay/hirity/VolumenSonidoHiriti.h"
-#include "src/gameplay/hirity/TemporizadorAmbiente.h"
+#include "src/gameplay/hirity/HiritiAnimation.h"
+#include "src/gameplay/hirity/HiritiSoundVolume.h"
+#include "src/gameplay/hirity/HiritiAudioTimer.h"
 
 #include <cmath>
 #include <iostream>
@@ -24,7 +24,7 @@ int main()
 	const glm::vec3 origen(0.0f);
 	const glm::vec3 centro(0.0f, 5.0f, 0.0f);
 	const glm::vec3 haciaHiriti(0.0f, 1.0f, 0.0f);
-	juego::AnimacionHiriti hiriti;
+	game::HiritiAnimator hiriti;
 
 	comprobar(!hiriti.Actualizar(false, origen, haciaHiriti, centro, 0.2f),
 		"no se descubre mientras no se permite descubrir");
@@ -52,7 +52,7 @@ int main()
 		"agarrar a Hiriti cancela el sonido pendiente");
 	comprobar(!hiriti.MarcarAgarrado(),
 		"el evento de agarrarlo solo se activa una vez");
-	juego::AnimacionHiriti agarreValidado;
+	game::HiritiAnimator agarreValidado;
 	comprobar(agarreValidado.DescubrirPorInteraccion() && agarreValidado.MarcarAgarrado(),
 		"un agarre físico validado descubre a Hiriti aunque otra réplica no detectara su mirada");
 	comprobar(!agarreValidado.MarcarAgarrado(),
@@ -84,7 +84,7 @@ int main()
 	comprobar(hiriti.ActualizarContacto(true) == 0,
 		"una patada con el 70% de potencia reproduce audio de impacto");
 
-	juego::AnimacionHiriti seguimiento;
+	game::HiritiAnimator seguimiento;
 	comprobar(!seguimiento.ActualizarSuspensionSeguimiento(true, glm::vec3(0.0f), 0.1f),
 		"el seguimiento se suspende mientras el jugador manipula a Hiriti");
 	comprobar(!seguimiento.ActualizarSuspensionSeguimiento(false, glm::vec3(0.4f, 0.0f, 0.0f), 1.0f),
@@ -95,34 +95,34 @@ int main()
 		"el seguimiento se reanuda tras estabilizarse Hiriti");
 
 	const glm::vec3 haciaJugador(1.0f, 0.0f, 0.0f);
-	const glm::vec3 sinAceleracion = juego::AnimacionHiriti::CalcularAceleracionSeguimiento(
+	const glm::vec3 sinAceleracion = game::HiritiAnimator::CalcularAceleracionSeguimiento(
 		glm::vec3(0.0f), glm::vec3(1.7f, 0.0f, 0.0f), glm::vec3(0.0f),
 		haciaJugador, 1.8f, 2.4f, 3.2f);
 	comprobar(glm::length(sinAceleracion) < 1.0e-5f,
 		"Hiriti no acelera al estar dentro de la distancia de parada");
-	const glm::vec3 aceleracion = juego::AnimacionHiriti::CalcularAceleracionSeguimiento(
+	const glm::vec3 aceleracion = game::HiritiAnimator::CalcularAceleracionSeguimiento(
 		glm::vec3(0.0f), glm::vec3(5.0f, 0.0f, 0.0f), glm::vec3(0.0f),
 		haciaJugador, 1.8f, 2.4f, 3.2f);
 	comprobar(aceleracion.x > 0.0f && std::fabs(aceleracion.y) < 1.0e-5f &&
 		glm::length(aceleracion) <= 3.21f,
 		"el seguimiento acelera hacia el jugador con aceleracion limitada");
-	const glm::vec3 frenado = juego::AnimacionHiriti::CalcularAceleracionSeguimiento(
+	const glm::vec3 frenado = game::HiritiAnimator::CalcularAceleracionSeguimiento(
 		glm::vec3(0.0f), glm::vec3(0.0f), glm::vec3(1.0f, 0.0f, 0.0f),
 		haciaJugador, 1.8f, 2.4f, 3.2f);
 	comprobar(frenado.x < 0.0f,
 		"el seguimiento frena aunque Hiriti alcance la posicion del jugador");
 	const std::array<float, 5> obstaculoFrontal = {
-		0.2f, juego::AnimacionHiriti::AlcanceAnticipacionObstaculos,
-		juego::AnimacionHiriti::AlcanceAnticipacionObstaculos,
-		juego::AnimacionHiriti::AlcanceAnticipacionObstaculos,
-		juego::AnimacionHiriti::AlcanceAnticipacionObstaculos
+		0.2f, game::HiritiAnimator::AlcanceAnticipacionObstaculos,
+		game::HiritiAnimator::AlcanceAnticipacionObstaculos,
+		game::HiritiAnimator::AlcanceAnticipacionObstaculos,
+		game::HiritiAnimator::AlcanceAnticipacionObstaculos
 	};
-	const glm::vec3 rodeo = juego::AnimacionHiriti::CalcularDireccionSeguimiento(
+	const glm::vec3 rodeo = game::HiritiAnimator::CalcularDireccionSeguimiento(
 		glm::vec3(0.0f), glm::vec3(5.0f, 0.0f, 0.0f), obstaculoFrontal);
 	comprobar(rodeo.x > 0.0f && std::fabs(rodeo.y) > 0.5f,
 		"el seguimiento escoge una trayectoria lateral cuando el camino directo esta bloqueado");
 
-	juego::AnimacionHiriti reaparicion;
+	game::HiritiAnimator reaparicion;
 	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, false, 29.0f),
 		"Hiriti no reaparece antes de que venza el cooldown de 30 segundos");
 	comprobar(!reaparicion.ActualizarTemporizadorReaparicion(true, true, 1.0f),
@@ -141,28 +141,28 @@ int main()
 		reaparicion.ActualizarTemporizadorReaparicion(true, false, 1.0f),
 		"reiniciar Hiriti limpia el cooldown antes de cambiar o reinicializar la escena");
 
-	juego::TemporizadorAudioHiriti temporizadorAudio;
-	comprobar(temporizadorAudio.Actualizar(true, 29.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
-		temporizadorAudio.Actualizar(true, 1.0f) == juego::TemporizadorAudioHiriti::Evento::Ambiente,
+	game::HiritiAudioTimer temporizadorAudio;
+	comprobar(temporizadorAudio.Actualizar(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
 		"el sonido ambiente se activa al cumplirse treinta segundos de PLAY");
-	comprobar(temporizadorAudio.Actualizar(true, 14.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
-		temporizadorAudio.Actualizar(true, 1.0f) == juego::TemporizadorAudioHiriti::Evento::Buscando,
+	comprobar(temporizadorAudio.Actualizar(true, 14.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 1.0f) == game::HiritiAudioTimer::Evento::Buscando,
 		"el sonido searching alterna quince segundos despues del ambiente");
-	comprobar(temporizadorAudio.Actualizar(true, 15.0f) == juego::TemporizadorAudioHiriti::Evento::Ambiente &&
-		temporizadorAudio.Actualizar(true, 15.0f) == juego::TemporizadorAudioHiriti::Evento::Buscando,
+	comprobar(temporizadorAudio.Actualizar(true, 15.0f) == game::HiritiAudioTimer::Evento::Ambiente &&
+		temporizadorAudio.Actualizar(true, 15.0f) == game::HiritiAudioTimer::Evento::Buscando,
 		"cada categoria de sonido se repite con treinta segundos de diferencia");
-	comprobar(temporizadorAudio.Actualizar(false, 30.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
-		temporizadorAudio.Actualizar(true, 29.0f) == juego::TemporizadorAudioHiriti::Evento::Ninguno &&
-		temporizadorAudio.Actualizar(true, 1.0f) == juego::TemporizadorAudioHiriti::Evento::Ambiente,
+	comprobar(temporizadorAudio.Actualizar(false, 30.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
+		temporizadorAudio.Actualizar(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
 		"salir de PLAY reinicia la secuencia empezando por ambiente");
 
 	comprobar(!hiriti.Actualizar(true, origen, haciaHiriti,
-		glm::vec3(0.0f, juego::AnimacionHiriti::AlcanceDescubrimiento + 1.0f, 0.0f), 0.2f),
+		glm::vec3(0.0f, game::HiritiAnimator::AlcanceDescubrimiento + 1.0f, 0.0f), 0.2f),
 		"no se descubre fuera del alcance");
 
 	const auto volumenCercano = [](float volumenBase, float distancia, float esperado)
 	{
-		return std::fabs(juego::hiriti::AttenuateVolumeByDistance(volumenBase, distancia) - esperado) < 1.0e-5f;
+		return std::fabs(game::hiriti::AttenuateVolumeByDistance(volumenBase, distancia) - esperado) < 1.0e-5f;
 	};
 	comprobar(volumenCercano(1.0f, 0.0f, 1.0f) && volumenCercano(1.0f, 2.0f, 1.0f),
 		"la voz de Hiriti suena a volumen completo hasta dos metros");

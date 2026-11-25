@@ -13,13 +13,13 @@ namespace runtimeui
 {
 	// mode: 1 = host, 2 = client (the "Offline / Host / Cliente" radio buttons).
 	inline bool BuildNetworkStartRequest(int mode, const char* name, const char* ip, int port,
-		netjuego::ConfigRed& config, std::string& error)
+		netgame::NetworkConfig& config, std::string& error)
 	{
 		config.rol = mode == 1 ? net::Role::Host : net::Role::Client;
 		config.nombre = name[0] ? name : "jugador";
 		std::string parseError;
-		if (!netjuego::PuertoValido(port)) error = "Puerto fuera de rango: usa un valor entre 1 y 65535.";
-		else if (config.rol == net::Role::Client && !netjuego::ParsearEndpoint(std::string(ip) + ":" + std::to_string(port), config.host, config.puerto, parseError))
+		if (!netgame::PuertoValido(port)) error = "Puerto fuera de rango: usa un valor entre 1 y 65535.";
+		else if (config.rol == net::Role::Client && !netgame::ParsearEndpoint(std::string(ip) + ":" + std::to_string(port), config.host, config.puerto, parseError))
 			error = parseError;
 		else
 		{

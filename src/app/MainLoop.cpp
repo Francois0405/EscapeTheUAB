@@ -56,7 +56,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 			// Movimiento WASD
 			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
 			{
-				fps::EntradaMovimiento entrada;
+				fps::MovementInput entrada;
 				entrada.activo = !editorEscenas.Activo() && entradaFPSActiva() && mundoFisico.HayJugador();
 				entrada.quiereMoverse = entrada.activo && hayTeclaDeMovimiento(window);
 				entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
@@ -71,7 +71,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 
 			actualizarMovimientoMovil(window, static_cast<float>(delta));
 
-			const bool animacionPausada = netjuego::PausarMundoJuego(
+			const bool animacionPausada = netgame::PausarMundoJuego(
 				estadoActual == ESTADO_JUGANDO, editorEscenas.Activo(), fpsPausado,
 				ventanaConFoco, gestorOpenXR.SesionEnMarcha(), redJuego.EsHost());
 			actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
@@ -165,7 +165,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 				mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
 				if (redJuego.Activa() && redJuego.EsHost())
 				{
-					std::vector<netjuego::EstadoObjetoEscena> estados;
+					std::vector<netgame::SceneObjectState> estados;
 					if (!capturarEstadoEscenaRed(estados) || !redJuego.FijarEstadoEscena(estados, true))
 						editorEscenas.InformarEstado("La sesión solo replica objetos existentes; no se sincronizaron altas, bajas o IDs no válidos.", true);
 				}

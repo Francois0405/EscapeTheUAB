@@ -3,7 +3,7 @@
 // Aritmetica pura de la carga del lanzamiento (sin ventana, red ni fisica).
 #include <algorithm>
 
-namespace juego::interaction
+namespace game::interaction
 {
 	inline constexpr float kMaxThrowChargeSeconds = 1.25f;
 

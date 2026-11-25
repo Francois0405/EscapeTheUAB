@@ -1,6 +1,6 @@
 // MovimientoFPSTests.cpp
 // Pruebas de velocidad, sprint, estamina y balanceo (MovimientoFPS.h) sin ventana ni fisica.
-#include "src/gameplay/player/MovimientoFPS.h"
+#include "src/gameplay/player/FpsMovement.h"
 
 #include <cmath>
 #include <iostream>
@@ -16,15 +16,15 @@ namespace
 	}
 	bool casi(float a, float b, float eps) { return std::abs(a - b) <= eps; }
 
-	EntradaMovimiento corriendo()
+	MovementInput corriendo()
 	{
-		EntradaMovimiento e;
+		MovementInput e;
 		e.activo = e.quiereMoverse = e.sprintPedido = e.enSuelo = true;
 		return e;
 	}
 
 	// Avanza 'segundos' con pasos de 1/fps; devuelve el estado final.
-	void Simular(MovimientoJugador& m, const EntradaMovimiento& e, float segundos, int fpsSimulados)
+	void Simular(PlayerMovement& m, const MovementInput& e, float segundos, int fpsSimulados)
 	{
 		const int pasos = static_cast<int>(std::lround(segundos * fpsSimulados));
 		for (int i = 0; i < pasos; ++i) m.Actualizar(1.0f / fpsSimulados, e);
@@ -35,7 +35,7 @@ int main()
 {
 	// 1) Parametros iniciales pedidos.
 	{
-		MovimientoJugador m;
+		PlayerMovement m;
 		comprobar(m.parametros.velocidadCaminar == 3.0f && m.parametros.velocidadAgachado == 1.4f &&
 			m.parametros.velocidadSprint == 5.2f, "velocidades iniciales 3,0 / 1,4 / 5,2 m/s");
 		comprobar(m.parametros.estaminaMaxima == 100.0f && m.parametros.consumoPorSegundo == 20.0f &&
@@ -47,7 +47,7 @@ int main()
 	// 2) Consumo independiente de los FPS (30, 60, 120): 2 s corriendo = 40 puntos.
 	for (int f : { 30, 60, 120 })
 	{
-		MovimientoJugador m;
+		PlayerMovement m;
 		Simular(m, corriendo(), 2.0f, f);
 		comprobar(casi(m.Estamina(), 60.0f, 0.5f), "consumo de 2 s corriendo es 40 puntos a cualquier FPS");
 		comprobar(m.Sprintando(), "sigue corriendo con estamina");
@@ -56,9 +56,9 @@ int main()
 	// 3) Recuperacion: retardo de 1 s y luego 12 puntos/s, igual a 30/60/120 FPS.
 	for (int f : { 30, 60, 120 })
 	{
-		MovimientoJugador m;
+		PlayerMovement m;
 		Simular(m, corriendo(), 2.0f, f);                 // 60
-		EntradaMovimiento quieto = corriendo();
+		MovementInput quieto = corriendo();
 		quieto.sprintPedido = false;
 		Simular(m, quieto, 0.9f, f);
 		comprobar(casi(m.Estamina(), 60.0f, 0.5f), "no recupera durante el retardo de 1 s");
@@ -70,7 +70,7 @@ int main()
 
 	// 4) Agotamiento: a los 5 s se acaba y obliga a recuperar el minimo antes de volver a correr.
 	{
-		MovimientoJugador m;
+		PlayerMovement m;
 		Simular(m, corriendo(), 4.9f, 60);
 		comprobar(m.Sprintando() && !m.Agotada(), "a los 4,9 s aun corre");
 		Simular(m, corriendo(), 0.3f, 60);
@@ -87,8 +87,8 @@ int main()
 
 	// 5) Sin consumo: pausa, sin desplazamiento, agachado, en el aire.
 	{
-		MovimientoJugador m;
-		EntradaMovimiento e = corriendo();
+		PlayerMovement m;
+		MovementInput e = corriendo();
 		e.activo = false;
 		Simular(m, e, 3.0f, 60);
 		comprobar(m.Estamina() == 100.0f && !m.Sprintando(), "en pausa no consume");
@@ -109,18 +109,18 @@ int main()
 		comprobar(m.Estamina() == 100.0f && !m.Sprintando(), "en el aire no se corre");
 
 		// La pausa tambien congela la recuperacion y el retardo.
-		MovimientoJugador n;
+		PlayerMovement n;
 		Simular(n, corriendo(), 2.0f, 60);
 		const float antes = n.Estamina();
-		EntradaMovimiento pausa;
+		MovementInput pausa;
 		Simular(n, pausa, 10.0f, 60);
 		comprobar(n.Estamina() == antes, "la pausa congela la estamina");
 	}
 
 	// 6) Velocidades y transiciones suaves.
 	{
-		MovimientoJugador m;
-		EntradaMovimiento caminar = corriendo();
+		PlayerMovement m;
+		MovementInput caminar = corriendo();
 		caminar.sprintPedido = false;
 		Simular(m, caminar, 2.0f, 60);
 		comprobar(casi(m.Velocidad(), 3.0f, 0.01f), "caminando va a 3 m/s");
@@ -133,7 +133,7 @@ int main()
 		Simular(m, caminar, 1.5f, 60);
 		comprobar(casi(m.Velocidad(), 3.0f, 0.05f), "al soltar Shift vuelve a 3 m/s suavemente");
 
-		EntradaMovimiento agachado = caminar;
+		MovementInput agachado = caminar;
 		agachado.fraccionAgachado = 1.0f;
 		Simular(m, agachado, 2.0f, 60);
 		comprobar(casi(m.Velocidad(), 1.4f, 0.02f), "agachado va a 1,4 m/s");
@@ -142,7 +142,7 @@ int main()
 		comprobar(casi(m.Velocidad(), 2.2f, 0.03f), "a medio agachar la velocidad esta a medio camino");
 
 		// Independiente de los FPS: tras 0,5 s de sprint la velocidad es la misma a 30 y a 120 FPS.
-		MovimientoJugador a, b;
+		PlayerMovement a, b;
 		Simular(a, corriendo(), 0.5f, 30);
 		Simular(b, corriendo(), 0.5f, 120);
 		comprobar(casi(a.Velocidad(), b.Velocidad(), 0.01f), "la aceleracion no depende de los FPS");
@@ -150,7 +150,7 @@ int main()
 
 	// 7) Un fotograma gigante no dispara nada.
 	{
-		MovimientoJugador m;
+		PlayerMovement m;
 		m.Actualizar(10.0f, corriendo());
 		comprobar(m.Estamina() > 98.0f, "un delta enorme se limita a 0,05 s");
 		comprobar(LimitarDelta(-1.0f) == 0.0f, "un delta negativo se ignora");
@@ -166,8 +166,8 @@ int main()
 
 	// 9) Balanceo: proporcional al desplazamiento real, amortiguado y de amplitud moderada.
 	{
-		ParametrosMovimiento mov;
-		BalanceoCamara b;
+		MovementParameters mov;
+		CameraBob b;
 		float maxVertical = 0.0f;
 		// Camina 4 s a 3 m/s con 60 FPS.
 		for (int i = 0; i < 240; ++i)
@@ -188,7 +188,7 @@ int main()
 			"tras detenerse unos segundos el balanceo desaparece");
 
 		// Correr: mas amplitud (3-4 cm).
-		BalanceoCamara c;
+		CameraBob c;
 		float maxCorrer = 0.0f;
 		for (int i = 0; i < 300; ++i)
 		{
@@ -199,7 +199,7 @@ int main()
 		comprobar(c.FactorDeAmplitud() > 2.0f && c.FactorDeAmplitud() < 2.6f, "el movil se mueve ~2,3 veces mas al correr");
 
 		// Agachado: menos que caminando.
-		BalanceoCamara d;
+		CameraBob d;
 		float maxAgachado = 0.0f;
 		for (int i = 0; i < 300; ++i)
 		{
@@ -209,12 +209,12 @@ int main()
 		comprobar(maxAgachado < maxVertical && maxAgachado > 0.004f, "agachado: balanceo menor que caminando");
 
 		// Sin avance real (choca con una pared) no hay balanceo aunque se pulse la tecla.
-		BalanceoCamara e;
+		CameraBob e;
 		for (int i = 0; i < 120; ++i) e.Actualizar(1.0f / 60.0f, 0.0f, true, true, 3.0f, mov, 0.0f);
 		comprobar(e.Peso() < 1e-3f && e.Fase() == 0.0f, "sin desplazamiento real no hay balanceo");
 
 		// En el aire o en pausa tampoco avanza la fase.
-		BalanceoCamara g;
+		CameraBob g;
 		g.Actualizar(1.0f / 60.0f, 0.05f, false, true, 3.0f, mov, 0.0f);
 		g.Actualizar(1.0f / 60.0f, 0.05f, true, false, 3.0f, mov, 0.0f);
 		comprobar(g.Fase() == 0.0f, "ni en el aire ni en pausa avanza la fase");
@@ -222,12 +222,12 @@ int main()
 
 	// 10) La misma distancia da la misma fase a 30, 60 y 120 FPS.
 	{
-		ParametrosMovimiento mov;
+		MovementParameters mov;
 		float fases[3];
 		int k = 0;
 		for (int f : { 30, 60, 120 })
 		{
-			BalanceoCamara b;
+			CameraBob b;
 			for (int i = 0; i < 3 * f; ++i) b.Actualizar(1.0f / f, 3.0f / f, true, true, 3.0f, mov, 0.0f);
 			fases[k++] = b.Fase();
 		}
@@ -236,7 +236,7 @@ int main()
 
 	// 11) Barra de estamina.
 	{
-		BarraEstamina barra;
+		StaminaBar barra;
 		for (int i = 0; i < 120; ++i) barra.Actualizar(1.0f / 60.0f, 1.0f, false);
 		comprobar(barra.visible < 0.01f, "con la estamina llena la barra esta oculta");
 		for (int i = 0; i < 30; ++i) barra.Actualizar(1.0f / 60.0f, 0.5f, true);

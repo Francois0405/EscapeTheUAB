@@ -5,11 +5,11 @@
 // main.cpp es el dueno de todo el estado y lo presta mediante este contexto; aqui no se puede
 // incluir main.h (define globales).
 // La API publica va en ingles; main.cpp enlaza cada miembro en contextoEscena().
-#include "src/animation/ObjetosAnimadosGLB.h"
-#include "src/editor/SerializadorEscenas.h"
-#include "src/gameplay/hirity/AnimacionHiriti.h"
-#include "src/physics/EscenaFisica.h"
-#include "src/physics/MundoFisico.h"
+#include "src/animation/GlbAnimatedObjects.h"
+#include "src/editor/SceneSerializer.h"
+#include "src/gameplay/hirity/HiritiAnimation.h"
+#include "src/physics/PhysicsScene.h"
+#include "src/physics/PhysicsWorld.h"
 #include "src/scene/SceneLoader.h"
 
 #include <glm/glm.hpp>
@@ -23,7 +23,7 @@
 
 // Solo referencias: sus cabeceras arrastran OpenGL/GLFW.
 class COBJModel;
-namespace editor { class EditorEscenas; }
+namespace editor { class SceneEditor; }
 
 namespace scene::runtime
 {
@@ -33,14 +33,14 @@ namespace scene::runtime
 		std::vector<SceneObject>& sceneObjects;
 		std::unordered_map<std::string, std::unique_ptr<COBJModel>>& objModels;	// compartidos entre instancias
 		std::unordered_map<std::string, unsigned int>& materialTextures;			// nombres de textura OpenGL
-		std::vector<SceneObjetoAnimado>& animatedData;
-		glb::EscenaAnimada& animatedObjects;
+		std::vector<SceneAnimatedObject>& animatedData;
+		glb::AnimatedScene& animatedObjects;
 		bool& animatedObjectsOnGpu;
-		editor::SerializadorEscenas& serializer;
+		editor::SceneSerializer& serializer;
 
 		// Fisica: referencia al unique_ptr porque cargar o reconstruir sustituye la escena fisica.
-		fisica::MundoFisico& physicsWorld;
-		std::unique_ptr<fisica::EscenaFisica>& physicsScene;
+		fisica::PhysicsWorld& physicsWorld;
+		std::unique_ptr<fisica::PhysicsScene>& physicsScene;
 
 		// Datos de la escena activa
 		std::string& activeSceneName;
@@ -53,8 +53,8 @@ namespace scene::runtime
 		bool& hasValidGeometry;
 		bool& phongOccludersDirty;
 
-		editor::EditorEscenas& sceneEditor;
-		juego::AnimacionHiriti& hiritiAnimation;
+		editor::SceneEditor& sceneEditor;
+		game::HiritiAnimator& hiritiAnimation;
 
 		// Estado de render heredado (main.h); el programa puede cambiar entre cargas.
 		char& objectType;

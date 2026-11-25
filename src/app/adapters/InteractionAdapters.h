@@ -2,9 +2,9 @@
 
 #include "src/app/AppState.h"
 
-const juego::interaction::InteractionContext& contextoInteraccion();
+const game::interaction::InteractionContext& contextoInteraccion();
 bool jugadorTieneAgarre();
-ObjetivoInteraccion buscarObjetivoInteraccion();
+InteractionTarget buscarObjetivoInteraccion();
 void actualizarObjetivoInteraccion(bool permitido);
 void iniciarCargaLanzamiento();
 void interactuar();

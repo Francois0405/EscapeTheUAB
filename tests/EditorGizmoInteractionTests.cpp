@@ -1,4 +1,4 @@
-#include "src/editor/CamaraEditor.h"
+#include "src/editor/EditorCamera.h"
 #include "imgui.h"
 #include "ImGuizmo.h"
 
@@ -45,7 +45,7 @@ namespace
 		void Terminar() { ImGui::EndFrame(); }
 	};
 
-	bool DibujarGizmoSiPermitido(editor::BloqueoGizmoTrasSeleccion& bloqueo, glm::mat4& matriz,
+	bool DibujarGizmoSiPermitido(editor::GizmoPostSelectionLock& bloqueo, glm::mat4& matriz,
 		const glm::mat4& vista, const glm::mat4& proyeccion)
 	{
 		if (!bloqueo.PermitirManipular(ImGui::GetIO().MouseDown[ImGuiMouseButton_Left])) return false;
@@ -63,7 +63,7 @@ int main()
 	const glm::mat4 proyeccion = glm::ortho(-10.0f, 10.0f, -7.5f, 7.5f, 0.05f, 400.0f);
 	glm::mat4 objeto = glm::translate(glm::mat4(1.0f), centro);
 	const glm::mat4 original = objeto;
-	BloqueoGizmoTrasSeleccion bloqueo;
+	GizmoPostSelectionLock bloqueo;
 	// El objeto recién seleccionado queda bajo el puntero. Se simula el clic y su
 	// continuación con un movimiento grande que, sin arbitraje, podría iniciar el gizmo.
 	bloqueo.Bloquear();

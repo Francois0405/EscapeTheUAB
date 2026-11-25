@@ -9,7 +9,7 @@
 #include <deque>
 #include <map>
 
-namespace netjuego::timeline
+namespace netgame::timeline
 {
 	struct RemotePhysicsSample
 	{

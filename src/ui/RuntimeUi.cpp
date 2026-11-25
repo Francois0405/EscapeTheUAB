@@ -11,9 +11,9 @@
 #include <cstdio>
 
 #include "src/audio/AudioManager.h"
-#include "src/gameplay/player/MovimientoFPS.h"
-#include "src/physics/EscenaFisica.h"
-#include "src/ui/EscalaUI.h"
+#include "src/gameplay/player/FpsMovement.h"
+#include "src/physics/PhysicsScene.h"
+#include "src/ui/UiScale.h"
 
 namespace runtimeui
 {

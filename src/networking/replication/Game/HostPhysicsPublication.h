@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <map>
 
-namespace netjuego::publication
+namespace netgame::publication
 {
 	// Observes host sleep state and returns true only on an awake-to-asleep transition.
 	// The first observation initializes the object's state without publishing an event.

@@ -8,9 +8,9 @@
 
 // Contexto prestado a src/networking/session: el estado sigue siendo de main.cpp.
 
-const netjuego::session::SessionContext& contextoSesionRed()
+const netgame::session::SessionContext& contextoSesionRed()
 {
-	static const netjuego::session::SessionContext contexto{
+	static const netgame::session::SessionContext contexto{
 		objetosEscena, escenaFisica, mundoFisico, redJuego, objetosAnimados, puertasRed, estadoSesionRed,
 		gestorOpenXR, ultimaCabezaVR, hayCabezaVR,
 		[] { return glm::vec3(static_cast<float>(opvN.x), static_cast<float>(opvN.y), static_cast<float>(opvN.z)); },
@@ -35,23 +35,23 @@ const netjuego::session::SessionContext& contextoSesionRed()
 	return contexto;
 }
 
-bool capturarEstadoEscenaRed(std::vector<netjuego::EstadoObjetoEscena>& salida)
+bool capturarEstadoEscenaRed(std::vector<netgame::SceneObjectState>& salida)
 {
-	return netjuego::session::CaptureSceneState(contextoSesionRed(), salida);
+	return netgame::session::CaptureSceneState(contextoSesionRed(), salida);
 }
 
-void iniciarRed(const netjuego::ConfigRed& cfg)
+void iniciarRed(const netgame::NetworkConfig& cfg)
 {
-	netjuego::session::StartSession(contextoSesionRed(), cfg);
+	netgame::session::StartSession(contextoSesionRed(), cfg);
 }
 
 void detenerRed()
 {
-	netjuego::session::StopSession(contextoSesionRed());
+	netgame::session::StopSession(contextoSesionRed());
 }
 
 // Una vez por fotograma, en el hilo de juego. Offline: no hace nada (coste cero).
 void actualizarRed(double ahora, bool jugando)
 {
-	netjuego::session::UpdateSession(contextoSesionRed(), ahora, jugando);
+	netgame::session::UpdateSession(contextoSesionRed(), ahora, jugando);
 }

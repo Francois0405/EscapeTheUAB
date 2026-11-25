@@ -7,8 +7,8 @@
 //   3. Un GLB inventado dentro de la prueba (un "cajón") con una jerarquía DISTINTA
 //      a la de la puerta, para comprobar que el cargador no depende de ella.
 // -----------------------------------------------------------------------------
-#include "src/rendering/ModeloGLB.h"
-#include "src/animation/ObjetosAnimadosGLB.h"
+#include "src/rendering/GlbModel.h"
+#include "src/animation/GlbAnimatedObjects.h"
 
 #include <chrono>
 #include <cmath>
@@ -43,7 +43,7 @@ namespace
 	}
 
 	// Posición en el espacio del glTF (Y arriba) de un punto local de un nodo.
-	glm::vec3 PuntoEnMundo(const ModeloGLB& modelo, const PoseGLB& pose, int nodo, const glm::vec3& puntoLocal)
+	glm::vec3 PuntoEnMundo(const GlbModel& modelo, const GlbPose& pose, int nodo, const glm::vec3& puntoLocal)
 	{
 		return glm::vec3(MatrizMundoDelNodo(modelo, pose, nodo) * glm::vec4(puntoLocal, 1.0f));
 	}
@@ -57,10 +57,10 @@ namespace
 	// ----------------------------------------------------------------------
 	// 1. Matemática de keyframes (canales escritos a mano)
 	// ----------------------------------------------------------------------
-	CanalAnimacion CanalPosicion(Interpolacion interpolacion)
+	AnimationChannel CanalPosicion(InterpolationMode interpolacion)
 	{
-		CanalAnimacion canal;
-		canal.propiedad = PropiedadAnimada::Posicion;
+		AnimationChannel canal;
+		canal.propiedad = AnimatedProperty::Posicion;
 		canal.interpolacion = interpolacion;
 		canal.tiempos = { 0.0f, 2.0f, 4.0f };
 		canal.valores = { glm::vec4(0, 0, 0, 0), glm::vec4(10, 0, 0, 0), glm::vec4(10, 20, 0, 0) };
@@ -69,7 +69,7 @@ namespace
 
 	void ProbarInterpolacion()
 	{
-		const CanalAnimacion lineal = CanalPosicion(Interpolacion::Lineal);
+		const AnimationChannel lineal = CanalPosicion(InterpolationMode::Lineal);
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(lineal, 0.0f)), glm::vec3(0, 0, 0)), "t=0 devuelve el primer keyframe");
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(lineal, 1.0f)), glm::vec3(5, 0, 0)), "mitad del primer tramo = mix al 50%");
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(lineal, 2.0f)), glm::vec3(10, 0, 0)), "t justo en el keyframe intermedio");
@@ -77,13 +77,13 @@ namespace
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(lineal, -5.0f)), glm::vec3(0, 0, 0)), "antes del inicio: se queda en el primero");
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(lineal, 99.0f)), glm::vec3(10, 20, 0)), "despues del final: se queda en el ultimo");
 
-		const CanalAnimacion escalon = CanalPosicion(Interpolacion::Escalon);
+		const AnimationChannel escalon = CanalPosicion(InterpolationMode::Escalon);
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(escalon, 1.9f)), glm::vec3(0, 0, 0)), "escalon mantiene el valor anterior");
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(escalon, 2.0f)), glm::vec3(10, 0, 0)), "escalon salta al llegar al keyframe");
 
 		// Rotación: de 0 a 90 grados alrededor de Y. A mitad de camino deben ser 45 grados.
-		CanalAnimacion giro;
-		giro.propiedad = PropiedadAnimada::Rotacion;
+		AnimationChannel giro;
+		giro.propiedad = AnimatedProperty::Rotacion;
 		giro.tiempos = { 0.0f, 2.0f };
 		const glm::quat q90 = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
 		giro.valores = { glm::vec4(0, 0, 0, 1), glm::vec4(q90.x, q90.y, q90.z, q90.w) };
@@ -92,7 +92,7 @@ namespace
 		comprobar(casi(glm::length(mitad), 1.0f), "slerp conserva un cuaternion unitario");
 
 		// Un canal con un solo keyframe no debe fallar.
-		CanalAnimacion unico;
+		AnimationChannel unico;
 		unico.tiempos = { 1.0f };
 		unico.valores = { glm::vec4(7, 8, 9, 0) };
 		comprobar(casiVec(glm::vec3(ValorDelCanalEnTiempo(unico, 0.0f)), glm::vec3(7, 8, 9)), "un solo keyframe");
@@ -101,7 +101,7 @@ namespace
 
 	void ProbarReproductor()
 	{
-		ReproductorAnimacion reproductor;
+		AnimationPlayer reproductor;
 		reproductor.Iniciar(2.0f);
 		comprobar(reproductor.reproduciendo && reproductor.tiempo == 0.0f, "Iniciar pone el tiempo a 0");
 		reproductor.Actualizar(1.5f);
@@ -115,7 +115,7 @@ namespace
 
 	void ProbarReproductorHaciaAtras()
 	{
-		ReproductorAnimacion reproductor;
+		AnimationPlayer reproductor;
 		reproductor.Iniciar(2.0f);
 		reproductor.Actualizar(0.0f);
 		comprobar(reproductor.reproduciendo && reproductor.tiempo == 0.0f, "Iniciar + delta 0 no termina la reproduccion");
@@ -146,11 +146,11 @@ namespace
 	// ----------------------------------------------------------------------
 	void ProbarPuertaReal(const fs::path& ruta)
 	{
-		ModeloGLB modelo;
+		GlbModel modelo;
 		std::string error;
 		comprobar(CargarModeloGLB(ruta, modelo, error), "Puerta.glb carga");
 		if (modelo.nodos.empty()) { std::cerr << "  " << error << '\n'; return; }
-		PoseGLB pose = CrearPoseDeReposo(modelo);   // la pose de esta "puerta"
+		GlbPose pose = CrearPoseDeReposo(modelo);   // la pose de esta "puerta"
 
 		// --- Jerarquía ---
 		const int grupo = BuscarNodoPorNombre(modelo, "Door_Group");
@@ -168,8 +168,8 @@ namespace
 
 		// --- Mallas ---
 		bool mallasValidas = !modelo.mallas.empty();
-		for (const MallaGLB& malla : modelo.mallas)
-			for (const PrimitivaGLB& primitiva : malla.primitivas)
+		for (const GlbMesh& malla : modelo.mallas)
+			for (const GlbPrimitive& primitiva : malla.primitivas)
 			{
 				mallasValidas = mallasValidas && !primitiva.posiciones.empty() && primitiva.indices.size() % 3 == 0 &&
 					primitiva.normales.size() == primitiva.posiciones.size();
@@ -179,9 +179,9 @@ namespace
 		comprobar(mallasValidas, "todas las primitivas tienen triangulos, normales e indices validos");
 
 		// --- Pivote: la malla de la puerta llega hasta la bisagra (origen del nodo) ---
-		const MallaGLB& mallaPuerta = modelo.mallas[modelo.nodos[puerta].indiceMalla];
+		const GlbMesh& mallaPuerta = modelo.mallas[modelo.nodos[puerta].indiceMalla];
 		float xMin = 1e9f, xMax = -1e9f;
-		for (const PrimitivaGLB& p : mallaPuerta.primitivas)
+		for (const GlbPrimitive& p : mallaPuerta.primitivas)
 			for (const glm::vec3& v : p.posiciones) { xMin = std::min(xMin, v.x); xMax = std::max(xMax, v.x); }
 		comprobar(casi(xMax, 0.0f, 0.01f) && casi(xMin, -0.836f, 0.01f), "el origen de Door esta en el borde de la bisagra, no en el centro");
 		// Blender (0.418, -0.022, 1.05) debe llegar como glTF (0.418, 1.05, 0.022): Y arriba.
@@ -190,18 +190,18 @@ namespace
 		// --- Animación ---
 		comprobar(modelo.animaciones.size() == 1, "hay una animacion");
 		if (modelo.animaciones.empty()) return;
-		const AnimacionGLB& animacion = modelo.animaciones[0];
-		comprobar(animacion.nombre.rfind("Door_acci", 0) == 0, "la animacion conserva el nombre de Blender (Action Door_accion)");
-		comprobar(casi(animacion.duracion, 7.0417f, 0.01f), "duracion = 170 fotogramas a 24 fps (7.04 s)");
-		bool empiezaEnCero = !animacion.canales.empty();
-		for (const CanalAnimacion& canal : animacion.canales)
+		const GlbAnimation& animation = modelo.animaciones[0];
+		comprobar(animation.nombre.rfind("Door_acci", 0) == 0, "la animacion conserva el nombre de Blender (Action Door_accion)");
+		comprobar(casi(animation.duracion, 7.0417f, 0.01f), "duracion = 170 fotogramas a 24 fps (7.04 s)");
+		bool empiezaEnCero = !animation.canales.empty();
+		for (const AnimationChannel& canal : animation.canales)
 			empiezaEnCero = empiezaEnCero && canal.tiempos.front() == 0.0f && canal.indiceNodo == puerta;
 		comprobar(empiezaEnCero, "todos los canales empiezan en t=0 y animan el nodo Door");
 
 		// Interpolación contra el archivo: a mitad entre dos keyframes, el valor es el slerp de ambos.
-		for (const CanalAnimacion& canal : animacion.canales)
+		for (const AnimationChannel& canal : animation.canales)
 		{
-			if (canal.propiedad != PropiedadAnimada::Rotacion || canal.tiempos.size() < 20) continue;
+			if (canal.propiedad != AnimatedProperty::Rotacion || canal.tiempos.size() < 20) continue;
 			const size_t k = 10;
 			const float tMedio = 0.5f * (canal.tiempos[k] + canal.tiempos[k + 1]);
 			const glm::quat esperado = glm::slerp(CuaternionDesdeVec4(canal.valores[k]), CuaternionDesdeVec4(canal.valores[k + 1]), 0.5f);
@@ -214,10 +214,10 @@ namespace
 		const glm::vec3 bordeLibreInicial = PuntoEnMundo(modelo, pose, puerta, glm::vec3(xMin, 0.0f, 0.0f));
 		const glm::vec3 pomoInicial = PuntoEnMundo(modelo, pose, pomoDelante, glm::vec3(0.0f));
 
-		AplicarAnimacion(pose, animacion, 0.0f);
+		AplicarAnimacion(pose, animation, 0.0f);
 		comprobar(casi(AnguloGrados(pose.nodos[puerta].rotacion), 0.0f, 0.5f), "t=0: la puerta esta cerrada (0 grados)");
 
-		AplicarAnimacion(pose, animacion, animacion.duracion);
+		AplicarAnimacion(pose, animation, animation.duracion);
 		const float anguloFinal = AnguloGrados(pose.nodos[puerta].rotacion);
 		comprobar(anguloFinal > 80.0f && anguloFinal < 90.0f, "al final la puerta esta abierta unos 85 grados");
 		const glm::quat rotacionFinal = pose.nodos[puerta].rotacion;
@@ -225,7 +225,7 @@ namespace
 			"el giro es alrededor del eje Y de glTF (el Z de Blender)");
 
 		// Al terminar se queda abierta: pasarse de tiempo no cambia nada.
-		AplicarAnimacion(pose, animacion, animacion.duracion + 100.0f);
+		AplicarAnimacion(pose, animation, animation.duracion + 100.0f);
 		comprobar(casi(AnguloGrados(pose.nodos[puerta].rotacion), anguloFinal, 0.01f), "despues del final la puerta sigue abierta");
 
 		// --- Pivote durante la animación ---
@@ -251,7 +251,7 @@ namespace
 
 	void ProbarPuertaLaboratorio(const fs::path& ruta)
 	{
-		ModeloGLB modelo;
+		GlbModel modelo;
 		std::string error;
 		comprobar(CargarModeloGLB(ruta, modelo, error), "Puerta_Lab.glb carga");
 		if (modelo.animaciones.empty()) return;
@@ -334,11 +334,11 @@ namespace
 	{
 		const fs::path ruta = carpeta / "cajon.glb";
 		EscribirGlbCajon(ruta, "LINEAR");
-		ModeloGLB modelo;
+		GlbModel modelo;
 		std::string error;
 		comprobar(CargarModeloGLB(ruta, modelo, error), "el GLB inventado carga");
 		if (modelo.nodos.size() != 2) { comprobar(false, "el GLB inventado tiene 2 nodos"); std::cerr << "  " << error << '\n'; return; }
-		PoseGLB pose = CrearPoseDeReposo(modelo);
+		GlbPose pose = CrearPoseDeReposo(modelo);
 
 		// Jerarquía aunque el hijo esté escrito antes que el padre.
 		const int cajon = BuscarNodoPorNombre(modelo, "Cajon");
@@ -352,13 +352,13 @@ namespace
 		comprobar(casiVec(PuntoEnMundo(modelo, pose, cajon, glm::vec3(1, 0, 0)), glm::vec3(12, 0, 0)), "mundo(hijo) = mundo(padre) * local(hijo)");
 
 		// Sin normales en el archivo: se calculan. El triángulo está en el plano XY, mirando a +Z.
-		const PrimitivaGLB& triangulo = modelo.mallas[0].primitivas[0];
+		const GlbPrimitive& triangulo = modelo.mallas[0].primitivas[0];
 		comprobar(triangulo.normales.size() == 3 && casiVec(triangulo.normales[0], glm::vec3(0, 0, 1)), "normales calculadas cuando faltan");
 		comprobar(triangulo.colorBase == glm::vec4(1.0f), "sin material: color base blanco");
 
 		// Animación: tiempos 1..3 se normalizan a 0..2.
 		comprobar(modelo.animaciones.size() == 1 && modelo.animaciones[0].nombre == "Subir", "animacion 'Subir'");
-		const AnimacionGLB& subir = modelo.animaciones[0];
+		const GlbAnimation& subir = modelo.animaciones[0];
 		comprobar(casi(subir.duracion, 2.0f) && subir.canales[0].tiempos.front() == 0.0f, "los tiempos se normalizan para empezar en 0");
 
 		// A mitad (t=1 s) el cajón está a 0.5 de altura LOCAL; el padre escala x2 => 1.0 en el mundo.
@@ -372,18 +372,18 @@ namespace
 
 		// STEP: no interpola.
 		EscribirGlbCajon(ruta, "STEP");
-		ModeloGLB escalon;
+		GlbModel escalon;
 		comprobar(CargarModeloGLB(ruta, escalon, error) && !escalon.animaciones.empty(), "GLB con STEP carga");
 		if (!escalon.animaciones.empty())
 		{
-			PoseGLB poseEscalon = CrearPoseDeReposo(escalon);
+			GlbPose poseEscalon = CrearPoseDeReposo(escalon);
 			AplicarAnimacion(poseEscalon, escalon.animaciones[0], 1.9f);
 			comprobar(casiVec(poseEscalon.nodos[0].posicion, glm::vec3(0, 0, 0)), "STEP mantiene el valor anterior");
 		}
 
 		// CUBICSPLINE: se rechaza con un mensaje que explica cómo arreglarlo.
 		EscribirGlbCajon(ruta, "CUBICSPLINE");
-		ModeloGLB cubica;
+		GlbModel cubica;
 		const bool cargo = CargarModeloGLB(ruta, cubica, error);
 		comprobar(!cargo, "CUBICSPLINE se rechaza");
 		comprobar(error.find("CUBICSPLINE") != std::string::npos && error.find("Sample") != std::string::npos, "el error explica que hay que activar 'Always Sample Animations'");
@@ -394,7 +394,7 @@ namespace
 	// 4. Lista de objetos animados: varias puertas con el mismo modelo
 	// ----------------------------------------------------------------------
 	// Ángulo (grados) al que está girada la hoja de una puerta en su pose actual.
-	float AnguloDeLaHoja(const ObjetoAnimado& objeto)
+	float AnguloDeLaHoja(const AnimatedObject& objeto)
 	{
 		const int hoja = BuscarNodoPorNombre(*objeto.modelo, "Door");
 		return AnguloGrados(objeto.pose.nodos[hoja].rotacion);
@@ -402,7 +402,7 @@ namespace
 
 	void ProbarObjetosAnimados(const fs::path& rutaPuerta, const fs::path& carpeta)
 	{
-		EscenaAnimada escena;
+		AnimatedScene escena;
 		std::string error;
 		const std::string ruta = rutaPuerta.string();
 		comprobar(AnadirObjeto(escena, "puerta_1", ruta, glm::vec3(6, -2, -1.7f), -90.0f, error), "anadir puerta_1");
@@ -421,7 +421,7 @@ namespace
 		comprobar(BuscarObjeto(escena, "puerta_2") == &escena.objetos[1] && BuscarObjeto(escena, "nada") == nullptr, "BuscarObjeto");
 
 		// Punteros estables: cargar otro modelo no invalida el de las puertas.
-		const ModeloGLB* antes = escena.objetos[0].modelo;
+		const GlbModel* antes = escena.objetos[0].modelo;
 		EscribirGlbCajon(carpeta / "otro.glb", "LINEAR");
 		comprobar(AnadirObjeto(escena, "cajon_1", (carpeta / "otro.glb").string(), glm::vec3(0.0f), 0.0f, error), "anadir un modelo distinto");
 		comprobar(escena.modelos.size() == 2 && antes == escena.objetos[0].modelo && antes == &escena.modelos.at(ruta), "cargar otro modelo no mueve los anteriores");
@@ -432,8 +432,8 @@ namespace
 		comprobar(casiVec(glm::vec3(base * glm::vec4(1, 0, 0, 0)), glm::vec3(0, -1, 0)), "giro -90 grados: el eje X pasa a -Y");
 
 		// Independencia: se abre solo la puerta_1.
-		ObjetoAnimado& p1 = *BuscarObjeto(escena, "puerta_1");
-		ObjetoAnimado& p2 = *BuscarObjeto(escena, "puerta_2");
+		AnimatedObject& p1 = *BuscarObjeto(escena, "puerta_1");
+		AnimatedObject& p2 = *BuscarObjeto(escena, "puerta_2");
 		const float duracion = p1.modelo->animaciones[0].duracion;
 		comprobar(casi(AnguloDeLaHoja(p1), 0.0f, 0.5f) && casi(AnguloDeLaHoja(p2), 0.0f, 0.5f), "al cargar, las dos puertas estan cerradas");
 		IniciarAnimacion(p1);
@@ -482,35 +482,35 @@ namespace
 	// ----------------------------------------------------------------------
 	void ProbarEstadosDePuerta(const fs::path& rutaPuerta)
 	{
-		EscenaAnimada escena;
+		AnimatedScene escena;
 		std::string error;
 		const std::string ruta = rutaPuerta.string();
 		comprobar(AnadirObjeto(escena, "puerta_1", ruta, glm::vec3(6, -2, -1.7f), -90.0f, error), "anadir puerta_1");
 		comprobar(AnadirObjeto(escena, "puerta_2", ruta, glm::vec3(6, 3, -1.7f), -90.0f, error), "anadir puerta_2");
 		if (escena.objetos.size() != 2) return;
-		ObjetoAnimado& p1 = escena.objetos[0];
-		ObjetoAnimado& p2 = escena.objetos[1];
+		AnimatedObject& p1 = escena.objetos[0];
+		AnimatedObject& p2 = escena.objetos[1];
 		const float duracion = p1.modelo->animaciones[0].duracion;
 
-		comprobar(p1.estado == EstadoPuerta::Cerrada && p2.estado == EstadoPuerta::Cerrada, "empiezan Cerradas");
+		comprobar(p1.estado == DoorState::Cerrada && p2.estado == DoorState::Cerrada, "empiezan Cerradas");
 
 		// --- Abrir ---
 		AlternarPuerta(p1);
-		comprobar(p1.estado == EstadoPuerta::Abriendo, "E con la puerta cerrada: Abriendo");
+		comprobar(p1.estado == DoorState::Abriendo, "E con la puerta cerrada: Abriendo");
 		ActualizarObjetos(escena, 0.1f);
-		comprobar(p1.estado == EstadoPuerta::Abriendo && AnguloDeLaHoja(p1) > 5.0f, "a los 0.1 s sigue Abriendo y ya se ha movido");
+		comprobar(p1.estado == DoorState::Abriendo && AnguloDeLaHoja(p1) > 5.0f, "a los 0.1 s sigue Abriendo y ya se ha movido");
 		ActualizarObjetos(escena, duracion + 1.0f);
-		comprobar(p1.estado == EstadoPuerta::Abierta && p1.reproductor.tiempo == duracion, "al terminar: Abierta, en el ultimo instante");
+		comprobar(p1.estado == DoorState::Abierta && p1.reproductor.tiempo == duracion, "al terminar: Abierta, en el ultimo instante");
 		const float anguloAbierta = AnguloDeLaHoja(p1);
 		comprobar(anguloAbierta > 80.0f, "Abierta: unos 85 grados");
 
 		// --- Cerrar con la animacion del GLB hacia atras ---
 		AlternarPuerta(p1);
-		comprobar(p1.estado == EstadoPuerta::Cerrando, "E con la puerta abierta: Cerrando");
+		comprobar(p1.estado == DoorState::Cerrando, "E con la puerta abierta: Cerrando");
 		ActualizarObjetos(escena, 0.0f);
 		comprobar(casi(AnguloDeLaHoja(p1), anguloAbierta, 1.0e-3f), "al empezar a cerrar no hay salto");
 		ActualizarObjetos(escena, duracion + 1.0f);
-		comprobar(p1.estado == EstadoPuerta::Cerrada && p1.reproductor.tiempo == 0.0f, "al terminar: Cerrada, en t = 0");
+		comprobar(p1.estado == DoorState::Cerrada && p1.reproductor.tiempo == 0.0f, "al terminar: Cerrada, en t = 0");
 		comprobar(casi(AnguloDeLaHoja(p1), 0.0f, 0.5f), "Cerrada: 0 grados");
 
 		// --- La misma animacion en los dos sentidos (sin keyframes manuales) ---
@@ -523,46 +523,46 @@ namespace
 		comprobar(casi(p1.reproductor.tiempo, 0.5f), "cerrando llegamos a t = 0.5");
 		comprobar(casi(AnguloDeLaHoja(p1), anguloAbriendoEn05, 1.0e-3f), "en t = 0.5 la pose es la misma abriendo que cerrando");
 		ActualizarObjetos(escena, duracion);                    // termina de cerrar
-		comprobar(p1.estado == EstadoPuerta::Cerrada, "vuelve a Cerrada");
+		comprobar(p1.estado == DoorState::Cerrada, "vuelve a Cerrada");
 
 		// --- Invertir a mitad de movimiento, sin saltos ---
 		AlternarPuerta(p1);                                     // Abriendo
 		ActualizarObjetos(escena, 0.3f);
 		const float anguloA = AnguloDeLaHoja(p1);
 		AlternarPuerta(p1);                                     // E mientras se abre -> Cerrando
-		comprobar(p1.estado == EstadoPuerta::Cerrando, "E mientras se abre: pasa a Cerrando");
+		comprobar(p1.estado == DoorState::Cerrando, "E mientras se abre: pasa a Cerrando");
 		ActualizarObjetos(escena, 0.0f);
 		comprobar(casi(AnguloDeLaHoja(p1), anguloA, 1.0e-3f) && casi(p1.reproductor.tiempo, 0.3f), "invertir conserva el instante: sin salto");
 		ActualizarObjetos(escena, 0.1f);
-		comprobar(casi(p1.reproductor.tiempo, 0.2f) && p1.estado == EstadoPuerta::Cerrando, "ahora el tiempo baja");
+		comprobar(casi(p1.reproductor.tiempo, 0.2f) && p1.estado == DoorState::Cerrando, "ahora el tiempo baja");
 		AlternarPuerta(p1);                                     // E mientras se cierra -> Abriendo
-		comprobar(p1.estado == EstadoPuerta::Abriendo, "E mientras se cierra: pasa a Abriendo");
+		comprobar(p1.estado == DoorState::Abriendo, "E mientras se cierra: pasa a Abriendo");
 		ActualizarObjetos(escena, 0.1f);
 		comprobar(casi(p1.reproductor.tiempo, 0.3f), "y vuelve a subir desde donde estaba");
 		AlternarPuerta(p1);                                     // otra vez -> Cerrando, hasta el final
 		ActualizarObjetos(escena, 5.0f);
-		comprobar(p1.estado == EstadoPuerta::Cerrada && p1.reproductor.tiempo == 0.0f, "invertir hasta el principio termina en Cerrada");
+		comprobar(p1.estado == DoorState::Cerrada && p1.reproductor.tiempo == 0.0f, "invertir hasta el principio termina en Cerrada");
 
 		// --- Pausa: delta 0 no mueve nada ---
 		AlternarPuerta(p1);
 		ActualizarObjetos(escena, 0.0f);
-		comprobar(p1.estado == EstadoPuerta::Abriendo && p1.reproductor.tiempo == 0.0f, "con delta 0 (pausa) la puerta no avanza");
+		comprobar(p1.estado == DoorState::Abriendo && p1.reproductor.tiempo == 0.0f, "con delta 0 (pausa) la puerta no avanza");
 
 		// --- La puerta_2 nunca se ha tocado ---
-		comprobar(p2.estado == EstadoPuerta::Cerrada && p2.reproductor.tiempo == 0.0f && !p2.reproductor.reproduciendo, "la puerta_2 sigue Cerrada, con su reloj parado");
+		comprobar(p2.estado == DoorState::Cerrada && p2.reproductor.tiempo == 0.0f && !p2.reproductor.reproduciendo, "la puerta_2 sigue Cerrada, con su reloj parado");
 		comprobar(casi(AnguloDeLaHoja(p2), 0.0f, 0.5f), "la puerta_2 sigue con su pose cerrada");
 
 		// --- Estados independientes ---
 		AlternarPuerta(p2);
 		ActualizarObjetos(escena, duracion + 1.0f);
-		comprobar(p2.estado == EstadoPuerta::Abierta && p1.estado == EstadoPuerta::Abierta, "cada puerta termina en su propio estado");
+		comprobar(p2.estado == DoorState::Abierta && p1.estado == DoorState::Abierta, "cada puerta termina en su propio estado");
 		AlternarPuerta(p1);
-		comprobar(p1.estado == EstadoPuerta::Cerrando && p2.estado == EstadoPuerta::Abierta, "cerrar una no cierra la otra");
+		comprobar(p1.estado == DoorState::Cerrando && p2.estado == DoorState::Abierta, "cerrar una no cierra la otra");
 
 		// --- Sin animacion valida no pasa nada ---
 		p2.indiceAnimacion = 99;
 		AlternarPuerta(p2);
-		comprobar(p2.estado == EstadoPuerta::Abierta, "una instancia sin animacion valida no cambia de estado");
+		comprobar(p2.estado == DoorState::Abierta, "una instancia sin animacion valida no cambia de estado");
 	}
 
 	// ----------------------------------------------------------------------
@@ -570,16 +570,16 @@ namespace
 	// ----------------------------------------------------------------------
 	void ProbarInteraccion(const fs::path& rutaPuerta)
 	{
-		EscenaAnimada escena;
+		AnimatedScene escena;
 		std::string error;
 		const std::string ruta = rutaPuerta.string();
 		AnadirObjeto(escena, "lejana", ruta, glm::vec3(6, 3, -1.7f), -90.0f, error);
 		AnadirObjeto(escena, "puerta_a", ruta, glm::vec3(6, -2.0f, -1.7f), -90.0f, error);
 		AnadirObjeto(escena, "puerta_b", ruta, glm::vec3(6, -3.4f, -1.7f), -90.0f, error);
 		if (escena.objetos.size() != 3) { comprobar(false, "se crearon 3 puertas"); return; }
-		ObjetoAnimado& lejana = escena.objetos[0];
-		ObjetoAnimado& puertaA = escena.objetos[1];
-		ObjetoAnimado& puertaB = escena.objetos[2];
+		AnimatedObject& lejana = escena.objetos[0];
+		AnimatedObject& puertaA = escena.objetos[1];
+		AnimatedObject& puertaB = escena.objetos[2];
 
 		// El punto de la puerta es su centro, ya colocado en el mundo del juego (Z arriba).
 		comprobar(casiVec(PuntoDeInteraccion(puertaA), glm::vec3(6.0f, -2.0f, -0.65f), 0.1f), "punto de interaccion = centro de la puerta en el mundo");
@@ -589,7 +589,7 @@ namespace
 		comprobar(casiVec(PuntoDeInteraccion(puertaA), cerrada), "el punto de interaccion no cambia al abrirse");
 		puertaA.reproductor.tiempo = 0.0f;
 		RestaurarPoseDeReposo(*puertaA.modelo, puertaA.pose);
-		puertaA.estado = EstadoPuerta::Cerrada;
+		puertaA.estado = DoorState::Cerrada;
 		ActualizarObjetos(escena, 0.0f);
 
 		// Delante y cerca: se elige la puerta.
@@ -622,11 +622,11 @@ namespace
 		comprobar(BuscarObjetoInteractuable(escena, entre, casiHaciaB) == &puertaB, "dos candidatas: gana la puerta_b, mas centrada");
 		comprobar(BuscarObjetoInteractuable(escena, entre, casiHaciaA) == &puertaA, "dos candidatas: gana la puerta_a, mas centrada");
 
-		ObjetoAnimado* usada = InteractuarConObjeto(escena, entre, haciaA);
-		comprobar(usada == &puertaA && puertaA.estado == EstadoPuerta::Abriendo, "E: la puerta elegida empieza a abrirse");
-		comprobar(puertaB.estado == EstadoPuerta::Cerrada && lejana.estado == EstadoPuerta::Cerrada, "las demas puertas no se activan");
+		AnimatedObject* usada = InteractuarConObjeto(escena, entre, haciaA);
+		comprobar(usada == &puertaA && puertaA.estado == DoorState::Abriendo, "E: la puerta elegida empieza a abrirse");
+		comprobar(puertaB.estado == DoorState::Cerrada && lejana.estado == DoorState::Cerrada, "las demas puertas no se activan");
 		usada = InteractuarConObjeto(escena, entre, haciaA);
-		comprobar(usada == &puertaA && puertaA.estado == EstadoPuerta::Cerrando, "E otra vez: invierte el sentido");
+		comprobar(usada == &puertaA && puertaA.estado == DoorState::Cerrando, "E otra vez: invierte el sentido");
 		comprobar(InteractuarConObjeto(escena, entre, glm::vec3(1, 0, 0)) == nullptr, "E sin puerta delante no hace nada");
 
 		// Una instancia sin animacion valida no es interactuable.
@@ -646,18 +646,18 @@ namespace
 
 	void ProbarCentroDelModelo(const fs::path& rutaPuerta)
 	{
-		ModeloGLB modelo;
+		GlbModel modelo;
 		std::string error;
 		if (!CargarModeloGLB(rutaPuerta, modelo, error)) { comprobar(false, "cargar la puerta para el centro"); return; }
 		const glm::vec3 centro = CalcularCentroDelModelo(modelo, CrearPoseDeReposo(modelo));
 		// Marco de 1 m de ancho y 2.1 m de alto: centro en x = 0, y = 1.05 (Y arriba en glTF).
 		comprobar(casiVec(centro, glm::vec3(0.0f, 1.05f, 0.0f), 0.1f), "el centro de la puerta esta a la mitad de su altura");
-		comprobar(casiVec(CalcularCentroDelModelo(ModeloGLB(), PoseGLB()), glm::vec3(0.0f)), "un modelo vacio tiene el centro en el origen");
+		comprobar(casiVec(CalcularCentroDelModelo(GlbModel(), GlbPose()), glm::vec3(0.0f)), "un modelo vacio tiene el centro en el origen");
 	}
 
 	void ProbarErrores(const fs::path& carpeta)
 	{
-		ModeloGLB modelo;
+		GlbModel modelo;
 		std::string error;
 		comprobar(!CargarModeloGLB(carpeta / "no_existe.glb", modelo, error) && !error.empty(), "archivo inexistente: error");
 

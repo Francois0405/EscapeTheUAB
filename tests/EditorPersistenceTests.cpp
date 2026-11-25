@@ -1,4 +1,4 @@
-#include "src/editor/SerializadorEscenas.h"
+#include "src/editor/SceneSerializer.h"
 #include "src/scene/SceneLoader.h"
 #include <nlohmann/json.hpp>
 
@@ -72,9 +72,9 @@ int main()
 	escribir(escena, original);
 
 	std::string error;
-	editor::SerializadorEscenas serializador;
+	editor::SceneSerializer serializador;
 	comprobar(serializador.Cargar(escena, error), "carga el documento JSON de la escena");
-	DatosEscena datos;
+	SceneData datos;
 	comprobar(CargarDatosEscenaJSON(escena, datos, error), "fixture JSON válido");
 	comprobar(std::abs(datos.indirectIntensity - 0.20f) < 1e-6f &&
 		std::abs(datos.indirectAmbientBase - 0.035f) < 1e-6f &&
@@ -131,7 +131,7 @@ int main()
 	comprobar(guardado["animated"][0]["colliders"][0]["type"] == "kinematic", "preserva colisionador animado");
 	comprobar(guardado["animated"][0]["allowArchitecturePenetration"] == true, "persiste la excepcion explicita en la puerta GLB");
 	comprobar(guardado["architecture"][0]["position"] == nlohmann::json::array({ 0, 0, 0 }), "preserva instancias no editadas");
-	DatosEscena recargada;
+	SceneData recargada;
 	comprobar(CargarDatosEscenaJSON(escena, recargada, error), "recarga JSON editado");
 	comprobar(recargada.animados[0].permitirPenetracionArquitectura, "la puerta GLB restaura su excepcion explicita");
 	comprobar(recargada.objetos[1].posicion == mesa.posicion && recargada.objetos[1].rotacion == mesa.rotacion &&
@@ -155,7 +155,7 @@ int main()
 	guardado = nlohmann::json::parse(leer(escena));
 	comprobar(guardado["objects"].size() == 1 && guardado["objects"][0]["id"] == "table",
 		"elimina solo la instancia retirada");
-	comprobar(serializador.Guardar({ datos.objetos[0], mesa }, std::vector<SceneObjetoAnimado>{}, error),
+	comprobar(serializador.Guardar({ datos.objetos[0], mesa }, std::vector<SceneAnimatedObject>{}, error),
 		"guarda la escena al eliminar la ultima instancia GLB");
 	guardado = nlohmann::json::parse(leer(escena));
 	comprobar(guardado.contains("animated") && guardado["animated"].is_array() && guardado["animated"].empty(),
@@ -168,12 +168,12 @@ int main()
        "physics":{"type":"static","halfSize":[1,1,1]},
        "wall":{"apertures":[{"id":"door-opening","doorId":"door","centerU":0.5,"width":1.0,"height":2.1,"base":0.0}]}}
       ],"objects":[],"animated":[{"id":"door","model":"../models/door.glb","position":[0.5,0,-1.5],"rotation":[0,0,90],"wallId":"wall","openingId":"door-opening"}]})json");
-	editor::SerializadorEscenas serializerWall;
+	editor::SceneSerializer serializerWall;
 	comprobar(serializerWall.Cargar(paredEscena, error), "carga escena con pared paramétrica y asociación de puerta");
-	DatosEscena paredDatos;
+	SceneData paredDatos;
 	comprobar(CargarDatosEscenaJSON(paredEscena, paredDatos, error), "valida pared y apertura asociada");
 	comprobar(serializerWall.Guardar(paredDatos.objetos, paredDatos.animados, error), "guarda pared paramétrica sin hornear el OBJ");
-	DatosEscena paredRecargada;
+	SceneData paredRecargada;
 	comprobar(CargarDatosEscenaJSON(paredEscena, paredRecargada, error) &&
 		paredRecargada.objetos[0].pared.aperturas[0].id == "door-opening" &&
 		paredRecargada.animados[0].paredId == "wall" && paredRecargada.animados[0].aperturaId == "door-opening",
@@ -200,7 +200,7 @@ int main()
 	escribir(runtimeScene, original);
 	escribir(sourceScene, original);
 
-	editor::SerializadorEscenas serializadorConCopiaFuente;
+	editor::SceneSerializer serializadorConCopiaFuente;
 	comprobar(serializadorConCopiaFuente.Cargar(runtimeScene, error), "carga una escena desde assets de ejecución");
 	comprobar(serializadorConCopiaFuente.RutaFuente() == sourceScene.lexically_normal(),
 		"resuelve la escena fuente correspondiente");

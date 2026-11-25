@@ -9,11 +9,11 @@
 #include <vector>
 #include <GLFW/glfw3.h>
 
-#include "src/networking/preferences/PreferenciasRed.h"
-#include "src/gameplay/hirity/AnimacionHiriti.h"
-#include "src/networking/replication/NetAdaptadores.h"
-#include "src/networking/replication/NetJuego.h"
-#include "src/physics/EscenaFisica.h"
+#include "src/networking/preferences/NetworkPreferences.h"
+#include "src/gameplay/hirity/HiritiAnimation.h"
+#include "src/networking/replication/NetAdapters.h"
+#include "src/networking/replication/NetGame.h"
+#include "src/physics/PhysicsScene.h"
 #include "src/scene/SceneLoader.h"
 #include "src/ui/RuntimeUiLogic.h"
 
@@ -24,26 +24,26 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 {
 	auto& redJuego = context.session;
 	auto& configRedPendiente = context.pendingConfig;
-	using netjuego::FaseRed;
-	const netjuego::Diagnostico d = redJuego.ObtenerDiagnostico();
+	using netgame::NetworkPhase;
+	const netgame::Diagnostico d = redJuego.ObtenerDiagnostico();
 	ImGui::SetNextWindowPos(ImVec2(12.0f * uiScale, 12.0f * uiScale), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(360.0f * uiScale, 0.0f), ImGuiCond_FirstUseEver);
 	ImGui::Begin("Multijugador", &context.panelVisible);
 	ImGui::Text("Modo: %s | Estado: %s", d.modo.c_str(), d.estado.c_str());
-	if (d.fase != FaseRed::Offline)
+	if (d.fase != NetworkPhase::Offline)
 	{
 		if (d.modo == "Host") ImGui::Text("Escucha UDP: %s:%u (todas las interfaces)", d.endpoint.c_str(), static_cast<unsigned>(d.puerto));
 		else ImGui::Text("Servidor: %s:%u", d.endpoint.c_str(), static_cast<unsigned>(d.puerto));
 	}
 	if (!d.mensaje.empty()) ImGui::TextWrapped("%s", d.mensaje.c_str());
-	const bool libre = d.fase == FaseRed::Offline || d.fase == FaseRed::Error;
-	static int modo = -1; static char ip[64]; static int puerto = netjuego::kPuertoPorDefecto; static char nombre[33];
+	const bool libre = d.fase == NetworkPhase::Offline || d.fase == NetworkPhase::Error;
+	static int modo = -1; static char ip[64]; static int puerto = netgame::kPuertoPorDefecto; static char nombre[33];
 	static std::string errorEntrada;
 	if (modo < 0)
 	{
 		modo = configRedPendiente.rol == net::Role::Host ? 1 : (configRedPendiente.rol == net::Role::Client ? 2 : 0);
-		netjuego::UltimoEndpoint ultimo;
-		const bool hayUltimo = netjuego::CargarUltimoEndpoint(ultimo);
+		netgame::LastEndpoint ultimo;
+		const bool hayUltimo = netgame::CargarUltimoEndpoint(ultimo);
 		const std::string& hostInicial = configRedPendiente.rol == net::Role::Client ? configRedPendiente.host : (hayUltimo ? ultimo.host : configRedPendiente.host);
 		std::snprintf(ip, sizeof ip, "%s", hostInicial.c_str());
 		std::snprintf(nombre, sizeof nombre, "%s", configRedPendiente.nombre.c_str());
@@ -61,19 +61,19 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 			ImGui::InputInt("Puerto", &puerto);
 			ImGui::InputText("Nombre", nombre, sizeof nombre);
 			static int enet = -1;
-			if (enet < 0) enet = netjuego::RedJuego::EnetDisponible() ? 1 : 0;   // solo al elegir red; no inicializa ENet
+			if (enet < 0) enet = netgame::NetworkGame::EnetDisponible() ? 1 : 0;   // solo al elegir red; no inicializa ENet
 			if (!enet) ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "ENet no incluido en esta compilacion.");
 			if (!errorEntrada.empty()) ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "%s", errorEntrada.c_str());
 			if (ImGui::Button("Iniciar"))
 			{
 				errorEntrada.clear();
-				netjuego::ConfigRed cfg;
+				netgame::NetworkConfig cfg;
 				if (BuildNetworkStartRequest(modo, nombre, ip, puerto, cfg, errorEntrada))
 				{
 					if (cfg.rol == net::Role::Client)
 					{
 						std::string errorGuardado;
-						if (!netjuego::GuardarUltimoEndpoint({ cfg.host, cfg.puerto }, errorGuardado))
+						if (!netgame::GuardarUltimoEndpoint({ cfg.host, cfg.puerto }, errorGuardado))
 							errorEntrada = "No se guardo la ultima direccion: " + errorGuardado;
 					}
 					configRedPendiente = cfg; context.startNetwork(cfg);
@@ -81,8 +81,8 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 			}
 		}
 	}
-	else if (ImGui::Button(d.fase == FaseRed::Arrancando ? "Cancelar" : "Desconectar")) context.stopNetwork();
-	if (d.fase == FaseRed::Activa)
+	else if (ImGui::Button(d.fase == NetworkPhase::Arrancando ? "Cancelar" : "Desconectar")) context.stopNetwork();
+	if (d.fase == NetworkPhase::Activa)
 	{
 		ImGui::Separator();
 		ImGui::Text("Escena: %s | peer local: %u", d.escena.c_str(), static_cast<unsigned>(d.peerLocal));
@@ -90,7 +90,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 		ImGui::Text("Eventos ignorados: %zu | descartados: %zu", d.eventosIgnorados, d.eventosDescartados);
 		const auto& obj = redJuego.Objeto();
 		if (obj.conocido)
-			ImGui::Text("Objeto compartido: %s", obj.dueno == netjuego::kSinDueno ? "libre"
+			ImGui::Text("Objeto compartido: %s", obj.dueno == netgame::kSinDueno ? "libre"
 				: (redJuego.SoyDuenoDelObjeto() ? "lo tengo yo" : "en manos de otro jugador"));
 		ImGui::TextUnformatted("E / gatillo apuntando al cubo amarillo: coger o soltar.");
 	}
@@ -108,9 +108,9 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 	{
 		std::string id;
 		uint32_t idRed = 0;
-		net::PeerId propietario = netjuego::kSinDueno;
-		fisica::PoseCuerpo aplicado;
-		fisica::PoseCuerpo autoritativo;
+		net::PeerId propietario = netgame::kSinDueno;
+		fisica::BodyPose aplicado;
+		fisica::BodyPose autoritativo;
 		bool tieneAutoritativo = false;
 		bool activo = false;
 		bool sujeto = false;
@@ -126,7 +126,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 		siguienteActualizacion = ahora + 0.5;
 		if (escenaFisica)
 		{
-			std::vector<fisica::EscenaFisica::EstadoDinamico> cuerpos;
+			std::vector<fisica::PhysicsScene::DynamicState> cuerpos;
 			escenaFisica->CapturarEstadosDinamicos(cuerpos);
 			const auto remotos = redJuego.EsCliente()
 				? redJuego.EstadosFisicosRemotos() : std::map<uint32_t, net::DynamicStateEntry>{};
@@ -136,12 +136,12 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 				const SceneObject& objeto = objetosEscena[static_cast<std::size_t>(cuerpo.indiceObjeto)];
 				Fila fila;
 				fila.id = objeto.id;
-				fila.idRed = netjuego::HashId(objeto.id);
+				fila.idRed = netgame::HashId(objeto.id);
 				fila.propietario = redJuego.Activa()
-					? redJuego.PropietarioDinamico(fila.idRed) : netjuego::kSinDueno;
+					? redJuego.PropietarioDinamico(fila.idRed) : netgame::kSinDueno;
 				fila.aplicado = cuerpo.pose;
 				fila.activo = cuerpo.activo;
-				fila.sujeto = cuerpo.agarrado || fila.propietario != netjuego::kSinDueno;
+				fila.sujeto = cuerpo.agarrado || fila.propietario != netgame::kSinDueno;
 				fila.hiriti = objeto.id == "hiriti";
 				if (fila.hiriti)
 					fila.estadoSeguimiento = HiritiFollowStatus(redJuego.EsCliente(), context.hiritiFollowEnabled,
@@ -149,10 +149,10 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 				if (redJuego.EsCliente())
 				{
 					const auto remoto = remotos.find(fila.idRed);
-					if (remoto != remotos.end() && netjuego::EstadoFisicoValido(remoto->second))
+					if (remoto != remotos.end() && netgame::EstadoFisicoValido(remoto->second))
 					{
-						fila.autoritativo.posicion = netjuego::PosDe(remoto->second.transform);
-						fila.autoritativo.rotacion = netjuego::RotDe(remoto->second.transform);
+						fila.autoritativo.posicion = netgame::PosDe(remoto->second.transform);
+						fila.autoritativo.rotacion = netgame::RotDe(remoto->second.transform);
 						fila.tieneAutoritativo = true;
 					}
 				}
@@ -175,7 +175,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 	{
 		const char* rol = redJuego.EsHost() ? "host" : redJuego.EsCliente() ? "client" : "offline";
 		const char* cuerpo = redJuego.EsCliente() ? "replica cinematica" : "body dinamico";
-		if (fila.propietario == netjuego::kSinDueno)
+		if (fila.propietario == netgame::kSinDueno)
 			ImGui::Text("%s  id=%08x  owner=libre  %s/%s  %s%s", fila.id.c_str(), fila.idRed,
 				rol, cuerpo, fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),
 				fila.estadoSeguimiento);
@@ -184,7 +184,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 				static_cast<unsigned>(fila.propietario), rol, cuerpo,
 				fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),
 				fila.estadoSeguimiento);
-		const auto dibujarPose = [](const char* nombre, const fisica::PoseCuerpo& pose)
+		const auto dibujarPose = [](const char* nombre, const fisica::BodyPose& pose)
 		{
 			ImGui::Text("%s p(%.2f,%.2f,%.2f) q(%.2f,%.2f,%.2f,%.2f)", nombre,
 				pose.posicion.x, pose.posicion.y, pose.posicion.z,

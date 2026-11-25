@@ -13,14 +13,14 @@
 
 using nlohmann::json;
 
-bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneAperturaPared>& aperturas,
-    std::vector<SceneSeccionPared>& secciones, std::string& error)
+bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneWallOpening>& aperturas,
+    std::vector<SceneWallSection>& secciones, std::string& error)
 {
-    std::vector<SceneSeccionPared> resultado;
+    std::vector<SceneWallSection> resultado;
     if (!std::isfinite(mitadPared.x) || !std::isfinite(mitadPared.y) || !std::isfinite(mitadPared.z) ||
         mitadPared.x <= 0.0f || mitadPared.y <= 0.0f || mitadPared.z <= 0.0f)
     { error = "Las dimensiones de pared deben ser finitas y positivas."; return false; }
-    std::vector<SceneAperturaPared> ordenadas = aperturas;
+    std::vector<SceneWallOpening> ordenadas = aperturas;
     std::sort(ordenadas.begin(), ordenadas.end(), [](const auto& a, const auto& b) { return a.centerU < b.centerU; });
     float cursor = -mitadPared.x;
     std::unordered_set<std::string> idsApertura, idsPuerta;
@@ -125,16 +125,16 @@ namespace
         return true;
     }
 
-    bool leerTipo(const json& valor, bool permitirCinematico, fisica::TipoCuerpo& tipo,
+    bool leerTipo(const json& valor, bool permitirCinematico, fisica::BodyType& tipo,
         const std::string& contexto, std::string& error)
     {
         if (valor.is_string())
         {
             const std::string texto = valor.get<std::string>();
-            if (texto == "static") { tipo = fisica::TipoCuerpo::Estatico; return true; }
-            if (texto == "dynamic" && !permitirCinematico) { tipo = fisica::TipoCuerpo::Dinamico; return true; }
-            if (texto == "bouncy" && !permitirCinematico) { tipo = fisica::TipoCuerpo::Rebotador; return true; }
-            if (texto == "kinematic" && permitirCinematico) { tipo = fisica::TipoCuerpo::Cinematico; return true; }
+            if (texto == "static") { tipo = fisica::BodyType::Estatico; return true; }
+            if (texto == "dynamic" && !permitirCinematico) { tipo = fisica::BodyType::Dinamico; return true; }
+            if (texto == "bouncy" && !permitirCinematico) { tipo = fisica::BodyType::Rebotador; return true; }
+            if (texto == "kinematic" && permitirCinematico) { tipo = fisica::BodyType::Cinematico; return true; }
         }
         error = contexto + ".type debe ser " +
             (permitirCinematico ? "\"static\" o \"kinematic\"." : "\"static\", \"dynamic\" o \"bouncy\".");
@@ -164,7 +164,7 @@ namespace
     }
 
     // Campo opcional "physics" de un objeto OBJ.
-    bool leerFisica(const json& entrada, SceneFisica& fisica, const std::string& contexto, std::string& error)
+    bool leerFisica(const json& entrada, ScenePhysics& fisica, const std::string& contexto, std::string& error)
     {
         if (!entrada.contains("physics")) return true;   // sin físicas: comportamiento anterior
         const json& datos = entrada["physics"];
@@ -186,12 +186,12 @@ namespace
             if (!datos["shape"].is_string())
             { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
             const std::string forma = datos["shape"].get<std::string>();
-            if (forma == "box") fisica.forma = fisica::FormaCuerpo::Caja;
-            else if (forma == "sphere") fisica.forma = fisica::FormaCuerpo::Esfera;
+            if (forma == "box") fisica.forma = fisica::BodyShape::Caja;
+            else if (forma == "sphere") fisica.forma = fisica::BodyShape::Esfera;
             else
             { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
         }
-        if (fisica.tipo == fisica::TipoCuerpo::Rebotador && fisica.forma != fisica::FormaCuerpo::Esfera)
+        if (fisica.tipo == fisica::BodyType::Rebotador && fisica.forma != fisica::BodyShape::Esfera)
         { error = ctx + " de tipo bouncy requiere shape \"sphere\"."; return false; }
         if (!leerCaja(datos, fisica.mitadTamano, fisica.desplazamiento, ctx, error)) return false;
 
@@ -218,7 +218,7 @@ namespace
         return true;
     }
 
-    bool leerLuz(const json& entrada, SceneLuz& luz, const std::string& contexto, std::string& error)
+    bool leerLuz(const json& entrada, SceneLight& luz, const std::string& contexto, std::string& error)
     {
         if (!entrada.contains("light")) return true;
         const json& datos = entrada["light"];
@@ -304,7 +304,7 @@ namespace
 
     // Un elemento de la lista opcional "animated".
     bool leerObjetoAnimado(const json& entrada, const std::string& contexto, const std::filesystem::path& carpetaJson,
-        SceneObjetoAnimado& objeto, std::string& error)
+        SceneAnimatedObject& objeto, std::string& error)
     {
         if (!entrada.is_object())
         {
@@ -376,7 +376,7 @@ namespace
                 error = contexto + ".animation debe ser el nombre (texto) de la animacion.";
                 return false;
             }
-            objeto.animacion = entrada["animation"].get<std::string>();
+            objeto.animation = entrada["animation"].get<std::string>();
         }
         if (entrada.contains("colliders"))
         {
@@ -401,7 +401,7 @@ namespace
                     error = ctx + " necesita 'node' (nombre del nodo del GLB) y 'type'.";
                     return false;
                 }
-                SceneColisionador colisionador;
+                SceneCollider colisionador;
                 colisionador.nodo = caja["node"].get<std::string>();
                 if (!leerTipo(caja["type"], true, colisionador.tipo, ctx, error)) return false;
                 if (!leerCaja(caja, colisionador.mitadTamano, colisionador.desplazamiento, ctx, error)) return false;
@@ -421,14 +421,14 @@ namespace
 bool CargarEscenaJSON(const std::filesystem::path& ruta,
     std::vector<SceneObject>& objetos, std::string& error, std::string& nombre)
 {
-    DatosEscena datos;
+    SceneData datos;
     if (!CargarDatosEscenaJSON(ruta, datos, error)) return false;
     objetos = std::move(datos.objetos);
     nombre = std::move(datos.nombre);
     return true;
 }
 
-bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datosSalida, std::string& error)
+bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, SceneData& datosSalida, std::string& error)
 {
     try
     {
@@ -465,7 +465,7 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
         }
 
         std::vector<SceneObject> candidatos;
-        std::vector<SceneObjetoAnimado> candidatosAnimados;
+        std::vector<SceneAnimatedObject> candidatosAnimados;
         SceneSpawn spawn;
         float indirectIntensity = 0.16f;
         float indirectAmbientBase = 0.025f;
@@ -590,7 +590,7 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
             (entradaApertura.contains("doorId") && !entradaApertura["doorId"].is_string()) ||
                             !entradaApertura.contains("centerU") || !entradaApertura.contains("width") || !entradaApertura.contains("height"))
                         { if (error.empty()) error = ctxA + " requiere id, centerU, width y height."; return false; }
-                        SceneAperturaPared ap;
+                        SceneWallOpening ap;
                         ap.id = entradaApertura.contains("id") ? entradaApertura["id"].get<std::string>() : entradaApertura["doorId"].get<std::string>();
                         ap.idPuerta = entradaApertura.contains("doorId") ? entradaApertura["doorId"].get<std::string>() : std::string{};
                         if (!leerNumero(entradaApertura["centerU"], ap.centerU, ctxA + ".centerU", error) ||
@@ -599,10 +599,10 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
                             (entradaApertura.contains("base") && !leerNumero(entradaApertura["base"], ap.base, ctxA + ".base", error))) return false;
                         objeto.pared.aperturas.push_back(std::move(ap));
                     }
-                    std::vector<SceneSeccionPared> comprobacion;
+                    std::vector<SceneWallSection> comprobacion;
                     if (!GenerarSeccionesPared(glm::abs(objeto.escala) * objeto.fisica.mitadTamano, objeto.pared.aperturas, comprobacion, error))
                     { error = contexto + ".wall: " + error; return false; }
-                    if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::TipoCuerpo::Estatico ||
+                    if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Estatico ||
                         objeto.fisica.mitadTamano != glm::vec3(1.0f) ||
                         objeto.fisica.desplazamiento != glm::vec3(0.0f))
                     { error = contexto + ".wall requiere un collider static centrado en el cubo de pared."; return false; }
@@ -637,7 +637,7 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
             for (std::size_t indice = 0; indice < documento["animated"].size(); ++indice)
             {
                 const std::string contexto = "animated[" + std::to_string(indice) + "]";
-                SceneObjetoAnimado animado;
+                SceneAnimatedObject animado;
                 if (!leerObjetoAnimado(documento["animated"][indice], contexto, ruta.parent_path(), animado, error))
                     return false;
                 if (!ids.insert(animado.id).second)
@@ -650,7 +650,7 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
         }
 
         for (const SceneObject& pared : candidatos)
-            for (const SceneAperturaPared& apertura : pared.pared.aperturas)
+            for (const SceneWallOpening& apertura : pared.pared.aperturas)
             {
                 if (apertura.idPuerta.empty()) continue; // hueco intencional sin puerta
                 const auto puerta = std::find_if(candidatosAnimados.begin(), candidatosAnimados.end(), [&](const auto& a) {
@@ -659,14 +659,14 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos
                 if (puerta == candidatosAnimados.end() || puerta->aperturaId != apertura.id)
                 { error = "La apertura de '" + pared.id + "' no tiene una puerta animada asociada de forma univoca."; return false; }
             }
-        for (const SceneObjetoAnimado& puerta : candidatosAnimados)
+        for (const SceneAnimatedObject& puerta : candidatosAnimados)
             if (!puerta.paredId.empty())
             {
                 const auto pared = std::find_if(candidatos.begin(), candidatos.end(), [&](const SceneObject& item) { return item.id == puerta.paredId; });
                 if (pared == candidatos.end() || !pared->pared.presente)
                 { error = "La puerta '" + puerta.id + "' referencia una pared paramétrica inexistente."; return false; }
                 const auto apertura = std::find_if(pared->pared.aperturas.begin(), pared->pared.aperturas.end(),
-                    [&](const SceneAperturaPared& item) { return item.id == puerta.aperturaId && item.idPuerta == puerta.id; });
+                    [&](const SceneWallOpening& item) { return item.id == puerta.aperturaId && item.idPuerta == puerta.id; });
                 if (apertura == pared->pared.aperturas.end())
                 { error = "La puerta '" + puerta.id + "' referencia un vano inexistente o asociado a otra instancia."; return false; }
             }

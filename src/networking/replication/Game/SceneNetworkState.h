@@ -1,24 +1,24 @@
 #pragma once
 
-#include "src/networking/replication/NetJuego.h"
+#include "src/networking/replication/NetGame.h"
 #include "src/scene/SceneLoader.h"
 
 #include <map>
 #include <string>
 #include <vector>
 
-namespace netjuego::scene_network_state
+namespace netgame::scene_network_state
 {
 	template <typename HashIdFn>
 	inline bool CaptureSceneNetworkStates(const std::vector<SceneObject>& objects,
-		std::vector<EstadoObjetoEscena>& output, HashIdFn hashFunction)
+		std::vector<SceneObjectState>& output, HashIdFn hashFunction)
 	{
 		std::map<uint32_t, std::string> persistentIds;
 		output.clear();
 		output.reserve(objects.size());
 		for (const SceneObject& object : objects)
 		{
-			EstadoObjetoEscena state;
+			SceneObjectState state;
 			state.id = hashFunction(object.id);
 			if (state.id == 0 || !persistentIds.emplace(state.id, object.id).second) return false;
 			state.posicion = object.posicion; state.rotacion = object.rotacion; state.escala = object.escala;
@@ -35,7 +35,7 @@ namespace netjuego::scene_network_state
 	}
 
 	inline bool CaptureSceneNetworkStates(const std::vector<SceneObject>& objects,
-		std::vector<EstadoObjetoEscena>& output)
+		std::vector<SceneObjectState>& output)
 	{
 		return CaptureSceneNetworkStates(objects, output,
 			[](const std::string& objectId) { return HashId(objectId); });

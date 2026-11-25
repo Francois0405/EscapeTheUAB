@@ -90,22 +90,22 @@
     <ClCompile Include="..\src\scene\SceneRuntime.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\rendering\DibujoGLB.cpp">
+    <ClCompile Include="..\src\rendering\GlbDrawing.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\physics\EscenaFisica.cpp">
+    <ClCompile Include="..\src\physics\PhysicsScene.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\physics\DibujoColisionadores.cpp">
+    <ClCompile Include="..\src\physics\ColliderDrawing.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\rendering\ModeloGLB.cpp">
+    <ClCompile Include="..\src\rendering\GlbModel.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\physics\MundoFisico.cpp">
+    <ClCompile Include="..\src\physics\PhysicsWorld.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\animation\ObjetosAnimadosGLB.cpp">
+    <ClCompile Include="..\src\animation\GlbAnimatedObjects.cpp">
       <Filter>Archivos de origen</Filter>
     </ClCompile>
     <ClCompile Include="..\src\gameplay\hirity\HiritiRuntime.cpp">
@@ -368,13 +368,13 @@
     <ClInclude Include="..\src\vr\OpenXRManager.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\vr\VistaVR.h">
+    <ClInclude Include="..\src\vr\VrView.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gameplay\hirity\HiritiRuntime.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\gameplay\hirity\VolumenSonidoHiriti.h">
+    <ClInclude Include="..\src\gameplay\hirity\HiritiSoundVolume.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gameplay\interaction\InteractionRuntime.h">
@@ -389,7 +389,7 @@
     <ClInclude Include="..\src\gameplay\interaction\ThrowCharge.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\gameplay\player\MovimientoFPS.h">
+    <ClInclude Include="..\src\gameplay\player\FpsMovement.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\gameplay\player\PlayerRuntime.h">
@@ -455,34 +455,34 @@
     <ClInclude Include="..\src\scene\SceneRuntime.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\animation\AnimacionGLB.h">
+    <ClInclude Include="..\src\animation\GlbAnimation.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\animation\AnimacionPuerta.h">
+    <ClInclude Include="..\src\animation\DoorAnimation.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\rendering\DibujoGLB.h">
+    <ClInclude Include="..\src\rendering\GlbDrawing.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\physics\EscenaFisica.h">
+    <ClInclude Include="..\src\physics\PhysicsScene.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\physics\DibujoColisionadores.h">
+    <ClInclude Include="..\src\physics\ColliderDrawing.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\rendering\ModeloGLB.h">
+    <ClInclude Include="..\src\rendering\GlbModel.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\rendering\DibujoGLB.h">
+    <ClInclude Include="..\src\rendering\GlbDrawing.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\physics\MundoFisico.h">
+    <ClInclude Include="..\src\physics\PhysicsWorld.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\animation\ObjetosAnimadosGLB.h">
+    <ClInclude Include="..\src\animation\GlbAnimatedObjects.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\vr\VistaEstereo.h">
+    <ClInclude Include="..\src\vr\StereoView.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
   </ItemGroup>

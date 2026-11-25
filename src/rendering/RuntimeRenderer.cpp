@@ -5,10 +5,10 @@
 #include "src/rendering/shader.h"
 #include "src/rendering/UniformCache.h"
 #include "src/rendering/visualitzacio.h"
-#include "src/editor/EditorEscenas.h"
+#include "src/editor/SceneEditor.h"
 #include "src/vr/OpenXRManager.h"
-#include "src/vr/VistaEstereo.h"
-#include "src/vr/VistaVR.h"
+#include "src/vr/StereoView.h"
+#include "src/vr/VrView.h"
 #include <algorithm>
 #include <cstdio>
 
@@ -48,12 +48,12 @@ void RuntimeRenderer::dibujarEscenaEstereo(int anchoVentana, int altoVentana)
 		objecte, true, pas, front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
 		eixos, grid, hgrid);
 
-	for (const estereo::Ojo ojo : { estereo::Ojo::Izquierdo, estereo::Ojo::Derecho })
+	for (const stereo::Ojo ojo : { stereo::Ojo::Izquierdo, stereo::Ojo::Derecho })
 	{
-		const estereo::Rectangulo mitad = estereo::MitadDePantalla(ojo, anchoVentana);
+		const stereo::Rectangulo mitad = stereo::MitadDePantalla(ojo, anchoVentana);
 		// Cada mitad tiene SU relación de aspecto (la mitad de ancho): Projeccio_Perspectiva fija el viewport y la proyección.
 		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, mitad.x, 0, mitad.ancho, altoVentana, OPV.R);
-		ViewMatrix = estereo::VistaDeOjo(vistaCentral, ojo);
+		ViewMatrix = stereo::VistaDeOjo(vistaCentral, ojo);
 
 		Iluminacio(
 			shader_programID,
@@ -84,7 +84,7 @@ void RuntimeRenderer::dibujarEscenaEstereo(int anchoVentana, int altoVentana)
 // el anclaje (pies o ojos del jugador + su orientación FPS) se recalcula cada fotograma.
 // ---------------------------------------------------------------------------------------------
 // Copia el ojo a la ventana (espejo de escritorio) conservando su proporción. Debe hacerse ANTES de liberar la imagen.
-void RuntimeRenderer::copiarOjoAVentana(const vr::OjoVR& ojo)
+void RuntimeRenderer::copiarOjoAVentana(const vr::VrEye& ojo)
 {
 	if (w <= 0 || h <= 0 || ojo.ancho <= 0 || ojo.alto <= 0) return;
 	const float escala = std::min(static_cast<float>(w) / ojo.ancho, static_cast<float>(h) / ojo.alto);
@@ -102,22 +102,22 @@ void RuntimeRenderer::copiarOjoAVentana(const vr::OjoVR& ojo)
 // hay que dibujar la escena de escritorio con normalidad (VR sin sesión en marcha, visor sin mostrar, etc.).
 bool RuntimeRenderer::dibujarEscenaVR()
 {
-	const vr::ResultadoFotograma resultado = gestorOpenXR.EmpezarFotograma();
-	if (resultado == vr::ResultadoFotograma::NoActivo) return false;
+	const vr::FrameResult resultado = gestorOpenXR.EmpezarFotograma();
+	if (resultado == vr::FrameResult::NoActivo) return false;
 
 	bool dibujado = false;
-	if (resultado == vr::ResultadoFotograma::Renderizar)
+	if (resultado == vr::FrameResult::Renderizar)
 	{
 		const glm::vec3 pies = piesJugador();
 		const glm::vec3 haciaDondeMira(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-		const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, haciaDondeMira,
-			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, alturaOjosJugador());
+		const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, haciaDondeMira,
+			gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo, alturaOjosJugador());
 
 		glDisable(GL_SCISSOR_TEST);
-		glm::vec3 sumaOjos(0.0f); int ojosCabeza = 0; vr::PoseXR primerOjo;
+		glm::vec3 sumaOjos(0.0f); int ojosCabeza = 0; vr::XrPose primerOjo;
 		for (int i = 0; i < gestorOpenXR.NumeroDeOjos(); ++i)
 		{
-			vr::OjoVR ojo;
+			vr::VrEye ojo;
 			if (!gestorOpenXR.AdquirirOjo(i, ojo)) continue;   // el fotograma se enviará vacío; AdquirirOjo no deja nada a medias
 			if (ojosCabeza++ == 0) primerOjo = ojo.pose;       // para la red: pose real de la cabeza (media de los ojos)
 			sumaOjos += ojo.pose.posicion;

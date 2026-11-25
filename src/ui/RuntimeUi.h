@@ -11,13 +11,13 @@
 class AudioManager;
 struct GLFWwindow;
 struct SceneObject;
-namespace animacion { struct Reproductor; }
-namespace fisica { class DemoCuboCaida; class EscenaFisica; class MundoFisico; }
-namespace fps { class BalanceoCamara; class BarraEstamina; class MovimientoJugador; }
-namespace glb { struct EscenaAnimada; }
-namespace juego { class AnimacionHiriti; }
-namespace netjuego { class RedJuego; struct ConfigRed; }
-namespace vr { class GestorOpenXR; }
+namespace animation { struct Reproductor; }
+namespace fisica { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
+namespace fps { class CameraBob; class StaminaBar; class PlayerMovement; }
+namespace glb { struct AnimatedScene; }
+namespace game { class HiritiAnimator; }
+namespace netgame { class NetworkGame; struct NetworkConfig; }
+namespace vr { class OpenXrManager; }
 
 enum EstadoJuego {
 	ESTADO_MENU_PRINCIPAL,
@@ -33,13 +33,13 @@ namespace runtimeui
 		std::function<bool()> isFpsMode;
 		std::function<bool()> isFpsInputActive;
 		std::function<bool()> isEditorActive;
-		const fps::BarraEstamina& staminaBar;
-		const fps::MovimientoJugador& movement;
+		const fps::StaminaBar& staminaBar;
+		const fps::PlayerMovement& movement;
 		const bool& showStaminaPercent;
 		const bool& throwCharging;
 		const float& throwChargeSeconds;
 		float maxThrowChargeSeconds;
-		const std::unique_ptr<fisica::EscenaFisica>& physicsScene;
+		const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
 		std::function<const char*()> interactionPrompt;   // nullptr when nothing is targeted
 		const unsigned int& handTexture;
 	};
@@ -56,20 +56,20 @@ namespace runtimeui
 
 	struct MultiplayerContext
 	{
-		netjuego::RedJuego& session;
-		netjuego::ConfigRed& pendingConfig;
+		netgame::NetworkGame& session;
+		netgame::NetworkConfig& pendingConfig;
 		bool& panelVisible;
-		std::function<void(const netjuego::ConfigRed&)> startNetwork;
+		std::function<void(const netgame::NetworkConfig&)> startNetwork;
 		std::function<void()> stopNetwork;
 	};
 
 	struct DynamicObjectsContext
 	{
-		netjuego::RedJuego& session;
-		const std::unique_ptr<fisica::EscenaFisica>& physicsScene;
+		netgame::NetworkGame& session;
+		const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
 		const std::vector<SceneObject>& sceneObjects;
 		const bool& hiritiFollowEnabled;
-		const juego::AnimacionHiriti& hiriti;
+		const game::HiritiAnimator& hiriti;
 	};
 
 	// F1 gameplay panels: phone, movement/render metrics, lighting, door demo, physics/OpenXR, GLB.
@@ -83,27 +83,27 @@ namespace runtimeui
 		float& walkingIntensity;
 		float& mouseIntensity;
 		const float& frameDeltaSeconds;
-		fps::MovimientoJugador& movement;
-		fps::BalanceoCamara& cameraSway;
+		fps::PlayerMovement& movement;
+		fps::CameraBob& cameraSway;
 		bool& showStaminaPercent;
 		bool& showFpsCounter;
 		bool& optimizedRendering;
 		const double& lastGpuMs;
 		int& lightingView;
-		const animacion::Reproductor& doorDemoPlayer;
+		const animation::Reproductor& doorDemoPlayer;
 		const float& doorDemoAngle;
 		bool& showColliders;
 		const bool& hiritiFollowEnabled;
 		float& hiritiStopDistance;
 		float& hiritiMaxSpeed;
 		bool& stereoPreview;
-		vr::GestorOpenXR& openXR;
-		fisica::MundoFisico& physicsWorld;
-		const std::unique_ptr<fisica::EscenaFisica>& physicsScene;
-		fisica::DemoCuboCaida& cubeDemo;
-		netjuego::RedJuego& session;
+		vr::OpenXrManager& openXR;
+		fisica::PhysicsWorld& physicsWorld;
+		const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+		fisica::FallingCubeDemo& cubeDemo;
+		netgame::NetworkGame& session;
 		const std::vector<SceneObject>& sceneObjects;
-		glb::EscenaAnimada& animatedObjects;
+		glb::AnimatedScene& animatedObjects;
 		std::function<void()> startDoorDemo;
 		std::function<void()> toggleOpenXR;
 	};

@@ -1,5 +1,5 @@
 #include "src/gameplay/hirity/HiritiRuntime.h"
-#include "src/gameplay/hirity/VolumenSonidoHiriti.h"
+#include "src/gameplay/hirity/HiritiSoundVolume.h"
 
 #include <algorithm>
 #include <array>
@@ -9,7 +9,7 @@
 #include <random>
 #include <sstream>
 
-namespace juego::hiriti
+namespace game::hiriti
 {
 	namespace
 	{
@@ -141,9 +141,9 @@ namespace juego::hiriti
 		const int indice = static_cast<int>(std::distance(objetosEscena.begin(), hiriti));
 		glm::vec3 velocidadHiriti(0.0f);
 		escenaFisica->VelocidadObjetoDinamico(indice, velocidadHiriti);
-		const uint32_t idHiriti = netjuego::HashId(hiriti->id);
+		const uint32_t idHiriti = netgame::HashId(hiriti->id);
 		const bool propietarioRed = redJuego.Activa() &&
-			redJuego.PropietarioDinamico(idHiriti) != netjuego::kSinDueno;
+			redJuego.PropietarioDinamico(idHiriti) != netgame::kSinDueno;
 		const bool jugadorManipulaHiriti = escenaFisica->ObjetoDinamicoSujeto(indice) || propietarioRed;
 		const bool puedeSeguir = animacionHiriti.ActualizarSuspensionSeguimiento(
 			jugadorManipulaHiriti, velocidadHiriti, puedeProcesarColisiones ? delta : 0.0f);
@@ -167,7 +167,7 @@ namespace juego::hiriti
 			if (context.clockSeconds() - ultimaMuestraHiriti >= 0.5)
 			{
 				const net::PeerId propietario = redJuego.Activa()
-					? redJuego.PropietarioDinamico(idHiriti) : netjuego::kSinDueno;
+					? redJuego.PropietarioDinamico(idHiriti) : netgame::kSinDueno;
 				std::ostringstream registro;
 				registro << "[grab] hiriti id=" << idHiriti << " owner=" << propietario
 					<< " body=" << (redJuego.EsCliente() ? "kinematic-replica" : "authoritative-dynamic")
@@ -190,7 +190,7 @@ namespace juego::hiriti
 				piesJugador.x - centro.x, piesJugador.y - centro.y));
 			const bool interaccionJugador = jugadorManipulaHiriti || !puedeSeguir;
 			if (animacionHiriti.ActualizarTemporizadorReaparicion(
-				distanciaAlJugador > juego::AnimacionHiriti::DistanciaParaReaparecer,
+				distanciaAlJugador > game::HiritiAnimator::DistanciaParaReaparecer,
 				interaccionJugador, delta))
 			{
 				glm::vec3 centroAparicion(0.0f);
@@ -226,11 +226,11 @@ namespace juego::hiriti
 					direccionObjetivo.x * seno + direccionObjetivo.y * coseno,
 					0.0f);
 				distanciasObstaculos[i] = escenaFisica->DistanciaObstaculoEnRayoObjetoDinamico(
-					indice, centro, direccion, juego::AnimacionHiriti::AlcanceAnticipacionObstaculos);
+					indice, centro, direccion, game::HiritiAnimator::AlcanceAnticipacionObstaculos);
 			}
-			const glm::vec3 direccionSeguimiento = juego::AnimacionHiriti::CalcularDireccionSeguimiento(
+			const glm::vec3 direccionSeguimiento = game::HiritiAnimator::CalcularDireccionSeguimiento(
 				centro, piesJugador, distanciasObstaculos);
-			const glm::vec3 aceleracion = juego::AnimacionHiriti::CalcularAceleracionSeguimiento(
+			const glm::vec3 aceleracion = game::HiritiAnimator::CalcularAceleracionSeguimiento(
 				centro, piesJugador, velocidadHiriti, direccionSeguimiento,
 				hiritiFollowStopDistance, hiritiFollowMaxSpeed, 3.2f);
 			escenaFisica->AplicarAceleracionHorizontalObjetoDinamico(
@@ -265,19 +265,19 @@ namespace juego::hiriti
 		if (!activo) hiritiFollowPlayerEnabled = false;
 		switch (temporizadorAudioHiriti.Actualizar(activo, delta))
 		{
-		case juego::TemporizadorAudioHiriti::Evento::Ambiente:
+		case game::HiritiAudioTimer::Evento::Ambiente:
 			hiritiFollowPlayerEnabled = false;
 			PlayHiritiSound(context, tipoAmbiente(generador) == 0
 				? "assets/audio/hirity/ambient/cough.ogg"
 				: "assets/audio/hirity/ambient/pasosfuertes.ogg");
 			break;
-		case juego::TemporizadorAudioHiriti::Evento::Buscando:
+		case game::HiritiAudioTimer::Evento::Buscando:
 			hiritiFollowPlayerEnabled = true;
 			PlayHiritiSound(context, tipoBuscando(generador) == 0
 				? "assets/audio/hirity/searching/heydondeestashirity.ogg"
 				: "assets/audio/hirity/searching/venaquihirity.ogg");
 			break;
-		case juego::TemporizadorAudioHiriti::Evento::Ninguno:
+		case game::HiritiAudioTimer::Evento::Ninguno:
 			break;
 		}
 	}

@@ -7,7 +7,7 @@
 #include <cmath>
 #include <cstdint>
 
-namespace netjuego::session
+namespace netgame::session
 {
 	// El host solo acepta un rayo de agarre remoto que salga de la cabeza o la mano del peer y que
 	// apunte aproximadamente hacia donde apunta su mano.

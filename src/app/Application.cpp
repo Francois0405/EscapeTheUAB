@@ -15,15 +15,15 @@ void ParseNetworkArguments(int argc, char** argv)
 {
 	{	// Red: --host [--port N] | --connect HOST[:PUERTO] [--name N]. Sin argumentos: OFFLINE.
 		std::string errorRed;
-		if (!netjuego::ParsearArgumentos(argc, argv, configRedPendiente, errorRed))
+		if (!netgame::ParsearArgumentos(argc, argv, configRedPendiente, errorRed))
 		{
 			std::cerr << "Argumentos de red ignorados: " << errorRed << std::endl;
-			configRedPendiente = netjuego::ConfigRed{};
+			configRedPendiente = netgame::NetworkConfig{};
 		}
 		else if (configRedPendiente.rol == net::Role::Client)
 		{
 			std::string errorGuardado;
-			if (!netjuego::GuardarUltimoEndpoint({ configRedPendiente.host, configRedPendiente.puerto }, errorGuardado))
+			if (!netgame::GuardarUltimoEndpoint({ configRedPendiente.host, configRedPendiente.puerto }, errorGuardado))
 				std::cerr << "Red: no se guardo la ultima direccion: " << errorGuardado << std::endl;
 		}
 	}
@@ -170,8 +170,8 @@ void RegisterWindowCallbacks()
 	glfwSetWindowCloseCallback(window, OnWindowCloseRequest);
 	editorEscenas.FijarCargadorModelos(cargarModeloParaEditor);
 	editorEscenas.FijarCargadorTexturas(texturaParaEditor);
-	editorEscenas.FijarCargadorPuertas([](const std::filesystem::path& ruta, const SceneObjetoAnimado& datos,
-		editor::ContextoEscena contexto, std::string& error)
+	editorEscenas.FijarCargadorPuertas([](const std::filesystem::path& ruta, const SceneAnimatedObject& datos,
+		editor::EditorSceneContext contexto, std::string& error)
 	{
 		std::error_code ec;
 		const auto absoluta = std::filesystem::absolute(ruta, ec).lexically_normal();
@@ -179,10 +179,10 @@ void RegisterWindowCallbacks()
 		const std::string clave = absoluta.string();
 		const bool modeloNuevo = !contexto.escenaGlb.modelos.contains(clave);
 		if (!glb::AnadirObjeto(contexto.escenaGlb, datos.id, clave, datos.posicion, datos.giroZGrados, error)) return false;
-		glb::ObjetoAnimado* instancia = glb::BuscarObjeto(contexto.escenaGlb, datos.id);
+		glb::AnimatedObject* instancia = glb::BuscarObjeto(contexto.escenaGlb, datos.id);
 		if (instancia == nullptr) { error = "No se pudo crear la instancia GLB."; return false; }
 		instancia->escala = datos.escala;
-		if (!datos.animacion.empty() && !glb::SeleccionarAnimacion(*instancia, datos.animacion, error)) return false;
+		if (!datos.animation.empty() && !glb::SeleccionarAnimacion(*instancia, datos.animation, error)) return false;
 		if (modeloNuevo) glb::SubirModeloAGPU(contexto.escenaGlb.modelos.at(clave));
 		return true;
 	});

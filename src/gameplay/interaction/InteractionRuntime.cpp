@@ -2,7 +2,7 @@
 
 #include <algorithm>
 
-namespace juego::interaction
+namespace game::interaction
 {
 	bool PlayerHasGrab(const InteractionContext& context)
 	{
@@ -13,7 +13,7 @@ namespace juego::interaction
 			(redJuego.EsCliente() && redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal()) != 0);
 	}
 
-	ObjetivoInteraccion FindInteractionTarget(const InteractionContext& context)
+	InteractionTarget FindInteractionTarget(const InteractionContext& context)
 	{
 		auto& escenaFisica = context.physicsScene;
 		auto& mundoFisico = context.physicsWorld;
@@ -23,27 +23,27 @@ namespace juego::interaction
 
 		glm::vec3 origen, direccion;
 		context.lookRay(origen, direccion);
-		const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
+		const float alcance = std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION);
 		float distancia = std::numeric_limits<float>::infinity();
 		const fisica::IdCuerpo cuerpoMirado = mundoFisico.CuerpoAlFinalDelRayo(origen, direccion, alcance, &distancia);
 		if (cuerpoMirado == fisica::CuerpoInvalido) return {};
 
 		const int indiceDinamico = escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoMirado);
 		if (indiceDinamico >= 0)
-			return { AccionInteraccion::Recoger, indiceDinamico, nullptr, distancia, "[E] Coger" };
+			return { InteractionAction::Recoger, indiceDinamico, nullptr, distancia, "[E] Coger" };
 
 		const int indiceAnimado = escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoMirado);
 		if (indiceAnimado < 0 || indiceAnimado >= static_cast<int>(objetosAnimados.objetos.size()))
 			return {};
 
-		glb::ObjetoAnimado* puerta = glb::BuscarObjetoInteractuable(objetosAnimados, origen, direccion);
+		glb::AnimatedObject* puerta = glb::BuscarObjetoInteractuable(objetosAnimados, origen, direccion);
 		if (puerta == nullptr || puerta != &objetosAnimados.objetos[indiceAnimado])
 			return {};
 
-		const AccionInteraccion accion =
-			(puerta->estado == glb::EstadoPuerta::Cerrada || puerta->estado == glb::EstadoPuerta::Cerrando)
-			? AccionInteraccion::Abrir : AccionInteraccion::Cerrar;
-		return { accion, -1, puerta, distancia, accion == AccionInteraccion::Abrir ? "[E] Abrir" : "[E] Cerrar" };
+		const InteractionAction accion =
+			(puerta->estado == glb::DoorState::Cerrada || puerta->estado == glb::DoorState::Cerrando)
+			? InteractionAction::Abrir : InteractionAction::Cerrar;
+		return { accion, -1, puerta, distancia, accion == InteractionAction::Abrir ? "[E] Abrir" : "[E] Cerrar" };
 	}
 
 	void UpdateInteractionTarget(const InteractionContext& context, bool allowed)
@@ -64,7 +64,7 @@ namespace juego::interaction
 		auto& redJuego = context.session;
 		auto& puertasRed = context.networkDoors;
 
-		const ObjetivoInteraccion objetivo = context.currentTarget;
+		const InteractionTarget objetivo = context.currentTarget;
 		// Objeto compartido de prueba (solo con red): si se apunta a el, pedirlo/soltarlo tiene prioridad.
 		if (redJuego.Activa())
 		{
@@ -72,12 +72,12 @@ namespace juego::interaction
 			context.lookRay(origenRed, direccionRed);
 			if (redJuego.AlternarObjeto(origenRed, direccionRed, context.clockSeconds())) return;
 		}
-		if (objetivo.accion == AccionInteraccion::Recoger)
+		if (objetivo.accion == InteractionAction::Recoger)
 		{
 			if (objetivo.indiceDinamico < 0 || objetivo.indiceDinamico >= static_cast<int>(objetosEscena.size())) return;
 			glm::vec3 origen, direccion;
 			context.lookRay(origen, direccion);
-			const uint32_t id = netjuego::HashId(objetosEscena[objetivo.indiceDinamico].id);
+			const uint32_t id = netgame::HashId(objetosEscena[objetivo.indiceDinamico].id);
 			bool agarrado = false;
 			if (redJuego.Activa() && redJuego.EsCliente())
 			{
@@ -88,19 +88,19 @@ namespace juego::interaction
 			else if (redJuego.Activa() && redJuego.EsHost())
 			{
 				const net::PeerId propietario = redJuego.PropietarioDinamico(id);
-				if (propietario == netjuego::kSinDueno &&
+				if (propietario == netgame::kSinDueno &&
 					escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion))
 				{
 					agarrado = true;
 					redJuego.FijarPropietarioDinamico(id, net::kHostPeerId);
 				}
 				else context.traceGrab("reject", id, redJuego.PeerLocal(), propietario, origen, direccion,
-					propietario == netjuego::kSinDueno ? "host-local-physics-rejected-grab" : "host-local-object-owned-by-peer");
+					propietario == netgame::kSinDueno ? "host-local-physics-rejected-grab" : "host-local-object-owned-by-peer");
 			}
 			else
 			{
 				agarrado = escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
-				if (!agarrado) context.traceGrab("reject", id, net::kUnassignedPeerId, netjuego::kSinDueno,
+				if (!agarrado) context.traceGrab("reject", id, net::kUnassignedPeerId, netgame::kSinDueno,
 					origen, direccion, "offline-local-physics-rejected-grab");
 			}
 			if (agarrado && objetosEscena[objetivo.indiceDinamico].id == "hiriti")
@@ -111,11 +111,11 @@ namespace juego::interaction
 				escenaFisica->PosicionObjetoDinamico(objetivo.indiceDinamico, posicion);
 				const net::PeerId peer = redJuego.Activa() ? redJuego.PeerLocal() : net::kUnassignedPeerId;
 				context.traceGrab("local-grab", id, peer, peer, posicion,
-					fisica::EscenaFisica::DestinoDeAgarre(origen, direccion),
+					fisica::PhysicsScene::DestinoDeAgarre(origen, direccion),
 					redJuego.EsHost() ? "authoritative-host-dynamic" : "offline-dynamic");
 			}
 		}
-		else if ((objetivo.accion == AccionInteraccion::Abrir || objetivo.accion == AccionInteraccion::Cerrar) &&
+		else if ((objetivo.accion == InteractionAction::Abrir || objetivo.accion == InteractionAction::Cerrar) &&
 			objetivo.objetoAnimado != nullptr)
 		{
 			// Cliente: la puerta la decide el host (se envia la solicitud y se espera su estado).
@@ -167,7 +167,7 @@ namespace juego::interaction
 		{
 			const uint32_t id = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
 			const auto it = std::find_if(objetosEscena.begin(), objetosEscena.end(), [id](const SceneObject& objeto)
-				{ return id != 0 && netjuego::HashId(objeto.id) == id; });
+				{ return id != 0 && netgame::HashId(objeto.id) == id; });
 			if (id != 0)
 			{
 				const bool encolada = redJuego.SolicitarSoltarDinamico(id, velocidad);
@@ -182,17 +182,17 @@ namespace juego::interaction
 		{
 			const int indice = escenaFisica->ObjetoAgarrado();
 			const uint32_t id = indice >= 0 && indice < static_cast<int>(objetosEscena.size())
-				? netjuego::HashId(objetosEscena[indice].id) : 0;
+				? netgame::HashId(objetosEscena[indice].id) : 0;
 			if (escenaFisica->LanzarAgarre(velocidad))
 			{
 				if (redJuego.Activa() && redJuego.EsHost() && id != 0)
-					redJuego.FijarPropietarioDinamico(id, netjuego::kSinDueno);
+					redJuego.FijarPropietarioDinamico(id, netgame::kSinDueno);
 				if (indice >= 0 && indice < static_cast<int>(objetosEscena.size()) && objetosEscena[indice].id == "hiriti")
 					context.onHiritiThrown(carga);
 				glm::vec3 posicion(0.0f);
 				if (indice >= 0) escenaFisica->PosicionObjetoDinamico(indice, posicion);
 				context.traceGrab("released", id, redJuego.Activa() ? redJuego.PeerLocal() : net::kUnassignedPeerId,
-					netjuego::kSinDueno, posicion, velocidad, "local-launch-applied-throw-velocity");
+					netgame::kSinDueno, posicion, velocidad, "local-launch-applied-throw-velocity");
 			}
 		}
 	}
@@ -206,7 +206,7 @@ namespace juego::interaction
 		if (!context.throwChargeActive) return;
 		const uint32_t objetoPropio = redJuego.Activa() && redJuego.EsCliente()
 			? redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal()) : 0;
-		if (!context.fpsInputActive() || !netjuego::PuedeCargarLanzamiento(escenaFisica->HayAgarre(),
+		if (!context.fpsInputActive() || !netgame::PuedeCargarLanzamiento(escenaFisica->HayAgarre(),
 			redJuego.EsCliente() ? net::Role::Client : net::Role::Offline, objetoPropio))
 		{
 			CancelThrowCharge(context);

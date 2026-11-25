@@ -52,13 +52,13 @@ bool matrizMandoIzquierdoMundo(glm::mat4& matrizMundo)
 {
 	if (!gestorOpenXR.SesionEnMarcha()) return false;
 
-	vr::PoseXR poseMandoIzq;
+	vr::XrPose poseMandoIzq;
 	if (!gestorOpenXR.PoseApuntadoMando(0, poseMandoIzq)) return false;
 
 	const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
 	const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-	const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-		gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+	const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
+		gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo, mundoFisico.AlturaOjosJugador());
 
 	const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMandoIzq, anclaje);
 	matrizMundo = glm::inverse(vistaMando);
@@ -69,7 +69,7 @@ void dibujarRayoMandoVR()
 {
 	if (!gestorOpenXR.SesionEnMarcha() || eixos_programID == 0) return;
 
-	vr::PoseXR poseMando;
+	vr::XrPose poseMando;
 	if (!gestorOpenXR.PoseApuntadoMando(1, poseMando)) return; // Solo mando derecho (1)
 
 	glm::vec3 origen, direccion;
@@ -77,12 +77,12 @@ void dibujarRayoMandoVR()
 	direccion = glm::normalize(direccion);
 
 	// Longitud del láser (mismo alcance que el agarre/interacción)
-	const float alcance = std::max(fisica::EscenaFisica::AlcanceDeAgarre, glb::RADIO_INTERACCION);
+	const float alcance = std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION);
 	const glm::vec3 destino = origen + direccion * alcance;
 
 	// Color RGBA: verde si estás agarrando o apuntando a algo interactuable; cian por defecto
-	const ObjetivoInteraccion objetivo = buscarObjetivoInteraccion();
-	const bool resaltado = escenaFisica->HayAgarre() || objetivo.accion != AccionInteraccion::Ninguna;
+	const InteractionTarget objetivo = buscarObjetivoInteraccion();
+	const bool resaltado = escenaFisica->HayAgarre() || objetivo.accion != InteractionAction::Ninguna;
 	const float r = resaltado ? 0.1f : 0.0f;
 	const float g = resaltado ? 1.0f : 0.85f;
 	const float b = resaltado ? 0.2f : 1.0f;

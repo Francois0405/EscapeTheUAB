@@ -15,7 +15,7 @@
 
 #include "networking/transport/NetProtocol.h"
 #include "networking/transport/NetSession.h"
-#include "src/vr/VistaVR.h"
+#include "src/vr/VrView.h"
 
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
@@ -30,14 +30,14 @@
 #include <string>
 #include <vector>
 
-namespace netjuego
+namespace netgame
 {
 	// ------------------------------------------------------------------ configuracion
 	constexpr uint16_t kPuertoPorDefecto = 7777;
 	constexpr double kHzSubidaPose = 30.0;     // el cliente no envia mas de esto, aunque el juego vaya a 144 fps
 	constexpr double kRetardoInterpolacion = 0.10;   // s: dos snapshots a 20 Hz
 
-	struct ConfigRed
+	struct NetworkConfig
 	{
 		net::Role rol = net::Role::Offline;   // OFFLINE por defecto: ni hilo, ni sockets, ni ENet
 		std::string host = "127.0.0.1";       // solo cliente
@@ -90,9 +90,9 @@ namespace netjuego
 	}
 
 	// --host [--port N] | --connect HOST[:PORT] [--name NOMBRE]. Sin argumentos de red: Offline.
-	inline bool ParsearArgumentos(int argc, char** argv, ConfigRed& cfg, std::string& error)
+	inline bool ParsearArgumentos(int argc, char** argv, NetworkConfig& cfg, std::string& error)
 	{
-		ConfigRed r;
+		NetworkConfig r;
 		long puertoCli = -1; std::string endpoint;
 		for (int i = 1; i < argc; ++i)
 		{
@@ -127,7 +127,7 @@ namespace netjuego
 	constexpr uint32_t kRangoReservadoIni = 0x53480000u, kRangoReservadoFin = 0x5348000Fu;
 	inline bool IdReservado(uint32_t id) { return id >= kRangoReservadoIni && id <= kRangoReservadoFin; }
 
-	enum EventoJuego : uint16_t
+	enum GameplayEvent : uint16_t
 	{
 		kEvPuertaSolicitud = 0x0100,   // cliente -> host: "alterna esta puerta" (target = ID de red de la puerta)
 		kEvPuertaEstado    = 0x0101,   // host -> todos: payload u8 (1 = abierta)
@@ -142,7 +142,7 @@ namespace netjuego
 		kEvEstadoFisicoFinal = 0x0133 // host -> todos/cliente tardío: estado fiable y vigente
 	};
 
-	struct SolicitudObjetoDinamico
+	struct DynamicObjectRequest
 	{
 		uint32_t id = 0;
 		net::PeerId peer = net::kUnassignedPeerId;
@@ -231,7 +231,7 @@ namespace netjuego
 		return CoordenadaValida(origen) && CoordenadaValida(direccion) && glm::length(direccion) >= 0.5f && glm::length(direccion) <= 1.5f;
 	}
 
-	struct EventoSalida { uint16_t tipo = 0; uint32_t objetivo = 0; std::vector<uint8_t> payload; };
+	struct OutputEvent { uint16_t tipo = 0; uint32_t objetivo = 0; std::vector<uint8_t> payload; };
 
 	// El contrato de escena distingue solo cuerpos estáticos de cuerpos replicables;
 	// la réplica conserva una subclase local conocida si el host aún reporta dynamic.
@@ -243,9 +243,9 @@ namespace netjuego
 	// El protocolo solo reporta none/static/dynamic. Al aplicar el estado recibido,
 	// conserva Rebotador únicamente si el host sigue marcando dynamic y ya existe en
 	// la configuración local. En cualquier discrepancia manda el estado del host.
-	template <typename TipoCuerpo>
-	inline TipoCuerpo TipoFisicoReplicaEscena(bool colisionHostPresente, uint8_t tipoHost,
-		TipoCuerpo tipoLocal, TipoCuerpo dinamico, TipoCuerpo rebotador, TipoCuerpo estatico)
+	template <typename BodyType>
+	inline BodyType TipoFisicoReplicaEscena(bool colisionHostPresente, uint8_t tipoHost,
+		BodyType tipoLocal, BodyType dinamico, BodyType rebotador, BodyType estatico)
 	{
 		if (!colisionHostPresente || tipoHost != 2) return estatico;
 		return tipoLocal == rebotador ? rebotador : dinamico;
@@ -289,7 +289,7 @@ namespace netjuego
 
 	// Estado replicable de un objeto OBJ existente. El identificador se deriva del id
 	// persistente del JSON; no depende del orden de las listas ni de punteros de Bullet.
-	struct EstadoObjetoEscena
+	struct SceneObjectState
 	{
 		uint32_t id = 0;
 		glm::vec3 posicion{ 0.0f }, rotacion{ 0.0f }, escala{ 1.0f };
@@ -299,7 +299,7 @@ namespace netjuego
 		float masa = 0.0f;
 	};
 
-	inline bool EstadoObjetoEscenaValido(const EstadoObjetoEscena& e)
+	inline bool EstadoObjetoEscenaValido(const SceneObjectState& e)
 	{
 		if (e.id == 0 || IdReservado(e.id)) return false;
 		auto vectorValido = [](const glm::vec3& v, float maximo)
@@ -317,14 +317,14 @@ namespace netjuego
 			(e.tipoColision != 2 || e.masa > 0.0f);
 	}
 
-	inline bool IgualEstadoObjetoEscena(const EstadoObjetoEscena& a, const EstadoObjetoEscena& b)
+	inline bool IgualEstadoObjetoEscena(const SceneObjectState& a, const SceneObjectState& b)
 	{
 		return a.id == b.id && a.posicion == b.posicion && a.rotacion == b.rotacion && a.escala == b.escala &&
 			a.colisionPresente == b.colisionPresente && a.tipoColision == b.tipoColision &&
 			a.mitadTamano == b.mitadTamano && a.desplazamiento == b.desplazamiento && a.masa == b.masa;
 	}
 
-	inline std::string SceneNetworkFingerprint(const std::string& sceneName, const std::vector<EstadoObjetoEscena>& sceneState)
+	inline std::string SceneNetworkFingerprint(const std::string& sceneName, const std::vector<SceneObjectState>& sceneState)
 	{
 		// El saludo ENet solo admite 64 bytes. Un fingerprint compacto del nombre de
 		// escena y del conjunto de IDs persistentes detecta JSON incompatibles al entrar.
@@ -343,7 +343,7 @@ namespace netjuego
 		return result;
 	}
 
-	inline std::vector<uint8_t> CodificarEstadoObjetoEscena(const EstadoObjetoEscena& e)
+	inline std::vector<uint8_t> CodificarEstadoObjetoEscena(const SceneObjectState& e)
 	{
 		std::vector<uint8_t> b;
 		if (!EstadoObjetoEscenaValido(e)) return b;
@@ -356,10 +356,10 @@ namespace netjuego
 		return b;
 	}
 
-	inline bool DecodificarEstadoObjetoEscena(uint32_t id, const std::vector<uint8_t>& b, EstadoObjetoEscena& out)
+	inline bool DecodificarEstadoObjetoEscena(uint32_t id, const std::vector<uint8_t>& b, SceneObjectState& out)
 	{
 		if (b.size() != 66) return false;
-		EstadoObjetoEscena e; e.id = id;
+		SceneObjectState e; e.id = id;
 		float* valores[] = { &e.posicion.x, &e.posicion.y, &e.posicion.z, &e.rotacion.x, &e.rotacion.y, &e.rotacion.z,
 			&e.escala.x, &e.escala.y, &e.escala.z, &e.mitadTamano.x, &e.mitadTamano.y, &e.mitadTamano.z,
 			&e.desplazamiento.x, &e.desplazamiento.y, &e.desplazamiento.z, &e.masa };
@@ -462,15 +462,15 @@ namespace netjuego
 
 	// ADAPTADOR OpenXR: poses del espacio de OpenXR + el mismo Anclaje que usa el render -> mundo del motor.
 	// Rotacion de red = rotacion de mundo del dispositivo * (cambio de ejes OpenXR local -> triedro de red).
-	inline net::Transform7 TransformDesdeXR(const vr::PoseXR& pose, const vr::Anclaje& anclaje)
+	inline net::Transform7 TransformDesdeXR(const vr::XrPose& pose, const vr::Anchor& anclaje)
 	{
 		const glm::mat4 m = vr::MundoDeOjo(pose, anclaje);
 		const glm::mat3 xrAEjesRed(glm::vec3(1, 0, 0), glm::vec3(0, 0, -1), glm::vec3(0, 1, 0));   // X->X, Y(red)->-Z(xr), Z(red)->Y(xr)
 		return ATransform(glm::vec3(m[3]), glm::quat_cast(glm::mat3(m) * xrAEjesRed));
 	}
 	// Si un mando no esta disponible se usa el offset de PC respecto a la cabeza.
-	inline bool PoseDesdeVR(const vr::PoseXR& cabeza, const vr::PoseXR* izq, const vr::PoseXR* der,
-		const vr::Anclaje& anclaje, net::PoseEntry& out)
+	inline bool PoseDesdeVR(const vr::XrPose& cabeza, const vr::XrPose* izq, const vr::XrPose* der,
+		const vr::Anchor& anclaje, net::PoseEntry& out)
 	{
 		net::PoseEntry base;
 		base.head = TransformDesdeXR(cabeza, anclaje);
@@ -510,7 +510,7 @@ namespace netjuego
 
 	// Guarda las ultimas muestras (con su hora de llegada) de cada jugador remoto y las reproduce con un
 	// retraso fijo: lerp de posicion + slerp de rotacion. Sin extrapolar: tras la ultima muestra se mantiene.
-	class InterpoladorRemotos
+	class RemoteInterpolator
 	{
 	public:
 		static constexpr size_t kMaxMuestras = 8;
@@ -558,10 +558,10 @@ namespace netjuego
 	};
 
 	// ------------------------------------------------------------------ puertas (host = autoridad)
-	class IPuertasEscena
+	class ISceneDoors
 	{
 	public:
-		virtual ~IPuertasEscena() = default;
+		virtual ~ISceneDoors() = default;
 		virtual size_t Cantidad() const = 0;
 		virtual std::string Id(size_t i) const = 0;              // id estable de escena
 		virtual bool Abierta(size_t i) const = 0;                // abierta o abriendose
@@ -569,16 +569,16 @@ namespace netjuego
 		virtual glm::vec3 Punto(size_t i) const = 0;             // punto de interaccion (mundo, Z arriba)
 	};
 
-	enum class ResultadoSolicitud { Aplicada, IdDesconocido, FueraDeAlcance, SinPose, NoEsDueno, Ocupado, Invalida };
+	enum class RequestResult { Aplicada, IdDesconocido, FueraDeAlcance, SinPose, NoEsDueno, Ocupado, Invalida };
 
-	class SincroPuertas
+	class DoorSync
 	{
 	public:
 		static constexpr float kAlcanceHost = 3.0f;   // RADIO_INTERACCION (2 m) + margen de latencia
 
 		// Construye la tabla ID de red -> puerta. Devuelve false (y 'error') si hay IDs repetidos, colisiones de
 		// hash o IDs reservados; las puertas conflictivas quedan EXCLUIDAS de la red (siguen funcionando en local).
-		bool Reconstruir(const IPuertasEscena& p, std::string& error)
+		bool Reconstruir(const ISceneDoors& p, std::string& error)
 		{
 			porId_.clear(); idDe_.assign(p.Cantidad(), 0); ultimo_.assign(p.Cantidad(), -1);
 			std::map<uint32_t, int> cuenta; error.clear();
@@ -605,19 +605,19 @@ namespace netjuego
 		uint32_t IdRed(size_t idx) const { return idx < idDe_.size() ? idDe_[idx] : 0; }
 		bool EnRed(size_t idx) const { return idx < idDe_.size() && porId_.count(idDe_[idx]) > 0; }
 
-		static EventoSalida Solicitud(uint32_t id) { EventoSalida e; e.tipo = kEvPuertaSolicitud; e.objetivo = id; return e; }
+		static OutputEvent Solicitud(uint32_t id) { OutputEvent e; e.tipo = kEvPuertaSolicitud; e.objetivo = id; return e; }
 
 		// HOST: valida y aplica. 'cabeza' = ultima pose conocida del solicitante (nullptr si no hay).
-		ResultadoSolicitud HostSolicitud(IPuertasEscena& p, uint32_t id, const glm::vec3* cabeza)
+		RequestResult HostSolicitud(ISceneDoors& p, uint32_t id, const glm::vec3* cabeza)
 		{
-			size_t i; if (!IndiceDe(id, i) || i >= p.Cantidad()) return ResultadoSolicitud::IdDesconocido;
-			if (!cabeza) return ResultadoSolicitud::SinPose;
-			if (glm::distance(*cabeza, p.Punto(i)) > kAlcanceHost) return ResultadoSolicitud::FueraDeAlcance;
+			size_t i; if (!IndiceDe(id, i) || i >= p.Cantidad()) return RequestResult::IdDesconocido;
+			if (!cabeza) return RequestResult::SinPose;
+			if (glm::distance(*cabeza, p.Punto(i)) > kAlcanceHost) return RequestResult::FueraDeAlcance;
 			p.FijarAbierta(i, !p.Abierta(i));
-			return ResultadoSolicitud::Aplicada;
+			return RequestResult::Aplicada;
 		}
 		// HOST: emite el estado de las puertas que cambiaron (por E del host, por clientes o por depuracion).
-		void HostDetectarCambios(const IPuertasEscena& p, std::vector<EventoSalida>& out)
+		void HostDetectarCambios(const ISceneDoors& p, std::vector<OutputEvent>& out)
 		{
 			for (const auto& kv : porId_)
 			{
@@ -625,22 +625,22 @@ namespace netjuego
 				const int abierta = p.Abierta(i) ? 1 : 0;
 				if (abierta == ultimo_[i]) continue;
 				ultimo_[i] = abierta;
-				EventoSalida e; e.tipo = kEvPuertaEstado; e.objetivo = kv.first; e.payload = { uint8_t(abierta) };
+				OutputEvent e; e.tipo = kEvPuertaEstado; e.objetivo = kv.first; e.payload = { uint8_t(abierta) };
 				out.push_back(std::move(e));
 			}
 		}
 		// CLIENTE: aplica el estado que dicta el host (idempotente).
-		bool AplicarEstado(IPuertasEscena& p, uint32_t id, const std::vector<uint8_t>& payload)
+		bool AplicarEstado(ISceneDoors& p, uint32_t id, const std::vector<uint8_t>& payload)
 		{
 			size_t i; if (payload.size() != 1 || payload[0] > 1 || !IndiceDe(id, i) || i >= p.Cantidad()) return false;
 			p.FijarAbierta(i, payload[0] == 1);
 			return true;
 		}
-		void EstadoRecuperacion(const IPuertasEscena& p, std::vector<net::StateEntry>& out) const
+		void EstadoRecuperacion(const ISceneDoors& p, std::vector<net::StateEntry>& out) const
 		{
 			for (const auto& kv : porId_) if (kv.second < p.Cantidad()) out.push_back({ kv.first, p.Abierta(kv.second) ? 1 : 0 });
 		}
-		void AplicarRecuperacion(IPuertasEscena& p, const std::vector<net::StateEntry>& v)
+		void AplicarRecuperacion(ISceneDoors& p, const std::vector<net::StateEntry>& v)
 		{
 			for (const auto& e : v) { size_t i; if (IndiceDe(e.objectId, i) && i < p.Cantidad() && (e.value == 0 || e.value == 1)) p.FijarAbierta(i, e.value == 1); }
 		}
@@ -651,7 +651,7 @@ namespace netjuego
 	};
 
 	// ------------------------------------------------------------------ propiedad temporal de objetos
-	struct ObjetoCompartido
+	struct SharedObject
 	{
 		uint32_t id = 0; glm::vec3 pos{ 0 };
 		net::PeerId dueno = kSinDueno; double expira = 0.0;
@@ -659,7 +659,7 @@ namespace netjuego
 
 	// Solo la usa el HOST. Un objeto tiene como mucho un dueno; la propiedad es una CONCESION que caduca si
 	// el dueno deja de moverlo, y se libera al soltar, al caducar o al desconectarse.
-	class ArbitroPropiedad
+	class OwnershipArbiter
 	{
 	public:
 		static constexpr float kAlcance = 3.0f;          // cabeza <-> objeto para pedirlo
@@ -667,37 +667,37 @@ namespace netjuego
 		static constexpr float kSaltoMaximo = 5.0f;      // m entre dos movimientos consecutivos
 		static constexpr double kConcesion = 10.0;       // s sin moverlo = se libera
 
-		void Definir(uint32_t id, const glm::vec3& pos) { ObjetoCompartido o; o.id = id; o.pos = pos; obj_[id] = o; cambios_.push_back(id); }
-		const ObjetoCompartido* Buscar(uint32_t id) const { auto it = obj_.find(id); return it == obj_.end() ? nullptr : &it->second; }
+		void Definir(uint32_t id, const glm::vec3& pos) { SharedObject o; o.id = id; o.pos = pos; obj_[id] = o; cambios_.push_back(id); }
+		const SharedObject* Buscar(uint32_t id) const { auto it = obj_.find(id); return it == obj_.end() ? nullptr : &it->second; }
 
-		ResultadoSolicitud Solicitar(uint32_t id, net::PeerId quien, const glm::vec3* cabeza, double ahora)
+		RequestResult Solicitar(uint32_t id, net::PeerId quien, const glm::vec3* cabeza, double ahora)
 		{
-			auto it = obj_.find(id); if (it == obj_.end()) return ResultadoSolicitud::IdDesconocido;
-			if (!cabeza || !CoordenadaValida(*cabeza)) return ResultadoSolicitud::SinPose;
-			ObjetoCompartido& o = it->second;
-			if (o.dueno != kSinDueno && o.dueno != quien) return ResultadoSolicitud::Ocupado;
-			if (glm::distance(*cabeza, o.pos) > kAlcance) return ResultadoSolicitud::FueraDeAlcance;
+			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::IdDesconocido;
+			if (!cabeza || !CoordenadaValida(*cabeza)) return RequestResult::SinPose;
+			SharedObject& o = it->second;
+			if (o.dueno != kSinDueno && o.dueno != quien) return RequestResult::Ocupado;
+			if (glm::distance(*cabeza, o.pos) > kAlcance) return RequestResult::FueraDeAlcance;
 			if (o.dueno != quien) { o.dueno = quien; cambios_.push_back(id); }
 			o.expira = ahora + kConcesion;
-			return ResultadoSolicitud::Aplicada;
+			return RequestResult::Aplicada;
 		}
-		ResultadoSolicitud Liberar(uint32_t id, net::PeerId quien)
+		RequestResult Liberar(uint32_t id, net::PeerId quien)
 		{
-			auto it = obj_.find(id); if (it == obj_.end()) return ResultadoSolicitud::IdDesconocido;
-			if (it->second.dueno != quien) return ResultadoSolicitud::NoEsDueno;
+			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::IdDesconocido;
+			if (it->second.dueno != quien) return RequestResult::NoEsDueno;
 			it->second.dueno = kSinDueno; cambios_.push_back(id);
-			return ResultadoSolicitud::Aplicada;
+			return RequestResult::Aplicada;
 		}
-		ResultadoSolicitud Mover(uint32_t id, net::PeerId quien, const glm::vec3& nueva, const glm::vec3* cabeza, double ahora)
+		RequestResult Mover(uint32_t id, net::PeerId quien, const glm::vec3& nueva, const glm::vec3* cabeza, double ahora)
 		{
-			auto it = obj_.find(id); if (it == obj_.end()) return ResultadoSolicitud::IdDesconocido;
-			ObjetoCompartido& o = it->second;
-			if (o.dueno != quien) return ResultadoSolicitud::NoEsDueno;
-			if (!CoordenadaValida(nueva)) return ResultadoSolicitud::Invalida;
-			if (!cabeza || !CoordenadaValida(*cabeza)) return ResultadoSolicitud::SinPose;
-			if (glm::distance(*cabeza, nueva) > kAlcanceAcarreo || glm::distance(o.pos, nueva) > kSaltoMaximo) return ResultadoSolicitud::FueraDeAlcance;
+			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::IdDesconocido;
+			SharedObject& o = it->second;
+			if (o.dueno != quien) return RequestResult::NoEsDueno;
+			if (!CoordenadaValida(nueva)) return RequestResult::Invalida;
+			if (!cabeza || !CoordenadaValida(*cabeza)) return RequestResult::SinPose;
+			if (glm::distance(*cabeza, nueva) > kAlcanceAcarreo || glm::distance(o.pos, nueva) > kSaltoMaximo) return RequestResult::FueraDeAlcance;
 			o.pos = nueva; o.expira = ahora + kConcesion; cambios_.push_back(id);
-			return ResultadoSolicitud::Aplicada;
+			return RequestResult::Aplicada;
 		}
 		// Desconexion o expulsion: libera todo lo que tuviera ese jugador.
 		void PeerDesconectado(net::PeerId p)
@@ -718,7 +718,7 @@ namespace netjuego
 		{
 			for (const auto& kv : obj_)
 			{
-				const ObjetoCompartido& o = kv.second;
+				const SharedObject& o = kv.second;
 				out.push_back({ o.id, o.dueno == kSinDueno ? 0 : int32_t(o.dueno) + 1 });
 				out.push_back({ o.id + 1, int32_t(std::lround(o.pos.x * 1000.0f)) });
 				out.push_back({ o.id + 2, int32_t(std::lround(o.pos.y * 1000.0f)) });
@@ -726,17 +726,17 @@ namespace netjuego
 			}
 		}
 	private:
-		std::map<uint32_t, ObjetoCompartido> obj_;
+		std::map<uint32_t, SharedObject> obj_;
 		std::vector<uint32_t> cambios_;
 	};
 
-	inline EventoSalida EventoEstadoObjeto(const ObjetoCompartido& o)
+	inline OutputEvent EventoEstadoObjeto(const SharedObject& o)
 	{
-		EventoSalida e; e.tipo = kEvPropEstado; e.objetivo = o.id; e.payload = CodificarEstadoObjeto(o.dueno, o.pos); return e;
+		OutputEvent e; e.tipo = kEvPropEstado; e.objetivo = o.id; e.payload = CodificarEstadoObjeto(o.dueno, o.pos); return e;
 	}
 
 	// Vista del objeto en el CLIENTE (y en el host para dibujar): refleja lo que dicta el host.
-	struct VistaObjetoCompartido
+	struct SharedObjectView
 	{
 		bool conocido = false; net::PeerId dueno = kSinDueno; glm::vec3 pos{ 0 };
 
@@ -760,7 +760,7 @@ namespace netjuego
 			if (!CoordenadaValida(p)) return false;
 			conocido = true; dueno = d == 0 ? kSinDueno : net::PeerId(d - 1); pos = p; return true;
 		}
-		void Reiniciar() { *this = VistaObjetoCompartido{}; }
+		void Reiniciar() { *this = SharedObjectView{}; }
 	};
 
 	// Rayo (origen, direccion) contra la esfera del objeto: para elegir el objeto compartido con ratón/mando.

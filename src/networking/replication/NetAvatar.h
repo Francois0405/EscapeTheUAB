@@ -5,7 +5,7 @@
 
 #include "src/networking/replication/NetJuegoLogica.h"
 
-namespace netjuego
+namespace netgame
 {
 	// 'programaEjes' = shader eixos ya compilado; matrices de la camara actual (escritorio o un ojo VR).
 	void DibujarAvataresRemotos(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,

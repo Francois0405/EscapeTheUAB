@@ -1,16 +1,16 @@
 #include "LegacyVgiSceneRenderer.h"
 
-#include "DibujoGLB.h"
+#include "GlbDrawing.h"
 #include "FrustumCulling.h"
 #include "RenderMetrics.h"
 #include "UniformCache.h"
-#include "src/animation/AnimacionPuerta.h"
-#include "src/editor/EditorEscenas.h"
+#include "src/animation/DoorAnimation.h"
+#include "src/editor/SceneEditor.h"
 #include "src/networking/replication/NetAvatar.h"
-#include "src/networking/replication/NetJuego.h"
-#include "src/physics/DibujoColisionadores.h"
-#include "src/physics/EscenaFisica.h"
-#include "src/physics/MundoFisico.h"
+#include "src/networking/replication/NetGame.h"
+#include "src/physics/ColliderDrawing.h"
+#include "src/physics/PhysicsScene.h"
+#include "src/physics/PhysicsWorld.h"
 #include "src/scene/SceneLoader.h"
 #include "src/scene/escena.h"
 
@@ -94,7 +94,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			std::vector<glm::mat4> matrices;
 			if (obj.pared.presente && !obj.pared.aperturas.empty())
 			{
-				std::vector<SceneSeccionPared> secciones;
+				std::vector<SceneWallSection> secciones;
 				std::string errorPared;
 				if (GenerarSeccionesPared(glm::abs(obj.escala), obj.pared.aperturas, secciones, errorPared))
 				{
@@ -178,7 +178,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			false, ctx.texturesID, ctx.textura_map, ctx.tFlag_invert_Y,
 			ctx.npts_T, ctx.PC_t, ctx.pas_CS, ctx.sw_Punts_Control, ctx.dibuixa_TriedreFrenet,
 			modelo.second.get(),
-			animacion::MatrizPuertaConBisagra(ctx.mitadTamanoPuertaDemo, ctx.bisagraPuertaDemo, ctx.anguloPuertaDemo)
+			animation::MatrizPuertaConBisagra(ctx.mitadTamanoPuertaDemo, ctx.bisagraPuertaDemo, ctx.anguloPuertaDemo)
 		);
 		break;
 	}
@@ -189,7 +189,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 		for (const auto& modelo : ctx.modelosHabitacion)
 		{
 			if (!modelo.first.ends_with("test.obj")) continue;
-			const fisica::PoseCuerpo pose = ctx.demoFisica.PoseCubo();
+			const fisica::BodyPose pose = ctx.demoFisica.PoseCubo();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
 			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
 				* glm::mat4_cast(pose.rotacion)
@@ -232,7 +232,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
 	if (ctx.editorEscenas.Activo() && ctx.editorEscenas.MostrarColisionadores())
 	{
-		std::vector<fisica::CajaColision> cajasEditor;
+		std::vector<fisica::CollisionBox> cajasEditor;
 		for (std::size_t indiceObjeto = 0; indiceObjeto < ctx.objetosEscena.size(); ++indiceObjeto)
 		{
 			const SceneObject& objeto = ctx.objetosEscena[indiceObjeto];
@@ -241,7 +241,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
-			fisica::CajaColision caja;
+			fisica::CollisionBox caja;
 			caja.tipo = objeto.fisica.tipo;
 			caja.pose.posicion = objeto.posicion + glm::vec3(giro * glm::vec4(objeto.escala * objeto.fisica.desplazamiento, 0.0f));
 			caja.pose.rotacion = glm::quat_cast(glm::mat3(giro));
@@ -256,10 +256,10 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	// Multijugador: jugadores remotos (el local NUNCA se dibuja) y objeto compartido de prueba.
 	if (ctx.redJuego.Activa() && !ctx.editorEscenas.Activo())
 	{
-		netjuego::DibujarAvataresRemotos(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix,
+		netgame::DibujarAvataresRemotos(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix,
 			ctx.redJuego.RemotosParaDibujar(glfwGetTime()),
 			ctx.redJuego.Objeto().conocido, ctx.redJuego.PosicionVisualObjeto(), ctx.redJuego.SoyDuenoDelObjeto(),
-			ctx.redJuego.Objeto().dueno != netjuego::kSinDueno);
+			ctx.redJuego.Objeto().dueno != netgame::kSinDueno);
 	}
 
 	// Dibujar el rayo láser del mando derecho en VR.

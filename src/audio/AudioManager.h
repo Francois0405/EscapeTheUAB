@@ -2,7 +2,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "src/gameplay/player/MovimientoFPS.h"
+#include "src/gameplay/player/FpsMovement.h"
 
 struct ma_engine;
 struct ma_sound;
@@ -25,7 +25,7 @@ public:
     
     void setMasterVolume(float volume);
 
-    void playFootstep(fps::EstadoPaso estado);
+    void playFootstep(fps::StepState estado);
 
 private:
     ma_engine* m_engine = nullptr;

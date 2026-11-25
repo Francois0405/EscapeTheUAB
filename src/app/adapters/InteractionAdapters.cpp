@@ -6,9 +6,9 @@
 #include "src/diagnostics/GrabTrace.h"
 
 // Contexto prestado a src/gameplay/interaction: el estado sigue siendo de main.cpp.
-const juego::interaction::InteractionContext& contextoInteraccion()
+const game::interaction::InteractionContext& contextoInteraccion()
 {
-	static const juego::interaction::InteractionContext contexto{
+	static const game::interaction::InteractionContext contexto{
 		objetosEscena, escenaFisica, mundoFisico, redJuego, objetosAnimados, puertasRed,
 		objetivoInteraccionActual, cargaLanzamientoActiva, tiempoCargaLanzamiento, mostrarPanelesDebug,
 		[] { return entradaFPSActiva(); },
@@ -32,46 +32,46 @@ const juego::interaction::InteractionContext& contextoInteraccion()
 
 bool jugadorTieneAgarre()
 {
-	return juego::interaction::PlayerHasGrab(contextoInteraccion());
+	return game::interaction::PlayerHasGrab(contextoInteraccion());
 }
 
-ObjetivoInteraccion buscarObjetivoInteraccion()
+InteractionTarget buscarObjetivoInteraccion()
 {
-	return juego::interaction::FindInteractionTarget(contextoInteraccion());
+	return game::interaction::FindInteractionTarget(contextoInteraccion());
 }
 
 void actualizarObjetivoInteraccion(bool permitido)
 {
-	juego::interaction::UpdateInteractionTarget(contextoInteraccion(), permitido);
+	game::interaction::UpdateInteractionTarget(contextoInteraccion(), permitido);
 }
 
 void iniciarCargaLanzamiento()
 {
-	juego::interaction::StartThrowCharge(contextoInteraccion());
+	game::interaction::StartThrowCharge(contextoInteraccion());
 }
 
 void interactuar()
 {
-	juego::interaction::Interact(contextoInteraccion());
+	game::interaction::Interact(contextoInteraccion());
 }
 
 void actualizarAgarreDelJugador(bool puedeJugar)
 {
-	juego::interaction::UpdatePlayerGrab(contextoInteraccion(), puedeJugar);
+	game::interaction::UpdatePlayerGrab(contextoInteraccion(), puedeJugar);
 }
 
 void cancelarCargaLanzamiento()
 {
-	juego::interaction::CancelThrowCharge(contextoInteraccion());
+	game::interaction::CancelThrowCharge(contextoInteraccion());
 }
 
 void lanzarObjetoCargado()
 {
-	juego::interaction::ThrowChargedObject(contextoInteraccion());
+	game::interaction::ThrowChargedObject(contextoInteraccion());
 }
 
 void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
 {
-	juego::interaction::UpdateThrowCharge(contextoInteraccion(), delta, [window]
+	game::interaction::UpdateThrowCharge(contextoInteraccion(), delta, [window]
 		{ return glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS || gestorOpenXR.GatilloPulsado(); });
 }

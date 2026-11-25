@@ -53,7 +53,7 @@ namespace gameplay::player
 
 	void fixCameraAtSpawn(PlayerContext& context, const SceneSpawn& spawn)
 	{
-		const float eyeHeight = context.physics.HayJugador() ? context.physics.AlturaOjosJugador() : fisica::MedidasJugador::AlturaOjos;
+		const float eyeHeight = context.physics.HayJugador() ? context.physics.AlturaOjosJugador() : fisica::PlayerDimensions::AlturaOjos;
 		const glm::vec3 eyes = spawn.pies + glm::vec3(0.0f, 0.0f, eyeHeight);
 		const glm::vec3 direction = glm::normalize(spawn.direccion);
 		context.cameraOrigin.x = eyes.x; context.cameraOrigin.y = eyes.y; context.cameraOrigin.z = eyes.z;
@@ -174,7 +174,7 @@ namespace gameplay::player
 	glm::dvec3 visualCameraDisplacement(const PlayerContext& context)
 	{
 		if (!isFpsMode(context) || !context.physics.HayJugador()) return glm::dvec3(0.0);
-		const fps::DesplazamientoVisual displacement = context.cameraBob.Desplazamiento();
+		const fps::VisualOffset displacement = context.cameraBob.Desplazamiento();
 		const double dx = context.lookAt[0] - context.cameraOrigin.x, dy = context.lookAt[1] - context.cameraOrigin.y;
 		const double length = std::sqrt(dx * dx + dy * dy);
 		glm::dvec3 result(0.0, 0.0, displacement.vertical);

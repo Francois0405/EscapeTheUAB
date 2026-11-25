@@ -7,13 +7,13 @@
 #include <string>
 #include <vector>
 
-#include "src/animation/AnimacionPuerta.h"
-#include "src/animation/ObjetosAnimadosGLB.h"
-#include "src/gameplay/player/MovimientoFPS.h"
+#include "src/animation/DoorAnimation.h"
+#include "src/animation/GlbAnimatedObjects.h"
+#include "src/gameplay/player/FpsMovement.h"
 #include "src/networking/replication/Game/SceneNetworkState.h"
-#include "src/networking/replication/NetJuego.h"
-#include "src/physics/EscenaFisica.h"
-#include "src/physics/MundoFisico.h"
+#include "src/networking/replication/NetGame.h"
+#include "src/physics/PhysicsScene.h"
+#include "src/physics/PhysicsWorld.h"
 #include "src/rendering/RenderMetrics.h"
 #include "src/scene/SceneLoader.h"
 #include "src/vr/OpenXRManager.h"
@@ -65,8 +65,8 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 
 	ImGui::Begin("Movimiento FPS");
 	{
-		fps::ParametrosMovimiento& pm = movimientoJugador.parametros;
-		fps::ParametrosBalanceo& pb = balanceoCamara.parametros;
+		fps::MovementParameters& pm = movimientoJugador.parametros;
+		fps::BobParameters& pb = balanceoCamara.parametros;
 		ImGui::Text("Estamina: %.1f / %.1f%s", movimientoJugador.Estamina(), pm.estaminaMaxima,
 			movimientoJugador.Agotada() ? "  (AGOTADA)" : (movimientoJugador.Sprintando() ? "  (corriendo)" : ""));
 		ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", movimientoJugador.Velocidad(),
@@ -135,7 +135,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	ImGui::Checkbox("Vista estereoscopica de prueba (F2) - NO es VR real", &modoEstereoPrueba);
 	ImGui::Separator();
 	ImGui::Text("OpenXR (VR real, F3): %s", vr::NombreDelEstado(gestorOpenXR.Estado()));
-	if (!vr::GestorOpenXR::EstaCompilado())
+	if (!vr::OpenXrManager::EstaCompilado())
 		ImGui::TextUnformatted("No incluido en esta compilacion (macOS u OpenXR no instalado).");
 	else if (ImGui::Button(gestorOpenXR.TieneRecursos() ? "Desactivar OpenXR" : "Activar OpenXR"))
 		context.toggleOpenXR();
@@ -144,7 +144,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	{
 		ImGui::Text("Sesion: %s%s | espacio: %s | ojos: %d", gestorOpenXR.NombreEstadoSesion(),
 			gestorOpenXR.SesionEnMarcha() ? " (en marcha)" : "",
-			gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo ? "STAGE" : (gestorOpenXR.Espacio() == vr::EspacioReferencia::Local ? "LOCAL" : "-"),
+			gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo ? "STAGE" : (gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
 			gestorOpenXR.NumeroDeOjos());
 	}
 	if (!gestorOpenXR.Diagnostico().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
@@ -164,7 +164,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	{
 		const uint32_t idPropio = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
 		const auto propio = std::find_if(objetosEscena.begin(), objetosEscena.end(), [idPropio](const SceneObject& objeto)
-			{ return idPropio != 0 && netjuego::HashId(objeto.id) == idPropio; });
+			{ return idPropio != 0 && netgame::HashId(objeto.id) == idPropio; });
 		if (propio != objetosEscena.end())
 		{
 			ImGui::Text("en tu mano (host autoritativo): %s", propio->id.c_str());
@@ -174,10 +174,10 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	if (!estadoAgarreMostrado && redJuego.EsHost())
 	{
 		for (const auto& par : redJuego.PropietariosDinamicos())
-			if (par.second != netjuego::kSinDueno && par.second != net::kHostPeerId)
+			if (par.second != netgame::kSinDueno && par.second != net::kHostPeerId)
 			{
 				std::size_t indice = 0;
-				if (netjuego::scene_network_state::FindUniqueDynamicSceneObjectIndex(par.first, objetosEscena, indice))
+				if (netgame::scene_network_state::FindUniqueDynamicSceneObjectIndex(par.first, objetosEscena, indice))
 				{
 					ImGui::Text("sujeto por peer %u: %s", static_cast<unsigned>(par.second), objetosEscena[indice].id.c_str());
 					estadoAgarreMostrado = true;
@@ -204,7 +204,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		if (ImGui::Button("Reiniciar demo")) demoFisica.Iniciar();
 		ImGui::SameLine();
 		if (ImGui::Button("Quitar demo")) demoFisica.Detener();
-		const fisica::PoseCuerpo pose = demoFisica.PoseCubo();
+		const fisica::BodyPose pose = demoFisica.PoseCubo();
 		const glm::vec3 velocidad = demoFisica.VelocidadCubo();
 		const glm::vec3 gravedad = mundoFisico.Gravedad();
 		ImGui::Text("gravedad: (%.2f, %.2f, %.2f) m/s2", gravedad.x, gravedad.y, gravedad.z);
@@ -218,7 +218,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	ImGui::Text("Objetos animados GLB (Blender)");
 	if (objetosAnimados.objetos.empty())
 		ImGui::TextUnformatted("Ninguno cargado (ver consola)");
-	for (glb::ObjetoAnimado& objeto : objetosAnimados.objetos)
+	for (glb::AnimatedObject& objeto : objetosAnimados.objetos)
 	{
 		ImGui::PushID(objeto.id.c_str());   // cada fila necesita un ID distinto para sus botones
 		if (ImGui::Button("Abrir")) glb::IniciarAnimacion(objeto);     // depuración: reinicia la apertura

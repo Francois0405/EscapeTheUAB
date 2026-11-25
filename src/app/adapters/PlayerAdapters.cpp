@@ -53,13 +53,13 @@ void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
 {
 	if (gestorOpenXR.SesionEnMarcha())
 	{
-		vr::PoseXR poseMando;
+		vr::XrPose poseMando;
 		if (gestorOpenXR.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
 		{
 			const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
 			const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-			const vr::Anclaje anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-				gestorOpenXR.Espacio() == vr::EspacioReferencia::Suelo, mundoFisico.AlturaOjosJugador());
+			const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
+				gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo, mundoFisico.AlturaOjosJugador());
 
 			const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMando, anclaje);
 			const glm::mat4 mundoMando = glm::inverse(vistaMando);

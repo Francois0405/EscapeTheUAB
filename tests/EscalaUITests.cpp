@@ -1,4 +1,4 @@
-#include "src/ui/EscalaUI.h"
+#include "src/ui/UiScale.h"
 
 #include <cmath>
 #include <iostream>

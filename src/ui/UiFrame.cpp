@@ -116,7 +116,7 @@ void draw_Menu_ImGui()
 		{ fpsMode, [] { return entradaFPSActiva(); }, [] { return editorEscenas.Activo(); },
 			barraEstamina, movimientoJugador, mostrarPorcentajeEstamina,
 			cargaLanzamientoActiva, tiempoCargaLanzamiento, TiempoMaximoCargaLanzamiento, escenaFisica,
-			[]() -> const char* { return objetivoInteraccionActual.accion == AccionInteraccion::Ninguna
+			[]() -> const char* { return objetivoInteraccionActual.accion == InteractionAction::Ninguna
 				? nullptr : objetivoInteraccionActual.texto; },
 			texturaManoInteraccion },
 		// Menus
@@ -124,7 +124,7 @@ void draw_Menu_ImGui()
 			[] { fpsTienePosicionAnterior = false; mouseDeltaX = mouseDeltaY = 0.0; } },
 		// Multijugador
 		{ redJuego, configRedPendiente, mostrarPanelRed,
-			[](const netjuego::ConfigRed& cfg) { iniciarRed(cfg); }, [] { detenerRed(); } },
+			[](const netgame::NetworkConfig& cfg) { iniciarRed(cfg); }, [] { detenerRed(); } },
 		// Objetos dinamicos (F4)
 		{ redJuego, escenaFisica, objetosEscena, hiritiFollowPlayerEnabled, animacionHiriti },
 		// Paneles de depuracion (F1)
@@ -137,7 +137,7 @@ void draw_Menu_ImGui()
 		(c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5),
 		mostrarPanelesDebug, mostrarContadorFPS,
 		dibujarVentanasLegacyImGui,
-		[](int ancho, int alto) { editorEscenas.DibujarInterfaz(editor::ContextoEscena{ objetosEscena, datosAnimadosEscena, objetosAnimados }, ancho, alto); }
+		[](int ancho, int alto) { editorEscenas.DibujarInterfaz(editor::EditorSceneContext{ objetosEscena, datosAnimadosEscena, objetosAnimados }, ancho, alto); }
 	};
 	runtimeui::DrawRuntimeUiFrame(contexto);
 }

@@ -8,11 +8,11 @@ std::vector<SceneObject> objetosEscena;
 
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
 
-editor::EditorEscenas editorEscenas;
+editor::SceneEditor editorEscenas;
 
-editor::SerializadorEscenas serializadorEscena;
+editor::SceneSerializer serializadorEscena;
 
-std::vector<SceneObjetoAnimado> datosAnimadosEscena;
+std::vector<SceneAnimatedObject> datosAnimadosEscena;
 
 COBJModel* phoneOBJ = nullptr;
 
@@ -23,7 +23,7 @@ bool modoEstereoPrueba = false;
 
 // OpenXR (VR real): SOLO se inicia cuando el usuario lo pide (F3 o el botón del panel de física).
 // No tiene nada que ver con F2. Si no hay runtime o visor, el juego sigue en pantalla.
-vr::GestorOpenXR gestorOpenXR;
+vr::OpenXrManager gestorOpenXR;
 
 GLFWwindow* ventanaPrincipal = nullptr;   // la necesita OpenXR para enlazar su sesión con el contexto OpenGL
 
@@ -97,16 +97,16 @@ AudioManager audioManager;
 
 float volumenGeneralPorcentaje = 100.0f;
 
-juego::AnimacionHiriti animacionHiriti;
+game::HiritiAnimator animacionHiriti;
 
-juego::TemporizadorAudioHiriti temporizadorAudioHiriti;
+game::HiritiAudioTimer temporizadorAudioHiriti;
 
 // --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
-fps::MovimientoJugador movimientoJugador;
+fps::PlayerMovement movimientoJugador;
 
-fps::BalanceoCamara balanceoCamara;
+fps::CameraBob balanceoCamara;
 
-fps::BarraEstamina barraEstamina;
+fps::StaminaBar barraEstamina;
 
 bool mostrarPorcentajeEstamina = true;
 
@@ -117,9 +117,9 @@ bool hayPiesFotogramaAnterior = false;
 // --- DEMO FASE 1: puerta que se abre girando sobre su bisagra ---
 // Keyframes: en 0 s la puerta está cerrada (0 grados), en 2 s abierta (90 grados).
 // Para cambiar la duración o el ángulo basta con editar esta lista.
-std::vector<animacion::KeyframeAngulo> keyframesPuertaDemo = { {0.0f, 0.0f}, {2.0f, 90.0f} };
+std::vector<animation::AngleKeyframe> keyframesPuertaDemo = { {0.0f, 0.0f}, {2.0f, 90.0f} };
 
-animacion::Reproductor reproductorPuertaDemo;
+animation::Reproductor reproductorPuertaDemo;
 
 float anguloPuertaDemo = 0.0f;                              // ángulo actual (se recalcula cada fotograma)
 
@@ -131,16 +131,16 @@ extern const glm::vec3 bisagraPuertaDemo(6.0f, -0.5f, -1.7f);      // punto del 
 // No hay keyframes ni puertas escritas aquí: la lista "animated" del JSON de la habitación
 // declara cada instancia (puerta, cajón...) y cargarYAplicarEscena() las crea.
 // Varias instancias pueden usar el mismo .glb y se abren de forma independiente.
-glb::EscenaAnimada objetosAnimados;
+glb::AnimatedScene objetosAnimados;
 
 // --- FÍSICA (Bullet, Fase 1): cubo que cae sobre un suelo estático. Ver MundoFisico.h ---
 // UN solo mundo físico para toda la partida. La habitación activa y la demo ponen cuerpos
 // en él y cada una quita solo los suyos. No depende de GLFW ni de la cámara (válido para VR).
-fisica::MundoFisico mundoFisico;
+fisica::PhysicsWorld mundoFisico;
 
-std::unique_ptr<fisica::EscenaFisica> escenaFisica = std::make_unique<fisica::EscenaFisica>(mundoFisico);
+std::unique_ptr<fisica::PhysicsScene> escenaFisica = std::make_unique<fisica::PhysicsScene>(mundoFisico);
 
-fisica::DemoCuboCaida demoFisica(mundoFisico);
+fisica::FallingCubeDemo demoFisica(mundoFisico);
 
 bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
 
@@ -167,22 +167,22 @@ bool linternaMovilActiva = true;
 bool lamparasLaboratorioActivas = true;
 
 // --- Multijugador (OFFLINE por defecto: no hay hilo, ni socket, ni ENet hasta pulsar Iniciar o usar --host/--connect) ---
-netjuego::RedJuego redJuego;
+netgame::NetworkGame redJuego;
 
 // El panel puede cerrarse y recuperarse con F4, sin depender de los paneles F1.
 bool mostrarPanelRed = true;
 
-std::unique_ptr<netjuego::PuertasGLB> puertasRed;       // adaptador de las puertas GLB (IDs de escena)
+std::unique_ptr<netgame::GlbDoors> puertasRed;       // adaptador de las puertas GLB (IDs de escena)
 
-netjuego::ConfigRed configRedPendiente;                 // lo que editan el menu y la linea de comandos
+netgame::NetworkConfig configRedPendiente;                 // lo que editan el menu y la linea de comandos
 
-netjuego::session::SessionRuntimeState estadoSesionRed;  // estado propio de src/networking/session
+netgame::session::SessionRuntimeState estadoSesionRed;  // estado propio de src/networking/session
 
-vr::PoseXR ultimaCabezaVR;                              // pose real del visor, la rellena el render VR
+vr::XrPose ultimaCabezaVR;                              // pose real del visor, la rellena el render VR
 
 bool hayCabezaVR = false;
 
-ObjetivoInteraccion objetivoInteraccionActual;
+InteractionTarget objetivoInteraccionActual;
 
 std::string nombreEscenaActiva;
 

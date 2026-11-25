@@ -15,8 +15,8 @@ namespace
 
 	struct Fixture
 	{
-		fisica::MundoFisico physics;
-		std::unique_ptr<fisica::EscenaFisica> scenePhysics;
+		fisica::PhysicsWorld physics;
+		std::unique_ptr<fisica::PhysicsScene> scenePhysics;
 		bool validGeometry = false;
 		SceneSpawn spawn;
 		std::string sceneName = "test";
@@ -29,8 +29,8 @@ namespace
 		int projectionMenu = 0, cameraMenu = 0, objectMenu = 0, lightingMenu = 0, shaderMenu = 0;
 		bool worldLighting = false, skybox = false;
 		int callbacks = 0;
-		fps::MovimientoJugador movement;
-		fps::BalanceoCamara bob;
+		fps::PlayerMovement movement;
+		fps::CameraBob bob;
 		bool hasPreviousFeet = false;
 		glm::vec3 previousFeet{ 0.0f };
 		float walkWeight = 0.0f, walkPhase = 0.0f;

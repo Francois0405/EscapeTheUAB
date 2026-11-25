@@ -9,8 +9,8 @@
 #include <functional>
 
 class Shader;
-namespace editor { class EditorEscenas; }
-namespace vr { class GestorOpenXR; struct OjoVR; struct PoseXR; }
+namespace editor { class SceneEditor; }
+namespace vr { class OpenXrManager; struct VrEye; struct XrPose; }
 
 struct RuntimeRenderer
 {
@@ -63,9 +63,9 @@ struct RuntimeRenderer
 	Shader& shaderLighting;
 
 	// Editor and VR
-	const editor::EditorEscenas& editorEscenas;
-	vr::GestorOpenXR& gestorOpenXR;
-	vr::PoseXR& ultimaCabezaVR;		// head pose of the last VR frame, read by networking
+	const editor::SceneEditor& editorEscenas;
+	vr::OpenXrManager& gestorOpenXR;
+	vr::XrPose& ultimaCabezaVR;		// head pose of the last VR frame, read by networking
 	bool& hayCabezaVR;
 
 	// Services that stay in main.cpp
@@ -83,5 +83,5 @@ struct RuntimeRenderer
 	void OnPaint(GLFWwindow* window);
 
 private:
-	void copiarOjoAVentana(const vr::OjoVR& ojo);
+	void copiarOjoAVentana(const vr::VrEye& ojo);
 };

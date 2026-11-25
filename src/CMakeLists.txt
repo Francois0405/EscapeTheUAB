@@ -61,10 +61,10 @@ add_subdirectory("${REPO_ROOT}/src/networking/transport" "${CMAKE_BINARY_DIR}/sr
 
 set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/audio/AudioManager.cpp
-	${REPO_ROOT}/src/physics/DibujoColisionadores.cpp
-	${REPO_ROOT}/src/rendering/DibujoGLB.cpp
-	${REPO_ROOT}/src/editor/EditorEscenas.cpp
-	${REPO_ROOT}/src/editor/SerializadorEscenas.cpp
+	${REPO_ROOT}/src/physics/ColliderDrawing.cpp
+	${REPO_ROOT}/src/rendering/GlbDrawing.cpp
+	${REPO_ROOT}/src/editor/SceneEditor.cpp
+	${REPO_ROOT}/src/editor/SceneSerializer.cpp
 	${REPO_ROOT}/src/gameplay/hirity/HiritiRuntime.cpp
 	${REPO_ROOT}/src/gameplay/interaction/InteractionRuntime.cpp
 	${REPO_ROOT}/src/gameplay/player/PlayerRuntime.cpp
@@ -239,7 +239,7 @@ target_compile_features(EntornVGI_scene_loader PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_scene_loader PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_glb_model STATIC
-	${REPO_ROOT}/src/rendering/ModeloGLB.cpp
+	${REPO_ROOT}/src/rendering/GlbModel.cpp
 )
 target_include_directories(EntornVGI_glb_model
 	PUBLIC ${REPO_ROOT} ${REPO_ROOT}
@@ -250,7 +250,7 @@ target_compile_features(EntornVGI_glb_model PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_glb_model PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_animated_glb STATIC
-	${REPO_ROOT}/src/animation/ObjetosAnimadosGLB.cpp
+	${REPO_ROOT}/src/animation/GlbAnimatedObjects.cpp
 )
 target_include_directories(EntornVGI_animated_glb PUBLIC
 	${REPO_ROOT}
@@ -264,8 +264,8 @@ target_compile_features(EntornVGI_animated_glb PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_animated_glb PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_physics STATIC
-	${REPO_ROOT}/src/physics/MundoFisico.cpp
-	${REPO_ROOT}/src/physics/EscenaFisica.cpp
+	${REPO_ROOT}/src/physics/PhysicsWorld.cpp
+	${REPO_ROOT}/src/physics/PhysicsScene.cpp
 )
 target_include_directories(EntornVGI_physics PUBLIC
 	${REPO_ROOT}
@@ -284,11 +284,11 @@ add_library(EntornVGI_grab_diagnostics STATIC ${REPO_ROOT}/src/diagnostics/GrabD
 target_include_directories(EntornVGI_grab_diagnostics PUBLIC ${REPO_ROOT})
 target_compile_features(EntornVGI_grab_diagnostics PUBLIC cxx_std_20)
 
-add_library(EntornVGI_network_preferences STATIC ${REPO_ROOT}/src/networking/preferences/PreferenciasRed.cpp)
+add_library(EntornVGI_network_preferences STATIC ${REPO_ROOT}/src/networking/preferences/NetworkPreferences.cpp)
 target_include_directories(EntornVGI_network_preferences PUBLIC ${REPO_ROOT})
 target_compile_features(EntornVGI_network_preferences PUBLIC cxx_std_20)
 
-add_library(EntornVGI_network_game STATIC ${REPO_ROOT}/src/networking/replication/NetJuego.cpp)
+add_library(EntornVGI_network_game STATIC ${REPO_ROOT}/src/networking/replication/NetGame.cpp)
 target_include_directories(EntornVGI_network_game PUBLIC ${REPO_ROOT} ${REPO_ROOT})
 target_link_libraries(EntornVGI_network_game PUBLIC
 	EntornVGI_network
@@ -298,10 +298,10 @@ target_compile_features(EntornVGI_network_game PUBLIC cxx_std_20)
 target_compile_definitions(EntornVGI_network_game PRIVATE GLM_ENABLE_EXPERIMENTAL)
 
 add_library(EntornVGI_editor_core STATIC
-	${REPO_ROOT}/src/editor/LimitesModelo.cpp
-	${REPO_ROOT}/src/editor/SelectorObjetos.cpp
-	${REPO_ROOT}/src/editor/ValidadorColocacion.cpp
-	${REPO_ROOT}/src/editor/VisibilidadEditor.cpp
+	${REPO_ROOT}/src/editor/ModelBounds.cpp
+	${REPO_ROOT}/src/editor/ObjectPicker.cpp
+	${REPO_ROOT}/src/editor/PlacementValidator.cpp
+	${REPO_ROOT}/src/editor/EditorVisibility.cpp
 )
 target_include_directories(EntornVGI_editor_core PUBLIC
 	${REPO_ROOT}

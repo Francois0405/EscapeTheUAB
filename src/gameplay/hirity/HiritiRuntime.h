@@ -4,12 +4,12 @@
 // actualizacion por fotograma y audio ambiental. main.cpp es el dueno de todo el estado y lo presta
 // mediante este contexto; aqui no se puede incluir main.h (define globales).
 // La API publica va en ingles; main.cpp enlaza cada miembro con su global en contextoHiriti().
-#include "src/gameplay/hirity/TemporizadorAmbiente.h"
+#include "src/gameplay/hirity/HiritiAudioTimer.h"
 #include "src/audio/AudioManager.h"
-#include "src/gameplay/hirity/AnimacionHiriti.h"
-#include "src/networking/replication/NetJuego.h"
-#include "src/physics/EscenaFisica.h"
-#include "src/physics/MundoFisico.h"
+#include "src/gameplay/hirity/HiritiAnimation.h"
+#include "src/networking/replication/NetGame.h"
+#include "src/physics/PhysicsScene.h"
+#include "src/physics/PhysicsWorld.h"
 #include "src/scene/SceneLoader.h"
 
 #include <cstdint>
@@ -18,19 +18,19 @@
 #include <string>
 #include <vector>
 
-namespace juego::hiriti
+namespace game::hiriti
 {
 	struct HiritiContext
 	{
 		// Estado prestado
 		AudioManager& audioManager;
-		AnimacionHiriti& hiritiAnimation;
-		TemporizadorAudioHiriti& hiritiAudioTimer;
+		HiritiAnimator& hiritiAnimation;
+		HiritiAudioTimer& hiritiAudioTimer;
 		const std::vector<SceneObject>& sceneObjects;
 		// Referencia al unique_ptr: la carga de habitacion sustituye la escena fisica.
-		std::unique_ptr<fisica::EscenaFisica>& physicsScene;
-		const fisica::MundoFisico& physicsWorld;
-		const netjuego::RedJuego& session;
+		std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+		const fisica::PhysicsWorld& physicsWorld;
+		const netgame::NetworkGame& session;
 		bool& hiritiFollowEnabled;
 		const float& hiritiStopDistance;
 		const float& hiritiMaxSpeed;

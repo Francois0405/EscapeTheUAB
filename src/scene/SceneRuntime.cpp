@@ -3,8 +3,8 @@
 #include "src/scene/objLoader.h"
 #include "src/scene/SceneRuntime.h"
 
-#include "src/editor/EditorEscenas.h"
-#include "src/rendering/DibujoGLB.h"
+#include "src/editor/SceneEditor.h"
+#include "src/rendering/GlbDrawing.h"
 #include "src/rendering/UniformCache.h"
 
 #include <iostream>
@@ -33,14 +33,14 @@ namespace scene::runtime
 	bool LoadAndApplyScene(const SceneRuntimeContext& context, const std::filesystem::path& ruta)
 	{
 		// 1) Leer y validar el JSON (si falla, no se ha tocado nada).
-		DatosEscena datos;
+		SceneData datos;
 		std::string error;
 		if (!CargarDatosEscenaJSON(ruta, datos, error))
 		{
 			std::cerr << "No se cargo la escena: " << error << '\n';
 			return false;
 		}
-		editor::SerializadorEscenas nuevoSerializador;
+		editor::SceneSerializer nuevoSerializador;
 		if (!nuevoSerializador.Cargar(ruta, error))
 		{
 			std::cerr << "No se pudo preparar la persistencia de la escena: " << error << '\n';
@@ -84,7 +84,7 @@ namespace scene::runtime
 		}
 
 		// 3) Objetos animados GLB de la lista "animated", también temporales.
-		glb::EscenaAnimada nuevosAnimados;
+		glb::AnimatedScene nuevosAnimados;
 		if (!fisica::CargarObjetosAnimadosDeEscena(datos.animados, std::filesystem::absolute(ruta.parent_path()),
 			nuevosAnimados, error))
 		{
@@ -97,7 +97,7 @@ namespace scene::runtime
 				std::cerr << modelo.first << ": " << aviso << '\n';
 
 		// 4) Cuerpos físicos NUEVOS (los de la habitación anterior siguen en el mundo hasta el final).
-		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(context.physicsWorld);
+		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
 		if (!nuevaFisica->Crear(objetosValidos, nuevosAnimados, datos.animados, error))
 		{
 			std::cerr << "No se cargo la escena (fisicas): " << error << '\n';
@@ -178,7 +178,7 @@ namespace scene::runtime
 
 	bool RebuildPhysicsAfterEdit(const SceneRuntimeContext& context, std::string& error, bool autoridadFisica)
 	{
-		auto nuevaFisica = std::make_unique<fisica::EscenaFisica>(context.physicsWorld);
+		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
 		if (!nuevaFisica->Crear(context.sceneObjects, context.animatedObjects, context.animatedData, error, autoridadFisica)) return false;
 		context.physicsScene->Vaciar();
 		context.physicsScene = std::move(nuevaFisica);

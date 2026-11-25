@@ -5,18 +5,18 @@
 #include <vector>
 #include <filesystem>
 #include <glm/glm.hpp>
-#include "src/physics/MundoFisico.h"   // solo para fisica::TipoCuerpo (no arrastra Bullet)
+#include "src/physics/PhysicsWorld.h"   // solo para fisica::TipoCuerpo (no arrastra Bullet)
 
 // Configuración física OPCIONAL de un objeto (campo "physics" del JSON).
 // Los tamaños se expresan en el espacio del MODELO, antes de aplicar la escala del objeto:
 //   mundo.mitadTamano = |escala| * mitadTamano      (la escala se aplica UNA sola vez)
 //   mundo.centro      = posicion + R * (escala * desplazamiento)
 //   mundo.orientacion = R (la rotación del objeto)
-struct SceneFisica
+struct ScenePhysics
 {
     bool presente = false;                                  // false = el objeto no tiene físicas
-    fisica::TipoCuerpo tipo = fisica::TipoCuerpo::Estatico; // static, dynamic o bouncy
-    fisica::FormaCuerpo forma = fisica::FormaCuerpo::Caja;
+    fisica::BodyType tipo = fisica::BodyType::Estatico; // static, dynamic o bouncy
+    fisica::BodyShape forma = fisica::BodyShape::Caja;
     glm::vec3 mitadTamano = glm::vec3(0.5f);                // "halfSize": medias dimensiones; radio para esfera
     glm::vec3 desplazamiento = glm::vec3(0.0f);             // "offset": centro de la caja respecto al origen del modelo
     float masa = 0.0f;                                      // "mass" en kg (solo dinámicos)
@@ -24,7 +24,7 @@ struct SceneFisica
 
 // Fuente de luz ligada a la transformacion de una instancia OBJ.
 // El motor limita estas fuentes a los slots disponibles del shader Phong.
-struct SceneLuz
+struct SceneLight
 {
     bool presente = false;
     bool encendida = true;
@@ -50,7 +50,7 @@ struct SceneMaterial
 
 // Apertura rectangular en una pared paramétrica. centerU y base se expresan en metros
 // desde el centro de pared y el pie inferior, respectivamente.
-struct SceneAperturaPared
+struct SceneWallOpening
 {
     std::string idPuerta;
     float centerU = 0.0f;
@@ -60,13 +60,13 @@ struct SceneAperturaPared
 	std::string id;
 };
 
-struct ScenePared
+struct SceneWall
 {
     bool presente = false;
-    std::vector<SceneAperturaPared> aperturas;
+    std::vector<SceneWallOpening> aperturas;
 };
 
-struct SceneSeccionPared
+struct SceneWallSection
 {
     glm::vec3 centroLocal{ 0.0f };
     glm::vec3 mitad{ 0.0f };
@@ -74,8 +74,8 @@ struct SceneSeccionPared
 
 // Particiona una caja de pared en paños laterales, dinteles y posibles zócalos.
 // Rechaza aperturas solapadas, demasiado próximas a extremos o fuera de altura.
-bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneAperturaPared>& aperturas,
-    std::vector<SceneSeccionPared>& secciones, std::string& error);
+bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneWallOpening>& aperturas,
+    std::vector<SceneWallSection>& secciones, std::string& error);
 
 struct SceneObject
 {
@@ -87,33 +87,33 @@ struct SceneObject
     glm::vec3 rotacion;
     glm::vec3 escala;
 
-    SceneFisica fisica;   // opcional: sin "physics" en el JSON queda con presente = false
-    SceneLuz luz;         // opcional: fuente Phong atada al objeto, sin colision extra
+    ScenePhysics fisica;   // opcional: sin "physics" en el JSON queda con presente = false
+    SceneLight luz;         // opcional: fuente Phong atada al objeto, sin colision extra
     SceneMaterial material; // opcional: material configurable por instancia
-    ScenePared pared;       // opcional: definición lógica con aperturas, no altera el OBJ compartido
+    SceneWall pared;       // opcional: definición lógica con aperturas, no altera el OBJ compartido
     bool permitirPenetracionArquitectura = false; // excepción deliberada, desactivada por defecto
 };
 
 // Caja de colisión de UN nodo de un modelo animado (la hoja de la puerta, su marco...).
 // Se expresa en el espacio local del nodo del GLB (el de glTF, con Y hacia arriba).
-struct SceneColisionador
+struct SceneCollider
 {
     std::string nodo;                                       // nombre del nodo en el GLB, p. ej. "Door"
-    fisica::TipoCuerpo tipo = fisica::TipoCuerpo::Estatico; // "static" (marco) o "kinematic" (hoja que se mueve)
+    fisica::BodyType tipo = fisica::BodyType::Estatico; // "static" (marco) o "kinematic" (hoja que se mueve)
     glm::vec3 mitadTamano = glm::vec3(0.5f);
     glm::vec3 desplazamiento = glm::vec3(0.0f);
 };
 
 // Instancia de un modelo animado GLB declarada en la lista opcional "animated".
-struct SceneObjetoAnimado
+struct SceneAnimatedObject
 {
     std::string id;
     std::string modelo;                  // ruta del .glb relativa al JSON
     glm::vec3 posicion = glm::vec3(0.0f);
     float giroZGrados = 0.0f;            // de momento los modelos animados solo giran sobre el eje vertical
     float escala = 1.0f;                 // escala uniforme
-    std::string animacion;               // nombre de la animación; vacío = la primera del archivo
-    std::vector<SceneColisionador> colisionadores;
+    std::string animation;               // nombre de la animación; vacío = la primera del archivo
+    std::vector<SceneCollider> colisionadores;
     bool permitirPenetracionArquitectura = false; // excepción deliberada, desactivada por defecto
     std::string paredId;
     std::string aperturaId;
@@ -129,7 +129,7 @@ struct SceneSpawn
 };
 
 // Todo lo que describe un archivo de escena.
-struct DatosEscena
+struct SceneData
 {
     std::string nombre;
     SceneSpawn spawn;
@@ -139,12 +139,12 @@ struct DatosEscena
     glm::vec3 indirectFloorColor{ 0.42f, 0.46f, 0.43f };
     glm::vec3 indirectSkyColor{ 0.24f, 0.28f, 0.34f };
     std::vector<SceneObject> objetos;            // arquitectura + objetos OBJ
-    std::vector<SceneObjetoAnimado> animados;    // objetos GLB animados (lista opcional)
+    std::vector<SceneAnimatedObject> animados;    // objetos GLB animados (lista opcional)
 };
 
 // Lee la escena completa. Es estricto: si hay un error devuelve false, deja 'datos' como estaba
 // y 'error' explica qué campo falla.
-bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, DatosEscena& datos, std::string& error);
+bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, SceneData& datos, std::string& error);
 
 // Versión antigua (solo objetos OBJ): sigue funcionando igual. Valida también los objetos animados.
 bool CargarEscenaJSON(

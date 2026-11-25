@@ -2,7 +2,7 @@
 #include "framework.h"
 #include "src/networking/replication/NetAvatar.h"
 
-namespace netjuego
+namespace netgame
 {
 	namespace
 	{
