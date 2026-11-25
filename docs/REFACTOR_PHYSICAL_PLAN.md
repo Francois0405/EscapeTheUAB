@@ -1,6 +1,6 @@
 # Plan de reorganización física de EscapeTheUAB
 
-**El árbol y los lotes de este documento son un objetivo [P]. No están realizados:** no se ha movido, renombrado ni modificado ningún fichero de código, CMake o recursos para redactarlo. **La QA manual (P0) sigue PENDIENTE y no hay GO funcional.**
+**El árbol y los lotes de este documento son un objetivo [P]. No están realizados:** no se ha movido, renombrado ni modificado ningún fichero de código, CMake o recursos para redactarlo. **La QA manual (P0) sigue PENDIENTE y no hay GO funcional.** El usuario autoriza continuar las etapas arquitectónicas provisionales (B0 a B5, B2b, G1, S1 a S10, P3-SH y P4 a P12) que sean verificables técnicamente, cada una con su puerta propia, sin esperar la QA manual ni pedir aprobación tras cada corte superado. La publicación en `master` sigue pendiente.
 
 Complementa a [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md) (etapas y registro de ejecución) y a [ARCHITECTURE.md](ARCHITECTURE.md) (arquitectura actual y contratos).
 
@@ -9,7 +9,8 @@ Complementa a [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md) (etapas y r
 | Dato | Valor |
 |---|---|
 | Base de la auditoría física y de este documento | `7ace570` |
-| Estado de `refactor/project-architecture` | `2d83c7d`: `fe4d7da` (corte S4, [mapa §10](REFACTOR_MIGRATION_MAP.md)) más el commit documental de este plan |
+| Estado de `refactor/project-architecture` al redactar el plan (foto de ese momento) | `2d83c7d`: `fe4d7da` (corte S4, [mapa §10](REFACTOR_MIGRATION_MAP.md)) más el commit documental de este plan |
+| Base documental previa a la actualización de gates y propiedad | `6aa6371` |
 | Método | Lectura estática y de objetos git. No se compiló ni se probó nada para este documento |
 
 Marcas: **[C]** confirmado leyendo ficheros o git; **[H]** inferencia o aproximación no ejecutada; **[D]** afirmación histórica no reverificada; **[P]** propuesta; **Decidido**: acordado y todavía no ejecutado. Salvo lo recogido como decidido en la tabla siguiente, en §2.5, en el alcance de §6 y en ARCHITECTURE §1.5 a §1.8, las secciones 1 a 8 son [P].
@@ -20,10 +21,12 @@ Marcas: **[C]** confirmado leyendo ficheros o git; **[H]** inferencia o aproxima
 | Nombres en inglés obligatorios para el código propio (P12) | **Decidido** (usuario, vía coordinador) |
 | Lotes B2 a B5 antes de que termine la modularización | **Decidido** (orden encargado por el coordinador) |
 | Terceros en `third_party/` sin modificar; `legacy_vgi` solo con la base académica original | **Decidido** (coordinador) |
-| El cuerpo de la documentación conserva su idioma; nombres propios en inglés | **Decidido** (coordinador) |
+| El cuerpo (la prosa) de la documentación conserva su idioma; van en inglés los identificadores del código escrito por el equipo y los nombres de fichero y carpeta | **Decidido** (coordinador) |
 | `origin/Issue#5` no se integra; la rama se conserva | **Decidido** (coordinador) |
 | B2 y S1, S2, S5 en serie por `NetJuegoLogica.h` | **Decidido** (coordinador) |
-| S10 tras la QA de agarre y como puerta de P8; P4 a P7 sin esperarlo | **Propuesta, pendiente de aprobación** |
+| Continuación de las etapas arquitectónicas provisionales sin esperar la QA manual ni aprobación por corte | **Autorizada** (usuario) |
+| S10 como extracción que preserva el comportamiento, con caracterización antes y después y revisión cruzada; precede a P8, y P4 a P7 no lo esperan | **Decidido** (usuario, vía coordinador) |
+| Supervisor (Codex) como único editor e integrador de `main.cpp` y CMake compartidos | **Decidido** (coordinador) |
 | QA manual (P0) y GO funcional | **PENDIENTES** |
 
 **Objetivo del usuario (transmitido por el coordinador):** reorganizar físicamente fuentes, cabeceras, recursos, shaders, pruebas, documentación, scripts y terceros; modularizar `main.cpp`; unificar en inglés los nombres del código propio; reducir globales y acoplamiento; permitir propiedad independiente por equipos. Extraer targets CMake es solo un paso intermedio.
@@ -219,7 +222,7 @@ Criterio de origen usado arriba: la importación inicial (`6991d95`) contiene `o
 | 2 | **B1** | Prerrequisitos de movimiento (§3.2) | B0 | V, N, R |
 | — | **G1** | Revisión Claude de B1 sobre su SHA exacto (§3.3) | B1 | — |
 | 3 | **B2** | Transporte a `src/networking/transport/` | G1. **En serie con S1, S2 y S5** (`NetJuegoLogica.h`) | V, N, R, M |
-| 4 | **B2b** | Scripts a `tools/assets/` y guías en subcarpetas, con nombres en inglés y sin traducir el contenido | G1, I6, I7; propietario de `tests/CMakeLists.txt` | Enlaces, rutas de scripts, V |
+| 4 | **B2b** | Scripts a `tools/assets/` y guías en subcarpetas, con nombres en inglés y sin traducir el contenido | G1, I6, I7; el supervisor edita `tests/CMakeLists.txt` | Enlaces, rutas de scripts, V |
 | 5 | **B3** | `third_party/` consolidado | G1, I5, I8 | V, R, M, S |
 | 6 | **B4** | Recursos a `resources/` | G1 | V, R, M, S |
 | en paralelo | **P3** | S1, S2, S5, S6, S7, S8, S9 y enlace de shaders (§3.4) | S3 y S4 cerradas | V, N, S |
@@ -228,23 +231,25 @@ Criterio de origen usado arriba: la importación inicial (`6991d95`) contiene `o
 | 9 | **P5** | Hojas: audio, escala UI, cabeceras de gameplay, diagnóstico, paneles, HUD | P4 | V, N, S |
 | 10 | **P6** | a) sacar la lógica de juego del bloque VGI; b) mover el bloque a `legacy_vgi/` | P4, I3 | V, R, M, S |
 | 11 | **P7** | Render y VR | P6 | V, S |
-| 12 | **S10** | Ramas por rol de interacción, lanzamiento y solicitudes | **QA humana de agarre en cliente (P0)**; puerta propuesta [P] | V, N, S |
+| 12 | **S10** | Ramas por rol de interacción, lanzamiento y solicitudes | Antes de P8; caracterización previa en verde y revisión cruzada (§3.4) | V, N, S |
 | 13 | **P8** | Gameplay | P7, S10 | V, S |
 | 14 | **P9** | Red de juego, sin tocar el formato en cable | P8 | V, N, S |
 | 15 | **P10** | `app` como raíz de composición; RAII con el mismo orden de limpieza | P9 | V, N, S |
 | 16 | **P11** | Remanentes: pruebas por categoría, CMake por módulo, vaciar `EntornVGI/` | P10 | V, N, R, M, S |
 | 17 | **P12** (obligatorio) | Identificadores en inglés, un módulo por commit | P11 | V, N, R, M, S |
 
-Respecto al orden anterior del mapa, B2 a B5 adelantan movimientos de módulos que ya tienen target y pruebas, según el orden de lotes encargado por el coordinador. Ajuste **todavía pendiente de aprobación**:
+**Estado de cortes en curso, informado por el coordinador y no verificado al redactar:** S2 validado mecánicamente en su worktree aislado, a la espera de revisión independiente y commit; B1 con un bloqueo de rutas de include detectado y corrección pendiente. Ninguno está integrado ([mapa §8](REFACTOR_MIGRATION_MAP.md)).
 
-- El mapa exige P3 en verde antes de P6 a P9. Aquí S1, S2 y S5 a S9 bastan para P4 a P7; S10 solo bloquea P8 en adelante.
-- B5 **no** depende técnicamente de S5 a S9: puede intercalarse entre dos cortes. El orden de la tabla entre B5, los cortes de P3 y P4 es **serialización** (un solo propietario de `main.cpp` y CMake), no dependencia.
+Respecto al orden anterior del mapa, B2 a B5 adelantan movimientos de módulos que ya tienen target y pruebas, según el orden de lotes encargado por el coordinador. Además:
+
+- **Decidido:** S1, S2 y S5 a S9 bastan para P4 a P7; S10 precede a P8 y bloquea P8 en adelante hasta superar su propia puerta (§3.4), que no incluye la QA manual.
+- [P] B5 **no** depende técnicamente de S5 a S9: puede intercalarse entre dos cortes. El orden de la tabla entre B5, los cortes de P3 y P4 es **serialización** (un solo propietario de `main.cpp` y CMake), no dependencia.
 
 Rollback de cualquier lote: anotar el SHA de partida; un commit o serie corta contigua; `git revert` en orden inverso (los lotes posteriores primero); reconstruir en un directorio limpio; revisar `git status` sobre los assets tras usar el editor.
 
 ### 3.2 B1 y B2
 
-**B1** (un único propietario de los ficheros CMake; sin `main.cpp`, `main.h`, código de producción ni movimientos):
+**B1** (el supervisor edita e integra los ficheros CMake; sin `main.cpp`, `main.h`, código de producción ni movimientos):
 
 1. Targets estáticos para `ObjetosAnimadosGLB`, física (`MundoFisico`, `EscenaFisica`, con Bullet), `NetJuego` (con `EntornVGI_network` y GLM), `GrabDiagnostics` y `PreferenciasRed`. Las pruebas los enlazan en lugar de listar `.cpp`. Declarar `cxx_std_20` y avisos; `GLM_ENABLE_EXPERIMENTAL` y `NOMINMAX` por paridad con el ejecutable (de estas unidades, `GrabDiagnostics.cpp` incluye `windows.h` [C]).
 2. Variables de raíz de recursos y comprobación de ficheros sonda (§7), con los valores actuales.
@@ -282,10 +287,12 @@ Reglas: un corte por commit; fijar los valores esperados contra el comportamient
 | **S7** | Decisión de mantenimiento del agarre dentro del bucle de propietarios de `actualizarRed` | Medio | `NetJuegoTests` y `PhysicsTests`; conservar la copia que se itera y el orden de consultas |
 | **S8** | `aplicarEstadosEscenaRed` con reconstrucción inyectada | Medio | Validación todo o nada, última actualización gana, reversión, sin reconstruir si está vacío |
 | **S9** | `actualizarHiriti` como paso de estado (después de S6) | Alto | Registro del orden de llamadas; el sonido se emite de forma síncrona, no diferida |
-| **S10** | Ramas por rol de `interactuar`, `lanzarObjetoCargado` y el bucle de solicitudes: solo tablas de decisión | Máximo | `NetJuegoTests`, incluida la liberación al desconectar un cliente que posee un objeto. **Después de la QA de agarre en cliente** |
+| **S10** | Ramas por rol de `interactuar`, `lanzarObjetoCargado` y el bucle de solicitudes: solo tablas de decisión | Máximo | `NetJuegoTests`, incluida la liberación al desconectar un cliente que posee un objeto. Extracción sin cambio de comportamiento: pruebas de caracterización en verde **antes** (contra el comportamiento actual) **y después**, más revisión cruzada. La QA de agarre en cliente queda para la entrega funcional |
 | P3-SH | Pruebas de enlace de los shaders no cubiertos (las de Phong existen en `ObjLoaderTests` [C]) | Bajo | Requiere contexto gráfico |
 
 S1 y S2 pueden ir junto a B1 solo con casos sintéticos.
+
+**Puerta de S10 (decidida):** primero se escriben las pruebas de caracterización y pasan contra el comportamiento actual; después se extrae y vuelven a pasar sin cambiar los valores esperados; la revisión cruzada, de quien no escribió el corte, se hace sobre el SHA exacto. Como las ramas viven hoy en `main.cpp`, que ninguna prueba incluye, el método para fijar el «antes» debe quedar descrito y revisado; si no se puede caracterizar así, S10 no se integra. S3 y S4 no cumplieron el «antes y después» ([mapa §9 y §10](REFACTOR_MIGRATION_MAP.md)). Los demás cortes de alto riesgo conservan sus pruebas.
 
 S4 se implementó de forma distinta a la propuesta inicial: el auxiliar de mezcla no tiene parámetro «activo»; la guarda `flags & 1` sigue en `main.cpp` y el caso «inactivo salta a la pose objetivo» no tiene prueba [C].
 
@@ -321,7 +328,7 @@ B0 ─> B1 ─> G1 ─┬─> B2
 S6 ─> S9
 S1, S2, S5..S9 ─> P4 ─┬─> P5
                       └─> P6 ─> P7 ─> P8 ─> P9 ─> P10 ─> P11 ─> P12
-QA de agarre en cliente ──> S10 ──> P8
+S10 ──> P8
 B2, B3, B4, B5, P5 ──> P11
 ```
 
@@ -367,27 +374,31 @@ git status --short --ignored -- src resources tools tests
 |---|---|---|
 | Mecánico | Build, CTest, hashes, definiciones, renombres, includes, identidades y bytes | Todos los lotes |
 | Escritorio (pantalla y GPU) | Arranque, guardado del editor, pruebas OpenGL que no se omitan, capturas, valores `ET2-` de referencia | Recursos, render, UI y `app` |
-| QA manual (P0) | Agarre y lanzamiento desde cliente, Hirity, paridad visual host/cliente, F4, 1080p/4K | GO funcional y `master`. Propuesta [P]: también **S10 y por tanto P8 en adelante** |
+| QA manual (P0) | Agarre y lanzamiento desde cliente, Hirity, paridad visual host/cliente, F4, 1080p/4K | GO funcional y `master`. **No detiene ningún lote, corte ni etapa del refactor** |
 | Hardware y plataforma | Dos equipos y Tailscale, visor OpenXR, macOS, Linux | No bloquea trabajo estructural en Windows; se declara no validado |
 
 La ruta NFD antigua (`file_dialog_compat.h`) solo se compila en Linux con dependencias del sistema [C]: B3 exige una configuración en Linux o declarar el hueco.
 
-Pueden empezar sin QA manual: resolver las incertidumbres abiertas de §2.4, B0, B1, G1, B2, B2b y los cortes S1 y S2.
+Ningún lote, corte ni etapa espera a la QA manual; cada uno espera a sus dependencias y a su puerta. Un fallo de comportamiento atribuible al refactor se revierte ([mapa §3](REFACTOR_MIGRATION_MAP.md)).
 
 ## 5. Roles y propiedad
 
 | Rol | Responsabilidad |
 |---|---|
-| Supervisor (Codex) | Integra, secuencia y arbitra `main.cpp` y CMake |
-| Implementadores (Codex) | Implementan un lote o corte cada uno y lo validan |
-| Revisor y documentación (Claude Sonnet) | Revisa arquitectura y diffs sobre el SHA exacto; mantiene `docs/` |
+| Supervisor (Codex) | **Único editor e integrador** de `main.cpp`, `main.h` y los ficheros CMake compartidos; secuencia y arbitra |
+| Agentes de funcionalidad (Codex) | Implementan un lote o corte cada uno en **rutas disjuntas** y lo validan; los cambios en ficheros compartidos los proponen al supervisor |
+| Arquitectura y revisión cruzada (Claude Sonnet) | Revisa arquitectura y diffs sobre el SHA exacto; mantiene `docs/` |
 
 **Máximo 3 o 4 agentes concurrentes.** Quien revisa un lote no es quien lo escribió.
 
-**Propiedad en serie** (un solo propietario a la vez):
+**Solo el supervisor** edita e integra:
 
 - `main.cpp`, `main.h`.
-- `CMakeLists.txt` raíz, `EntornVGI/CMakeLists.txt`, `EntornVGI/Network/CMakeLists.txt`, `tests/CMakeLists.txt`, `CMakePresets.json`, `.gitignore`.
+- `CMakeLists.txt` raíz, `EntornVGI/CMakeLists.txt`, `EntornVGI/Network/CMakeLists.txt`, `tests/CMakeLists.txt`, `CMakePresets.json`.
+
+**Propiedad en serie** (un solo propietario a la vez):
+
+- `.gitignore`.
 - Enums y tipos compartidos: tipos y formas de cuerpo (`MundoFisico.h`), estructuras de `SceneLoader.h`, `EstadoJuego`.
 - `NetJuegoLogica.h` (S1, S2, S5, B2) y `tests/NetJuegoTests.cpp` (S1, S2, S5, S7, S8, S10): serializar, o crear un fichero de prueba por corte (esto último cambia el número de pruebas respecto a B0).
 - `docs/REFACTOR_MIGRATION_MAP.md`.

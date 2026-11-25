@@ -43,11 +43,12 @@ Decisiones del usuario, transmitidas por el coordinador el 2026-11-25 (los punto
 | Asunto | Estado a 2026-11-25 |
 |---|---|
 | Inicio de un refactor **provisional** | **Autorizado por el usuario** aunque la QA manual siga pendiente (transmitido por el coordinador al encargar este documento) |
+| Continuación de las etapas arquitectónicas provisionales | **Autorizada por el usuario**: B0 a B5, B2b, G1, S1 a S10, P3-SH y P4 a P12, mientras cada una sea verificable técnicamente y supere su puerta propia ([mapa §4](REFACTOR_MIGRATION_MAP.md)), sin esperar la QA manual ni pedir aprobación después de cada corte superado |
 | QA manual integral | **PENDIENTE** |
 | GO funcional | **PENDIENTE** |
 | Consolidación en `master` | Sin autorización registrada. [ESTABILIZACION_PRE_REFACTOR.md](ESTABILIZACION_PRE_REFACTOR.md) pide no consolidar hasta completar la validación de agarre [D] |
 
-`ESTABILIZACION_PRE_REFACTOR.md` dice textualmente que no se inicie el refactor hasta repetir el protocolo de agarre, y la auditoría calificó la ejecución como NO-GO salvo autorización expresa. La autorización del usuario cubre el **inicio provisional**; no convierte ninguna comprobación pendiente en superada.
+`ESTABILIZACION_PRE_REFACTOR.md` dice textualmente que no se inicie el refactor hasta repetir el protocolo de agarre, y la auditoría calificó la ejecución como NO-GO salvo autorización expresa. La autorización del usuario cubre el inicio y la **continuación provisional** de las etapas arquitectónicas citadas en la tabla. No convierte ninguna comprobación pendiente en superada: P0 y la QA manual de gameplay, el GO funcional y la publicación en `master` siguen **pendientes**. La QA manual es una puerta de entrega funcional, no una parada del refactor.
 
 Pendiente según ese documento [D]: selección, agarre y lanzamiento confirmados de un objeto normal desde el cliente; comparación visual simultánea de transformaciones host/cliente; reanudación observada del seguimiento de Hirity al soltarlo; prueba del registro persistente dentro del juego; presentación gráfica de la tabla F4; 1080p/4K y pantalla completa; dos equipos físicos y Tailscale; OpenXR con runtime y visor.
 
@@ -237,9 +238,9 @@ Esta es la dirección **objetivo**. La primera etapa de bibliotecas sigue las de
 
 **Reglas durante la migración:**
 
-- `main.cpp` y `main.h` tienen **un único propietario** (agente o persona) en cada momento. El coordinador lo designa antes de abrir la etapa; este documento no lo asigna.
-- Lo mismo se aplica a `EntornVGI/CMakeLists.txt` y `tests/CMakeLists.txt`.
-- Quien no sea propietario propone cambios, no edita esos ficheros en paralelo.
+- El **supervisor (Codex) es el único que edita e integra** `main.cpp`, `main.h` y los ficheros CMake compartidos.
+- Claude Sonnet hace la revisión de arquitectura y la revisión cruzada.
+- Los agentes de funcionalidad trabajan en rutas disjuntas y proponen los cambios en esos ficheros compartidos; no los editan.
 - Se extrae primero con parámetros explícitos y sin reescribir; la limpieza posterior va en otro commit.
 - Los arreglos funcionales no se mezclan con movimientos.
 

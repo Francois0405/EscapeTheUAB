@@ -2,14 +2,14 @@
 
 Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fechado el 2026-11-25. El contexto, los contratos, los no objetivos y las marcas de evidencia ([C], [H], [D], [P]) están en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas; P3 iniciada, con los cortes S3 (`0ccaea3`, §9) y S4 (`fe4d7da`, §10) integrados. P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
+**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas; P3 iniciada, con los cortes S3 (`0ccaea3`, §9) y S4 (`fe4d7da`, §10) integrados; S2 y B1 en curso y sin integrar (§8). P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
 
 El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cortes S1 a S10 están en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md). Es un objetivo, no está realizado. [ARCHITECTURE.md](ARCHITECTURE.md) (§1 y §7) está alineado con él: la reorganización física y los nombres en inglés del código propio son resultados obligatorios.
 
 ## 1. Estado de partida
 
 - **P0 no está superada.** La QA manual de gameplay sigue **PENDIENTE**, incluidos el agarre y lanzamiento de un objeto normal desde el cliente y la paridad visual entre host y cliente (ARCHITECTURE.md §2).
-- La autorización explícita del usuario del 2026-11-25 dispensa esa puerta **solo para iniciar un refactor provisional y aislado**. No permite declarar P0 superada, no es un GO funcional y no autoriza publicar en `master`.
+- La autorización explícita del usuario del 2026-11-25 dispensó esa puerta para iniciar un refactor provisional y aislado. El usuario autoriza además **continuar todas las etapas arquitectónicas provisionales verificables técnicamente** (B0 a B5, B2b, G1, S1 a S10, P3-SH y P4 a P12), cada una con su puerta (§4), sin esperar la QA manual ni pedir aprobación tras cada corte superado. Nada de esto permite declarar P0 superada, no es un GO funcional y no autoriza publicar en `master`.
 - El **GO funcional** sigue pendiente y no se consolida ni se publica en `master` mientras falte.
 - La extracción de bibliotecas de P2 está integrada en la rama local `refactor/project-architecture` como `4418c2d08c1186ce896309c9487315a9e3ec4a21`, a partir de `0aa6329` en `itsCarlosDev/cmake-core-libraries-codex` [C]. Detalle, evidencia y límites en §6.4.
 - **Las líneas base de P1 siguen incompletas**, en particular las capturas y las referencias de ejecución. La puerta de P2 compara contra ellas.
@@ -23,8 +23,9 @@ El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cort
 1. Un solo ejecutable; el target sigue llamándose `EntornVGI` y la salida sigue en `build/<preset>/bin/`.
 2. Primero bibliotecas con los ficheros en su sitio; después costuras y pruebas; **mover ficheros al final**. Enmienda (2026-11-25): un módulo que ya tenga target y pruebas se mueve antes, en los lotes B2 a B5 del [plan físico](REFACTOR_PHYSICAL_PLAN.md) §3; al final quedan los remanentes.
 3. Un commit (o una serie corta y contigua) por etapa, revertible, sin arreglos funcionales mezclados.
-4. Un único propietario de `main.cpp`, `main.h`, `EntornVGI/CMakeLists.txt` y `tests/CMakeLists.txt` por etapa.
-5. No se avanza con una puerta en rojo. Lo que no se ejecuta se declara como no ejecutado.
+4. El supervisor (Codex) es el único que edita e integra `main.cpp`, `main.h` y los ficheros CMake compartidos. Claude Sonnet hace la revisión de arquitectura y la revisión cruzada; los agentes de funcionalidad trabajan en rutas disjuntas.
+5. Cada etapa tiene sus propias puertas (§4 y §5): una puerta en rojo detiene esa etapa y las que dependen de ella, no el trabajo independiente. La QA manual es una puerta de entrega funcional, no de etapa. Lo que no se ejecuta se declara como no ejecutado.
+6. Una regresión atribuible al refactor se **revierte** (`git revert` del corte, §3); no se tapa con un arreglo mezclado.
 
 ## 3. Puntos de control y vuelta atrás
 
@@ -44,7 +45,7 @@ Procedimiento [P]:
 
 ## 4. Puerta común de cada etapa
 
-Ejecutar sobre el commit de la etapa y guardar el resultado con su SHA:
+Ejecutar sobre el commit de la etapa y guardar el resultado con su SHA. Los puntos 1 a 4 bloquean la integración de la etapa a la que apliquen. Los puntos 5 y 6 requieren pantalla o referencias de P1: bloquean donde la puerta propia de la etapa los pide (§5, §6.3 y [plan físico](REFACTOR_PHYSICAL_PLAN.md) §3.1 y §4.4); en el resto, si no se ejecutan, se declaran como no ejecutados y quedan pendientes. Una etapa integrada con comprobaciones pendientes no se declara superada.
 
 1. `git diff --check`.
 2. `.\run-windows.cmd -NoRun` y `.\run-windows.cmd -Configuration Release -NoRun`, con **directorio de build limpio** si cambian targets o se mueven ficheros.
@@ -59,7 +60,7 @@ macOS, Linux y VR se declaran **no validados** mientras no se ejecuten en esas p
 
 | Etapa | Cambio | Puerta de salida adicional |
 |---|---|---|
-| **P0. Gate** | QA manual de gameplay: agarre y lanzamiento de un objeto normal y de Hirity en host y cliente, con `request → accepted → holding` y registros; paridad visual host/cliente; reanudación de Hirity al soltarlo | QA superada con evidencia. **PENDIENTE**. La dispensa del 2026-11-25 (§1) solo permite iniciar el trabajo provisional; registrar la autorización no supera la puerta |
+| **P0. Gate** | QA manual de gameplay: agarre y lanzamiento de un objeto normal y de Hirity en host y cliente, con `request → accepted → holding` y registros; paridad visual host/cliente; reanudación de Hirity al soltarlo | QA superada con evidencia. **PENDIENTE**. La autorización del usuario (§1) permite iniciar y continuar el trabajo arquitectónico provisional; registrarla no supera la puerta. P0 bloquea el GO funcional y `master`, no las etapas |
 | **P1. Línea base** | Sin cambios de código: avisos de compilación, CTest, capturas 1080p/4K, identidad `ET2-…` de cada escena, bytes de referencia de los paquetes, un JSON guardado por el editor | Referencias archivadas y comparables |
 | **P2. Bibliotecas sin mover ficheros** | Primera migración real (§6) | Mismas pruebas registradas y mismo resultado que en P1 |
 | **P3. Red de seguridad** | Extraer **sin cambiar** a funciones con parámetros explícitos la autoridad de agarre, la aplicación de réplicas, `identificadorEscenaRed` y la máquina de Hirity; añadir pruebas de caracterización y de enlace de shaders | Pruebas nuevas en verde antes y después de cada extracción |
@@ -67,14 +68,14 @@ macOS, Linux y VR se declaran **no validados** mientras no se ejecuten en esas p
 | **P5. Hojas** | Audio, escala de UI, métricas, diagnóstico de agarre, colisionadores, panel F4, panel de red, HUD | Revisión visual |
 | **P6. Base VGI** | Trasladar el bloque VGI de `main.cpp` íntegro a unidades propias. El ciclo `material`/`glut_geometry` puede romperse moviendo `SetColor4d`, en commit aparte | Lista de menús y atajos VGI |
 | **P7. Render** | Caché de recursos, luces, oclusores, dibujo de escena, FBO PS1, estéreo y VR | Capturas contra P1; 13 luces visibles |
-| **P8. Gameplay** | Control del jugador, después interacción y agarre, después Hirity | Pruebas de P3 y QA offline |
-| **P9. Red** | Sincronización de escena, réplica cliente, autoridad del host. **Sin tocar el formato en cable** | Bytes e identidades de P1 idénticos; QA host/cliente |
+| **P8. Gameplay** | Control del jugador, después interacción y agarre, después Hirity | Pruebas de P3 (incluida la puerta de S10) en verde. La QA offline queda pendiente para la entrega funcional |
+| **P9. Red** | Sincronización de escena, réplica cliente, autoridad del host. **Sin tocar el formato en cable** | Bytes e identidades de P1 idénticos. La QA host/cliente queda pendiente para la entrega funcional |
 | **P10. Aplicación** | `main()` queda como composición; RAII conservando el orden de limpieza | Cierre limpio; editor con cambios sin guardar |
 | **P11. Mover ficheros** | `git mv` por módulo solo cuando su target y sus pruebas existan; actualizar CMake, pruebas, `.vscode` y documentación. Enmienda (decisión del usuario): el movimiento físico es obligatorio y los recursos **sí** se mueven en el árbol fuente, sin cambiar nombres ni la disposición de `bin/`; parte se adelanta como lotes B2 a B5 del [plan físico](REFACTOR_PHYSICAL_PLAN.md) | Build desde cero; revisar mayúsculas y Unicode |
 | **P12. Nombres** | Último, por módulo. **Obligatorio** para el código propio (decisión del usuario): código y módulos del equipo, pruebas, herramientas y documentación. Excluye IDs persistentes, claves JSON, protocolo, nombres de escena, rutas de assets, textos de jugador, base académica VGI (`legacy_vgi`, solo la original) y terceros (`third_party/`, sin modificar). En la documentación cambian nombres de fichero y carpeta, no el idioma del cuerpo | Bytes e identidades sin cambios |
 | **Aparte** | Reorganizar el contenido de assets, limpiar artefactos versionados, decidir sobre `.slnx`/`.vcxproj` | Decisión y rama propias |
 
-P6 a P9 no empiezan sin las pruebas de P3 en verde y sin P4. Ajuste propuesto, pendiente de aprobación: P6 y P7 solo esperan a los cortes S1, S2 y S5 a S9; S10 va tras la QA de agarre en cliente y bloquea P8 en adelante ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §3).
+P6 a P9 no empiezan sin las pruebas de los cortes de P3 que les correspondan en verde y sin P4. P4 a P7 esperan a los cortes S1, S2 y S5 a S9. S10 precede a P8 y, por tanto, a P9: es una extracción que preserva el comportamiento, con pruebas de caracterización en verde antes y después y revisión cruzada, y no espera a la QA manual ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §3).
 
 **Propietario en serie de `NetJuegoLogica.h`:** B2 (cambia sus includes) y los cortes S1, S2 y S5 no lo editan a la vez; quien vaya segundo parte del SHA ya integrado.
 
@@ -196,10 +197,11 @@ Commit `4418c2d08c1186ce896309c9487315a9e3ec4a21` en `refactor/project-architect
 
 | Etapa | Commit | Resultados | Pendiente |
 |---|---|---|---|
-| P0 | Sin commit de superación | **No superada.** Dispensada solo para iniciar el refactor provisional y aislado | Agarre y lanzamiento de objeto normal desde el cliente, paridad visual host/cliente, reanudación de Hirity y el resto de la QA de ARCHITECTURE.md §2 |
+| P0 | Sin commit de superación | **No superada.** No detiene las etapas arquitectónicas provisionales autorizadas (§1) | Agarre y lanzamiento de objeto normal desde el cliente, paridad visual host/cliente, reanudación de Hirity y el resto de la QA de ARCHITECTURE.md §2 |
 | P1 | Sin commit | **Incompleta** | Líneas base completas de capturas y ejecución, y el resto de referencias de §5 sin registrar |
+| B1 | Sin commit; no integrado | Informado por el coordinador, no verificado aquí: bloqueo de rutas de include detectado | Corrección, validación, commit y G1 |
 | P2 | `4418c2d` (origen `0aa6329`) | Extracción de bibliotecas completada e integrada; Debug y Release compilan y CTest 21/21 en ambas, según el supervisor (§6.4) | Build limpio, arranque desde `bin/`, guardado del editor y comparación con P1 |
-| P3 | `0ccaea3` (origen `7c8b174`), corte S3; `fe4d7da` (origen `943e658`), corte S4 | **Parcial.** S3 y S4 integrados; evidencia informada por el coordinador en §9 y §10 | Cortes S1, S2 y S5 a S10, pruebas de enlace de shaders y QA de gameplay y gráfica |
+| P3 | `0ccaea3` (origen `7c8b174`), corte S3; `fe4d7da` (origen `943e658`), corte S4 | **Parcial.** S3 y S4 integrados; evidencia informada por el coordinador en §9 y §10. S2, informado por el coordinador y no verificado aquí: validado mecánicamente en su worktree aislado; sin commit ni integración | Revisión independiente, commit e integración de S2; cortes S1 y S5 a S10, pruebas de enlace de shaders y QA de gameplay y gráfica |
 
 ## 9. P3, corte S3: `RemotePhysicsTimeline` (2026-11-25)
 
