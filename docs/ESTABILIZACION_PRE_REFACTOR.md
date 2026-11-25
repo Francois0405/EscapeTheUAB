@@ -42,15 +42,21 @@ La fórmula y el reajuste geométrico viven en `EscalaUI.h`; `EscalaUITests` cub
 
 El commit `d2e55e8` incorpora nuevos sonidos OGG de aparición, elimina los Opus sustituidos, permite controlar el volumen de cada one-shot y libera sonidos terminados o al apagar AudioManager. La búsqueda de OGG en `assets/audio/hirity/appear/` incluye los nuevos archivos; CMake copia recursivamente `assets` al directorio de ejecución. La reaparición usa un cooldown de 30 segundos, y las condiciones de distancia e interacción se mantienen bajo `puedeProcesarColisiones`, activado solo en host/offline; los clientes réplica no recorren candidatos ni intentan teletransportar cuerpos cinemáticos. `Reiniciar()` limpia también el cooldown para evitar heredarlo entre escenas. Los sonidos de interacción host y cliente usan el helper atenuado según la distancia local.
 
-La validación automatizada de audio, el copiado efectivo de los archivos al build, la regresión de reset del cooldown y la interacción multijugador con Hiriti quedan pendientes en el commit conjunto por el gate de seguridad.
+La validación automatizada de audio y el copiado del recurso al directorio de ejecución quedan completados en la validación de la corrección documentada abajo. La interacción visual multijugador con Hiriti sigue pendiente de una sesión gráfica host/cliente.
+
+### Compatibilidad de `heehee.ogg`
+
+La única falla reportada por la validación manual del commit `18d935d` era `AudioDecoderTests` al abrir `assets/audio/hirity/appear/heehee.ogg`. FFprobe identificó el archivo original como Ogg Opus, 48 kHz, estéreo y 4,56 s. El recurso estaba completo y coincidía con el blob versionado; el problema era el códec Opus, que no es compatible con el decodificador stb_vorbis usado por `AudioDecoderTests`. Los otros dos OGG de aparición son Vorbis.
+
+Se convirtió el recurso con la instalación local de FFmpeg 9.0.1 (`libvorbis`, calidad 4), conservando nombre, ruta, frecuencia, canales y contenido sonoro. Antes de sustituir el original, FFprobe informó Vorbis, 48 kHz, 2 canales y 4,5535 s; FFmpeg decodificó el archivo temporal completo sin error. El resultado convertido mide 27.991 bytes. No se añadió dependencia al motor ni se cambió el test. `AudioDecoderTests` y CTest pasaron en ambas configuraciones y confirmaron que el recurso copiado coincide con el fuente.
 
 ## Auditoría de ramas remotas restantes
 
 `MENU_RENDER`, `PUZZLE`, `Puzle2`, `VR`, `feat/linterna-texturas-ps1`, `feat/multijugador-lan-vr`, `feat/optimizacion-rendimiento-opengl` y `master` son antecesores de esta integración. `Issue#5` queda clasificada como `REDUNDANT`: su único commit exclusivo añade un indicador de mano basado en `getInteractuable()` y `assets/mano.png`, pero la integración ya tiene `dibujarHUDInteraccion()` con selección de objetivo más avanzada. La implementación antigua carga una textura por frame sin liberarla y no aporta funcionalidad exclusiva necesaria; no se importó su código ni el PNG. No quedan ramas remotas `PENDING` o `BLOCKED` según `git branch -r --no-merged HEAD` y la revisión de ese commit.
 
-## Validación automatizada de Windows
+## Validación automatizada de Windows antes de corregir el OGG
 
-Las compilaciones de referencia se ejecutaron desde la raíz con los lanzadores oficiales antes de incorporar `d2e55e8` y registrar `EscalaUITests`:
+Esta tabla conserva el resultado manual reportado para el commit `18d935d`, que ya incluía `d2e55e8` y `EscalaUITests`, pero aún tenía el OGG Opus incompatible:
 
 ```powershell
 .\run-windows.cmd -NoRun
@@ -63,16 +69,30 @@ CMake informó `ENet: encontrado; transporte real habilitado`, `OpenXR: ON` y `m
 |---|---|
 | Build Debug | PASS |
 | Build Release | PASS |
-| CTest Debug | PASS, 19/19 |
-| CTest Release | PASS, 19/19 |
+| CTest Debug | PASS, 19/20; falló `AudioDecoderTests` con el OGG Opus original |
+| CTest Release | PASS, 19/20; falló `AudioDecoderTests` con el OGG Opus original |
 | `NetJuegoTests`, Debug/Release | PASS, 20/20 en cada configuración |
 | `ENetLoopbackTests`, Debug/Release | PASS, 10/10 en cada configuración |
-| `EscalaUITests` | NOT RUN; prueba añadida después de la validación de referencia |
+| `EscalaUITests` | PASS (validación manual reportada) |
 | `git diff --check` después de integrar las ramas | PASS |
 
 Los conjuntos completos incluyen `SceneLoaderTests`, `ObjLoaderTests`, tests del editor, `PhysicsTests`, `AnimacionHiritiTests`, `AudioDecoderTests`, `OpenXRTests`, `NetworkTests` y ENet loopback.
 
-Estos PASS son evidencia del commit anterior, no de la integración actual. La validación final de Debug/Release, CTest, recursos de audio y prueba nueva DPI debe repetirse cuando Kaspersky finalice el análisis completo sin acciones pendientes.
+La fila 19/20 registra el resultado previo a convertir `heehee.ogg`; el resto de esta tabla también es solo la referencia reportada para ese estado.
+
+## Validación final de la corrección de audio
+
+Los lanzadores oficiales se ejecutaron sobre el recurso Vorbis convertido. vcpkg conservó ENet real, Bullet, Meshoptimizer y OpenXR habilitados. La primera configuración falló porque Windows denegó la extracción de herramientas en la caché global de vcpkg; al usar `VCPKG_DOWNLOADS` dentro de `build/` y repetir el mismo lanzador con acceso de ejecución concedido, Debug y Release configuraron y compilaron correctamente.
+
+| Validación del árbol con la corrección | Debug | Release |
+|---|---:|---:|
+| `run-windows.cmd -NoRun` | PASS | PASS |
+| `AudioDecoderTests` | PASS | PASS |
+| CTest completo | PASS, 20/20 | PASS, 20/20 |
+| `NetJuegoTests --repeat until-fail:20` | PASS, 20/20 | PASS, 20/20 |
+| `ENetLoopbackTests --repeat until-fail:10` | PASS, 10/10 | PASS, 10/10 |
+
+`EscalaUITests`, `AnimacionHiritiTests`, `PhysicsTests`, `SceneLoaderTests` y las demás pruebas están incluidas en el CTest completo y pasaron en ambas configuraciones. El archivo sincronizado a `build/windows-debug/bin/assets/audio/hirity/appear/heehee.ogg` y a su contraparte Release tiene el mismo SHA-256 que el recurso fuente (`4ADE833823A979755824E79F7B92C9E8E574685500097B438E6C9C21D4921E08`).
 
 ## Validación manual pendiente
 
@@ -90,4 +110,4 @@ No se realizaron pruebas gráficas de 1080p/4K, dos equipos, Tailscale, hardware
 
 ## Incidencia de Kaspersky
 
-Kaspersky informó que terminó el proceso de la detección anterior, guardó una copia de seguridad y eliminó el `SceneLoaderTests.exe` generado manualmente en `build/lighting-validation`. No se restauró ese archivo, no se añadió una exclusión y no se concluyó que fuera un falso positivo. La interfaz de Kaspersky muestra el análisis rápido completado sin amenazas (17.754 archivos) y el análisis completo todavía en curso: 10 %, 1.423.491 archivos analizados y aproximadamente 9 horas restantes en la última consulta de solo lectura. El análisis de vulnerabilidades separado reporta una aplicación vulnerable, que no es una detección de malware. No se debe interpretar el estado actual como un análisis completo limpio ni iniciar nuevas compilaciones o pruebas hasta que termine y no muestre acciones pendientes.
+Kaspersky informó que terminó el proceso de la detección anterior, guardó una copia de seguridad y eliminó el `SceneLoaderTests.exe` generado manualmente en `build/lighting-validation`. No se restauró ese archivo, no se añadió una exclusión y no se concluyó que fuera un falso positivo. El usuario confirmó que el análisis rápido terminó sin amenazas y autorizó continuar mientras el análisis completo permanece en curso. Kaspersky permaneció activo. No se observó una nueva detección durante la conversión ni la validación documentada; este resultado no determina retrospectivamente si la detección anterior fue un falso positivo.
