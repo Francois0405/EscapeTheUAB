@@ -37,6 +37,7 @@ aplicación. Si un módulo necesita estado, pásaselo en su contexto y enlázalo
 | Quiero... | Ficheros |
 |---|---|
 | Cambiar menús, HUD o paneles | `src/ui/RuntimeUi.cpp`; lo que se les pasa, en `src/app/ui/UiFrame.cpp`. Menú de pausa VGI: `src/legacy_vgi/VgiMenus.cpp` |
+| Colocar los modelos de Marc | En el editor (F6), carpeta `Marc/` del explorador de assets. Si no caben junto a la cámara, aparecen en una zona de preparación a la derecha: reduce la escala y muévelos |
 | Hacer puzzles | No existe todavía un módulo. Créalo en `src/gameplay/puzzles/` con su contexto, enlázalo en `src/app/adapters/` y actualízalo desde `src/app/MainLoop.cpp`. La interacción con objetos está en `src/gameplay/interaction/` |
 | Cambiar a Hirity | `src/gameplay/hirity/`, `src/app/adapters/HirityAdapters.cpp`, sonidos en `assets/audio/hirity/` |
 | Trabajar con audio | `src/audio/AudioManager.*`. Los pasos (`assets/audio/paso_1..3.wav`) no existen y nada llama a `playFootstep` |

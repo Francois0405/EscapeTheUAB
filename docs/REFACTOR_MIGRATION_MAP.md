@@ -479,3 +479,53 @@ Implementado por Claude Sonnet sobre `5bc72fd`. Auditoría independiente de solo
 5. Publicar solo cuando el equipo lo apruebe. No se ha hecho push.
 
 **QA manual pendiente:** movimiento y cámara; coger, mover, lanzar y puertas; Hirity y su audio; menús y fondo del menú; editor (F6) y guardado; F1/F4; dos jugadores en dos equipos; OpenXR con visor; compilación en Linux y macOS.
+
+## 32. Incorporación del trabajo de Marc (`f017e20`, `origin/master`, 2026-11-26)
+
+Estado de partida respaldado en la etiqueta local `backup/refactor-validated-2026-11-26` (`a88305b`). `f017e20` era el único commit remoto nuevo tras `git fetch origin`; parte de `d2e55e8`.
+
+**Incorporado**
+
+| Commit | Qué |
+|---|---|
+| `97aa5d9` | Los seis OBJ/MTL en `assets/models/Marc/`, con los mismos blobs y autoría de Marc. `ObjLoaderTests` los carga |
+| `b79cce6` | Zona de preparación del editor para objetos que no caben, con sus pruebas y documentación |
+| `2b5c839` | La linterna se sube en el mismo fotograma en que se ancla |
+
+**Descartado**
+
+- Luces: `NUM_MAX_LLUMS = 13` (9 de escena) y `MaxLights 13`. Tenemos 17 (13 de escena). Su bucle en `Iluminacio` ya existía aquí. El bloque uniforme de oclusores no se toca.
+- `PhysicsTests`: eliminaba las comprobaciones de cruzar y bloquear la puerta, porque su escena no tiene puertas. Se conservan. También su cambio de nombre de un mensaje.
+- `SceneLoaderTests`: nuevo spawn y límite de nueve luces, ligados a su escena.
+- Escena `aula_informatica_calibrada.json`: no se aplica ningún cambio (ver abajo). Hirity, spawn y paredes solo cambiaban en este fichero; no hay cambios de código asociados.
+
+**La escena de Marc** parte de la habitación pequeña de `master` (5 piezas de arquitectura, 13 objetos, sin puertas). La nuestra es esa habitación con tabiques, mobiliario y 5 puertas (22, 61, 5), construida para paredes en x = ±9,15. Sus cambios, para rehacerlos a mano si se quieren:
+
+| Cambio de Marc | Valores | Por qué no se aplica |
+|---|---|---|
+| Ensanchar la sala | suelo, techo y paredes norte/sur: escala x 9 → 12; pared este x 9,15 → 12,15; luminarias este x 7 → 10 | Nuestros tabiques acaban en las paredes actuales |
+| Mover la pared oeste | quita `pared_oeste_s1` (x −9,15) y añade paredes en x −6,35 y −12,15 | La de −6,35 atravesaría nuestro interior |
+| Dos tramos interiores | `pared_sur_s3_copy` y `_copy_copy`: x −2,15 → 0,65 | Depende del ensanche |
+| Techo | posición y 0 → −40 | Parece accidental: deja la sala sin techo |
+| Luces | elimina 5 luminarias (quedan 4) | Reduce la iluminación |
+| Spawn | (−6,5, 3, −3,05) → (−4,5, 4,5, −3,05) | Calculado para su sala |
+| Hirity | (−5,5, −5,65, −3) → (−4,88, −6,17, −2,27) | Queda 0,7 m más alto |
+
+Su versión completa: `git show f017e20:EntornVGI/assets/scenes/aula_informatica_calibrada.json`.
+
+**Revisión de los commits sin auditoría (`5bc72fd..a88305b`).** Hecha por quien los escribió, así que no es independiente. Se compararon los avisos de MSVC de ocultación y variables sin inicializar (C4456–C4459, C4700, C4701, C4717) en `5bc72fd`, `a88305b` y el estado actual: 49 avisos idénticos por fichero, ninguno nuevo. No se encontraron problemas que corregir.
+
+**Validación sobre `2b5c839` (Windows).** Exportado a un directorio nuevo: lanzadores Debug y Release con código 0; CTest 23/23 en ambas; `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10 en cada una; arranque y cierre correctos; MSBuild Debug y Release con `Rebuild` y arranque. La linterna, la zona de preparación y la colocación de los modelos **no se han probado visualmente**: quedan para la QA manual.
+
+**Ascendencia y consolidación.** Un merge normal de `origin/master` da conflictos en 13 ficheros y aplicaría sin conflicto parte de lo descartado. Como el contenido útil ya está portado, tras la QA y con el visto bueno del equipo:
+
+```text
+git fetch origin
+git log HEAD..origin/master --oneline        # solo debe salir f017e20
+git switch refactor/project-architecture
+git merge -s ours --no-ff origin/master -m "merge: record origin/master (f017e20), adapted by hand; see section 32"
+git diff HEAD~1 HEAD                          # vacío: el árbol no cambia
+git switch master && git merge --ff-only origin/master && git merge --no-ff refactor/project-architecture
+```
+
+Si `origin/master` tiene commits posteriores a `f017e20`, no usar `-s ours`: portarlos antes. Conviene avisar a Marc de que su escena y su límite de luces no quedan aplicados aunque su commit figure en el historial. No se ha hecho push ni se ha modificado `master`.
