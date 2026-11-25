@@ -26,6 +26,9 @@ empieza por [PORTING_MAP.md](PORTING_MAP.md).
 | `tools/` | Utilidades de assets, generador del proyecto Visual Studio, mapas del refactor |
 | `archive/legacy/` | Ficheros sin uso. Nada se compila ni se carga desde aquí |
 
+Cada cabecera de `src/app/state/` compila por sí sola porque incluye el agregado `src/app/AppIncludes.h`; dividir
+ese agregado es deuda pendiente.
+
 **Regla de dependencias:** fuera de `src/app/` y `src/legacy_vgi/` ningún módulo incluye cabeceras de la
 aplicación. Si un módulo necesita estado, pásaselo en su contexto y enlázalo en `src/app/adapters/`.
 
@@ -67,6 +70,9 @@ Si `ctest` no está en el PATH, usa una consola "Developer PowerShell" de Visual
 .\run-windows.cmd -NoRun
 python tools\generate_vs_project.py
 ```
+
+Es solo x64 y necesita el componente vcpkg de Visual Studio. Un conflicto de merge en `visualstudio/` se
+resuelve regenerando, no editando; antes de un merge ejecuta `python tools\generate_vs_project.py --check`.
 
 Los binarios de MSBuild salen en `build\msbuild\<Debug|Release>\` y la primera compilación instala las
 dependencias de `vcpkg.json`.

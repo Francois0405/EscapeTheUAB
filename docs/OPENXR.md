@@ -106,7 +106,7 @@ del runtime, extensiones, espacios disponibles/elegido, formatos de swapchain (e
 |---|---|
 | `Sin runtime OpenXR` | Horizon Link cerrado o no marcado como runtime activo de OpenXR |
 | `Sin visor` | Casco apagado o Link no activado |
-| `OpenGL insuficiente` | El controlador no dio 4.x; la ventana volvió a 3.3 (ver `Diagnostico`) |
+| `OpenGL insuficiente` | El controlador no dio 4.x; la ventana volvió a 3.3 (ver `NetworkDiagnostics`) |
 | Sesión creada pero pantalla negra en el casco | Aún no está en `READY`/`FOCUSED` (ponte el casco); mirar el estado en el panel |
-| `Framebuffer del ojo incompleto` | Formato de swapchain no renderizable; enviar el `Diagnostico` |
+| `Framebuffer del ojo incompleto` | Formato de swapchain no renderizable; enviar el `NetworkDiagnostics` |
 | Imagen muy oscura/clara | Formato elegido distinto de sRGB (ver *Formato elegido* en el diagnóstico) |

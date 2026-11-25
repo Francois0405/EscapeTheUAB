@@ -453,7 +453,7 @@ Refactor: rama `refactor/project-architecture`. Referencia: `integration/pre-ref
 
 ## 31. Cierre definitivo (2026-11-26)
 
-Implementado por Claude Sonnet sobre `5bc72fd`. Auditoría independiente de solo lectura por otro agente Claude Sonnet de `0d727a8..5bc72fd`: 0 BLOCKER, 0 REQUIRED; los OPTIONAL aplicados son los enumeradores mezclados, `Empty()`, los textos de uso de `tools/` y comentarios obsoletos. **Los commits posteriores a `5bc72fd` no se han auditado.**
+Implementado por Claude Sonnet sobre `5bc72fd`. Auditoría independiente de solo lectura por otro agente Claude Sonnet de `0d727a8..5bc72fd`: 0 BLOCKER, 0 REQUIRED; los OPTIONAL aplicados son los enumeradores mezclados, `Empty()`, los textos de uso de `tools/` y comentarios obsoletos. **Los commits posteriores a `5bc72fd` no se han auditado**; los de más riesgo son `edf0cb5` (enlace), `924a410` (miembros) y `4d4a932` (generador). `c9c3c10` no compila por sí solo; no se reescribió el historial.
 
 | Commit | Contenido |
 |---|---|
@@ -464,8 +464,9 @@ Implementado por Claude Sonnet sobre `5bc72fd`. Auditoría independiente de solo
 | `edf0cb5` | Estado dividido por responsabilidad; el pegamento sale de las carpetas de módulos |
 | `924a410` | Enumeradores y 96 campos y parámetros en inglés |
 | `3d99e7e` | Comentarios obsoletos y rutas de include duplicadas |
+| `9253ac4` | Resto de tipos y namespaces en inglés; cabeceras de estado autocontenidas; copias `.bak` fuera de `assets/` |
 
-**Validación sobre `3d99e7e` (Windows), exportado con `git archive` a un directorio nuevo:** lanzadores oficiales Debug y Release con código 0; CTest 23/23 en ambas; `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10 en cada configuración (60 pasadas); arranque de 20 s en ambas con 4 programas de shaders enlazados, escena de 83 instancias, spawn válido y cierre con código 0. MSBuild Debug y Release se compilaron y arrancaron sobre `4d4a932`, y Debug de nuevo sobre `edf0cb5`; el proyecto generado coincide con las fuentes de `3d99e7e`. Host y cliente locales en `127.0.0.1`: ninguno reporta fallo, mientras que un cliente sin host sí reporta «Sin respuesta» en el mismo plazo; es evidencia indirecta de conexión, no de juego multijugador.
+**Validación final sobre `9253ac4` (Windows).** Exportado con `git archive` a un directorio nuevo: lanzadores oficiales Debug y Release con código 0; CTest 23/23 en ambas; `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10 en cada configuración (60 pasadas); arranque de 20 s en ambas con 4 programas de shaders enlazados, escena de 83 instancias, spawn válido y cierre con código 0. En el árbol de trabajo, MSBuild Debug y Release con `Rebuild`, arranque y cierre correctos. Includes sin discrepancias de mayúsculas. Host y cliente en `127.0.0.1`: ninguno reporta fallo, mientras un cliente sin host reporta «Sin respuesta» en el mismo plazo; es evidencia indirecta de conexión, no de juego multijugador. Las pruebas solo cambiaron por renombrados.
 
 **Pendiente de decisión del equipo:** gitlink `ImDesignManager` (sin `.gitmodules`, no se puede inicializar; entró en `9b7fbf4`), `third_party/OpenXR-SDK-main` (CMake no lo referencia), `archive/legacy/` (copias, artefactos de compilación de Visual Studio, muestras VGI, modelos de `res/`, dependencias vendorizadas).
 

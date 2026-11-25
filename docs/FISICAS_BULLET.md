@@ -8,7 +8,7 @@ interacción física quedan para fases posteriores.
 
 | Archivo | Para qué sirve |
 |---|---|
-| `src/physics/PhysicsWorld.h/.cpp` | Envoltorio pequeño de Bullet (`fisica::PhysicsWorld`) y la demo (`fisica::FallingCubeDemo`). Sin OpenGL. |
+| `src/physics/PhysicsWorld.h/.cpp` | Envoltorio pequeño de Bullet (`physics::PhysicsWorld`) y la demo (`physics::FallingCubeDemo`). Sin OpenGL. |
 | `tests/PhysicsTests.cpp` | Pruebas sin ventana: gravedad, caída, paso fijo, FPS, pausa, suelo, reinicio. |
 | `src/app/` | Crea la demo, la actualiza cada fotograma, la dibuja y añade el panel ImGui "Fisica (Bullet)". |
 | `vcpkg.json`, `CMakeLists.txt` | Dependencia `bullet3` y target `EntornVGI_bullet`. |
@@ -50,12 +50,12 @@ posición, velocidad y si Bullet ya lo ha "dormido". No se modifica ninguna inst
 ## Crear otro objeto físico
 
 ```cpp
-fisica::PhysicsWorld mundo;
+physics::PhysicsWorld mundo;
 auto suelo = mundo.CreateStaticBox(glm::vec3(0, 0, -1.85), glm::vec3(8, 5, 0.15));
 auto caja  = mundo.CreateDynamicBox(glm::vec3(2, 0, 1), glm::vec3(0.2f), /*kg*/ 1.0f);
 // cada fotograma:
 mundo.Update(delta);
-fisica::BodyPose pose = mundo.PoseOf(caja);   // pose.posicion, pose.rotacion
+physics::BodyPose pose = mundo.PoseOf(caja);   // pose.posicion, pose.rotacion
 ```
 
 Los tamaños son **medias dimensiones**. Para formas nuevas (esfera, cápsula), añade una
@@ -217,7 +217,7 @@ El ratón sigue girando solo la cámara: **Bullet nunca toca la orientación**.
 | `TeleportPlayer(pies)` | Coloca al jugador (cambio de sala, depuración). |
 | `RemovePlayerBody()` | Lo quita del mundo. |
 
-Medidas en `fisica::PlayerDimensions` (radio 0,25; altura 1,8; ojos 1,7; escalón 0,10).
+Medidas en `physics::PlayerDimensions` (radio 0,25; altura 1,8; ojos 1,7; escalón 0,10).
 
 ## Conceptos de Bullet que usa
 
