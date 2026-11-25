@@ -2,9 +2,9 @@
 
 // Carga y aplicacion de escenas en ejecucion: carga transaccional desde JSON, reconstruccion de la
 // fisica tras editar y carga de modelos OBJ para el editor. No define el formato JSON ni la fisica.
-// main.cpp es el dueno de todo el estado y lo presta mediante este contexto; aqui no se puede
-// incluir main.h (define globales).
-// La API publica va en ingles; main.cpp enlaza cada miembro en contextoEscena().
+// src/app es el dueno de todo el estado y lo presta mediante este contexto; aqui no se puede
+// incluir las cabeceras de estado de la aplicacion.
+// La API publica va en ingles; src/app enlaza cada miembro en sceneBindings().
 #include "src/animation/GlbAnimatedObjects.h"
 #include "src/editor/SceneSerializer.h"
 #include "src/gameplay/hirity/HiritiAnimation.h"
@@ -56,13 +56,13 @@ namespace scene::runtime
 		editor::SceneEditor& sceneEditor;
 		game::HiritiAnimator& hiritiAnimation;
 
-		// Estado de render heredado (main.h); el programa puede cambiar entre cargas.
+		// Estado de render heredado (las cabeceras de estado); el programa puede cambiar entre cargas.
 		char& objectType;
 		bool& textureEnabled;
 		bool& textureInvertY;
 		const unsigned int& shaderProgram;
 
-		// Servicios que siguen en main.cpp (camara, jugador y red)
+		// Servicios que siguen en src/app (camara, jugador y red)
 		std::function<glm::vec3()> cameraFeetPosition;	// pies deducidos de la camara
 		std::function<glm::vec3()> viewForward;			// punto mirado menos ojos, sin normalizar
 		std::function<void(const SceneSpawn& spawn)> fixCameraAtSpawn;

@@ -2,10 +2,10 @@
 """Prepara cuatro texturas Poly Haven en EscapeTheUAB sin Blender.
 
 Ejecutar desde la raíz del repositorio:
-    python preparar_texturas_escapeuab.py
-    python preparar_texturas_escapeuab.py --downloads "C:\\Users\\...\\Downloads"
+    python tools/preparar_texturas_escapeuab.py
+    python tools/preparar_texturas_escapeuab.py --downloads "C:\\Users\\...\\Downloads"
 
-No toca los JSON ni main.cpp, y crea copias .bak de los OBJ/MTL existentes.
+No toca los JSON ni el codigo C++, y crea copias .bak de los OBJ/MTL existentes.
 """
 from __future__ import annotations
 
@@ -152,7 +152,7 @@ def main():
         archivo_mtl.write_text(actualizar_mtl(original_mtl, nombre, imagen), encoding='utf-8')
         print(f'  OBJ/MTL: {archivo_modelo.name} / {archivo_mtl.name}')
 
-    print('\nLISTO. Falta: en main.cpp, dentro del bucle que dibuja los objetos de la escena,')
+    print('\nLISTO. Falta: en el renderizador de la escena, dentro del bucle que dibuja los objetos de la escena,')
     print('cambia el argumento false por true inmediatamente antes de texturesID, textura_map.')
     print('Para usar el suelo metalico en el laboratorio, cambia SOLO su ruta en el JSON')
     print('a ../models/escape_pack/arquitectura/suelo_laboratorio.obj')

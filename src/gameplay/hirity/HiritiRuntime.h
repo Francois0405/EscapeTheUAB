@@ -1,9 +1,9 @@
 #pragma once
 
 // Ciclo de Hiriti en partida: voz (atenuada por distancia), aparicion por la espalda, seguimiento,
-// actualizacion por fotograma y audio ambiental. main.cpp es el dueno de todo el estado y lo presta
-// mediante este contexto; aqui no se puede incluir main.h (define globales).
-// La API publica va en ingles; main.cpp enlaza cada miembro con su global en contextoHiriti().
+// actualizacion por fotograma y audio ambiental. src/app es el dueno de todo el estado y lo presta
+// mediante este contexto; aqui no se puede incluir las cabeceras de estado de la aplicacion.
+// La API publica va en ingles; src/app enlaza cada miembro con su global en hiritiBindings().
 #include "src/gameplay/hirity/HiritiAudioTimer.h"
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/hirity/HiritiAnimation.h"
@@ -35,7 +35,7 @@ namespace game::hiriti
 		const float& hiritiStopDistance;
 		const float& hiritiMaxSpeed;
 
-		// Servicios que siguen en main.cpp (camara, reloj y diagnostico de agarre)
+		// Servicios que siguen en src/app (camara, reloj y diagnostico de agarre)
 		std::function<void(glm::vec3& origin, glm::vec3& direction)> lookRay;
 		std::function<glm::vec2()> cameraHorizontalForward;	// sin normalizar
 		std::function<double()> clockSeconds;

@@ -1,8 +1,8 @@
 #pragma once
 
-// Camera, view and projection menu callbacks. main.cpp owns every piece of state and lends it
-// through this context; nothing here may include main.h (it defines globals).
-// Member names match the main.cpp symbols they are bound to.
+// Camera, view and projection menu callbacks. src/app owns every piece of state and lends it
+// through this context; nothing here may include the application state headers.
+// Member names match the src/app symbols they are bound to.
 class Shader;
 struct CEsfe3D;
 struct CPunt3D;

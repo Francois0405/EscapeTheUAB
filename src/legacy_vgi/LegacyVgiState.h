@@ -1,6 +1,6 @@
 #pragma once
 
-// Shared state of the legacy VGI framework (formerly the globals defined by main.h).
+// Shared state of the legacy VGI framework (formerly the globals of the old main header).
 #include "imgui.h"
 #include "framework.h"
 #include "objLoader.h"

@@ -15,7 +15,7 @@ struct GLFWwindow;
 namespace gameplay::player
 {
 	// Borrowed application state required by the extracted desktop player runtime.
-	// Ownership stays in main.cpp; callbacks bridge the legacy camera preset API.
+	// Ownership stays in src/app; callbacks bridge the legacy camera preset API.
 	struct PlayerContext
 	{
 		fisica::PhysicsWorld& physics;

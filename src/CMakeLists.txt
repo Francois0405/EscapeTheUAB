@@ -150,7 +150,6 @@ endif()
 
 target_include_directories(EntornVGI PRIVATE
 	${REPO_ROOT}
-	${REPO_ROOT}
 	${REPO_ROOT}/src/legacy_vgi
 	${REPO_ROOT}/src/scene
 	${REPO_ROOT}/src/platform
@@ -231,7 +230,6 @@ add_library(EntornVGI_scene_loader STATIC
 )
 target_include_directories(EntornVGI_scene_loader PUBLIC
 	${REPO_ROOT}
-	${REPO_ROOT}
 	${REPO_ROOT}/third_party
 )
 target_link_libraries(EntornVGI_scene_loader PUBLIC ${ENTORNVGI_GLM_TARGET})
@@ -242,7 +240,7 @@ add_library(EntornVGI_glb_model STATIC
 	${REPO_ROOT}/src/rendering/GlbModel.cpp
 )
 target_include_directories(EntornVGI_glb_model
-	PUBLIC ${REPO_ROOT} ${REPO_ROOT}
+	PUBLIC ${REPO_ROOT}
 	PRIVATE ${REPO_ROOT}/third_party/cgltf
 )
 target_link_libraries(EntornVGI_glb_model PUBLIC ${ENTORNVGI_GLM_TARGET})
@@ -253,7 +251,6 @@ add_library(EntornVGI_animated_glb STATIC
 	${REPO_ROOT}/src/animation/GlbAnimatedObjects.cpp
 )
 target_include_directories(EntornVGI_animated_glb PUBLIC
-	${REPO_ROOT}
 	${REPO_ROOT}
 )
 target_link_libraries(EntornVGI_animated_glb PUBLIC
@@ -268,7 +265,6 @@ add_library(EntornVGI_physics STATIC
 	${REPO_ROOT}/src/physics/PhysicsScene.cpp
 )
 target_include_directories(EntornVGI_physics PUBLIC
-	${REPO_ROOT}
 	${REPO_ROOT}
 )
 target_link_libraries(EntornVGI_physics PUBLIC
@@ -289,7 +285,7 @@ target_include_directories(EntornVGI_network_preferences PUBLIC ${REPO_ROOT})
 target_compile_features(EntornVGI_network_preferences PUBLIC cxx_std_20)
 
 add_library(EntornVGI_network_game STATIC ${REPO_ROOT}/src/networking/replication/NetGame.cpp)
-target_include_directories(EntornVGI_network_game PUBLIC ${REPO_ROOT} ${REPO_ROOT})
+target_include_directories(EntornVGI_network_game PUBLIC ${REPO_ROOT})
 target_link_libraries(EntornVGI_network_game PUBLIC
 	EntornVGI_network
 	${ENTORNVGI_GLM_TARGET}
@@ -304,7 +300,6 @@ add_library(EntornVGI_editor_core STATIC
 	${REPO_ROOT}/src/editor/EditorVisibility.cpp
 )
 target_include_directories(EntornVGI_editor_core PUBLIC
-	${REPO_ROOT}
 	${REPO_ROOT}
 )
 target_link_libraries(EntornVGI_editor_core PUBLIC

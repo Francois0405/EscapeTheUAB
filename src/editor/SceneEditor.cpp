@@ -85,7 +85,7 @@ namespace editor
 		}
 	}
 
-	// ---- Peticiones hacia main.cpp ------------------------------------------------------------
+	// ---- Peticiones hacia src/app ------------------------------------------------------------
 
 	bool SceneEditor::ConsumePlayEntry() { const bool v = exitToPlay; exitToPlay = false; return v; }
 	bool SceneEditor::ConsumeSaveRequest() { const bool v = saveRequested; saveRequested = false; return v; }

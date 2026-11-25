@@ -16,7 +16,7 @@ namespace
 	netgame::session::SessionRuntimeState networkSessionState;  // estado propio de src/networking/session
 }
 
-// Contexto prestado a src/networking/session: el estado sigue siendo de main.cpp.
+// Contexto prestado a src/networking/session: el estado sigue siendo de src/app.
 
 const netgame::session::SessionContext& sessionBindings()
 {

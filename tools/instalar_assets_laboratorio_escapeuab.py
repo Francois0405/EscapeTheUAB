@@ -4,8 +4,8 @@
 Requiere solo Python 3.8+ (sin paquetes externos). No modifica JSON, shaders ni C++.
 
 Desde la raiz del repositorio:
-    python instalar_assets_laboratorio_escapeuab.py --downloads "E:\\Descargas - Brave" --check
-    python instalar_assets_laboratorio_escapeuab.py --downloads "E:\\Descargas - Brave"
+    python tools/instalar_assets_laboratorio_escapeuab.py --downloads "E:\\Descargas - Brave" --check
+    python tools/instalar_assets_laboratorio_escapeuab.py --downloads "E:\\Descargas - Brave"
 
 - Recupera el color PNG 2K sin extraer mapas PBR no soportados.
 - Crea suelo_rejilla.obj/.mtl como copia del suelo_laboratorio ya existente,
@@ -147,7 +147,7 @@ def main():
         write_safe(path,data,args.force,args.check)
     print('\nLISTO.' if not args.check else '\nCOMPROBACION COMPLETA.')
     print('A continuacion:')
-    print('1) En main.cpp, agrega suelo_rejilla.obj a la lista arquitecturaBase de uArchitectureTiling.')
+    print('1) En el renderizador de la escena, agrega suelo_rejilla.obj a la lista arquitecturaBase de uArchitectureTiling.')
     print('2) En el JSON del laboratorio, cambia solo model de suelo_laboratorio.obj a suelo_rejilla.obj.')
     print('3) Compila y prueba el suelo. No se ha cambiado el JSON ni el codigo.')
     print('4) En EDIT, busca Prop_Light_Wide en Asset Browser; anadelo sin collider.')

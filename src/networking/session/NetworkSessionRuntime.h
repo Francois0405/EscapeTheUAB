@@ -1,10 +1,10 @@
 #pragma once
 
 // Sesion de red en ejecucion: arranque, parada, bucle por fotograma, autoridad de agarre del host,
-// replicas del cliente y estado de escena. No define el protocolo ni el transporte. main.cpp es el
-// dueno de todo el estado y lo presta mediante este contexto; aqui no se puede incluir main.h
+// replicas del cliente y estado de escena. No define el protocolo ni el transporte. src/app es el
+// dueno de todo el estado y lo presta mediante este contexto; aqui no se puede incluir las cabeceras de estado
 // (define globales).
-// La API publica va en ingles; main.cpp enlaza cada miembro en contextoSesionRed().
+// La API publica va en ingles; src/app enlaza cada miembro en sessionBindings().
 #include "src/animation/GlbAnimatedObjects.h"
 #include "src/networking/replication/Game/RemotePhysicsTimeline.h"
 #include "src/networking/replication/NetAdapters.h"
@@ -23,7 +23,7 @@
 
 namespace netgame::session
 {
-	// Estado que solo usa la sesion; lo instancia main.cpp.
+	// Estado que solo usa la sesion; lo instancia src/app.
 	struct SessionRuntimeState
 	{
 		bool physicsInReplicaMode = false;
@@ -48,7 +48,7 @@ namespace netgame::session
 		const vr::XrPose& headPose;		// pose del visor del ultimo fotograma VR
 		const bool& hasHeadPose;
 
-		// Servicios que siguen en main.cpp (camara, escena, entrada, diagnostico y Hirity)
+		// Servicios que siguen en src/app (camara, escena, entrada, diagnostico y Hirity)
 		std::function<glm::vec3()> eyePosition;
 		std::function<glm::vec3()> viewForward;	// punto mirado menos ojos, sin normalizar
 		std::function<glm::vec3()> bodyFeetPosition;

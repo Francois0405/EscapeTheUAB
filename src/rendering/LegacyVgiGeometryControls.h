@@ -5,7 +5,7 @@ struct CColor;
 struct CPunt3D;
 struct INSTANCIA;
 
-// Borrows the VGI menu state owned by main.cpp.
+// Borrows the VGI menu state owned by src/app.
 struct LegacyVgiGeometryControls
 {
 	// Object selection and resources

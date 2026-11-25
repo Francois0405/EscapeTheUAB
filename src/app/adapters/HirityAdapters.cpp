@@ -12,7 +12,7 @@ namespace
 	game::HiritiAudioTimer hiritiAudioTimer;
 }
 
-// Contexto prestado a src/gameplay/hirity: el estado sigue siendo de main.cpp.
+// Contexto prestado a src/gameplay/hirity: el estado sigue siendo de src/app.
 const game::hiriti::HiritiContext& hiritiBindings()
 {
 	static const game::hiriti::HiritiContext contexto{

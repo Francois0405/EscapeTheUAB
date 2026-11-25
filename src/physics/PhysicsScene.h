@@ -31,7 +31,7 @@
 namespace fisica
 {
 	// Matriz de colocación de un objeto OBJ: trasladar * Rz * Ry * Rx * escalar.
-	// (Es la misma que usa el dibujo de main.cpp.)
+	// (Es la misma que usa el dibujo de src/app.)
 	glm::mat4 ObjectMatrix(const SceneObject& objeto);
 
 	// Crea las instancias GLB que pide el JSON. Los modelos se cargan una sola vez por

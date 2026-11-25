@@ -1,9 +1,9 @@
 #pragma once
 
 // Viewport callbacks and the per-frame draw path: desktop projections, the editor view, the F2
-// stereo test view and the OpenXR eye loop. main.cpp owns every piece of state and lends it through
-// this context; nothing here may include main.h (it defines globals).
-// Member names match the main.cpp globals and functions they are bound to.
+// stereo test view and the OpenXR eye loop. src/app owns every piece of state and lends it through
+// this context; nothing here may include the application state headers.
+// Member names match the src/app globals and functions they are bound to.
 // w and h are references on purpose: the main loop sets them to the PS1 FBO size around OnPaint.
 #include "framework.h"
 #include <functional>
@@ -68,7 +68,7 @@ struct RuntimeRenderer
 	vr::XrPose& lastVrHead;		// head pose of the last VR frame, read by networking
 	bool& hasVrHead;
 
-	// Services that stay in main.cpp
+	// Services that stay in src/app
 	std::function<void()> configura_Escena;
 	std::function<void()> dibuixa_Escena;
 	std::function<void()> Barra_Estat;

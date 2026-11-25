@@ -43,7 +43,7 @@ namespace editor
 		bool IsEnabled() const { return activo; }
 		void SetActive(bool activar);
 
-		// Acciones que main.cpp debe ejecutar (guardar en disco, volver a PLAY, cerrar).
+		// Acciones que src/app debe ejecutar (guardar en disco, volver a PLAY, cerrar).
 		bool ConsumePlayEntry();
 		bool ConsumeSaveRequest();
 		bool ConsumeCloseConfirmed();

@@ -10,7 +10,7 @@
 #include "src/app/input/CursorCapture.h"
 #include "src/app/adapters/GrabTrace.h"
 
-// Contexto prestado a src/gameplay/interaction: el estado sigue siendo de main.cpp.
+// Contexto prestado a src/gameplay/interaction: el estado sigue siendo de src/app.
 const game::interaction::InteractionContext& interactionBindings()
 {
 	static const game::interaction::InteractionContext contexto{

@@ -2,8 +2,8 @@
 """EscapeTheUAB: suelo mate + rejilla técnica localizada, sin tocar físicas ni shaders.
 
 Colocar en la raiz del repositorio y ejecutar:
-    python preparar_sector_laboratorio.py --check
-    python preparar_sector_laboratorio.py --apply
+    python tools/preparar_sector_laboratorio.py --check
+    python tools/preparar_sector_laboratorio.py --apply
 
 Antes de escribir, valida escena y assets. Genera backup del JSON fuera del repositorio.
 No coloca lámparas ni mobiliario (se hará desde EDIT para conservar su diseño).

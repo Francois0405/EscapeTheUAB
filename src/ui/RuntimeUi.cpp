@@ -309,7 +309,7 @@ void DrawRuntimeUiFrame(const FrameContext& context)
 		ImGui::End();
 	}
 
-	// Rendering ImGui Menus (main.cpp submits the draw data after the PS1 scene pass).
+	// Rendering ImGui Menus (src/app submits the draw data after the PS1 scene pass).
 	ImGui::Render();
 }
 }

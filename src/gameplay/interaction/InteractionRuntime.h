@@ -1,9 +1,9 @@
 #pragma once
 
 // Interaccion del jugador local: objetivo mirado, accion "interactuar", seguimiento del agarre y
-// carga/lanzamiento. main.cpp es el dueno de todo el estado y lo presta mediante este contexto;
-// aqui no se puede incluir main.h (define globales).
-// La API publica va en ingles; main.cpp enlaza cada miembro con su global en contextoInteraccion().
+// carga/lanzamiento. src/app es el dueno de todo el estado y lo presta mediante este contexto;
+// aqui no se puede incluir las cabeceras de estado de la aplicacion.
+// La API publica va en ingles; src/app enlaza cada miembro con su global en interactionBindings().
 #include "src/animation/GlbAnimatedObjects.h"
 #include "src/gameplay/interaction/ThrowCharge.h"
 #include "src/networking/replication/NetAdapters.h"
@@ -47,7 +47,7 @@ namespace game::interaction
 		float& throwChargeSeconds;
 		const bool& debugPanelsVisible;
 
-		// Servicios que siguen en main.cpp (estado de entrada, camara, reloj, diagnostico y Hirity)
+		// Servicios que siguen en src/app (estado de entrada, camara, reloj, diagnostico y Hirity)
 		std::function<bool()> fpsInputActive;
 		std::function<bool()> editorActive;
 		std::function<bool()> xrSessionRunning;

@@ -7,7 +7,7 @@
 #include "src/app/adapters/PlayerAdapters.h"
 #include "src/app/adapters/SessionAdapters.h"
 
-// Contexto prestado a src/scene/SceneRuntime: el estado sigue siendo de main.cpp.
+// Contexto prestado a src/scene/SceneRuntime: el estado sigue siendo de src/app.
 const scene::runtime::SceneRuntimeContext& sceneBindings()
 {
 	static const scene::runtime::SceneRuntimeContext contexto{

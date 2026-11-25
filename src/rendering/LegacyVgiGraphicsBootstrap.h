@@ -1,8 +1,8 @@
 #pragma once
 
 // One-time initialization of the legacy VGI state and GL resources (the former body of InitGL).
-// main.cpp owns every piece of state and lends it through this context; nothing here may include
-// main.h (it defines globals). Member names match the main.cpp symbols they are bound to.
+// src/app owns every piece of state and lends it through this context; nothing here may include
+// the application state headers. Member names match the src/app symbols they are bound to.
 // Requires a current OpenGL context with GLEW already initialized.
 #include "framework.h"
 

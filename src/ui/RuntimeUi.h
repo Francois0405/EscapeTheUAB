@@ -1,7 +1,7 @@
 #pragma once
 
-// Runtime ImGui UI. main.cpp owns every piece of game state and lends it through these
-// contexts; nothing here may include main.h (it defines globals).
+// Runtime ImGui UI. src/app owns every piece of game state and lends it through these
+// contexts; nothing here may include the application state headers.
 // All drawing is ImGui-native and happens after the PS1 scene pass.
 #include <functional>
 #include <memory>
@@ -118,7 +118,7 @@ namespace runtimeui
 		bool useLightStyle;
 		const bool& showDebugPanels;
 		const bool& showFpsCounter;
-		std::function<void()> drawLegacyWindows;            // legacy VGI windows stay in main.cpp
+		std::function<void()> drawLegacyWindows;            // legacy VGI windows stay in src/app
 		std::function<void(int width, int height)> drawEditor;
 	};
 

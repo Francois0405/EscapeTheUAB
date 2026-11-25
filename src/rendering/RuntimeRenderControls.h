@@ -1,9 +1,9 @@
 #pragma once
 
 // Render-control callbacks: lighting modes, materials, textures, light slots, shader
-// selection and the binary shader cache. main.cpp owns every piece of state and lends it
-// through this context; nothing here may include main.h (it defines globals).
-// Member names match the main.cpp globals they are bound to.
+// selection and the binary shader cache. src/app owns every piece of state and lends it
+// through this context; nothing here may include the application state headers.
+// Member names match the src/app globals they are bound to.
 #include <functional>
 
 class Shader;
@@ -37,7 +37,7 @@ struct RuntimeRenderControls
 	Shader& shaderLighting;
 	bool& phongOccludersDirty;
 
-	// Service that stays in main.cpp (the render path uses it too).
+	// Service that stays in src/app (the render path uses it too).
 	std::function<void(unsigned int programa, bool ambienteActivo)> applyMaterialIntensity;
 
 	void OnIluminacioLlumfixe();
