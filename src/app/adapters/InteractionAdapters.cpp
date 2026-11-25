@@ -22,8 +22,8 @@ const game::interaction::InteractionContext& interactionBindings()
 		[](glm::vec3& origen, glm::vec3& direccion) { gazeOriginAndDirection(origen, direccion); },
 		[] { return glfwGetTime(); },
 		[](const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
-			const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
-			{ traceGrab(evento, id, peer, propietario, posicion, punto, detalle); },
+			const glm::vec3& position, const glm::vec3& punto, const char* detalle)
+			{ traceGrab(evento, id, peer, propietario, position, punto, detalle); },
 		[]
 		{
 			hiritiAnimator.DiscoverByInteraction();

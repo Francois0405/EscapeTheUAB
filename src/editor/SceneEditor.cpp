@@ -67,8 +67,8 @@ namespace editor
 
 		glm::mat4 MatrizDeAnimado(const SceneAnimatedObject& a)
 		{
-			glm::mat4 m = glm::translate(glm::mat4(1.0f), a.posicion);
-			m = glm::rotate(m, glm::radians(a.giroZGrados), glm::vec3(0.0f, 0.0f, 1.0f));
+			glm::mat4 m = glm::translate(glm::mat4(1.0f), a.position);
+			m = glm::rotate(m, glm::radians(a.yawDegrees), glm::vec3(0.0f, 0.0f, 1.0f));
 			return glm::scale(m, glm::vec3(a.escala));
 		}
 
@@ -76,10 +76,10 @@ namespace editor
 		{
 			switch (clase)
 			{
-			case ElementClass::Suelo: return "floor";
-			case ElementClass::Techo: return "ceiling";
-			case ElementClass::Pared: return "wall";
-			case ElementClass::Arquitectura: return "architecture";
+			case ElementClass::Floor: return "floor";
+			case ElementClass::Ceiling: return "ceiling";
+			case ElementClass::Wall: return "wall";
+			case ElementClass::Architecture: return "architecture";
 			default: return "object";
 			}
 		}
@@ -87,29 +87,29 @@ namespace editor
 
 	// ---- Peticiones hacia main.cpp ------------------------------------------------------------
 
-	bool SceneEditor::ConsumePlayEntry() { const bool v = salirAPlay; salirAPlay = false; return v; }
-	bool SceneEditor::ConsumeSaveRequest() { const bool v = guardarSolicitado; guardarSolicitado = false; return v; }
-	bool SceneEditor::ConsumeCloseConfirmed() { const bool v = cerrarConfirmado; cerrarConfirmado = false; return v; }
-	bool SceneEditor::ConsumeCloseAfterSave() { const bool v = cerrarTrasGuardar; cerrarTrasGuardar = false; return v; }
+	bool SceneEditor::ConsumePlayEntry() { const bool v = exitToPlay; exitToPlay = false; return v; }
+	bool SceneEditor::ConsumeSaveRequest() { const bool v = saveRequested; saveRequested = false; return v; }
+	bool SceneEditor::ConsumeCloseConfirmed() { const bool v = closeConfirmed; closeConfirmed = false; return v; }
+	bool SceneEditor::ConsumeCloseAfterSave() { const bool v = closeAfterSave; closeAfterSave = false; return v; }
 
 	void SceneEditor::SetActive(bool activar)
 	{
 		if (activar == activo) return;
 		activo = activar;
-		if (!activo) { salirAPlay = true; EndCapture(); modoCamara = CameraMode::Ninguno; }   // el historial se conserva
+		if (!activo) { exitToPlay = true; EndCapture(); modoCamara = CameraMode::None; }   // el historial se conserva
 	}
 
 	void SceneEditor::SetModelsRoot(const std::filesystem::path& raiz)
 	{
-		raizModelos = raiz;
-		inventarioCargado = false;
+		modelsRoot = raiz;
+		inventoryLoaded = false;
 	}
 
 	void SceneEditor::NewScene()
 	{
 		historial.Reset();
 		glbEliminados.clear();
-		reconstruirFisicaSolicitada = false;
+		rebuildPhysicsRequested = false;
 		hayRespaldo = false;
 		seleccionado = -1;
 		bloqueoGizmoTrasSeleccion.Reset();
@@ -117,7 +117,7 @@ namespace editor
 		cajasObj.clear();
 		cajasGlb.clear();
 		visibilidad.ShowAll();
-		mensajeEstado.clear();
+		statusMessage.clear();
 	}
 
 	// ---- Entrada --------------------------------------------------------------------------------
@@ -141,11 +141,11 @@ namespace editor
 		switch (tecla)
 		{
 		case GLFW_KEY_UP: flecha = ArrowKey::Up; break;
-		case GLFW_KEY_DOWN: flecha = ArrowKey::Abajo; break;
-		case GLFW_KEY_LEFT: flecha = ArrowKey::Izquierda; break;
+		case GLFW_KEY_DOWN: flecha = ArrowKey::Down; break;
+		case GLFW_KEY_LEFT: flecha = ArrowKey::Left; break;
 		case GLFW_KEY_RIGHT: flecha = ArrowKey::Right; break;
-		case GLFW_KEY_PAGE_UP: flecha = ArrowKey::Subir; break;
-		case GLFW_KEY_PAGE_DOWN: flecha = ArrowKey::Bajar; break;
+		case GLFW_KEY_PAGE_UP: flecha = ArrowKey::Raise; break;
+		case GLFW_KEY_PAGE_DOWN: flecha = ArrowKey::Lower; break;
 		default: esFlecha = false; break;
 		}
 		if (esFlecha)
@@ -155,7 +155,7 @@ namespace editor
 			// Con un campo de texto o un widget en uso, las flechas son de ImGui y no tocan la escena.
 			if (escribiendoTexto || entrada.imguiActivo) return;
 			teclasFlechaPulsadas |= bit;
-			flechasPendientes.push_back({ flecha, control, mayus });
+			pendingArrows.push_back({ flecha, control, mayus });
 			return;
 		}
 
@@ -164,19 +164,19 @@ namespace editor
 		if (escribiendoTexto) return;
 		if (control)
 		{
-			if (tecla == GLFW_KEY_S) guardarSolicitado = true;
-			else if (tecla == GLFW_KEY_Z) { if (mayus) rehacerSolicitado = true; else deshacerSolicitado = true; }
-			else if (tecla == GLFW_KEY_Y) rehacerSolicitado = true;
-			else if (tecla == GLFW_KEY_D) duplicarSolicitado = true;
+			if (tecla == GLFW_KEY_S) saveRequested = true;
+			else if (tecla == GLFW_KEY_Z) { if (mayus) redoRequested = true; else undoRequested = true; }
+			else if (tecla == GLFW_KEY_Y) redoRequested = true;
+			else if (tecla == GLFW_KEY_D) duplicateRequested = true;
 			return;
 		}
 		switch (tecla)
 		{
-		case GLFW_KEY_1: herramienta = Herramienta::Move; break;
-		case GLFW_KEY_2: herramienta = Herramienta::Rotar; break;
-		case GLFW_KEY_3: herramienta = Herramienta::Escalar; break;
-		case GLFW_KEY_F: enfocarSolicitado = true; break;
-		case GLFW_KEY_DELETE: eliminarSolicitado = true; break;
+		case GLFW_KEY_1: herramienta = EditorTool::Move; break;
+		case GLFW_KEY_2: herramienta = EditorTool::Rotate; break;
+		case GLFW_KEY_3: herramienta = EditorTool::Scale; break;
+		case GLFW_KEY_F: focusRequested = true; break;
+		case GLFW_KEY_DELETE: deleteRequested = true; break;
 		default: break;
 		}
 	}
@@ -214,7 +214,7 @@ namespace editor
 		const bool mayus = glfwGetKey(ventana, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(ventana, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 		const bool ortografica = camara.IsOrthographic();
 
-		if (modoCamara == CameraMode::Ninguno)
+		if (modoCamara == CameraMode::None)
 		{
 			if (entrada.viewportLibre)
 			{
@@ -222,9 +222,9 @@ namespace editor
 				else if (medio) modoCamara = CameraMode::Pan;
 				else if (izquierdo && alt) modoCamara = ortografica ? CameraMode::Pan : CameraMode::Orbit;
 			}
-			if (modoCamara != CameraMode::Ninguno)
+			if (modoCamara != CameraMode::None)
 			{
-				pivoteOrbita = camara.PivotPoint();
+				orbitPivot = camara.PivotPoint();
 				reiniciarDelta = true;
 				dx = dy = 0.0f;
 				if (modoCamara == CameraMode::Look || modoCamara == CameraMode::Orbit)
@@ -241,7 +241,7 @@ namespace editor
 			const bool sigue = (modoCamara == CameraMode::Look) ? derecho
 				: (modoCamara == CameraMode::Orbit) ? izquierdo
 				: (derecho || medio || (izquierdo && alt));
-			if (!sigue) { EndCapture(); modoCamara = CameraMode::Ninguno; return; }
+			if (!sigue) { EndCapture(); modoCamara = CameraMode::None; return; }
 		}
 
 		switch (modoCamara)
@@ -258,7 +258,7 @@ namespace editor
 			}
 			break;
 		}
-		case CameraMode::Orbit: camara.Orbit(pivoteOrbita, dx, dy, opciones); break;
+		case CameraMode::Orbit: camara.Orbit(orbitPivot, dx, dy, opciones); break;
 		case CameraMode::Pan: camara.Pan(dx, dy, io.DisplaySize.y, opciones); break;
 		default: break;
 		}
@@ -268,7 +268,7 @@ namespace editor
 	{
 		if (!activo) return;
 		// La rueda es del panel ImGui si el cursor está encima (Hierarchy, Inspector, Asset Browser...) y no de la cámara.
-		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGuizmo::IsUsing() || modoCamara != CameraMode::Ninguno) return;
+		if (ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow) || ImGuizmo::IsUsing() || modoCamara != CameraMode::None) return;
 		camara.Zoom(cantidad, opciones);
 	}
 
@@ -290,23 +290,23 @@ namespace editor
 		{
 			if (glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, animado.id))
 			{
-				instancia->posicion = animado.posicion;
-				instancia->giroZGrados = animado.giroZGrados;
+				instancia->position = animado.position;
+				instancia->yawDegrees = animado.yawDegrees;
 				instancia->escala = animado.escala;
 			}
-			if (!animado.paredId.empty() && !animado.aperturaId.empty())
+			if (!animado.paredId.empty() && !animado.openingId.empty())
 			{
 				auto pared = std::find_if(contexto.objetos.begin(), contexto.objetos.end(),
 					[&](const SceneObject& item) { return item.id == animado.paredId && item.pared.presente; });
 				if (pared == contexto.objetos.end()) continue;
-				const float yaw = glm::radians(pared->rotacion.z);
+				const float yaw = glm::radians(pared->eulerRotation.z);
 				const glm::vec3 ejeU(std::cos(yaw), std::sin(yaw), 0.0f);
 				auto apertura = std::find_if(pared->pared.aperturas.begin(), pared->pared.aperturas.end(),
-					[&](const SceneWallOpening& item) { return item.id == animado.aperturaId; });
+					[&](const SceneWallOpening& item) { return item.id == animado.openingId; });
 				if (apertura == pared->pared.aperturas.end()) continue;
-				apertura->centerU = glm::dot(animado.posicion - pared->posicion, ejeU);
-				const glm::vec3 mitad = glm::abs(pared->escala) * (pared->fisica.presente ? pared->fisica.mitadTamano : glm::vec3(1.0f));
-				apertura->base = std::max(0.0f, animado.posicion.z - (pared->posicion.z - mitad.z));
+				apertura->centerU = glm::dot(animado.position - pared->position, ejeU);
+				const glm::vec3 mitad = glm::abs(pared->escala) * (pared->fisica.presente ? pared->fisica.halfExtents : glm::vec3(1.0f));
+				apertura->base = std::max(0.0f, animado.position.z - (pared->position.z - mitad.z));
 			}
 		}
 	}
@@ -330,7 +330,7 @@ namespace editor
 			if (cached != glbEliminados.end()) contexto.escenaGlb.objetos.push_back(cached->second);
 		}
 		SyncGlb(contexto);   // vista y cajas se rehacen solas: en EDIT todo se dibuja desde estas listas
-		reconstruirFisicaSolicitada = true;
+		rebuildPhysicsRequested = true;
 		const int total = static_cast<int>(contexto.objetos.size() + contexto.animados.size());
 		if (seleccionado >= total) SetSelection(total - 1);
 		hayRespaldo = false;
@@ -405,8 +405,8 @@ namespace editor
 			caja.valida = true;
 			if (objeto.fisica.presente)
 			{
-				caja.minimo = objeto.fisica.desplazamiento - objeto.fisica.mitadTamano;
-				caja.maximo = objeto.fisica.desplazamiento + objeto.fisica.mitadTamano;
+				caja.minimo = objeto.fisica.desplazamiento - objeto.fisica.halfExtents;
+				caja.maximo = objeto.fisica.desplazamiento + objeto.fisica.halfExtents;
 			}
 		}
 		return WithMinimumHalfExtent(caja, 0.02f);
@@ -453,10 +453,10 @@ namespace editor
 		{
 			const glm::vec3 escala(glm::length(glm::vec3(matriz[0])), glm::length(glm::vec3(matriz[1])), glm::length(glm::vec3(matriz[2])));
 			glm::mat4 pose = glm::translate(glm::mat4(1.0f), glm::vec3(matriz[3]));
-			glm::mat3 rotacion;
-			for (int eje = 0; eje < 3; ++eje) rotacion[eje] = glm::normalize(glm::vec3(matriz[eje]));
-			pose *= glm::mat4(rotacion);
-			const glm::vec3 mitadPared = glm::abs(escala) * (objeto.fisica.presente ? objeto.fisica.mitadTamano : BoxOfObject(objeto).HalfSize());
+			glm::mat3 eulerRotation;
+			for (int eje = 0; eje < 3; ++eje) eulerRotation[eje] = glm::normalize(glm::vec3(matriz[eje]));
+			pose *= glm::mat4(eulerRotation);
+			const glm::vec3 mitadPared = glm::abs(escala) * (objeto.fisica.presente ? objeto.fisica.halfExtents : BoxOfObject(objeto).HalfSize());
 			std::vector<SceneWallSection> secciones;
 			std::string error;
 			if (GenerateWallSections(mitadPared, objeto.pared.aperturas, secciones, error))
@@ -470,7 +470,7 @@ namespace editor
 		if (objeto.fisica.presente)
 		{
 			const glm::mat4 collider = matriz * glm::translate(glm::mat4(1.0f), objeto.fisica.desplazamiento);
-			return { TransformBox(collider, glm::vec3(0.0f), objeto.fisica.mitadTamano) };
+			return { TransformBox(collider, glm::vec3(0.0f), objeto.fisica.halfExtents) };
 		}
 		const LocalBox limites = BoxOfObject(objeto);
 		return { TransformBox(matriz, limites.CenterPoint(), limites.HalfSize()) };
@@ -481,8 +481,8 @@ namespace editor
 		const glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, animado.id);
 		if (instancia != nullptr && instancia->modelo != nullptr && !animado.colisionadores.empty())
 		{
-			glm::mat4 base = glm::translate(glm::mat4(1.0f), animado.posicion);
-			base = glm::rotate(base, glm::radians(animado.giroZGrados), glm::vec3(0, 0, 1));
+			glm::mat4 base = glm::translate(glm::mat4(1.0f), animado.position);
+			base = glm::rotate(base, glm::radians(animado.yawDegrees), glm::vec3(0, 0, 1));
 			base = glm::scale(base, glm::vec3(animado.escala));
 			std::vector<OrientedBox> cajas;
 			for (const SceneCollider& datos : animado.colisionadores)
@@ -491,7 +491,7 @@ namespace editor
 				if (nodo < 0) continue;
 				const glm::mat4 mundoNodo = base * glb::YUpToZUpMatrix() *
 					glb::NodeWorldMatrix(*instancia->modelo, instancia->pose, nodo);
-				cajas.push_back(TransformBox(mundoNodo, datos.desplazamiento, datos.mitadTamano));
+				cajas.push_back(TransformBox(mundoNodo, datos.desplazamiento, datos.halfExtents));
 			}
 			if (!cajas.empty()) return cajas;
 		}
@@ -515,12 +515,12 @@ namespace editor
 			const SceneObject& objeto = contexto.objetos[i];
 			const auto cajas = BoxesOfObject(objeto, fisica::ObjectMatrix(objeto));
 			const glm::vec3 dimensiones = objeto.fisica.presente
-				? glm::abs(objeto.escala) * objeto.fisica.mitadTamano
+				? glm::abs(objeto.escala) * objeto.fisica.halfExtents
 				: glm::abs(objeto.escala) * BoxOfObject(objeto).HalfSize();
 			const float minimo = std::min({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float medio = dimensiones.x + dimensiones.y + dimensiones.z - minimo - std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float maximo = std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
-			const bool paredPorForma = objeto.fisica.presente && objeto.fisica.tipo == fisica::BodyType::Estatico &&
+			const bool paredPorForma = objeto.fisica.presente && objeto.fisica.tipo == fisica::BodyType::Static &&
 				minimo < 0.30f && medio > 1.0f && maximo > 4.0f;
 			const bool arquitectura = objeto.categoria == "architecture" || paredPorForma;
 			const std::string tipo = paredPorForma && objeto.categoria != "architecture" ? "wall" :
@@ -551,35 +551,35 @@ namespace editor
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 		{
 			SceneObject objeto = contexto.objetos[i];
-			if (objeto.id == candidato.paredId && !candidato.aperturaId.empty())
+			if (objeto.id == candidato.paredId && !candidato.openingId.empty())
 			{
 				auto apertura = std::find_if(objeto.pared.aperturas.begin(), objeto.pared.aperturas.end(),
-					[&](const SceneWallOpening& a) { return a.id == candidato.aperturaId; });
+					[&](const SceneWallOpening& a) { return a.id == candidato.openingId; });
 				if (apertura != objeto.pared.aperturas.end())
 				{
-					const float yaw = glm::radians(objeto.rotacion.z);
+					const float yaw = glm::radians(objeto.eulerRotation.z);
 					const glm::vec3 ejeU(std::cos(yaw), std::sin(yaw), 0.0f);
-					apertura->centerU = glm::dot(candidato.posicion - objeto.posicion, ejeU);
-					const glm::vec3 mitad = glm::abs(objeto.escala) * (objeto.fisica.presente ? objeto.fisica.mitadTamano : glm::vec3(1.0f));
-					apertura->base = candidato.posicion.z - (objeto.posicion.z - mitad.z);
+					apertura->centerU = glm::dot(candidato.position - objeto.position, ejeU);
+					const glm::vec3 mitad = glm::abs(objeto.escala) * (objeto.fisica.presente ? objeto.fisica.halfExtents : glm::vec3(1.0f));
+					apertura->base = candidato.position.z - (objeto.position.z - mitad.z);
 					std::vector<SceneWallSection> secciones;
 					std::string error;
 					if (!GenerateWallSections(mitad, objeto.pared.aperturas, secciones, error))
 						return { false, "wall opening: " + error };
-					const float normalOffset = glm::length(candidato.posicion - objeto.posicion - ejeU * apertura->centerU - glm::vec3(0, 0, candidato.posicion.z - objeto.posicion.z));
+					const float normalOffset = glm::length(candidato.position - objeto.position - ejeU * apertura->centerU - glm::vec3(0, 0, candidato.position.z - objeto.position.z));
 					if (normalOffset > mitad.y + 0.15f || apertura->base < -0.01f)
 						return { false, "door must remain aligned with its associated wall" };
 				}
 			}
 			const auto cajas = BoxesOfObject(objeto, fisica::ObjectMatrix(objeto));
 			const glm::vec3 dimensiones = objeto.fisica.presente
-				? glm::abs(objeto.escala) * objeto.fisica.mitadTamano
+				? glm::abs(objeto.escala) * objeto.fisica.halfExtents
 				: glm::abs(objeto.escala) * BoxOfObject(objeto).HalfSize();
 			const float minimo = std::min({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float medio = dimensiones.x + dimensiones.y + dimensiones.z - minimo - std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float maximo = std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const bool arquitectura = objeto.categoria == "architecture" ||
-				(objeto.fisica.presente && objeto.fisica.tipo == fisica::BodyType::Estatico && minimo < 0.30f && medio > 1.0f && maximo > 4.0f);
+				(objeto.fisica.presente && objeto.fisica.tipo == fisica::BodyType::Static && minimo < 0.30f && medio > 1.0f && maximo > 4.0f);
 			for (const OrientedBox& caja : cajas) obstaculos.push_back({ caja, objeto.id, arquitectura ? "architecture" : "object", arquitectura });
 		}
 		for (std::size_t i = 0; i < contexto.animados.size(); ++i)
@@ -597,8 +597,8 @@ namespace editor
 	{
 		const ImGuiIO& io = ImGui::GetIO();
 		// Prioridad 4: solo un clic simple en el viewport (no sobre un panel, ni arrastrando el gizmo, ni navegando con Alt/botones).
-		if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left) || !entrada.viewportLibre || entrada.altPulsado ||
-			modoCamara != CameraMode::Ninguno || ImGuizmo::IsOver()) return;
+		if (!ImGui::IsMouseClicked(ImGuiMouseButton_Left) || !entrada.viewportLibre || entrada.altPressed ||
+			modoCamara != CameraMode::None || ImGuizmo::IsOver()) return;
 		if (ancho <= 0 || alto <= 0) return;
 
 		glm::mat4 vista, proyeccion;
@@ -625,12 +625,12 @@ namespace editor
 	{
 		clases = ClassifyElements(contexto.objetos);
 		visibles.assign(contexto.objetos.size(), 1);
-		const bool superior = camara.vista == Vista::Superior;
+		const bool superior = camara.vista == ViewKind::Top;
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 			visibles[i] = visibilidad.Visible(contexto.objetos[i], clases[i], superior) ? 1 : 0;
-		aisladoEsAnimado = visibilidad.aislar &&
+		aisladoEsAnimado = visibilidad.isolateSelection &&
 			std::any_of(contexto.animados.begin(), contexto.animados.end(),
-				[this](const SceneAnimatedObject& a) { return a.id == visibilidad.idAislado; });
+				[this](const SceneAnimatedObject& a) { return a.id == visibilidad.isolatedId; });
 	}
 
 	bool SceneEditor::IsObjectVisible(std::size_t indice) const
@@ -640,7 +640,7 @@ namespace editor
 
 	bool SceneEditor::ShowAnimated() const
 	{
-		return !activo || !visibilidad.aislar || aisladoEsAnimado;
+		return !activo || !visibilidad.isolateSelection || aisladoEsAnimado;
 	}
 
 	void SceneEditor::FocusSelection(const EditorSceneContext& contexto)
@@ -658,10 +658,10 @@ namespace editor
 		float techoDelSuelo = std::numeric_limits<float>::lowest();
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 		{
-			if (c[i] != ElementClass::Suelo) continue;
+			if (c[i] != ElementClass::Floor) continue;
 			const SceneObject& o = contexto.objetos[i];
-			const float mitad = std::abs(o.escala.z) * (o.fisica.presente ? o.fisica.mitadTamano.z : 1.0f);
-			techoDelSuelo = std::max(techoDelSuelo, o.posicion.z + mitad);
+			const float mitad = std::abs(o.escala.z) * (o.fisica.presente ? o.fisica.halfExtents.z : 1.0f);
+			techoDelSuelo = std::max(techoDelSuelo, o.position.z + mitad);
 		}
 		return techoDelSuelo;
 	}
@@ -677,8 +677,8 @@ namespace editor
 		objeto.id = UniqueId(contexto, "obj_" + std::filesystem::path(clave).stem().string());
 		objeto.categoria = "objects";
 		objeto.modelo = clave;
-		objeto.posicion = glm::vec3(0.0f);
-		objeto.rotacion = yArribaAZArriba ? glm::vec3(90.0f, 0.0f, 0.0f) : glm::vec3(0.0f);
+		objeto.position = glm::vec3(0.0f);
+		objeto.eulerRotation = yArribaAZArriba ? glm::vec3(90.0f, 0.0f, 0.0f) : glm::vec3(0.0f);
 		objeto.escala = glm::vec3(1.0f);
 
 		LocalBox caja = BoxOfObject(objeto);
@@ -686,10 +686,10 @@ namespace editor
 		const float suelo = FloorHeight(contexto);
 		const glm::vec3 centro = mundo.CenterPoint();
 		const glm::vec3 objetivo = camara.PivotPoint();
-		objeto.posicion.x = objetivo.x - centro.x;
-		objeto.posicion.y = objetivo.y - centro.y;
+		objeto.position.x = objetivo.x - centro.x;
+		objeto.position.y = objetivo.y - centro.y;
 		// Apoyado sobre el suelo si la sala lo tiene; si no, centrado en el punto que mira la cámara.
-		objeto.posicion.z = suelo > std::numeric_limits<float>::lowest() / 2.0f ? suelo - mundo.minimo.z : objetivo.z - centro.z;
+		objeto.position.z = suelo > std::numeric_limits<float>::lowest() / 2.0f ? suelo - mundo.minimo.z : objetivo.z - centro.z;
 
 		std::string aviso;
 		if (colisionador)
@@ -700,8 +700,8 @@ namespace editor
 			else
 			{
 				objeto.fisica.presente = true;
-				objeto.fisica.tipo = dinamico ? fisica::BodyType::Dinamico : fisica::BodyType::Estatico;
-				objeto.fisica.mitadTamano = caja.HalfSize();
+				objeto.fisica.tipo = dinamico ? fisica::BodyType::Dynamic : fisica::BodyType::Static;
+				objeto.fisica.halfExtents = caja.HalfSize();
 				objeto.fisica.desplazamiento = caja.CenterPoint();
 				objeto.fisica.masa = dinamico ? 5.0f : 0.0f;
 			}
@@ -709,12 +709,12 @@ namespace editor
 		const PlacementResult resultado = ValidateObject(contexto, objeto, -1);
 		if (!resultado.valida)
 		{
-			mensajeColocacion = "Placement blocked by " + resultado.bloqueador;
-			mensajeEsError = true;
-			ReportStatus(mensajeColocacion, true);
+			placementMessage = "Placement blocked by " + resultado.bloqueador;
+			messageIsError = true;
+			ReportStatus(placementMessage, true);
 			return {};
 		}
-		mensajeColocacion.clear();
+		placementMessage.clear();
 		historial.RegisterElement(CaptureHistory(contexto));
 		const std::string id = objeto.id;
 		contexto.objetos.push_back(std::move(objeto));
@@ -731,7 +731,7 @@ namespace editor
 		if (IsAnimated(contexto, seleccionado))
 		{
 			SceneAnimatedObject copia = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
-			if (copia.paredId.empty() || copia.aperturaId.empty())
+			if (copia.paredId.empty() || copia.openingId.empty())
 			{ ReportStatus("Install this door in a parametric wall before duplicating it.", true); return false; }
 			const int paredIndex = static_cast<int>(std::distance(contexto.objetos.begin(), std::find_if(contexto.objetos.begin(), contexto.objetos.end(),
 				[&](const SceneObject& item) { return item.id == copia.paredId && item.pared.presente; })));
@@ -739,11 +739,11 @@ namespace editor
 			{ ReportStatus("The associated wall no longer exists.", true); return false; }
 			SceneObject& pared = contexto.objetos[static_cast<std::size_t>(paredIndex)];
 			auto apertura = std::find_if(pared.pared.aperturas.begin(), pared.pared.aperturas.end(),
-				[&](const SceneWallOpening& a) { return a.id == copia.aperturaId; });
+				[&](const SceneWallOpening& a) { return a.id == copia.openingId; });
 			if (apertura == pared.pared.aperturas.end())
 			{ ReportStatus("The door opening association is missing.", true); return false; }
 			copia.id = UniqueId(contexto, copia.id + "_copy");
-			copia.aperturaId = copia.id;
+			copia.openingId = copia.id;
 			SceneWallOpening nuevoVano = *apertura;
 			nuevoVano.id = copia.id;
 			nuevoVano.idPuerta = copia.id;
@@ -753,11 +753,11 @@ namespace editor
 			std::vector<SceneWallOpening> vanos = pared.pared.aperturas;
 			vanos.push_back(nuevoVano);
 			std::string errorVano;
-			if (!GenerateWallSections(glm::abs(pared.escala) * pared.fisica.mitadTamano, vanos, secciones, errorVano))
+			if (!GenerateWallSections(glm::abs(pared.escala) * pared.fisica.halfExtents, vanos, secciones, errorVano))
 			{ ReportStatus("Door duplicate blocked: " + errorVano, true); return false; }
-			const float angulo = glm::radians(pared.rotacion.z);
+			const float angulo = glm::radians(pared.eulerRotation.z);
 			const glm::vec3 ejeU(std::cos(angulo), std::sin(angulo), 0.0f);
-			copia.posicion += ejeU * desplazamientoU;
+			copia.position += ejeU * desplazamientoU;
 			copia.paredId = pared.id;
 			const SceneState estadoAnterior = CaptureHistory(contexto);
 			pared.pared.aperturas.push_back(nuevoVano);
@@ -767,11 +767,11 @@ namespace editor
 			{
 				glb::AnimatedObject clon = *original;
 				clon.id = copia.id;
-				clon.posicion = copia.posicion;
-				clon.giroZGrados = copia.giroZGrados;
+				clon.position = copia.position;
+				clon.yawDegrees = copia.yawDegrees;
 				clon.escala = copia.escala;
 				clon.pose = glb::CreateRestPose(*clon.modelo);
-				clon.estado = glb::DoorState::Cerrada;
+				clon.estado = glb::DoorState::Closed;
 				clon.reproductor = {};
 				glbEliminados[copia.id] = clon; // permite que Redo reconstruya la instancia sin recargar el modelo compartido
 				contexto.escenaGlb.objetos.push_back(std::move(clon));
@@ -792,7 +792,7 @@ namespace editor
 				ReportStatus("Door duplicate blocked by " + validacion.bloqueador, true); return false;
 			}
 			historial.RegisterElement(estadoAnterior);
-			reconstruirFisicaSolicitada = true;
+			rebuildPhysicsRequested = true;
 			SetSelection(nuevoIndice); hayRespaldo = false; MarkModified();
 			ReportStatus("Door duplicated with a separate wall opening.");
 			return true;
@@ -800,15 +800,15 @@ namespace editor
 		SceneObject copia = contexto.objetos[static_cast<std::size_t>(seleccionado)];
 		copia.id = UniqueId(contexto, copia.id + "_copy");
 		copia.categoria = "objects";
-		copia.posicion.x += 0.5f;
+		copia.position.x += 0.5f;
 		const PlacementResult resultado = ValidateObject(contexto, copia, -1);
 		if (!resultado.valida)
 		{
-			mensajeColocacion = "Duplicate blocked by " + resultado.bloqueador;
-			ReportStatus(mensajeColocacion, true);
+			placementMessage = "Duplicate blocked by " + resultado.bloqueador;
+			ReportStatus(placementMessage, true);
 			return false;
 		}
-		mensajeColocacion.clear();
+		placementMessage.clear();
 		historial.RegisterElement(CaptureHistory(contexto));
 		contexto.objetos.push_back(std::move(copia));
 		SetSelection(static_cast<int>(contexto.objetos.size()) - 1);
@@ -828,14 +828,14 @@ namespace editor
 			const std::size_t index = static_cast<std::size_t>(seleccionado) - contexto.objetos.size();
 			const SceneAnimatedObject& datos = contexto.animados[index];
 			id = datos.id;
-			if (!datos.paredId.empty() && !datos.aperturaId.empty())
+			if (!datos.paredId.empty() && !datos.openingId.empty())
 			{
 				auto pared = std::find_if(contexto.objetos.begin(), contexto.objetos.end(),
 					[&](const SceneObject& item) { return item.id == datos.paredId && item.pared.presente; });
 				if (pared != contexto.objetos.end())
 				{
 					auto apertura = std::find_if(pared->pared.aperturas.begin(), pared->pared.aperturas.end(),
-						[&](const SceneWallOpening& a) { return a.id == datos.aperturaId && a.idPuerta == datos.id; });
+						[&](const SceneWallOpening& a) { return a.id == datos.openingId && a.idPuerta == datos.id; });
 					if (apertura != pared->pared.aperturas.end())
 					{
 						if (cerrarHueco) pared->pared.aperturas.erase(apertura);
@@ -851,7 +851,7 @@ namespace editor
 					[&](const glb::AnimatedObject& item) { return item.id == id; }), instancias.end());
 			}
 			contexto.animados.erase(contexto.animados.begin() + static_cast<std::ptrdiff_t>(index));
-			reconstruirFisicaSolicitada = true;
+			rebuildPhysicsRequested = true;
 		}
 		else
 		{
@@ -872,20 +872,20 @@ namespace editor
 			indicePared < 0 || indicePared >= static_cast<int>(contexto.objetos.size())) return false;
 		SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(indicePuerta)];
 		SceneObject& paredNueva = contexto.objetos[static_cast<std::size_t>(indicePared)];
-		if (!paredNueva.pared.presente || (paredNueva.fisica.presente && paredNueva.fisica.tipo != fisica::BodyType::Estatico))
+		if (!paredNueva.pared.presente || (paredNueva.fisica.presente && paredNueva.fisica.tipo != fisica::BodyType::Static))
 		{ ReportStatus("Select a parametric wall with static collision first.", true); return false; }
 		float mitadAncho = 0.0f, alturaMarco = 0.0f;
 		for (const SceneCollider& c : puerta.colisionadores)
 			if (c.nodo == "DoorFrame")
 			{
-				mitadAncho = std::max(mitadAncho, std::abs(c.desplazamiento.x) + c.mitadTamano.x);
-				alturaMarco = std::max(alturaMarco, c.desplazamiento.y + c.mitadTamano.y);
+				mitadAncho = std::max(mitadAncho, std::abs(c.desplazamiento.x) + c.halfExtents.x);
+				alturaMarco = std::max(alturaMarco, c.desplazamiento.y + c.halfExtents.y);
 			}
 		if (!(mitadAncho > 0.0f && alturaMarco > 0.0f))
 		{ ReportStatus("DoorFrame colliders are required to derive the opening dimensions.", true); return false; }
-		const float a = glm::radians(paredNueva.rotacion.z);
+		const float a = glm::radians(paredNueva.eulerRotation.z);
 		const glm::vec3 ejeU(std::cos(a), std::sin(a), 0.0f);
-		const glm::vec3 delta = puerta.posicion - paredNueva.posicion;
+		const glm::vec3 delta = puerta.position - paredNueva.position;
 		SceneWallOpening nueva;
 		nueva.id = puerta.id + "_opening";
 		for (unsigned suffix = 2; std::any_of(paredNueva.pared.aperturas.begin(), paredNueva.pared.aperturas.end(),
@@ -897,7 +897,7 @@ namespace editor
 		nueva.alto = alturaMarco;
 		nueva.base = 0.0f;
 		const glm::vec3 halfWall = glm::abs(paredNueva.escala) *
-			(paredNueva.fisica.presente ? paredNueva.fisica.mitadTamano : glm::vec3(1.0f));
+			(paredNueva.fisica.presente ? paredNueva.fisica.halfExtents : glm::vec3(1.0f));
 		std::vector<SceneWallSection> secciones;
 		std::vector<SceneWallOpening> propuestaAperturas;
 		for (const auto& ap : paredNueva.pared.aperturas)
@@ -919,14 +919,14 @@ namespace editor
 		{
 			auto& old = contexto.objetos[static_cast<std::size_t>(paredAnteriorIndex)];
 			old.pared.aperturas.erase(std::remove_if(old.pared.aperturas.begin(), old.pared.aperturas.end(),
-				[&](const SceneWallOpening& ap) { return ap.id == puerta.aperturaId; }), old.pared.aperturas.end());
+				[&](const SceneWallOpening& ap) { return ap.id == puerta.openingId; }), old.pared.aperturas.end());
 		}
 		paredNueva.pared.aperturas = std::move(propuestaAperturas);
 		puerta.paredId = paredNueva.id;
-		puerta.aperturaId = nueva.id;
-		puerta.posicion = paredNueva.posicion + ejeU * nueva.centerU + glm::vec3(0.0f, 0.0f,
-			paredNueva.posicion.z - halfWall.z - puerta.posicion.z);
-		puerta.giroZGrados = paredNueva.rotacion.z;
+		puerta.openingId = nueva.id;
+		puerta.position = paredNueva.position + ejeU * nueva.centerU + glm::vec3(0.0f, 0.0f,
+			paredNueva.position.z - halfWall.z - puerta.position.z);
+		puerta.yawDegrees = paredNueva.eulerRotation.z;
 		const auto resultado = ValidateAnimated(contexto, puerta, static_cast<int>(contexto.objetos.size()) + indicePuerta);
 		if (!resultado.valida)
 		{
@@ -939,8 +939,8 @@ namespace editor
 		}
 		historial.RegisterElement(anterior);
 		SyncGlb(contexto);
-		reconstruirFisicaSolicitada = true;
-		MarkModified(); mensajeColocacion.clear();
+		rebuildPhysicsRequested = true;
+		MarkModified(); placementMessage.clear();
 		ReportStatus("Door installed; wall opening and static colliders updated.");
 		return true;
 	}
@@ -949,108 +949,108 @@ namespace editor
 	{
 		// Flechas: mueven el objeto seleccionado (herramienta Mover) o, sin selección, la cámara. Una pulsación mantenida
 		// (con la repetición del teclado) forma UNA operación de historial: se cierra al soltar todas las flechas.
-		for (const ArrowPress& pulsacion : flechasPendientes)
+		for (const ArrowPress& pulsacion : pendingArrows)
 		{
 			if (!IsValidIndex(contexto, seleccionado))
 			{
 				bool snap = false;
 				const float paso = ArrowStepLength(pulsacion.ctrl, pulsacion.shift, opciones, snap) * 5.0f;
-				camara.posicion += ArrowDirection(pulsacion.flecha, camara) * paso;
+				camara.position += ArrowDirection(pulsacion.flecha, camara) * paso;
 				continue;
 			}
-			if (herramienta != Herramienta::Move) continue;
+			if (herramienta != EditorTool::Move) continue;
 			if (!IsAnimated(contexto, seleccionado))
 			{
 				SceneObject& objeto = contexto.objetos[static_cast<std::size_t>(seleccionado)];
 				SceneObject candidato = objeto;
-				candidato.posicion = ApplyArrowKey(objeto.posicion, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
+				candidato.position = ApplyArrowKey(objeto.position, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
 				const PlacementResult resultado = ValidateObject(contexto, candidato, seleccionado);
 				if (!resultado.valida)
 				{
-					mensajeColocacion = "Movement blocked by " + resultado.bloqueador;
-					ReportStatus(mensajeColocacion, true);
+					placementMessage = "Movement blocked by " + resultado.bloqueador;
+					ReportStatus(placementMessage, true);
 					continue;
 				}
-				if (candidato.posicion == objeto.posicion) continue;
+				if (candidato.position == objeto.position) continue;
 				OpenTransactionIfNeeded();
-				objeto.posicion = candidato.posicion;
+				objeto.position = candidato.position;
 			}
 			else
 			{
 				SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
 				SceneAnimatedObject candidato = puerta;
-				candidato.posicion = ApplyArrowKey(puerta.posicion, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
+				candidato.position = ApplyArrowKey(puerta.position, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
 				const PlacementResult resultado = ValidateAnimated(contexto, candidato, seleccionado);
 				if (!resultado.valida)
 				{
-					mensajeColocacion = "Movement blocked by " + resultado.bloqueador;
-					ReportStatus(mensajeColocacion, true);
+					placementMessage = "Movement blocked by " + resultado.bloqueador;
+					ReportStatus(placementMessage, true);
 					continue;
 				}
-				if (candidato.posicion == puerta.posicion) continue;
+				if (candidato.position == puerta.position) continue;
 				OpenTransactionIfNeeded();
-				puerta.posicion = candidato.posicion;
+				puerta.position = candidato.position;
 				SyncGlb(contexto);
 			}
-			mensajeColocacion.clear();
+			placementMessage.clear();
 			MarkModified();
 		}
-		flechasPendientes.clear();
-		if (deshacerSolicitado) { deshacerSolicitado = false; Undo(contexto); }
-		if (rehacerSolicitado) { rehacerSolicitado = false; Redo(contexto); }
-		if (duplicarSolicitado) { duplicarSolicitado = false; DuplicateSelection(contexto); }
-		if (eliminarSolicitado) { eliminarSolicitado = false; DeleteSelection(contexto, true); }
+		pendingArrows.clear();
+		if (undoRequested) { undoRequested = false; Undo(contexto); }
+		if (redoRequested) { redoRequested = false; Redo(contexto); }
+		if (duplicateRequested) { duplicateRequested = false; DuplicateSelection(contexto); }
+		if (deleteRequested) { deleteRequested = false; DeleteSelection(contexto, true); }
 		if (eliminarConservarHuecoSolicitado) { eliminarConservarHuecoSolicitado = false; DeleteSelection(contexto, false); }
-		if (anadirSolicitado) { anadirSolicitado = false; AddFromAssetBrowser(contexto); }
-		if (enfocarSolicitado) { enfocarSolicitado = false; FocusSelection(contexto); }
+		if (addRequested) { addRequested = false; AddFromAssetBrowser(contexto); }
+		if (focusRequested) { focusRequested = false; FocusSelection(contexto); }
 	}
 
 	void SceneEditor::AddFromAssetBrowser(EditorSceneContext contexto)
 	{
-		if (assetEsPuerta)
+		if (assetIsDoor)
 		{
-			if (puertaSeleccionada.empty() || !cargadorPuertas)
+			if (selectedDoor.empty() || !doorLoader)
 			{ ReportStatus("No GLB door loader is registered.", true); return; }
 			std::error_code ec;
-			const auto absoluta = std::filesystem::absolute(raizAnimaciones / puertaSeleccionada, ec).lexically_normal();
+			const auto absoluta = std::filesystem::absolute(animationsRoot / selectedDoor, ec).lexically_normal();
 			if (ec) { ReportStatus("Could not resolve the selected GLB path.", true); return; }
 			SceneAnimatedObject nuevo;
 			nuevo.id = UniqueId(contexto, absoluta.stem().string());
-			nuevo.posicion = camara.PivotPoint();
-			const auto relativa = absoluta.lexically_relative(raizEscena);
+			nuevo.position = camara.PivotPoint();
+			const auto relativa = absoluta.lexically_relative(sceneRoot);
 			if (relativa.empty() || relativa.is_absolute()) { ReportStatus("Could not create a portable GLB path relative to the scene.", true); return; }
 			nuevo.modelo = relativa.generic_string();
 			for (const SceneAnimatedObject& existente : contexto.animados)
 			{
 				std::error_code rutaError;
-				const auto existenteAbs = std::filesystem::absolute(raizEscena / existente.modelo, rutaError).lexically_normal();
+				const auto existenteAbs = std::filesystem::absolute(sceneRoot / existente.modelo, rutaError).lexically_normal();
 				if (!rutaError && existenteAbs == absoluta) { nuevo.colisionadores = existente.colisionadores; nuevo.escala = existente.escala; break; }
 			}
 			if (nuevo.colisionadores.empty()) { ReportStatus("This GLB has no door collider template in the loaded scene.", true); return; }
 			const SceneState anterior = CaptureHistory(contexto);
 			std::string error;
-			if (!cargadorPuertas(absoluta, nuevo, contexto, error))
+			if (!doorLoader(absoluta, nuevo, contexto, error))
 			{ ReportStatus("Door asset error: " + error, true); return; }
 			historial.RegisterElement(anterior);
 			contexto.animados.push_back(nuevo);
-			reconstruirFisicaSolicitada = true;
+			rebuildPhysicsRequested = true;
 			SetSelection(static_cast<int>(contexto.objetos.size() + contexto.animados.size() - 1));
 			hayRespaldo = false; MarkModified();
 			ReportStatus("Door instance added. Select a parametric wall and install the opening in Inspector.");
 			return;
 		}
-		if (assetSeleccionado.empty()) { ReportStatus("Select a model in the Asset Browser first", true); return; }
-		if (!cargadorModelos) { ReportStatus("Asset error: no model loader is registered", true); return; }
+		if (selectedAsset.empty()) { ReportStatus("Select a model in the Asset Browser first", true); return; }
+		if (!modelLoader) { ReportStatus("Asset error: no model loader is registered", true); return; }
 		std::error_code ec;
-		const std::filesystem::path absoluta = std::filesystem::absolute(raizModelos / assetSeleccionado, ec).lexically_normal();
-		if (ec) { ReportStatus("Asset error: could not resolve " + assetSeleccionado, true); return; }
+		const std::filesystem::path absoluta = std::filesystem::absolute(modelsRoot / selectedAsset, ec).lexically_normal();
+		if (ec) { ReportStatus("Asset error: could not resolve " + selectedAsset, true); return; }
 		std::string clave, error;
-		if (!cargadorModelos(absoluta, clave, error))
+		if (!modelLoader(absoluta, clave, error))
 		{
 			ReportStatus("Asset error: " + (error.empty() ? std::string("could not load model") : error), true);
 			return;
 		}
-		AppendModel(contexto, clave, assetYArriba, assetColisionador, assetDinamico);
+		AppendModel(contexto, clave, assetYArriba, assetCollider, assetDynamic);
 	}
 
 	void SceneEditor::ChangeTransform(SceneObject& objeto, const glm::mat4& matriz)
@@ -1060,35 +1060,35 @@ namespace editor
 			ReportStatus("Gizmo transform rejected: non-finite or non-affine matrix", true);
 			return;
 		}
-		const glm::vec3 posicion(matriz[3]);
+		const glm::vec3 position(matriz[3]);
 		glm::vec3 escala(glm::length(glm::vec3(matriz[0])), glm::length(glm::vec3(matriz[1])), glm::length(glm::vec3(matriz[2])));
 		for (int eje = 0; eje < 3; ++eje) escala[eje] *= objeto.escala[eje] < 0.0f ? -1.0f : 1.0f;
-		if (std::abs(glm::determinant(glm::mat3(matriz))) < 1.0e-9f || !VectorFinito(posicion) || !VectorFinito(escala)) return;
+		if (std::abs(glm::determinant(glm::mat3(matriz))) < 1.0e-9f || !VectorFinito(position) || !VectorFinito(escala)) return;
 
-		glm::mat3 rotacion(matriz);
+		glm::mat3 eulerRotation(matriz);
 		for (int eje = 0; eje < 3; ++eje)
-			rotacion[eje] = glm::normalize(rotacion[eje]) * (objeto.escala[eje] < 0.0f ? -1.0f : 1.0f);
+			eulerRotation[eje] = glm::normalize(eulerRotation[eje]) * (objeto.escala[eje] < 0.0f ? -1.0f : 1.0f);
 		// Euler XYZ que reconstruye la matriz del motor Rz * Ry * Rx.
-		const float y = std::asin(std::clamp(-rotacion[0][2], -1.0f, 1.0f));
+		const float y = std::asin(std::clamp(-eulerRotation[0][2], -1.0f, 1.0f));
 		const float cy = std::cos(y);
 		float x = 0.0f, z = 0.0f;
 		if (std::abs(cy) > 1.0e-5f)
 		{
-			x = std::atan2(rotacion[1][2], rotacion[2][2]);
-			z = std::atan2(rotacion[0][1], rotacion[0][0]);
+			x = std::atan2(eulerRotation[1][2], eulerRotation[2][2]);
+			z = std::atan2(eulerRotation[0][1], eulerRotation[0][0]);
 		}
 		else
 		{
-			x = std::atan2(-rotacion[2][1], rotacion[1][1]);
+			x = std::atan2(-eulerRotation[2][1], eulerRotation[1][1]);
 		}
 		glm::vec3 nuevaRotacion(glm::degrees(x), glm::degrees(y), glm::degrees(z));
 		for (int eje = 0; eje < 3; ++eje)
-			nuevaRotacion[eje] += 360.0f * std::round((objeto.rotacion[eje] - nuevaRotacion[eje]) / 360.0f);
+			nuevaRotacion[eje] += 360.0f * std::round((objeto.eulerRotation[eje] - nuevaRotacion[eje]) / 360.0f);
 		if (!VectorFinito(nuevaRotacion)) return;
 		const glm::vec3 nuevaEscala = glm::max(glm::abs(escala), glm::vec3(MinimoEscala)) * glm::sign(escala);
-		if (posicion == objeto.posicion && nuevaRotacion == objeto.rotacion && nuevaEscala == objeto.escala) return;
-		objeto.posicion = posicion;
-		objeto.rotacion = nuevaRotacion;
+		if (position == objeto.position && nuevaRotacion == objeto.eulerRotation && nuevaEscala == objeto.escala) return;
+		objeto.position = position;
+		objeto.eulerRotation = nuevaRotacion;
 		objeto.escala = nuevaEscala;
 		MarkModified();
 	}
@@ -1105,47 +1105,47 @@ namespace editor
 		ImGui::SetNextWindowSize(ImVec2(io.DisplaySize.x, AlturaBarra * io.FontGlobalScale), ImGuiCond_Always);
 		ImGui::Begin("Editor Toolbar", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
 			ImGuiWindowFlags_HorizontalScrollbar);
-		if (ImGui::Button(modificada ? "Save*" : "Save")) guardarSolicitado = true;
+		if (ImGui::Button(modificada ? "Save*" : "Save")) saveRequested = true;
 		ImGui::SameLine();
 		ImGui::BeginDisabled(!historial.CanUndo());
-		if (ImGui::Button("Undo")) deshacerSolicitado = true;
+		if (ImGui::Button("Undo")) undoRequested = true;
 		ImGui::EndDisabled();
 		ImGui::SameLine();
 		ImGui::BeginDisabled(!historial.CanRedo());
-		if (ImGui::Button("Redo")) rehacerSolicitado = true;
+		if (ImGui::Button("Redo")) redoRequested = true;
 		ImGui::EndDisabled();
 		ImGui::SameLine();
-		auto herramientaBoton = [this](const char* texto, Herramienta h) {
+		auto herramientaBoton = [this](const char* texto, EditorTool h) {
 			const bool actual = herramienta == h;
 			if (actual) ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.20f, 0.45f, 0.75f, 1.0f));
 			if (ImGui::Button(texto)) herramienta = h;
 			if (actual) ImGui::PopStyleColor();
 		};
-		herramientaBoton("Move [1]", Herramienta::Move); ImGui::SameLine();
-		herramientaBoton("Rotate [2]", Herramienta::Rotar); ImGui::SameLine();
-		herramientaBoton("Scale [3]", Herramienta::Escalar);
+		herramientaBoton("Move [1]", EditorTool::Move); ImGui::SameLine();
+		herramientaBoton("Rotate [2]", EditorTool::Rotate); ImGui::SameLine();
+		herramientaBoton("Scale [3]", EditorTool::Scale);
 		ImGui::SameLine(); ImGui::Checkbox("Local", &local);
 		ImGui::SameLine(); ImGui::Checkbox("Snap", &snap);
 		ImGui::SameLine(); ImGui::Checkbox("Boxes", &showColliders);
 		ImGui::SameLine();
-		if (ImGui::Button(camara.vista == Vista::Perspectiva ? "Top view" : "Perspective"))
-			camara.ChangeView(camara.vista == Vista::Perspectiva ? Vista::Superior : Vista::Perspectiva);
+		if (ImGui::Button(camara.vista == ViewKind::Perspective ? "Top view" : "Perspective"))
+			camara.ChangeView(camara.vista == ViewKind::Perspective ? ViewKind::Top : ViewKind::Perspective);
 		ImGui::SameLine();
-		if (ImGui::Button("Front")) camara.ChangeView(Vista::Frontal);
+		if (ImGui::Button("Front")) camara.ChangeView(ViewKind::Front);
 		ImGui::SameLine();
-		if (ImGui::Button("Right")) camara.ChangeView(Vista::Right);
+		if (ImGui::Button("Right")) camara.ChangeView(ViewKind::Right);
 		ImGui::SameLine();
-		ImGui::Checkbox("Camera", &mostrarOpcionesCamara);
+		ImGui::Checkbox("Camera", &showCameraOptions);
 		ImGui::SameLine();
-		ImGui::Checkbox("Debug input", &depurarEntrada);
+		ImGui::Checkbox("Debug input", &debugInput);
 		ImGui::SameLine();
-		ImGui::TextDisabled("Arrows: 10cm | Ctrl 1cm | Shift 50cm | Ctrl+Shift grid %.0fcm | PgUp/PgDn Z", opciones.pasoCuadricula * 100.0f);
+		ImGui::TextDisabled("Arrows: 10cm | Ctrl 1cm | Shift 50cm | Ctrl+Shift grid %.0fcm | PgUp/PgDn Z", opciones.gridStep * 100.0f);
 		if (modificada) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.72f, 0.15f, 1.0f), "Unsaved changes"); }
-		if (!mensajeEstado.empty())
+		if (!statusMessage.empty())
 		{
 			ImGui::SameLine();
-			if (mensajeEsError) ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.3f, 1.0f), "%s", mensajeEstado.c_str());
-			else ImGui::TextUnformatted(mensajeEstado.c_str());
+			if (messageIsError) ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.3f, 1.0f), "%s", statusMessage.c_str());
+			else ImGui::TextUnformatted(statusMessage.c_str());
 		}
 		ImGui::End();
 		(void)contexto;
@@ -1166,19 +1166,19 @@ namespace editor
 		{
 			if (ImGui::CollapsingHeader("Editor visibility (not saved)", ImGuiTreeNodeFlags_DefaultOpen))
 			{
-				ImGui::Checkbox("Hide ceiling", &visibilidad.ocultarTecho);
-				ImGui::Checkbox("Hide walls", &visibilidad.ocultarParedes);
+				ImGui::Checkbox("Hide ceiling", &visibilidad.hideCeiling);
+				ImGui::Checkbox("Hide walls", &visibilidad.hideWalls);
 				ImGui::Checkbox("Auto-hide ceiling in top view", &visibilidad.autoOcultarTechoEnVistaSuperior);
 				if (ImGui::Button("Show all")) visibilidad.ShowAll();
 				ImGui::SameLine();
-				if (!visibilidad.aislar)
+				if (!visibilidad.isolateSelection)
 				{
 					ImGui::BeginDisabled(!IsValidIndex(contexto, seleccionado));
 					if (ImGui::Button("Isolate selected"))
-					{ visibilidad.aislar = true; visibilidad.idAislado = IdOf(contexto, seleccionado); }
+					{ visibilidad.isolateSelection = true; visibilidad.isolatedId = IdOf(contexto, seleccionado); }
 					ImGui::EndDisabled();
 				}
-				else if (ImGui::Button("End isolation")) { visibilidad.aislar = false; visibilidad.idAislado.clear(); }
+				else if (ImGui::Button("End isolation")) { visibilidad.isolateSelection = false; visibilidad.isolatedId.clear(); }
 				ImGui::TextDisabled("Hidden items stay in the scene, the JSON and the physics.");
 			}
 			ImGui::Separator();
@@ -1203,17 +1203,17 @@ namespace editor
 					else { ImGui::Dummy(ImVec2(ImGui::GetFrameHeight(), 1.0f)); ImGui::SameLine(); }
 					std::string etiqueta = id;
 					if (animado) etiqueta += "  [GLB]";
-					else if (static_cast<std::size_t>(i) < clases.size() && clases[static_cast<std::size_t>(i)] != ElementClass::Objeto)
+					else if (static_cast<std::size_t>(i) < clases.size() && clases[static_cast<std::size_t>(i)] != ElementClass::Object)
 						etiqueta += std::string("  [") + NombreClase(clases[static_cast<std::size_t>(i)]) + "]";
 					if (ImGui::Selectable(etiqueta.c_str(), seleccionado == i, ImGuiSelectableFlags_AllowDoubleClick))
 					{
 						SetSelection(i);
-						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) enfocarSolicitado = true;
+						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) focusRequested = true;
 					}
-					if (seleccionado == i && seleccionCambiada) { ImGui::SetScrollHereY(0.5f); }
+					if (seleccionado == i && selectionChanged) { ImGui::SetScrollHereY(0.5f); }
 					ImGui::PopID();
 				}
-				seleccionCambiada = false;
+				selectionChanged = false;
 			}
 			ImGui::EndChild();
 		}
@@ -1234,8 +1234,8 @@ namespace editor
 		AjustarVentanaAlCambiarEscala("Inspector", escalaUI, io.DisplaySize);
 		if (visible)
 		{
-			if (!mensajeColocacion.empty())
-				ImGui::TextColored(ImVec4(1.0f, 0.28f, 0.22f, 1.0f), "%s", mensajeColocacion.c_str());
+			if (!placementMessage.empty())
+				ImGui::TextColored(ImVec4(1.0f, 0.28f, 0.22f, 1.0f), "%s", placementMessage.c_str());
 			if (!IsValidIndex(contexto, seleccionado))
 				ImGui::TextUnformatted("Select an object in Hierarchy or click it in the viewport");
 			else if (!IsAnimated(contexto, seleccionado))
@@ -1246,33 +1246,33 @@ namespace editor
 				ImGui::TextWrapped("Model: %s", objeto.modelo.c_str());
 				ImGui::Separator();
 				ImGui::TextUnformatted("Transform");
-				glm::vec3 solicitada = objeto.posicion;
+				glm::vec3 solicitada = objeto.position;
 				if (ImGui::InputFloat3("Position", &solicitada.x, "%.3f"))
 				{
 					SceneObject candidato = objeto;
-					candidato.posicion = solicitada;
+					candidato.position = solicitada;
 					const PlacementResult resultado = VectorFinito(solicitada) ? ValidateObject(contexto, candidato, seleccionado) :
 						PlacementResult{ false, "non-finite position" };
 					if (resultado.valida)
 					{
-						if (solicitada != objeto.posicion) { OpenTransactionIfNeeded(); objeto.posicion = solicitada; MarkModified(); }
-						mensajeColocacion.clear();
+						if (solicitada != objeto.position) { OpenTransactionIfNeeded(); objeto.position = solicitada; MarkModified(); }
+						placementMessage.clear();
 					}
-					else { mensajeColocacion = "Position blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
+					else { placementMessage = "Position blocked by " + resultado.bloqueador; ReportStatus(placementMessage, true); }
 				}
-			glm::vec3 rotacionSolicitada = objeto.rotacion;
+			glm::vec3 rotacionSolicitada = objeto.eulerRotation;
 			if (ImGui::InputFloat3("Rotation", &rotacionSolicitada.x, "%.2f"))
 			{
 				SceneObject candidato = objeto;
-				candidato.rotacion = rotacionSolicitada;
+				candidato.eulerRotation = rotacionSolicitada;
 				const PlacementResult resultado = VectorFinito(rotacionSolicitada) ? ValidateObject(contexto, candidato, seleccionado) :
 					PlacementResult{ false, "non-finite rotation" };
 				if (resultado.valida)
 				{
-					if (rotacionSolicitada != objeto.rotacion) { OpenTransactionIfNeeded(); objeto.rotacion = rotacionSolicitada; MarkModified(); }
-					mensajeColocacion.clear();
+					if (rotacionSolicitada != objeto.eulerRotation) { OpenTransactionIfNeeded(); objeto.eulerRotation = rotacionSolicitada; MarkModified(); }
+					placementMessage.clear();
 				}
-				else { mensajeColocacion = "Rotation blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
+				else { placementMessage = "Rotation blocked by " + resultado.bloqueador; ReportStatus(placementMessage, true); }
 			}
 			glm::vec3 escalaSolicitada = objeto.escala;
 			if (ImGui::InputFloat3("Scale", &escalaSolicitada.x, "%.3f"))
@@ -1287,9 +1287,9 @@ namespace editor
 				if (resultado.valida)
 				{
 					if (escalaSolicitada != objeto.escala) { OpenTransactionIfNeeded(); objeto.escala = escalaSolicitada; MarkModified(); }
-					mensajeColocacion.clear();
+					placementMessage.clear();
 				}
-				else { mensajeColocacion = "Scale blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
+				else { placementMessage = "Scale blocked by " + resultado.bloqueador; ReportStatus(placementMessage, true); }
 			}
 			bool permitirArquitectura = objeto.permitirPenetracionArquitectura;
 			if (ImGui::Checkbox("Allow architecture penetration (unsafe)", &permitirArquitectura))
@@ -1325,13 +1325,13 @@ namespace editor
 					}
 					if (ImGui::BeginPopup("Selector de textura"))
 					{
-						ImGui::InputTextWithHint("##texture-filter", "Filtrar por nombre...", filtroTexturas, sizeof(filtroTexturas));
+						ImGui::InputTextWithHint("##texture-filter", "Filtrar por nombre...", textureFilter, sizeof(textureFilter));
 						const char* categorias[] = { "Todas", "Suelo", "Pared", "Techo", "Otros" };
-						ImGui::Combo("Categoría", &categoriaTexturas, categorias, 5);
+						ImGui::Combo("Categoría", &textureCategory, categorias, 5);
 						ImGui::BeginChild("##texture-list", ImVec2(330.0f, 260.0f), true);
 						std::error_code scanError;
-						if (!raizModelos.empty() && std::filesystem::exists(raizModelos, scanError))
-						for (std::filesystem::recursive_directory_iterator it(raizModelos, scanError), end; !scanError && it != end; it.increment(scanError))
+						if (!modelsRoot.empty() && std::filesystem::exists(modelsRoot, scanError))
+						for (std::filesystem::recursive_directory_iterator it(modelsRoot, scanError), end; !scanError && it != end; it.increment(scanError))
 						{
 							if (!it->is_regular_file(scanError)) continue;
 							std::string ext = it->path().extension().string();
@@ -1343,11 +1343,11 @@ namespace editor
 							if (low.find("floor") != std::string::npos || low.find("suelo") != std::string::npos) cat = 1;
 							else if (low.find("wall") != std::string::npos || low.find("pared") != std::string::npos) cat = 2;
 							else if (low.find("ceiling") != std::string::npos || low.find("techo") != std::string::npos) cat = 3;
-							if (categoriaTexturas != 0 && categoriaTexturas != cat) continue;
-							if (filtroTexturas[0] && low.find(filtroTexturas) == std::string::npos) continue;
+							if (textureCategory != 0 && textureCategory != cat) continue;
+							if (textureFilter[0] && low.find(textureFilter) == std::string::npos) continue;
 							const auto absoluta = std::filesystem::absolute(it->path(), scanError).lexically_normal();
 							if (scanError) { scanError.clear(); continue; }
-							const auto relativa = absoluta.lexically_relative(raizEscena);
+							const auto relativa = absoluta.lexically_relative(sceneRoot);
 							if (relativa.empty() || relativa.is_absolute()) continue;
 							const std::string ruta = relativa.generic_string();
 							const std::string label = std::string(categorias[cat]) + " / " + it->path().filename().string();
@@ -1356,9 +1356,9 @@ namespace editor
 								OpenTransactionIfNeeded(); objeto.material.textura = ruta; MarkModified();
 								ImGui::CloseCurrentPopup();
 							}
-							if (objeto.material.textura == ruta && cargadorTexturas)
+							if (objeto.material.textura == ruta && textureLoader)
 							{
-								const unsigned int tex = cargadorTexturas(absoluta);
+								const unsigned int tex = textureLoader(absoluta);
 								if (tex) { ImGui::SameLine(); ImGui::Image(reinterpret_cast<ImTextureID>(static_cast<intptr_t>(tex)), ImVec2(44, 30)); }
 							}
 						}
@@ -1386,8 +1386,8 @@ namespace editor
 				ImGui::Separator();
 				ImGui::TextUnformatted("Physics");
 				int tipo = !objeto.fisica.presente ? 0 :
-					(objeto.fisica.tipo == fisica::BodyType::Rebotador ? 3 :
-						(objeto.fisica.tipo == fisica::BodyType::Dinamico ? 2 : 1));
+					(objeto.fisica.tipo == fisica::BodyType::Bouncer ? 3 :
+						(objeto.fisica.tipo == fisica::BodyType::Dynamic ? 2 : 1));
 				const int tipoAnterior = tipo;
 				const char* tipos[] = { "None", "Static box", "Dynamic box", "Bouncy sphere" };
 				if (ImGui::Combo("Collider", &tipo, tipos, 4) && tipo != tipoAnterior)
@@ -1397,15 +1397,15 @@ namespace editor
 					objeto.fisica.presente = tipo != 0;
 					if (tipo != 0)
 					{
-						objeto.fisica.forma = tipo == 3 ? fisica::BodyShape::Esfera : fisica::BodyShape::Caja;
+						objeto.fisica.forma = tipo == 3 ? fisica::BodyShape::Sphere : fisica::BodyShape::Box;
 						if (tipoAnterior == 0)
 						{	// medidas iniciales a partir de los límites del modelo
 							const LocalBox caja = BoxOfObject(objeto);
-							objeto.fisica.mitadTamano = caja.HalfSize();
+							objeto.fisica.halfExtents = caja.HalfSize();
 							objeto.fisica.desplazamiento = caja.CenterPoint();
 						}
-						objeto.fisica.tipo = tipo == 3 ? fisica::BodyType::Rebotador :
-							(tipo == 2 ? fisica::BodyType::Dinamico : fisica::BodyType::Estatico);
+						objeto.fisica.tipo = tipo == 3 ? fisica::BodyType::Bouncer :
+							(tipo == 2 ? fisica::BodyType::Dynamic : fisica::BodyType::Static);
 						if ((tipo == 2 || tipo == 3) && objeto.fisica.masa <= 0.0f)
 							objeto.fisica.masa = 0.25f;
 					}
@@ -1413,10 +1413,10 @@ namespace editor
 				}
 				if (objeto.fisica.presente)
 				{
-					if (ImGui::InputFloat3("Half size", &objeto.fisica.mitadTamano.x, "%.3f"))
+					if (ImGui::InputFloat3("Half size", &objeto.fisica.halfExtents.x, "%.3f"))
 					{
 						for (int eje = 0; eje < 3; ++eje)
-							objeto.fisica.mitadTamano[eje] = std::max(0.005f, std::isfinite(objeto.fisica.mitadTamano[eje]) ? objeto.fisica.mitadTamano[eje] : 0.5f);
+							objeto.fisica.halfExtents[eje] = std::max(0.005f, std::isfinite(objeto.fisica.halfExtents[eje]) ? objeto.fisica.halfExtents[eje] : 0.5f);
 						OpenTransactionIfNeeded(); MarkModified();
 					}
 					if (ImGui::InputFloat3("Offset", &objeto.fisica.desplazamiento.x, "%.3f"))
@@ -1439,7 +1439,7 @@ namespace editor
 				ImGui::TextWrapped("Animation: %s", animado.animation.empty() ? "(first in file)" : animado.animation.c_str());
 				ImGui::Text("Colliders: %d", static_cast<int>(animado.colisionadores.size()));
 				for (const SceneCollider& c : animado.colisionadores)
-					ImGui::BulletText("%s (%s)", c.nodo.c_str(), c.tipo == fisica::BodyType::Cinematico ? "kinematic" : "static");
+					ImGui::BulletText("%s (%s)", c.nodo.c_str(), c.tipo == fisica::BodyType::Kinematic ? "kinematic" : "static");
 				if (!animado.paredId.empty())
 					for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 						if (contexto.objetos[i].id == animado.paredId) paredDestinoPuerta = static_cast<int>(i);
@@ -1462,32 +1462,32 @@ namespace editor
 				ImGui::TextDisabled("Opening dimensions are derived from DoorFrame collider bounds.");
 				ImGui::Separator();
 				ImGui::TextUnformatted("Transform (instance only)");
-				glm::vec3 posicionSolicitada = animado.posicion;
+				glm::vec3 posicionSolicitada = animado.position;
 				if (ImGui::InputFloat3("Position", &posicionSolicitada.x, "%.3f"))
 				{
 					SceneAnimatedObject candidato = animado;
-					candidato.posicion = posicionSolicitada;
+					candidato.position = posicionSolicitada;
 					const PlacementResult resultado = VectorFinito(posicionSolicitada) ? ValidateAnimated(contexto, candidato, seleccionado) :
 						PlacementResult{ false, "non-finite position" };
 					if (resultado.valida)
 					{
-						if (posicionSolicitada != animado.posicion) { OpenTransactionIfNeeded(); animado.posicion = posicionSolicitada; MarkModified(); SyncGlb(contexto); }
-						mensajeColocacion.clear();
+						if (posicionSolicitada != animado.position) { OpenTransactionIfNeeded(); animado.position = posicionSolicitada; MarkModified(); SyncGlb(contexto); }
+						placementMessage.clear();
 					}
-					else { mensajeColocacion = "Door position blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
+					else { placementMessage = "Door position blocked by " + resultado.bloqueador; ReportStatus(placementMessage, true); }
 				}
-				float giro = animado.giroZGrados;
+				float giro = animado.yawDegrees;
 				if (ImGui::InputFloat("Rotation Z", &giro, 1.0f, 15.0f, "%.2f") && std::isfinite(giro))
 				{
 					SceneAnimatedObject candidato = animado;
-					candidato.giroZGrados = giro;
+					candidato.yawDegrees = giro;
 					const PlacementResult resultado = ValidateAnimated(contexto, candidato, seleccionado);
 					if (resultado.valida)
 					{
-						if (giro != animado.giroZGrados) { OpenTransactionIfNeeded(); animado.giroZGrados = giro; MarkModified(); SyncGlb(contexto); }
-						mensajeColocacion.clear();
+						if (giro != animado.yawDegrees) { OpenTransactionIfNeeded(); animado.yawDegrees = giro; MarkModified(); SyncGlb(contexto); }
+						placementMessage.clear();
 					}
-					else { mensajeColocacion = "Door rotation blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
+					else { placementMessage = "Door rotation blocked by " + resultado.bloqueador; ReportStatus(placementMessage, true); }
 				}
 				bool permitirArquitectura = animado.permitirPenetracionArquitectura;
 				if (ImGui::Checkbox("Allow architecture penetration (unsafe)", &permitirArquitectura))
@@ -1503,23 +1503,23 @@ namespace editor
 			if (IsValidIndex(contexto, seleccionado))
 			{
 				ImGui::Separator();
-				if (ImGui::Button("Focus")) enfocarSolicitado = true;
+				if (ImGui::Button("Focus")) focusRequested = true;
 				ImGui::SameLine();
 				ImGui::BeginDisabled(IsAnimated(contexto, seleccionado));
-				if (ImGui::Button("Duplicate")) duplicarSolicitado = true;
+				if (ImGui::Button("Duplicate")) duplicateRequested = true;
 				ImGui::EndDisabled();
 				ImGui::SameLine();
 				if (IsAnimated(contexto, seleccionado))
 				{
 					const SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
-					if (!puerta.aperturaId.empty())
+					if (!puerta.openingId.empty())
 					{
-						if (ImGui::Button("Delete + close opening")) eliminarSolicitado = true;
+						if (ImGui::Button("Delete + close opening")) deleteRequested = true;
 						if (ImGui::Button("Delete only; keep opening")) eliminarConservarHuecoSolicitado = true;
 					}
-					else if (ImGui::Button("Delete")) eliminarSolicitado = true;
+					else if (ImGui::Button("Delete")) deleteRequested = true;
 				}
-				else if (ImGui::Button("Delete")) eliminarSolicitado = true;
+				else if (ImGui::Button("Delete")) deleteRequested = true;
 			}
 		}
 		ImGui::End();
@@ -1539,43 +1539,43 @@ namespace editor
 		AjustarVentanaAlCambiarEscala("Asset Browser", escalaUI, io.DisplaySize);
 		if (visible)
 		{
-			if (ImGui::Button("Refresh")) { inventarioCargado = false; inventarioPuertasCargado = false; }
+			if (ImGui::Button("Refresh")) { inventoryLoaded = false; inventarioPuertasCargado = false; }
 			ImGui::SameLine();
 			ImGui::SetNextItemWidth(-1.0f);
-			ImGui::InputTextWithHint("##filtro", "filter...", filtroAssets, sizeof(filtroAssets));
-			if (!inventarioCargado)
+			ImGui::InputTextWithHint("##filtro", "filter...", assetFilter, sizeof(assetFilter));
+			if (!inventoryLoaded)
 			{
 				std::error_code ec;
-				modelosDisponibles.clear();
-				if (std::filesystem::exists(raizModelos, ec))
-					for (std::filesystem::recursive_directory_iterator it(raizModelos, ec), fin; !ec && it != fin; it.increment(ec))
+				availableModels.clear();
+				if (std::filesystem::exists(modelsRoot, ec))
+					for (std::filesystem::recursive_directory_iterator it(modelsRoot, ec), fin; !ec && it != fin; it.increment(ec))
 						if (it->is_regular_file(ec) && it->path().extension() == ".obj")
-							modelosDisponibles.push_back(it->path().lexically_relative(raizModelos));
-				std::sort(modelosDisponibles.begin(), modelosDisponibles.end());
-				inventarioCargado = true;
+							availableModels.push_back(it->path().lexically_relative(modelsRoot));
+				std::sort(availableModels.begin(), availableModels.end());
+				inventoryLoaded = true;
 			}
 			if (!inventarioPuertasCargado)
 			{
 				std::error_code ec;
-				puertasDisponibles.clear();
-				if (std::filesystem::exists(raizAnimaciones, ec))
-					for (std::filesystem::recursive_directory_iterator it(raizAnimaciones, ec), fin; !ec && it != fin; it.increment(ec))
+				availableDoors.clear();
+				if (std::filesystem::exists(animationsRoot, ec))
+					for (std::filesystem::recursive_directory_iterator it(animationsRoot, ec), fin; !ec && it != fin; it.increment(ec))
 						if (it->is_regular_file(ec) && it->path().extension() == ".glb")
-							puertasDisponibles.push_back(it->path().lexically_relative(raizAnimaciones));
-				std::sort(puertasDisponibles.begin(), puertasDisponibles.end());
+							availableDoors.push_back(it->path().lexically_relative(animationsRoot));
+				std::sort(availableDoors.begin(), availableDoors.end());
 				inventarioPuertasCargado = true;
 			}
 			const float alturaOpciones = ImGui::GetFrameHeightWithSpacing() * 4.0f + 6.0f;
 			if (ImGui::BeginChild("model-list", ImVec2(0.0f, -alturaOpciones), true))
 			{
-				if (modelosDisponibles.empty())
-					ImGui::TextWrapped("No .obj found in %s", raizModelos.generic_string().c_str());
-				for (const auto& modelo : modelosDisponibles)
+				if (availableModels.empty())
+					ImGui::TextWrapped("No .obj found in %s", modelsRoot.generic_string().c_str());
+				for (const auto& modelo : availableModels)
 				{
 					const std::string relativa = modelo.generic_string();
-					if (filtroAssets[0] != '\0')
+					if (assetFilter[0] != '\0')
 					{
-						std::string a = relativa, b = filtroAssets;
+						std::string a = relativa, b = assetFilter;
 						std::transform(a.begin(), a.end(), a.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 						std::transform(b.begin(), b.end(), b.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 						if (a.find(b) == std::string::npos) continue;
@@ -1588,14 +1588,14 @@ namespace editor
 
 					if (ImGui::Selectable(
 						nombreVisible.c_str(),
-						assetSeleccionado == relativa,
+						selectedAsset == relativa,
 						ImGuiSelectableFlags_AllowDoubleClick))
 					{
-						assetSeleccionado = relativa;
-						assetEsPuerta = false;
+						selectedAsset = relativa;
+						assetIsDoor = false;
 
 						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left))
-							anadirSolicitado = true;
+							addRequested = true;
 					}
 
 					// Mostrar la ruta original al pasar el ratón.
@@ -1611,32 +1611,32 @@ namespace editor
 			ImGui::SeparatorText("Animated GLB doors");
 			if (ImGui::BeginChild("door-list", ImVec2(0.0f, 96.0f), true))
 			{
-				if (puertasDisponibles.empty()) ImGui::TextDisabled("No .glb files in %s", raizAnimaciones.generic_string().c_str());
-				for (const auto& ruta : puertasDisponibles)
+				if (availableDoors.empty()) ImGui::TextDisabled("No .glb files in %s", animationsRoot.generic_string().c_str());
+				for (const auto& ruta : availableDoors)
 				{
 					const std::string relativa = ruta.generic_string();
-					std::string low = relativa, filtro = filtroAssets;
+					std::string low = relativa, filtro = assetFilter;
 					std::transform(low.begin(), low.end(), low.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 					std::transform(filtro.begin(), filtro.end(), filtro.begin(), [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 					if (!filtro.empty() && low.find(filtro) == std::string::npos) continue;
-					if (ImGui::Selectable((ruta.stem().string() + "##door").c_str(), assetEsPuerta && puertaSeleccionada == ruta))
-					{ puertaSeleccionada = ruta; assetEsPuerta = true; }
+					if (ImGui::Selectable((ruta.stem().string() + "##door").c_str(), assetIsDoor && selectedDoor == ruta))
+					{ selectedDoor = ruta; assetIsDoor = true; }
 				}
 			}
 			ImGui::EndChild();
 			ImGui::Checkbox("Model is Y-up (rotate 90 deg on X)", &assetYArriba);
-			ImGui::Checkbox("Add box collider", &assetColisionador);
-			if (assetColisionador)
+			ImGui::Checkbox("Add box collider", &assetCollider);
+			if (assetCollider)
 			{
 				ImGui::SameLine();
-				ImGui::Checkbox("dynamic", &assetDinamico);
+				ImGui::Checkbox("dynamic", &assetDynamic);
 			}
-			ImGui::BeginDisabled(assetEsPuerta ? puertaSeleccionada.empty() : assetSeleccionado.empty());
-			if (ImGui::Button("Add to scene")) anadirSolicitado = true;
+			ImGui::BeginDisabled(assetIsDoor ? selectedDoor.empty() : selectedAsset.empty());
+			if (ImGui::Button("Add to scene")) addRequested = true;
 			ImGui::EndDisabled();
-			if (assetEsPuerta && !puertaSeleccionada.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", puertaSeleccionada.generic_string().c_str()); }
-			else if (!assetSeleccionado.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", assetSeleccionado.c_str()); }
-			if (mensajeEsError && !mensajeEstado.empty()) ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.3f, 1.0f), "%s", mensajeEstado.c_str());
+			if (assetIsDoor && !selectedDoor.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", selectedDoor.generic_string().c_str()); }
+			else if (!selectedAsset.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", selectedAsset.c_str()); }
+			if (messageIsError && !statusMessage.empty()) ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.3f, 1.0f), "%s", statusMessage.c_str());
 		}
 		ImGui::End();
 		(void)contexto;
@@ -1665,8 +1665,8 @@ namespace editor
 			idPrevisualizacionGizmo == idSeleccionado && io.MouseDown[ImGuiMouseButton_Left];
 		glm::mat4 matriz = reutilizarPrevisualizacion ? matrizPrevisualizacionGizmo : ElementAt(contexto, seleccionado).modelo;
 		ImGuizmo::OPERATION operacion = ImGuizmo::TRANSLATE;
-		if (herramienta == Herramienta::Rotar) operacion = animado ? ImGuizmo::ROTATE_Z : ImGuizmo::ROTATE;
-		if (herramienta == Herramienta::Escalar)
+		if (herramienta == EditorTool::Rotate) operacion = animado ? ImGuizmo::ROTATE_Z : ImGuizmo::ROTATE;
+		if (herramienta == EditorTool::Scale)
 		{
 			operacion = ImGuizmo::SCALE;
 		}
@@ -1674,12 +1674,12 @@ namespace editor
 		// (no se toca para no alterar sus colisionadores). NO se usa io.WantCaptureMouse: ImGuizmo lo activa el mismo
 		// (SetNextFrameWantCaptureMouse) al pasar sobre un manipulador, y desactivarlo por eso impedia empezar el arrastre.
 		// Si el cursor esta sobre un panel, ImGuizmo ya ignora el clic (IsHoveringWindow).
-		const bool escalaDePuerta = animado && herramienta == Herramienta::Escalar;
+		const bool escalaDePuerta = animado && herramienta == EditorTool::Scale;
 		ImGuizmo::PushID(idSeleccionado.c_str());
-		ImGuizmo::Enable(IsGizmoEnabled(ImGuizmo::IsUsing(), modoCamara != CameraMode::Ninguno, entrada.altPulsado, escalaDePuerta));
+		ImGuizmo::Enable(IsGizmoEnabled(ImGuizmo::IsUsing(), modoCamara != CameraMode::None, entrada.altPressed, escalaDePuerta));
 		float paso[3] = { 0.5f, 0.5f, 0.5f };
-		if (herramienta == Herramienta::Rotar) paso[0] = paso[1] = paso[2] = 15.0f;
-		if (herramienta == Herramienta::Escalar) paso[0] = paso[1] = paso[2] = 0.1f;
+		if (herramienta == EditorTool::Rotate) paso[0] = paso[1] = paso[2] = 15.0f;
+		if (herramienta == EditorTool::Scale) paso[0] = paso[1] = paso[2] = 0.1f;
 		const glm::mat4 matrizAntes = matriz;
 		const bool cambio = ImGuizmo::Manipulate(&vista[0][0], &proyeccion[0][0], operacion,
 			local ? ImGuizmo::LOCAL : ImGuizmo::WORLD, &matriz[0][0], nullptr, snap ? paso : nullptr);
@@ -1700,7 +1700,7 @@ namespace editor
 		}
 
 		const glm::mat4 matrizAceptada = ElementAt(contexto, seleccionado).modelo;
-		KeepHeightInTopView(matriz, matrizAceptada, camara.vista == Vista::Superior, herramienta == Herramienta::Move);
+		KeepHeightInTopView(matriz, matrizAceptada, camara.vista == ViewKind::Top, herramienta == EditorTool::Move);
 		PlacementResult resultado;
 		if (!MatrizGizmoValida(matriz)) resultado = { false, "invalid transform matrix" };
 		else if (!animado)
@@ -1708,11 +1708,11 @@ namespace editor
 		else
 		{
 			SceneAnimatedObject candidato = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
-			candidato.posicion = glm::vec3(matriz[3]);
+			candidato.position = glm::vec3(matriz[3]);
 			float giro = glm::degrees(std::atan2(matriz[0][1], matriz[0][0]));
-			giro += 360.0f * std::round((candidato.giroZGrados - giro) / 360.0f);
-			candidato.giroZGrados = giro;
-			resultado = VectorFinito(candidato.posicion) && std::isfinite(giro)
+			giro += 360.0f * std::round((candidato.yawDegrees - giro) / 360.0f);
+			candidato.yawDegrees = giro;
+			resultado = VectorFinito(candidato.position) && std::isfinite(giro)
 				? ValidateAnimated(contexto, candidato, seleccionado) : PlacementResult{ false, "invalid door transform" };
 		}
 
@@ -1722,16 +1722,16 @@ namespace editor
 		idPrevisualizacionGizmo = idSeleccionado;
 		if (!resultado.valida)
 		{
-			mensajeColocacion = "Placement blocked by " + resultado.bloqueador;
-			ReportStatus(mensajeColocacion, true);
-			if (depurarEntrada)
+			placementMessage = "Placement blocked by " + resultado.bloqueador;
+			ReportStatus(placementMessage, true);
+			if (debugInput)
 				std::fprintf(stderr, "[EditorGizmo] rejected id=%s view=%d using=%d blocker=%s before=(%.3f,%.3f,%.3f) candidate=(%.3f,%.3f,%.3f)\n",
 					idSeleccionado.c_str(), static_cast<int>(camara.vista), gizmoEnUso ? 1 : 0, resultado.bloqueador.c_str(),
 					matrizAceptada[3].x, matrizAceptada[3].y, matrizAceptada[3].z, matriz[3].x, matriz[3].y, matriz[3].z);
 			return;
 		}
-		mensajeColocacion.clear();
-		if (depurarEntrada)
+		placementMessage.clear();
+		if (debugInput)
 			std::fprintf(stderr, "[EditorGizmo] accepted id=%s view=%d using=%d before=(%.3f,%.3f,%.3f) after=(%.3f,%.3f,%.3f)\n",
 				idSeleccionado.c_str(), static_cast<int>(camara.vista), gizmoEnUso ? 1 : 0,
 				matrizAceptada[3].x, matrizAceptada[3].y, matrizAceptada[3].z, matriz[3].x, matriz[3].y, matriz[3].z);
@@ -1741,13 +1741,13 @@ namespace editor
 		else
 		{
 			SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
-			const glm::vec3 posicion(matriz[3]);
+			const glm::vec3 position(matriz[3]);
 			float giro = glm::degrees(std::atan2(matriz[0][1], matriz[0][0]));
-			giro += 360.0f * std::round((puerta.giroZGrados - giro) / 360.0f);
-			if (VectorFinito(posicion) && std::isfinite(giro))
+			giro += 360.0f * std::round((puerta.yawDegrees - giro) / 360.0f);
+			if (VectorFinito(position) && std::isfinite(giro))
 			{
-				puerta.posicion = posicion;
-				puerta.giroZGrados = giro;
+				puerta.position = position;
+				puerta.yawDegrees = giro;
 				SyncGlb(contexto);
 				MarkModified();
 			}
@@ -1794,22 +1794,22 @@ namespace editor
 
 	void SceneEditor::DrawCameraOptions()
 	{
-		if (!mostrarOpcionesCamara) return;
-		if (ImGui::Begin("Editor Camera", &mostrarOpcionesCamara, ImGuiWindowFlags_AlwaysAutoResize))
+		if (!showCameraOptions) return;
+		if (ImGui::Begin("Editor Camera", &showCameraOptions, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			ImGui::SliderFloat("Mouse sensitivity (deg/px)", &opciones.sensibilidad, 0.02f, 0.6f, "%.3f");
 			ImGui::Checkbox("Invert Y axis", &opciones.invertirY);
-			ImGui::SliderFloat("Camera speed (m/s)", &opciones.velocidad, 0.5f, 40.0f, "%.1f");
-			ImGui::SliderFloat("Pan speed", &opciones.velocidadPan, 0.1f, 4.0f, "%.2f");
-			ImGui::SliderFloat("Zoom speed", &opciones.velocidadZoom, 0.1f, 4.0f, "%.2f");
-			ImGui::SliderFloat("Shift multiplier", &opciones.multiplicadorShift, 1.0f, 10.0f, "%.2f");
-			ImGui::SliderFloat("Ctrl multiplier", &opciones.multiplicadorCtrl, 0.05f, 1.0f, "%.2f");
-			ImGui::SliderFloat("Snap grid (m)", &opciones.pasoCuadricula, 0.01f, 2.0f, "%.2f");
+			ImGui::SliderFloat("Camera speed (m/s)", &opciones.speed, 0.5f, 40.0f, "%.1f");
+			ImGui::SliderFloat("Pan speed", &opciones.panSpeed, 0.1f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Zoom speed", &opciones.zoomSpeed, 0.1f, 4.0f, "%.2f");
+			ImGui::SliderFloat("Shift multiplier", &opciones.shiftMultiplier, 1.0f, 10.0f, "%.2f");
+			ImGui::SliderFloat("Ctrl multiplier", &opciones.ctrlMultiplier, 0.05f, 1.0f, "%.2f");
+			ImGui::SliderFloat("Snap grid (m)", &opciones.gridStep, 0.01f, 2.0f, "%.2f");
 			ImGui::TextDisabled("Ctrl + Shift together: Ctrl wins (precision).");
 			ImGui::Separator();
 			ImGui::TextUnformatted("RMB look | RMB+WASD/QE fly | MMB pan | Alt+LMB orbit | wheel zoom | F focus");
 			ImGui::Text("yaw %.1f  pitch %.1f  pos %.2f %.2f %.2f", camara.yaw, camara.pitch,
-				camara.posicion.x, camara.posicion.y, camara.posicion.z);
+				camara.position.x, camara.position.y, camara.position.z);
 		}
 		ImGui::End();
 	}
@@ -1817,7 +1817,7 @@ namespace editor
 	// Instrumentación temporal del gizmo: ventana opcional y, con ESCAPETHEUAB_EDITOR_DEBUG=1, una línea por cambio en consola.
 	void SceneEditor::DrawDebugShapes()
 	{
-		if (!depurarEntrada) return;
+		if (!debugInput) return;
 		const ImGuiIO& io = ImGui::GetIO();
 		const char* nombresOperacion = "?";
 		if (operacionDepuracion & ImGuizmo::TRANSLATE) nombresOperacion = "TRANSLATE";
@@ -1829,7 +1829,7 @@ namespace editor
 			"SelectedObject=%d Operation=%s IsOver=%d IsUsing=%d MouseDown=%d ViewportHovered=%d MatrixChanged=%d WantCaptureMouse=%d CameraMode=%d",
 			seleccionado, nombresOperacion, gizmoSobre ? 1 : 0, usando ? 1 : 0, io.MouseDown[0] ? 1 : 0,
 			entrada.sobrePanel ? 0 : 1, matrizCambiada ? 1 : 0, io.WantCaptureMouse ? 1 : 0, static_cast<int>(modoCamara));
-		if (depuracionPorConsola)
+		if (consoleDebugging)
 		{
 			static std::string anterior;
 			const std::string actual = linea;
@@ -1837,7 +1837,7 @@ namespace editor
 		}
 		ImGui::SetNextWindowBgAlpha(0.6f);
 		ImGui::SetNextWindowPos(ImVec2(io.DisplaySize.x * 0.5f - 260.0f, io.DisplaySize.y - 70.0f), ImGuiCond_FirstUseEver);
-		if (ImGui::Begin("Editor input debug", &depurarEntrada, ImGuiWindowFlags_AlwaysAutoResize))
+		if (ImGui::Begin("Editor input debug", &debugInput, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			ImGui::Text("SelectedObject: %d   Operation: %s", seleccionado, nombresOperacion);
 			ImGui::Text("IsOver: %d  IsUsing: %d  MouseDown: %d", gizmoSobre ? 1 : 0, usando ? 1 : 0, io.MouseDown[0] ? 1 : 0);
@@ -1853,8 +1853,8 @@ namespace editor
 		{
 			depuracionIniciada = true;
 			const char* variable = std::getenv("ESCAPETHEUAB_EDITOR_DEBUG");
-			depuracionPorConsola = variable != nullptr && variable[0] != '\0' && variable[0] != '0';
-			depurarEntrada = depurarEntrada || depuracionPorConsola;
+			consoleDebugging = variable != nullptr && variable[0] != '\0' && variable[0] != '0';
+			debugInput = debugInput || consoleDebugging;
 		}
 		if (activo)
 		{
@@ -1863,7 +1863,7 @@ namespace editor
 			entrada.imguiActivo = ImGui::IsAnyItemActive();
 			entrada.gizmoUsando = ImGuizmo::IsUsing();
 			entrada.popup = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
-			entrada.altPulsado = ImGui::GetIO().KeyAlt;
+			entrada.altPressed = ImGui::GetIO().KeyAlt;
 			entrada.viewportLibre = FreeViewport(entrada.sobrePanel, entrada.imguiActivo, entrada.gizmoUsando, entrada.popup);
 			haySeleccionValida = IsValidIndex(contexto, seleccionado);
 			// Estado de reposo: si no hay arrastre ni campo en edición, así estaba la escena antes de cualquier cambio.
@@ -1876,15 +1876,15 @@ namespace editor
 		}
 		DrawEditorToolbar(contexto);
 
-		if (confirmacionCierre) ImGui::OpenPopup("Unsaved scene changes");
+		if (closeConfirmation) ImGui::OpenPopup("Unsaved scene changes");
 		if (ImGui::BeginPopupModal("Unsaved scene changes", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
 		{
 			ImGui::TextUnformatted("The scene has unsaved changes.");
-			if (ImGui::Button("Save and close")) { guardarSolicitado = true; cerrarTrasGuardar = true; confirmacionCierre = false; ImGui::CloseCurrentPopup(); }
+			if (ImGui::Button("Save and close")) { saveRequested = true; closeAfterSave = true; closeConfirmation = false; ImGui::CloseCurrentPopup(); }
 			ImGui::SameLine();
-			if (ImGui::Button("Discard and close")) { cerrarConfirmado = true; confirmacionCierre = false; ImGui::CloseCurrentPopup(); }
+			if (ImGui::Button("Discard and close")) { closeConfirmed = true; closeConfirmation = false; ImGui::CloseCurrentPopup(); }
 			ImGui::SameLine();
-			if (ImGui::Button("Continue editing")) { confirmacionCierre = false; ImGui::CloseCurrentPopup(); }
+			if (ImGui::Button("Continue editing")) { closeConfirmation = false; ImGui::CloseCurrentPopup(); }
 			ImGui::EndPopup();
 		}
 		if (!activo) return;

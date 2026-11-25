@@ -17,37 +17,37 @@
 
 namespace editor
 {
-	enum class ElementClass { Objeto, Suelo, Techo, Pared, Arquitectura };
+	enum class ElementClass { Object, Floor, Ceiling, Wall, Architecture };
 
 	// Una clase por objeto, en el mismo orden que 'objetos'.
 	std::vector<ElementClass> ClassifyElements(const std::vector<SceneObject>& objetos);
 
 	struct EditorVisibility
 	{
-		bool ocultarTecho = false;
-		bool ocultarParedes = false;
+		bool hideCeiling = false;
+		bool hideWalls = false;
 		bool autoOcultarTechoEnVistaSuperior = true;
-		bool aislar = false;                         // solo se ve el elemento 'idAislado'
-		std::string idAislado;
+		bool isolateSelection = false;                         // solo se ve el elemento 'idAislado'
+		std::string isolatedId;
 		std::unordered_set<std::string> ocultos;     // elementos ocultos uno a uno (por id)
 
 		void ShowAll()
 		{
-			ocultarTecho = ocultarParedes = aislar = false;
-			idAislado.clear();
+			hideCeiling = hideWalls = isolateSelection = false;
+			isolatedId.clear();
 			ocultos.clear();
 		}
 
 		bool Visible(const SceneObject& objeto, ElementClass clase, bool vistaSuperior) const
 		{
-			if (aislar) return objeto.id == idAislado;
+			if (isolateSelection) return objeto.id == isolatedId;
 			if (ocultos.contains(objeto.id)) return false;
-			if (clase == ElementClass::Techo && (ocultarTecho || (autoOcultarTechoEnVistaSuperior && vistaSuperior))) return false;
-			if (clase == ElementClass::Pared && ocultarParedes) return false;
+			if (clase == ElementClass::Ceiling && (hideCeiling || (autoOcultarTechoEnVistaSuperior && vistaSuperior))) return false;
+			if (clase == ElementClass::Wall && hideWalls) return false;
 			return true;
 		}
 
 		// Las puertas GLB solo se ocultan al aislar otro elemento.
-		bool AnimatedVisible(const std::string& id) const { return !aislar || id == idAislado; }
+		bool AnimatedVisible(const std::string& id) const { return !isolateSelection || id == isolatedId; }
 	};
 }

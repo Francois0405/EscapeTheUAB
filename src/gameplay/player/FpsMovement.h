@@ -39,14 +39,14 @@ namespace fps
 	// -------------------------------------------------------------------------
 	struct MovementParameters
 	{
-		float velocidadCaminar = 3.0f;    // m/s
-		float velocidadAgachado = 1.4f;   // m/s
-		float velocidadSprint = 5.2f;     // m/s
-		float suavizadoVelocidad = 7.0f;  // 1/s: cambios caminar <-> correr en ~0,4 s
+		float walkSpeed = 3.0f;    // m/s
+		float crouchSpeed = 1.4f;   // m/s
+		float sprintSpeed = 5.2f;     // m/s
+		float velocitySmoothing = 7.0f;  // 1/s: cambios caminar <-> correr en ~0,4 s
 
-		float estaminaMaxima = 100.0f;
-		float consumoPorSegundo = 20.0f;      // sprint continuo: 5 s
-		float recuperacionPorSegundo = 12.0f; // de vacío a lleno: ~8,3 s (tras el retardo)
+		float maxStamina = 100.0f;
+		float drainPerSecond = 20.0f;      // sprint continuo: 5 s
+		float recoveryPerSecond = 12.0f; // de vacío a lleno: ~8,3 s (tras el retardo)
 		float retardoRecuperacion = 1.0f;     // s sin sprint antes de empezar a recuperar
 		float minimoTrasAgotarse = 25.0f;     // tras agotarse hay que llegar a este valor para volver a correr
 		float agachadoMaximoParaSprint = 0.02f;   // fracción de agachado (0 de pie, 1 agachado) tolerada para correr
@@ -56,10 +56,10 @@ namespace fps
 	struct MovementInput
 	{
 		bool activo = false;          // modo FPS jugable (no pausa, sin foco perdido, sin paneles de depuración)
-		bool quiereMoverse = false;   // hay alguna tecla de dirección pulsada
-		bool sprintPedido = false;    // Shift mantenido
+		bool wantsToMove = false;   // hay alguna tecla de dirección pulsada
+		bool sprintRequested = false;    // Shift mantenido
 		bool enSuelo = true;
-		float fraccionAgachado = 0.0f; // 0 = de pie, 1 = totalmente agachado
+		float crouchRatio = 0.0f; // 0 = de pie, 1 = totalmente agachado
 	};
 
 	class PlayerMovement
@@ -77,16 +77,16 @@ namespace fps
 				return velocidadActual;
 			}
 			const MovementParameters& p = parametros;
-			estamina = std::clamp(estamina, 0.0f, p.estaminaMaxima);
+			estamina = std::clamp(estamina, 0.0f, p.maxStamina);
 
 			// ¿Se puede correr ahora?
 			if (agotada && estamina >= p.minimoTrasAgotarse) agotada = false;
-			sprintando = entrada.sprintPedido && entrada.quiereMoverse && entrada.enSuelo && !agotada &&
-				estamina > 0.0f && entrada.fraccionAgachado <= p.agachadoMaximoParaSprint;
+			sprintando = entrada.sprintRequested && entrada.wantsToMove && entrada.enSuelo && !agotada &&
+				estamina > 0.0f && entrada.crouchRatio <= p.agachadoMaximoParaSprint;
 
 			if (sprintando)
 			{
-				estamina -= p.consumoPorSegundo * delta;
+				estamina -= p.drainPerSecond * delta;
 				tiempoSinSprint = 0.0f;
 				if (estamina <= 0.0f) { estamina = 0.0f; agotada = true; sprintando = false; }
 			}
@@ -94,15 +94,15 @@ namespace fps
 			{
 				tiempoSinSprint += delta;
 				if (tiempoSinSprint >= p.retardoRecuperacion)
-					estamina = (std::min)(p.estaminaMaxima, estamina + p.recuperacionPorSegundo * delta);
+					estamina = (std::min)(p.maxStamina, estamina + p.recoveryPerSecond * delta);
 				if (agotada && estamina >= p.minimoTrasAgotarse) agotada = false;
 			}
 
 			// Velocidad deseada: caminar <-> agachado según lo agachado que se esté; sprint si procede.
-			const float agachado = std::clamp(entrada.fraccionAgachado, 0.0f, 1.0f);
-			const float objetivo = sprintando ? p.velocidadSprint
-				: p.velocidadCaminar + (p.velocidadAgachado - p.velocidadCaminar) * agachado;
-			velocidadActual = DollyIn(velocidadActual, objetivo, p.suavizadoVelocidad, delta);
+			const float agachado = std::clamp(entrada.crouchRatio, 0.0f, 1.0f);
+			const float objetivo = sprintando ? p.sprintSpeed
+				: p.walkSpeed + (p.crouchSpeed - p.walkSpeed) * agachado;
+			velocidadActual = DollyIn(velocidadActual, objetivo, p.velocitySmoothing, delta);
 			return velocidadActual;
 		}
 
@@ -110,13 +110,13 @@ namespace fps
 		bool IsSprinting() const { return sprintando; }
 		bool IsExhausted() const { return agotada; }
 		float StaminaValue() const { return estamina; }
-		float StaminaFraction() const { return parametros.estaminaMaxima > 0.0f ? estamina / parametros.estaminaMaxima : 0.0f; }
+		float StaminaFraction() const { return parametros.maxStamina > 0.0f ? estamina / parametros.maxStamina : 0.0f; }
 		float TimeWithoutSprint() const { return tiempoSinSprint; }
 
 		void Reset()
 		{
-			estamina = parametros.estaminaMaxima;
-			velocidadActual = parametros.velocidadCaminar;
+			estamina = parametros.maxStamina;
+			velocidadActual = parametros.walkSpeed;
 			tiempoSinSprint = 0.0f;
 			sprintando = agotada = false;
 		}
@@ -139,11 +139,11 @@ namespace fps
 		float amplitudCorrer = 0.035f;       // m: 3,5 cm
 		float amplitudAgachado = 0.008f;     // m: 0,8 cm
 		float lateralRelativo = 0.6f;        // el balanceo lateral es esta fracción del vertical
-		float zancadaCaminar = 1.5f;         // m recorridos por ciclo completo (pie izquierdo + derecho)
-		float zancadaCorrer = 2.2f;          // m
+		float walkStride = 1.5f;         // m recorridos por ciclo completo (pie izquierdo + derecho)
+		float runStride = 2.2f;          // m
 		float entrada = 8.0f;                // 1/s: rapidez con que aparece al empezar a andar
 		float salida = 5.0f;                 // 1/s: rapidez con que se amortigua al detenerse
-		float velocidadMinima = 0.15f;       // m/s reales por debajo de los cuales se considera parado
+		float minimumSpeed = 0.15f;       // m/s reales por debajo de los cuales se considera parado
 	};
 
 	struct VisualOffset
@@ -160,20 +160,20 @@ namespace fps
 		// 'distanciaHorizontal': metros REALES recorridos por la cápsula en este fotograma (no la velocidad pedida:
 		// si se choca con una pared, la cámara no se balancea). 'velocidadObjetivo' = MovimientoJugador::Velocidad().
 		void Update(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo,
-			float velocidadObjetivo, const MovementParameters& mov, float fraccionAgachado)
+			float velocidadObjetivo, const MovementParameters& mov, float crouchRatio)
 		{
 			const float delta = ClampDelta(deltaSinLimitar);
 			if (!activo || delta <= 0.0f) return;   // en pausa se queda como está
 
 			const BobParameters& p = parametros;
 			const float velocidadReal = distanciaHorizontal / delta;
-			const bool andando = enSuelo && velocidadReal > p.velocidadMinima;
+			const bool andando = enSuelo && velocidadReal > p.minimumSpeed;
 
 			// Cuánto de "correr" hay: 0 al caminar, 1 al correr (continuo, sigue a la velocidad suavizada).
-			const float rango = (std::max)(mov.velocidadSprint - mov.velocidadCaminar, 1e-3f);
-			const float correr = std::clamp((velocidadObjetivo - mov.velocidadCaminar) / rango, 0.0f, 1.0f);
-			const float agachado = std::clamp(fraccionAgachado, 0.0f, 1.0f);
-			const float zancada = p.zancadaCaminar + (p.zancadaCorrer - p.zancadaCaminar) * correr;
+			const float rango = (std::max)(mov.sprintSpeed - mov.walkSpeed, 1e-3f);
+			const float correr = std::clamp((velocidadObjetivo - mov.walkSpeed) / rango, 0.0f, 1.0f);
+			const float agachado = std::clamp(crouchRatio, 0.0f, 1.0f);
+			const float zancada = p.walkStride + (p.runStride - p.walkStride) * correr;
 			if (andando) fase += 6.28318530718f * distanciaHorizontal / (std::max)(zancada, 0.1f);
 			if (fase > 6.28318530718f * 1000.0f) fase = std::fmod(fase, 6.28318530718f);   // sin perder precisión
 
@@ -213,10 +213,10 @@ namespace fps
 	// -------------------------------------------------------------------------
 	enum class StepState
 	{
-		Reposo,
-		Caminando,
+		Idle,
+		Walking,
 		Sprint,
-		Agachado
+		Crouched
 	};
 
 	struct StepParameters
@@ -225,7 +225,7 @@ namespace fps
 		float distanciaPasoCaminar  = 0.85f; // m por paso
 		float distanciaPasoSprint   = 1.25f; // m por paso
 		float distanciaPasoAgachado = 0.65f; // m por paso
-		float velocidadMinima       = 0.15f; // m/s reales mínimos (evita pasos contra paredes)
+		float minimumSpeed       = 0.15f; // m/s reales mínimos (evita pasos contra paredes)
 	};
 
 	class StepController
@@ -240,7 +240,7 @@ namespace fps
 			const float delta = ClampDelta(deltaSinLimitar);
 
 			// Sin pasos en menús/pausa, en el aire o en reposo
-			if (!activo || !enSuelo || estado == StepState::Reposo || delta <= 0.0f)
+			if (!activo || !enSuelo || estado == StepState::Idle || delta <= 0.0f)
 			{
 				if (!enSuelo) distanciaAcumulada = 0.0f; // Al caer/saltar se reinicia el ciclo
 				return false;
@@ -248,7 +248,7 @@ namespace fps
 
 			// Filtro contra paredes (si velocidadReal <= velocidadMinima, la cápsula está chocando)
 			const float velocidadReal = distanciaHorizontal / delta;
-			if (velocidadReal <= parametros.velocidadMinima || distanciaHorizontal > 5.0f)
+			if (velocidadReal <= parametros.minimumSpeed || distanciaHorizontal > 5.0f)
 			{
 				return false;
 			}
@@ -257,7 +257,7 @@ namespace fps
 
 			float umbral = parametros.distanciaPasoCaminar;
 			if (estado == StepState::Sprint)        umbral = parametros.distanciaPasoSprint;
-			else if (estado == StepState::Agachado) umbral = parametros.distanciaPasoAgachado;
+			else if (estado == StepState::Crouched) umbral = parametros.distanciaPasoAgachado;
 
 			if (distanciaAcumulada >= umbral)
 			{

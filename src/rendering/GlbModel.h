@@ -58,8 +58,8 @@ namespace glb
 	// Posición, rotación y escala de un nodo respecto a su padre.
 	struct LocalTransform
 	{
-		glm::vec3 posicion = glm::vec3(0.0f);
-		glm::quat rotacion = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);   // w, x, y, z: sin giro
+		glm::vec3 position = glm::vec3(0.0f);
+		glm::quat eulerRotation = glm::quat(1.0f, 0.0f, 0.0f, 0.0f);   // w, x, y, z: sin giro
 		glm::vec3 escala = glm::vec3(1.0f);
 	};
 
@@ -67,7 +67,7 @@ namespace glb
 	{
 		std::string nombre;
 		int padre = -1;                 // índice del nodo padre; -1 si es raíz
-		int indiceMalla = -1;           // índice en ModeloGLB::mallas; -1 si no tiene malla
+		int meshIndex = -1;           // índice en ModeloGLB::mallas; -1 si no tiene malla
 		LocalTransform reposo;     // pose guardada en el archivo (no cambia nunca)
 	};
 
@@ -98,7 +98,7 @@ namespace glb
 
 	// Matriz de mundo de un nodo con una pose dada: sube por los padres multiplicando
 	// sus matrices locales.
-	glm::mat4 NodeWorldMatrix(const GlbModel& modelo, const GlbPose& pose, int indiceNodo);
+	glm::mat4 NodeWorldMatrix(const GlbModel& modelo, const GlbPose& pose, int nodeIndex);
 
 	// Devuelve el índice del nodo con ese nombre, o -1 si no existe.
 	int FindNodeByName(const GlbModel& modelo, const std::string& nombre);

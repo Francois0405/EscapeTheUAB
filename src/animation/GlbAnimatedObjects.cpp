@@ -19,16 +19,16 @@ namespace glb
 
 		bool TieneAnimacion(const AnimatedObject& objeto)
 		{
-			return objeto.modelo != nullptr && objeto.indiceAnimacion >= 0 &&
-				objeto.indiceAnimacion < static_cast<int>(objeto.modelo->animaciones.size());
+			return objeto.modelo != nullptr && objeto.animationIndex >= 0 &&
+				objeto.animationIndex < static_cast<int>(objeto.modelo->animaciones.size());
 		}
 
 		// Cuando el reloj se detiene, "Abriendo" pasa a "Abierta" y "Cerrando" a "Cerrada".
 		void PasarAlEstadoFinalSiHaTerminado(AnimatedObject& objeto)
 		{
 			if (objeto.reproductor.reproduciendo) return;
-			if (objeto.estado == DoorState::Abriendo) objeto.estado = DoorState::Open;
-			if (objeto.estado == DoorState::Cerrando) objeto.estado = DoorState::Cerrada;
+			if (objeto.estado == DoorState::Opening) objeto.estado = DoorState::Open;
+			if (objeto.estado == DoorState::Closing) objeto.estado = DoorState::Closed;
 		}
 
 		// Coseno del ángulo entre la dirección de mirada y la dirección hacia un punto.
@@ -43,7 +43,7 @@ namespace glb
 	}
 
 	bool AddAnimatedObject(AnimatedScene& escena, const std::string& id, const std::string& rutaGlb,
-		const glm::vec3& posicion, float giroZGrados, std::string& error)
+		const glm::vec3& position, float yawDegrees, std::string& error)
 	{
 		if (FindAnimatedObject(escena, id) != nullptr)
 		{
@@ -56,12 +56,12 @@ namespace glb
 		AnimatedObject objeto;
 		objeto.id = id;
 		objeto.modelo = modelo;
-		objeto.posicion = posicion;
-		objeto.giroZGrados = giroZGrados;
+		objeto.position = position;
+		objeto.yawDegrees = yawDegrees;
 		objeto.pose = CreateRestPose(*modelo);   // cada instancia empieza con su pose propia
 		objeto.centroDelModelo = ComputeModelCenter(*modelo, objeto.pose);
 		if (TieneAnimacion(objeto))   // reloj parado en t = 0: la puerta empieza cerrada
-			objeto.reproductor.duracion = modelo->animaciones[objeto.indiceAnimacion].duracion;
+			objeto.reproductor.duracion = modelo->animaciones[objeto.animationIndex].duracion;
 		escena.objetos.push_back(std::move(objeto));
 		return true;
 	}
@@ -81,7 +81,7 @@ namespace glb
 				return false;
 			}
 		}
-		objeto.indiceAnimacion = indice;
+		objeto.animationIndex = indice;
 		if (TieneAnimacion(objeto))   // reloj parado en t = 0, con la duración de la animación elegida
 			objeto.reproductor.duracion = objeto.modelo->animaciones[indice].duracion;
 		return true;
@@ -96,8 +96,8 @@ namespace glb
 
 	glm::mat4 ObjectBaseMatrix(const AnimatedObject& objeto)
 	{
-		const glm::mat4 colocar = glm::translate(glm::mat4(1.0f), objeto.posicion);
-		const glm::mat4 girar = glm::rotate(colocar, glm::radians(objeto.giroZGrados), glm::vec3(0.0f, 0.0f, 1.0f));
+		const glm::mat4 colocar = glm::translate(glm::mat4(1.0f), objeto.position);
+		const glm::mat4 girar = glm::rotate(colocar, glm::radians(objeto.yawDegrees), glm::vec3(0.0f, 0.0f, 1.0f));
 		return glm::scale(girar, glm::vec3(objeto.escala));   // trasladar * girar * escalar
 	}
 
@@ -105,8 +105,8 @@ namespace glb
 	{
 		if (!TieneAnimacion(objeto)) return;
 		RestoreRestPose(*objeto.modelo, objeto.pose);
-		objeto.reproductor.Start(objeto.modelo->animaciones[objeto.indiceAnimacion].duracion);
-		objeto.estado = DoorState::Abriendo;
+		objeto.reproductor.Start(objeto.modelo->animaciones[objeto.animationIndex].duracion);
+		objeto.estado = DoorState::Opening;
 	}
 
 	void ToggleDoor(AnimatedObject& objeto)
@@ -114,14 +114,14 @@ namespace glb
 		if (!TieneAnimacion(objeto)) return;
 		switch (objeto.estado)
 		{
-		case DoorState::Cerrada:
-		case DoorState::Cerrando:    // si se estaba cerrando, vuelve a abrirse desde donde esté
-			objeto.estado = DoorState::Abriendo;
+		case DoorState::Closed:
+		case DoorState::Closing:    // si se estaba cerrando, vuelve a abrirse desde donde esté
+			objeto.estado = DoorState::Opening;
 			objeto.reproductor.PlayAnimation(+1.0f);
 			break;
 		case DoorState::Open:
-		case DoorState::Abriendo:    // si se estaba abriendo, empieza a cerrarse desde donde esté
-			objeto.estado = DoorState::Cerrando;
+		case DoorState::Opening:    // si se estaba abriendo, empieza a cerrarse desde donde esté
+			objeto.estado = DoorState::Closing;
 			objeto.reproductor.PlayAnimation(-1.0f);
 			break;
 		}
@@ -131,10 +131,10 @@ namespace glb
 	{
 		switch (estado)
 		{
-		case DoorState::Cerrada:  return "Cerrada";
-		case DoorState::Abriendo: return "Abriendo";
+		case DoorState::Closed:  return "Cerrada";
+		case DoorState::Opening: return "Abriendo";
 		case DoorState::Open:  return "Abierta";
-		case DoorState::Cerrando: return "Cerrando";
+		case DoorState::Closing: return "Cerrando";
 		}
 		return "?";
 	}
@@ -146,7 +146,7 @@ namespace glb
 			if (!TieneAnimacion(objeto)) continue;
 			objeto.reproductor.Update(deltaSegundos);
 			PasarAlEstadoFinalSiHaTerminado(objeto);
-			ApplyAnimation(objeto.pose, objeto.modelo->animaciones[objeto.indiceAnimacion], objeto.reproductor.tiempo);
+			ApplyAnimation(objeto.pose, objeto.modelo->animaciones[objeto.animationIndex], objeto.reproductor.tiempo);
 		}
 	}
 

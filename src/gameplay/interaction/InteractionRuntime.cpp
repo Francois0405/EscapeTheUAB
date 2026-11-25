@@ -30,7 +30,7 @@ namespace game::interaction
 
 		const int indiceDinamico = physicsScene->DynamicObjectOfBody(cuerpoMirado);
 		if (indiceDinamico >= 0)
-			return { InteractionAction::Recoger, indiceDinamico, nullptr, distancia, "[E] Coger" };
+			return { InteractionAction::PickUp, indiceDinamico, nullptr, distancia, "[E] Coger" };
 
 		const int indiceAnimado = physicsScene->AnimatedObjectOfBody(cuerpoMirado);
 		if (indiceAnimado < 0 || indiceAnimado >= static_cast<int>(animatedObjects.objetos.size()))
@@ -41,9 +41,9 @@ namespace game::interaction
 			return {};
 
 		const InteractionAction accion =
-			(puerta->estado == glb::DoorState::Cerrada || puerta->estado == glb::DoorState::Cerrando)
-			? InteractionAction::Abrir : InteractionAction::Cerrar;
-		return { accion, -1, puerta, distancia, accion == InteractionAction::Abrir ? "[E] Abrir" : "[E] Cerrar" };
+			(puerta->estado == glb::DoorState::Closed || puerta->estado == glb::DoorState::Closing)
+			? InteractionAction::Open : InteractionAction::Close;
+		return { accion, -1, puerta, distancia, accion == InteractionAction::Open ? "[E] Abrir" : "[E] Cerrar" };
 	}
 
 	void UpdateInteractionTarget(const InteractionContext& context, bool allowed)
@@ -72,7 +72,7 @@ namespace game::interaction
 			context.lookRay(origenRed, direccionRed);
 			if (networkGame.ToggleAnimatedObject(origenRed, direccionRed, context.clockSeconds())) return;
 		}
-		if (objetivo.accion == InteractionAction::Recoger)
+		if (objetivo.accion == InteractionAction::PickUp)
 		{
 			if (objetivo.indiceDinamico < 0 || objetivo.indiceDinamico >= static_cast<int>(sceneObjects.size())) return;
 			glm::vec3 origen, direccion;
@@ -107,15 +107,15 @@ namespace game::interaction
 				context.onHiritiGrabbed();
 			if (agarrado)
 			{
-				glm::vec3 posicion(0.0f);
-				physicsScene->DynamicObjectPosition(objetivo.indiceDinamico, posicion);
+				glm::vec3 position(0.0f);
+				physicsScene->DynamicObjectPosition(objetivo.indiceDinamico, position);
 				const net::PeerId peer = networkGame.IsActive() ? networkGame.LocalPeerId() : net::kUnassignedPeerId;
-				context.traceGrab("local-grab", id, peer, peer, posicion,
+				context.traceGrab("local-grab", id, peer, peer, position,
 					fisica::PhysicsScene::GrabDestination(origen, direccion),
 					networkGame.IsHosting() ? "authoritative-host-dynamic" : "offline-dynamic");
 			}
 		}
-		else if ((objetivo.accion == InteractionAction::Abrir || objetivo.accion == InteractionAction::Cerrar) &&
+		else if ((objetivo.accion == InteractionAction::Open || objetivo.accion == InteractionAction::Close) &&
 			objetivo.objetoAnimado != nullptr)
 		{
 			// Cliente: la puerta la decide el host (se envia la solicitud y se espera su estado).
@@ -162,7 +162,7 @@ namespace game::interaction
 		glm::vec3 origen, direccion;
 		context.lookRay(origen, direccion);
 		const float rapidez = ThrowSpeed(carga);
-		const glm::vec3 velocidad = glm::normalize(direccion) * rapidez;
+		const glm::vec3 speed = glm::normalize(direccion) * rapidez;
 		if (networkGame.IsActive() && networkGame.IsClient())
 		{
 			const uint32_t id = networkGame.DynamicObjectOfPeer(networkGame.LocalPeerId());
@@ -170,9 +170,9 @@ namespace game::interaction
 				{ return id != 0 && netgame::HashId(objeto.id) == id; });
 			if (id != 0)
 			{
-				const bool encolada = networkGame.RequestDynamicRelease(id, velocidad);
+				const bool encolada = networkGame.RequestDynamicRelease(id, speed);
 				context.traceGrab(encolada ? "release-request" : "release-rejected", id, networkGame.LocalPeerId(),
-					networkGame.DynamicOwner(id), glm::vec3(0.0f), velocidad,
+					networkGame.DynamicOwner(id), glm::vec3(0.0f), speed,
 					encolada ? "client-release-request-queued" : "client-release-request-queue-failed");
 				if (encolada && it != sceneObjects.end() && it->id == "hiriti")
 					context.onHiritiThrown(carga);
@@ -183,16 +183,16 @@ namespace game::interaction
 			const int indice = physicsScene->GrabbedObject();
 			const uint32_t id = indice >= 0 && indice < static_cast<int>(sceneObjects.size())
 				? netgame::HashId(sceneObjects[indice].id) : 0;
-			if (physicsScene->ThrowGrab(velocidad))
+			if (physicsScene->ThrowGrab(speed))
 			{
 				if (networkGame.IsActive() && networkGame.IsHosting() && id != 0)
 					networkGame.SetDynamicOwner(id, netgame::kSinDueno);
 				if (indice >= 0 && indice < static_cast<int>(sceneObjects.size()) && sceneObjects[indice].id == "hiriti")
 					context.onHiritiThrown(carga);
-				glm::vec3 posicion(0.0f);
-				if (indice >= 0) physicsScene->DynamicObjectPosition(indice, posicion);
+				glm::vec3 position(0.0f);
+				if (indice >= 0) physicsScene->DynamicObjectPosition(indice, position);
 				context.traceGrab("released", id, networkGame.IsActive() ? networkGame.LocalPeerId() : net::kUnassignedPeerId,
-					netgame::kSinDueno, posicion, velocidad, "local-launch-applied-throw-velocity");
+					netgame::kSinDueno, position, speed, "local-launch-applied-throw-velocity");
 			}
 		}
 	}

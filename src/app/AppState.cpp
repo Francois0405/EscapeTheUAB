@@ -108,7 +108,7 @@ bool hasPreviousFrameFeet = false;
 // Keyframes: en 0 s la puerta está cerrada (0 grados), en 2 s abierta (90 grados).
 // Para cambiar la duración o el ángulo basta con editar esta lista.
 
-animation::Reproductor demoDoorPlayback;
+animation::Playback demoDoorPlayback;
 
 float demoDoorAngle = 0.0f;                              // ángulo actual (se recalcula cada fotograma)
 

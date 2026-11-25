@@ -17,13 +17,13 @@ namespace editor
 		bool SaveScene(const std::vector<SceneObject>& objetos, const std::vector<SceneAnimatedObject>& animados, std::string& error);
 		bool SaveScene(const std::vector<SceneObject>& objetos, std::string& error);
 		const std::filesystem::path& Ruta() const { return ruta; }
-		const std::filesystem::path& RutaFuente() const { return rutaFuente; }
+		const std::filesystem::path& RutaFuente() const { return sourcePath; }
 		bool IsLoaded() const { return cargado; }
 
 	private:
 		std::filesystem::path ruta;
-		std::filesystem::path rutaFuente;
-		std::string documentoOriginal;
+		std::filesystem::path sourcePath;
+		std::string originalDocument;
 		bool cargado = false;
 		bool llamadaSinListaAnimados = false;
 	};

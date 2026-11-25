@@ -81,8 +81,8 @@ int main()
 		std::abs(datos.directSceneLightScale - 0.80f) < 1e-6f,
 		"carga los parametros de iluminacion configurables");
 	SceneObject mesa = datos.objetos.at(1);
-	mesa.posicion = glm::vec3(7.25f, -3.5f, 1.75f);
-	mesa.rotacion = glm::vec3(15.0f, -20.0f, 90.0f);
+	mesa.position = glm::vec3(7.25f, -3.5f, 1.75f);
+	mesa.eulerRotation = glm::vec3(15.0f, -20.0f, 90.0f);
 	mesa.escala = glm::vec3(1.25f, 0.75f, 2.0f);
 	mesa.material.presente = true;
 	mesa.material.textura = "../models/floor.png";
@@ -134,7 +134,7 @@ int main()
 	SceneData recargada;
 	comprobar(LoadSceneDataJson(escena, recargada, error), "recarga JSON editado");
 	comprobar(recargada.animados[0].permitirPenetracionArquitectura, "la puerta GLB restaura su excepcion explicita");
-	comprobar(recargada.objetos[1].posicion == mesa.posicion && recargada.objetos[1].rotacion == mesa.rotacion &&
+	comprobar(recargada.objetos[1].position == mesa.position && recargada.objetos[1].eulerRotation == mesa.eulerRotation &&
 		recargada.objetos[1].escala == mesa.escala, "la recarga conserva transformaciones exactas");
 	comprobar(recargada.objetos[1].permitirPenetracionArquitectura, "la recarga restaura la excepcion explicita");
 	comprobar(recargada.objetos[1].luz.presente && recargada.objetos[1].luz.encendida &&
@@ -176,7 +176,7 @@ int main()
 	SceneData paredRecargada;
 	comprobar(LoadSceneDataJson(paredEscena, paredRecargada, error) &&
 		paredRecargada.objetos[0].pared.aperturas[0].id == "door-opening" &&
-		paredRecargada.animados[0].paredId == "wall" && paredRecargada.animados[0].aperturaId == "door-opening",
+		paredRecargada.animados[0].paredId == "wall" && paredRecargada.animados[0].openingId == "door-opening",
 		"Save/Reload conserva exactamente el vínculo pared, vano y puerta");
 	paredDatos.objetos[0].pared.aperturas[0].idPuerta.clear();
 	paredDatos.animados.clear();

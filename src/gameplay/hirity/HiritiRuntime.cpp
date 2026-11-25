@@ -31,7 +31,7 @@ namespace game::hiriti
 				[](const SceneObject& objeto) { return objeto.id == "hiriti"; });
 			if (hiriti == sceneObjects.end()) return volumenBase;
 
-			posicionHiriti = hiriti->posicion;
+			posicionHiriti = hiriti->position;
 			const int indice = static_cast<int>(std::distance(sceneObjects.begin(), hiriti));
 			physicsScene->DynamicObjectPosition(indice, posicionHiriti);
 
@@ -152,14 +152,14 @@ namespace game::hiriti
 		if (varianteDanio >= 0)
 		{
 			traceGrab("hiriti-contact", idHiriti, networkGame.LocalPeerId(),
-				networkGame.DynamicOwner(idHiriti), hiriti->posicion, velocidadHiriti,
+				networkGame.DynamicOwner(idHiriti), hiriti->position, velocidadHiriti,
 				varianteDanio == 0 ? "contact-damage-audio" : "contact-damage-audio-long");
 			PlayHiritiSound(context, varianteDanio == 0
 				? "assets/audio/hirity/damage/damagehirity.ogg"
 				: "assets/audio/hirity/damage/damegehiritylong.ogg");
 		}
 
-		glm::vec3 centro = hiriti->posicion;
+		glm::vec3 centro = hiriti->position;
 		physicsScene->DynamicObjectPosition(indice, centro);
 		if (grabTraceEnabled())
 		{
@@ -265,19 +265,19 @@ namespace game::hiriti
 		if (!activo) hiritiFollowPlayerEnabled = false;
 		switch (hiritiAudioTimer.Update(activo, delta))
 		{
-		case game::HiritiAudioTimer::Evento::Ambiente:
+		case game::HiritiAudioTimer::Evento::Ambient:
 			hiritiFollowPlayerEnabled = false;
 			PlayHiritiSound(context, tipoAmbiente(generador) == 0
 				? "assets/audio/hirity/ambient/cough.ogg"
 				: "assets/audio/hirity/ambient/pasosfuertes.ogg");
 			break;
-		case game::HiritiAudioTimer::Evento::Buscando:
+		case game::HiritiAudioTimer::Evento::Searching:
 			hiritiFollowPlayerEnabled = true;
 			PlayHiritiSound(context, tipoBuscando(generador) == 0
 				? "assets/audio/hirity/searching/heydondeestashirity.ogg"
 				: "assets/audio/hirity/searching/venaquihirity.ogg");
 			break;
-		case game::HiritiAudioTimer::Evento::Ninguno:
+		case game::HiritiAudioTimer::Evento::None:
 			break;
 		}
 	}

@@ -11,7 +11,7 @@
 class AudioManager;
 struct GLFWwindow;
 struct SceneObject;
-namespace animation { struct Reproductor; }
+namespace animation { struct Playback; }
 namespace fisica { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
 namespace fps { class CameraBob; class StaminaBar; class PlayerMovement; }
 namespace glb { struct AnimatedScene; }
@@ -90,7 +90,7 @@ namespace runtimeui
 		bool& optimizedRendering;
 		const double& lastGpuMs;
 		int& lightingView;
-		const animation::Reproductor& doorDemoPlayer;
+		const animation::Playback& doorDemoPlayer;
 		const float& doorDemoAngle;
 		bool& showColliders;
 		const bool& hiritiFollowEnabled;

@@ -21,11 +21,11 @@ namespace netgame::scene_network_state
 			SceneObjectState state;
 			state.id = hashFunction(object.id);
 			if (state.id == 0 || !persistentIds.emplace(state.id, object.id).second) return false;
-			state.posicion = object.posicion; state.rotacion = object.rotacion; state.escala = object.escala;
-			state.colisionPresente = object.fisica.presente;
-			state.tipoColision = SceneCollisionType(object.fisica.presente,
+			state.position = object.position; state.eulerRotation = object.eulerRotation; state.escala = object.escala;
+			state.hasCollision = object.fisica.presente;
+			state.collisionKind = SceneCollisionType(object.fisica.presente,
 				fisica::IsDynamicBody(object.fisica.tipo));
-			state.mitadTamano = object.fisica.mitadTamano;
+			state.halfExtents = object.fisica.halfExtents;
 			state.desplazamiento = object.fisica.desplazamiento;
 			state.masa = object.fisica.masa;
 			if (!IsValidSceneObjectState(state)) return false;

@@ -27,5 +27,5 @@ extern fisica::PhysicsWorld physicsWorld;
 extern std::unique_ptr<fisica::PhysicsScene> physicsScene;
 extern fisica::FallingCubeDemo fallingCubeDemo;
 extern bool showColliders;
-extern animation::Reproductor demoDoorPlayback;
+extern animation::Playback demoDoorPlayback;
 extern float demoDoorAngle;

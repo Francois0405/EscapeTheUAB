@@ -15,9 +15,9 @@
 struct ScenePhysics
 {
     bool presente = false;                                  // false = el objeto no tiene físicas
-    fisica::BodyType tipo = fisica::BodyType::Estatico; // static, dynamic o bouncy
-    fisica::BodyShape forma = fisica::BodyShape::Caja;
-    glm::vec3 mitadTamano = glm::vec3(0.5f);                // "halfSize": medias dimensiones; radio para esfera
+    fisica::BodyType tipo = fisica::BodyType::Static; // static, dynamic o bouncy
+    fisica::BodyShape forma = fisica::BodyShape::Box;
+    glm::vec3 halfExtents = glm::vec3(0.5f);                // "halfSize": medias dimensiones; radio para esfera
     glm::vec3 desplazamiento = glm::vec3(0.0f);             // "offset": centro de la caja respecto al origen del modelo
     float masa = 0.0f;                                      // "mass" en kg (solo dinámicos)
 };
@@ -83,8 +83,8 @@ struct SceneObject
     std::string categoria;
     std::string modelo;
 
-    glm::vec3 posicion;
-    glm::vec3 rotacion;
+    glm::vec3 position;
+    glm::vec3 eulerRotation;
     glm::vec3 escala;
 
     ScenePhysics fisica;   // opcional: sin "physics" en el JSON queda con presente = false
@@ -99,8 +99,8 @@ struct SceneObject
 struct SceneCollider
 {
     std::string nodo;                                       // nombre del nodo en el GLB, p. ej. "Door"
-    fisica::BodyType tipo = fisica::BodyType::Estatico; // "static" (marco) o "kinematic" (hoja que se mueve)
-    glm::vec3 mitadTamano = glm::vec3(0.5f);
+    fisica::BodyType tipo = fisica::BodyType::Static; // "static" (marco) o "kinematic" (hoja que se mueve)
+    glm::vec3 halfExtents = glm::vec3(0.5f);
     glm::vec3 desplazamiento = glm::vec3(0.0f);
 };
 
@@ -109,14 +109,14 @@ struct SceneAnimatedObject
 {
     std::string id;
     std::string modelo;                  // ruta del .glb relativa al JSON
-    glm::vec3 posicion = glm::vec3(0.0f);
-    float giroZGrados = 0.0f;            // de momento los modelos animados solo giran sobre el eje vertical
+    glm::vec3 position = glm::vec3(0.0f);
+    float yawDegrees = 0.0f;            // de momento los modelos animados solo giran sobre el eje vertical
     float escala = 1.0f;                 // escala uniforme
     std::string animation;               // nombre de la animación; vacío = la primera del archivo
     std::vector<SceneCollider> colisionadores;
     bool permitirPenetracionArquitectura = false; // excepción deliberada, desactivada por defecto
     std::string paredId;
-    std::string aperturaId;
+    std::string openingId;
 };
 
 // Punto inicial opcional de la escena. position son los pies del jugador en metros;

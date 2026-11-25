@@ -128,7 +128,7 @@ void draw_Menu_ImGui()
 		{ fpsMode, [] { return fpsInputActive(); }, [] { return sceneEditor.IsEnabled(); },
 			staminaBar, playerMovement, showStaminaPercent,
 			throwChargeActive, throwChargeTime, kMaxThrowChargeDuration, physicsScene,
-			[]() -> const char* { return currentInteractionTarget.accion == InteractionAction::Ninguna
+			[]() -> const char* { return currentInteractionTarget.accion == InteractionAction::None
 				? nullptr : currentInteractionTarget.texto; },
 			interactionHandTexture },
 		// Menus

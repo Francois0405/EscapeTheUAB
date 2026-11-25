@@ -29,14 +29,14 @@ namespace vr
 	{
 		switch (estado)
 		{
-		case OpenXrState::Desactivado:             return "Desactivado";
-		case OpenXrState::NoCompilado:             return "No compilado";
-		case OpenXrState::SinRuntime:              return "Sin runtime OpenXR";
-		case OpenXrState::SinVisor:                return "Sin visor";
-		case OpenXrState::FaltaExtensionOpenGL:    return "Falta XR_KHR_opengl_enable";
-		case OpenXrState::OpenGLInsuficiente:      return "OpenGL insuficiente";
-		case OpenXrState::InstanciaYSistemaListos: return "Visor detectado (sin sesion en esta plataforma)";
-		case OpenXrState::SesionCreada:            return "Sesion creada";
+		case OpenXrState::Disabled:             return "Desactivado";
+		case OpenXrState::NotCompiled:             return "No compilado";
+		case OpenXrState::NoRuntime:              return "Sin runtime OpenXR";
+		case OpenXrState::NoHeadset:                return "Sin visor";
+		case OpenXrState::MissingOpenGLExtension:    return "Falta XR_KHR_opengl_enable";
+		case OpenXrState::OpenGLTooOld:      return "OpenGL insuficiente";
+		case OpenXrState::InstanceAndSystemReady: return "Visor detectado (sin sesion en esta plataforma)";
+		case OpenXrState::SessionCreated:            return "Sesion creada";
 		case OpenXrState::Error:                   return "Error";
 		}
 		return "?";
@@ -44,7 +44,7 @@ namespace vr
 
 	GamePlayMode ChooseGamePlayMode(bool vrSolicitado, OpenXrState estado)
 	{
-		return (vrSolicitado && estado == OpenXrState::SesionCreada) ? GamePlayMode::VR : GamePlayMode::Pantalla;
+		return (vrSolicitado && estado == OpenXrState::SessionCreated) ? GamePlayMode::VR : GamePlayMode::Screen;
 	}
 
 	#ifdef ENTORNVGI_HAS_OPENXR
@@ -71,7 +71,7 @@ namespace vr
 		XrSystemId sistema = XR_NULL_SYSTEM_ID;
 		XrSession sesion = XR_NULL_HANDLE;
 		XrSpace espacio = XR_NULL_HANDLE;
-		ReferenceSpaceKind tipoEspacio = ReferenceSpaceKind::Ninguno;
+		ReferenceSpaceKind tipoEspacio = ReferenceSpaceKind::None;
 
 		XrSessionState estadoSesion = XR_SESSION_STATE_UNKNOWN;
 		bool sesionIniciada = false;                    // entre xrBeginSession y xrEndSession
@@ -85,20 +85,20 @@ namespace vr
 		XrTime tiempoPrediccion = 0;
 
 		XrActionSet actionSet = XR_NULL_HANDLE;
-		XrAction accionAgarrar = XR_NULL_HANDLE;
+		XrAction grabAction = XR_NULL_HANDLE;
 		XrPath rutaManos[2] = { XR_NULL_PATH, XR_NULL_PATH }; // 0: izq, 1: der
 
 		bool gatilloAnterior = false;
 		bool gatilloActual = false;
-		bool gatilloRecienPulsado = false;
-		bool gatilloRecienSoltado = false;
+		bool triggerPressedNow = false;
+		bool triggerReleasedNow = false;
 		bool gatilloIzqAnterior = false;
 		bool gatilloIzqRecienPulsado = false;
 
-		XrAction accionApuntar = XR_NULL_HANDLE;
-		XrSpace espacioApuntar[2] = { XR_NULL_HANDLE, XR_NULL_HANDLE };
-		XrPose poseMando[2];
-		bool poseMandoValida[2] = { false, false };
+		XrAction aimAction = XR_NULL_HANDLE;
+		XrSpace aimSpace[2] = { XR_NULL_HANDLE, XR_NULL_HANDLE };
+		XrPose controllerPose[2];
+		bool controllerPoseValid[2] = { false, false };
 	};
 
 	namespace
@@ -146,7 +146,7 @@ namespace vr
 			{
 				mensaje = EsFaltaDeRuntime(r) ? "No hay un runtime OpenXR activo (abre Meta Horizon Link / Quest Link, SteamVR u otro)."
 					: Texto("No se pudieron enumerar las extensiones de OpenXR", r);
-				return EsFaltaDeRuntime(r) ? OpenXrState::SinRuntime : OpenXrState::Error;
+				return EsFaltaDeRuntime(r) ? OpenXrState::NoRuntime : OpenXrState::Error;
 			}
 			std::vector<XrExtensionProperties> extensiones(cuantas, { XR_TYPE_EXTENSION_PROPERTIES });
 			r = xrEnumerateInstanceExtensionProperties(nullptr, cuantas, &cuantas, extensiones.data());
@@ -158,9 +158,9 @@ namespace vr
 				lista.push_back(e.extensionName);
 				if (std::strcmp(e.extensionName, XR_KHR_OPENGL_ENABLE_EXTENSION_NAME) == 0) hayOpenGL = true;
 			}
-			if (hayOpenGL) return OpenXrState::Desactivado;   // "sin problema"
+			if (hayOpenGL) return OpenXrState::Disabled;   // "sin problema"
 			mensaje = "El runtime OpenXR no ofrece XR_KHR_opengl_enable: no puede dibujar con OpenGL.";
-			return OpenXrState::FaltaExtensionOpenGL;
+			return OpenXrState::MissingOpenGLExtension;
 		}
 
 		// Etapa A, paso 2: crear la instancia (la "conexión" con el runtime).
@@ -177,11 +177,11 @@ namespace vr
 			info.enabledExtensionNames = extensiones;
 
 			const XrResult r = xrCreateInstance(&info, &instancia);
-			if (XR_SUCCEEDED(r)) return OpenXrState::Desactivado;
+			if (XR_SUCCEEDED(r)) return OpenXrState::Disabled;
 			instancia = XR_NULL_HANDLE;
 			mensaje = EsFaltaDeRuntime(r) ? "No hay un runtime OpenXR activo (abre Meta Horizon Link / Quest Link, SteamVR u otro)."
 				: Texto("No se pudo crear la instancia de OpenXR", r);
-			return EsFaltaDeRuntime(r) ? OpenXrState::SinRuntime : OpenXrState::Error;
+			return EsFaltaDeRuntime(r) ? OpenXrState::NoRuntime : OpenXrState::Error;
 		}
 
 		// Etapa A, paso 3: buscar el visor.
@@ -190,11 +190,11 @@ namespace vr
 			XrSystemGetInfo info = { XR_TYPE_SYSTEM_GET_INFO };
 			info.formFactor = XR_FORM_FACTOR_HEAD_MOUNTED_DISPLAY;
 			const XrResult r = xrGetSystem(instancia, &info, &sistema);
-			if (XR_SUCCEEDED(r)) return OpenXrState::Desactivado;
+			if (XR_SUCCEEDED(r)) return OpenXrState::Disabled;
 			if (r == XR_ERROR_FORM_FACTOR_UNAVAILABLE)
 			{
 				mensaje = "Hay runtime OpenXR pero no hay ningun visor conectado (enciende el casco y activa Meta Horizon Link / Quest Link).";
-				return OpenXrState::SinVisor;
+				return OpenXrState::NoHeadset;
 			}
 			mensaje = Texto("No se pudo consultar el visor", r);
 			return OpenXrState::Error;
@@ -211,7 +211,7 @@ namespace vr
 			if (XR_FAILED(r) || pedirRequisitos == nullptr)
 			{
 				mensaje = Texto("No se encontro xrGetOpenGLGraphicsRequirementsKHR", r);
-				return OpenXrState::FaltaExtensionOpenGL;
+				return OpenXrState::MissingOpenGLExtension;
 			}
 			XrGraphicsRequirementsOpenGLKHR requisitos = { XR_TYPE_GRAPHICS_REQUIREMENTS_OPENGL_KHR };
 			r = pedirRequisitos(instancia, sistema, &requisitos);
@@ -224,9 +224,9 @@ namespace vr
 				mensaje = "El runtime necesita OpenGL " + std::to_string(XR_VERSION_MAJOR(requisitos.minApiVersionSupported)) + "." +
 					std::to_string(XR_VERSION_MINOR(requisitos.minApiVersionSupported)) + " o superior y la ventana tiene " +
 					std::to_string(mayor) + "." + std::to_string(menor) + ".";
-				return OpenXrState::OpenGLInsuficiente;
+				return OpenXrState::OpenGLTooOld;
 			}
-			return OpenXrState::Desactivado;
+			return OpenXrState::Disabled;
 		}
 
 		// Datos del runtime y del visor para el informe de diagnóstico.
@@ -271,7 +271,7 @@ namespace vr
 			info.systemId = sistema;
 			const XrResult r = xrCreateSession(instancia, &info, &sesion);
 			if (XR_FAILED(r)) { sesion = XR_NULL_HANDLE; mensaje = Texto("No se pudo crear la sesion OpenXR con OpenGL", r); return OpenXrState::Error; }
-			return OpenXrState::SesionCreada;
+			return OpenXrState::SessionCreated;
 		}
 
 		// Etapa C, paso 1: espacio de referencia. STAGE (suelo) si el runtime lo ofrece; si no, LOCAL.
@@ -292,7 +292,7 @@ namespace vr
 			{
 				info.referenceSpaceType = XR_REFERENCE_SPACE_TYPE_STAGE;
 				r = xrCreateReferenceSpace(sesion, &info, &espacio);
-				if (XR_SUCCEEDED(r)) tipo = ReferenceSpaceKind::Suelo;
+				if (XR_SUCCEEDED(r)) tipo = ReferenceSpaceKind::Floor;
 			}
 			if (XR_FAILED(r) && hayLocal)
 			{
@@ -301,8 +301,8 @@ namespace vr
 				if (XR_SUCCEEDED(r)) tipo = ReferenceSpaceKind::Local;
 			}
 			if (XR_FAILED(r)) { espacio = XR_NULL_HANDLE; mensaje = Texto("No se pudo crear un espacio de referencia (STAGE ni LOCAL)", r); return OpenXrState::Error; }
-			d += std::string("Espacio elegido: ") + (tipo == ReferenceSpaceKind::Suelo ? "STAGE (origen en el suelo)" : "LOCAL (origen en la cabeza)") + "\n";
-			return OpenXrState::SesionCreada;
+			d += std::string("Espacio elegido: ") + (tipo == ReferenceSpaceKind::Floor ? "STAGE (origen en el suelo)" : "LOCAL (origen en la cabeza)") + "\n";
+			return OpenXrState::SessionCreated;
 		}
 
 		// Etapa C, paso 2: formato de color del swapchain. Se elige entre los que ofrece el runtime; nada fijo.
@@ -395,8 +395,8 @@ namespace vr
 		// Etapa D: crear el ActionSet, la acción "agarrar" y vincularla al gatillo frontal de los mandos.
 		// Etapa D: crear el ActionSet, las acciones "agarrar" y "apuntar_mando" y vincularlas.
 		bool CrearAcciones(XrInstance instancia, XrSession sesion, XrActionSet& actionSet,
-			XrAction& accionAgarrar, XrAction& accionApuntar, XrPath rutaManos[2],
-			XrSpace espacioApuntar[2], std::string& mensaje, std::string& d)
+			XrAction& grabAction, XrAction& aimAction, XrPath rutaManos[2],
+			XrSpace aimSpace[2], std::string& mensaje, std::string& d)
 		{
 			XrActionSetCreateInfo setInfo = { XR_TYPE_ACTION_SET_CREATE_INFO };
 			std::strncpy(setInfo.actionSetName, "acciones_juego", XR_MAX_ACTION_SET_NAME_SIZE - 1);
@@ -415,7 +415,7 @@ namespace vr
 			std::strncpy(actionInfo.localizedActionName, "Agarrar", XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
 			actionInfo.countSubactionPaths = 2;
 			actionInfo.subactionPaths = rutaManos;
-			r = xrCreateAction(actionSet, &actionInfo, &accionAgarrar);
+			r = xrCreateAction(actionSet, &actionInfo, &grabAction);
 			if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear la accion agarrar", r); return false; }
 
 			// 2. Acción de pose para apuntar con los mandos
@@ -425,7 +425,7 @@ namespace vr
 			std::strncpy(poseInfo.localizedActionName, "Apuntar Mando", XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
 			poseInfo.countSubactionPaths = 2;
 			poseInfo.subactionPaths = rutaManos;
-			r = xrCreateAction(actionSet, &poseInfo, &accionApuntar);
+			r = xrCreateAction(actionSet, &poseInfo, &aimAction);
 			if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear la accion apuntar_mando", r); return false; }
 
 			// Rutas físicas
@@ -443,10 +443,10 @@ namespace vr
 			XrPath perfilOculus = XR_NULL_PATH;
 			xrStringToPath(instancia, "/interaction_profiles/oculus/touch_controller", &perfilOculus);
 			XrActionSuggestedBinding bindingsOculus[] = {
-				{ accionAgarrar, triggerIzq },
-				{ accionAgarrar, triggerDer },
-				{ accionApuntar, aimIzq },
-				{ accionApuntar, aimDer }
+				{ grabAction, triggerIzq },
+				{ grabAction, triggerDer },
+				{ aimAction, aimIzq },
+				{ aimAction, aimDer }
 			};
 			XrInteractionProfileSuggestedBinding sugOculus = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 			sugOculus.interactionProfile = perfilOculus;
@@ -458,10 +458,10 @@ namespace vr
 			XrPath perfilSimple = XR_NULL_PATH;
 			xrStringToPath(instancia, "/interaction_profiles/khr/simple_controller", &perfilSimple);
 			XrActionSuggestedBinding bindingsSimple[] = {
-				{ accionAgarrar, selectIzq },
-				{ accionAgarrar, selectDer },
-				{ accionApuntar, aimIzq },
-				{ accionApuntar, aimDer }
+				{ grabAction, selectIzq },
+				{ grabAction, selectDer },
+				{ aimAction, aimIzq },
+				{ aimAction, aimDer }
 			};
 			XrInteractionProfileSuggestedBinding sugSimple = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 			sugSimple.interactionProfile = perfilSimple;
@@ -480,10 +480,10 @@ namespace vr
 			for (int i = 0; i < 2; ++i)
 			{
 				XrActionSpaceCreateInfo spaceInfo = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
-				spaceInfo.action = accionApuntar;
+				spaceInfo.action = aimAction;
 				spaceInfo.subactionPath = rutaManos[i];
 				spaceInfo.poseInActionSpace.orientation.w = 1.0f;
-				r = xrCreateActionSpace(sesion, &spaceInfo, &espacioApuntar[i]);
+				r = xrCreateActionSpace(sesion, &spaceInfo, &aimSpace[i]);
 				if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear XrActionSpace del mando", r); return false; }
 			}
 
@@ -519,8 +519,8 @@ namespace vr
 	const char* OpenXrManager::NombreEstadoSesion() const { return impl->sesion != XR_NULL_HANDLE ? NombreSesion(impl->estadoSesion) : "sin sesion"; }
 	ReferenceSpaceKind OpenXrManager::ReferenceSpaceHandle() const { return impl->tipoEspacio; }
 	int OpenXrManager::EyeCount() const { return static_cast<int>(impl->ojos.size()); }
-	bool OpenXrManager::GatilloRecienPulsado() const { return impl->gatilloRecienPulsado; }
-	bool OpenXrManager::TriggerJustReleased() const { return impl->gatilloRecienSoltado; }
+	bool OpenXrManager::GatilloRecienPulsado() const { return impl->triggerPressedNow; }
+	bool OpenXrManager::TriggerJustReleased() const { return impl->triggerReleasedNow; }
 	bool OpenXrManager::GatilloPulsado() const { return impl->gatilloActual; }
 	bool OpenXrManager::LeftTriggerJustPressed() const { return impl->gatilloIzqRecienPulsado; }
 
@@ -537,10 +537,10 @@ namespace vr
 		impl->fotogramaAbierto = false;
 		DestruirCadenas(impl->ojos);
 		impl->vistas.clear();
-		if (impl->espacioApuntar[0] != XR_NULL_HANDLE) xrDestroySpace(impl->espacioApuntar[0]);
-		if (impl->espacioApuntar[1] != XR_NULL_HANDLE) xrDestroySpace(impl->espacioApuntar[1]);
-		if (impl->accionApuntar != XR_NULL_HANDLE) xrDestroyAction(impl->accionApuntar);
-		if (impl->accionAgarrar != XR_NULL_HANDLE) xrDestroyAction(impl->accionAgarrar);
+		if (impl->aimSpace[0] != XR_NULL_HANDLE) xrDestroySpace(impl->aimSpace[0]);
+		if (impl->aimSpace[1] != XR_NULL_HANDLE) xrDestroySpace(impl->aimSpace[1]);
+		if (impl->aimAction != XR_NULL_HANDLE) xrDestroyAction(impl->aimAction);
+		if (impl->grabAction != XR_NULL_HANDLE) xrDestroyAction(impl->grabAction);
 		if (impl->actionSet != XR_NULL_HANDLE) xrDestroyActionSet(impl->actionSet);
 		if (impl->espacio != XR_NULL_HANDLE) xrDestroySpace(impl->espacio);
 		if (impl->sesion != XR_NULL_HANDLE)
@@ -551,28 +551,28 @@ namespace vr
 		if (impl->instancia != XR_NULL_HANDLE) xrDestroyInstance(impl->instancia);
 		impl->gatilloIzqAnterior = false;
 		impl->gatilloIzqRecienPulsado = false;
-		impl->espacioApuntar[0] = XR_NULL_HANDLE;
-		impl->espacioApuntar[1] = XR_NULL_HANDLE;
-		impl->accionApuntar = XR_NULL_HANDLE;
-		impl->poseMandoValida[0] = false;
-		impl->poseMandoValida[1] = false;
-		impl->gatilloRecienSoltado = false;
-		impl->accionAgarrar = XR_NULL_HANDLE;
+		impl->aimSpace[0] = XR_NULL_HANDLE;
+		impl->aimSpace[1] = XR_NULL_HANDLE;
+		impl->aimAction = XR_NULL_HANDLE;
+		impl->controllerPoseValid[0] = false;
+		impl->controllerPoseValid[1] = false;
+		impl->triggerReleasedNow = false;
+		impl->grabAction = XR_NULL_HANDLE;
 		impl->actionSet = XR_NULL_HANDLE;
 		impl->rutaManos[0] = XR_NULL_PATH;
 		impl->rutaManos[1] = XR_NULL_PATH;
 		impl->gatilloAnterior = false;
 		impl->gatilloActual = false;
-		impl->gatilloRecienPulsado = false;
+		impl->triggerPressedNow = false;
 		impl->espacio = XR_NULL_HANDLE;
 		impl->sesion = XR_NULL_HANDLE;
 		impl->instancia = XR_NULL_HANDLE;
 		impl->sistema = XR_NULL_SYSTEM_ID;
-		impl->tipoEspacio = ReferenceSpaceKind::Ninguno;
+		impl->tipoEspacio = ReferenceSpaceKind::None;
 		impl->estadoSesion = XR_SESSION_STATE_UNKNOWN;
 		impl->sesionIniciada = false;
 		impl->vistasValidas = false;
-		if (estado != OpenXrState::Desactivado && estado != OpenXrState::NoCompilado) { estado = OpenXrState::Desactivado; mensaje = "OpenXR desactivado."; }
+		if (estado != OpenXrState::Disabled && estado != OpenXrState::NotCompiled) { estado = OpenXrState::Disabled; mensaje = "OpenXR desactivado."; }
 	}
 
 	OpenXrState OpenXrManager::SetActive(GLFWwindow* ventana, int glMajorVersion, int glMinorVersion)
@@ -585,36 +585,36 @@ namespace vr
 
 		// Cada paso devuelve "Desactivado" si todo fue bien; si no, el motivo. Al primer fallo se limpia todo.
 		OpenXrState resultado = ComprobarExtensionOpenGL(aviso, extensiones);
-		if (resultado == OpenXrState::Desactivado) resultado = CrearInstancia(impl->instancia, aviso);
-		if (resultado == OpenXrState::Desactivado) resultado = BuscarVisor(impl->instancia, impl->sistema, aviso);
-		if (resultado == OpenXrState::Desactivado)
+		if (resultado == OpenXrState::Disabled) resultado = CrearInstancia(impl->instancia, aviso);
+		if (resultado == OpenXrState::Disabled) resultado = BuscarVisor(impl->instancia, impl->sistema, aviso);
+		if (resultado == OpenXrState::Disabled)
 		{
 			DescribirRuntimeYVisor(impl->instancia, impl->sistema, informe);
 			resultado = ComprobarVersionOpenGL(impl->instancia, impl->sistema, glMajorVersion, glMinorVersion, aviso, informe);
 		}
-		if (resultado == OpenXrState::Desactivado)
+		if (resultado == OpenXrState::Disabled)
 		{
 #if defined(_WIN32)
 			resultado = CrearSesion(impl->instancia, impl->sistema, impl->sesion, aviso);
-			if (resultado == OpenXrState::SesionCreada) resultado = CrearEspacio(impl->sesion, impl->espacio, impl->tipoEspacio, aviso, informe);
+			if (resultado == OpenXrState::SessionCreated) resultado = CrearEspacio(impl->sesion, impl->espacio, impl->tipoEspacio, aviso, informe);
 			int64_t formato = 0;
-			if (resultado == OpenXrState::SesionCreada && !ElegirFormato(impl->sesion, formato, aviso, informe)) resultado = OpenXrState::Error;
-			if (resultado == OpenXrState::SesionCreada &&
+			if (resultado == OpenXrState::SessionCreated && !ElegirFormato(impl->sesion, formato, aviso, informe)) resultado = OpenXrState::Error;
+			if (resultado == OpenXrState::SessionCreated &&
 				!CrearCadenas(impl->instancia, impl->sistema, impl->sesion, formato, impl->ojos, impl->vistas, impl->mezcla, aviso, informe))
 				resultado = OpenXrState::Error;
-			if (resultado == OpenXrState::SesionCreada &&
-				!CrearAcciones(impl->instancia, impl->sesion, impl->actionSet, impl->accionAgarrar,
-					impl->accionApuntar, impl->rutaManos, impl->espacioApuntar, aviso, informe))
+			if (resultado == OpenXrState::SessionCreated &&
+				!CrearAcciones(impl->instancia, impl->sesion, impl->actionSet, impl->grabAction,
+					impl->aimAction, impl->rutaManos, impl->aimSpace, aviso, informe))
 				resultado = OpenXrState::Error;
-			if (resultado == OpenXrState::SesionCreada)
+			if (resultado == OpenXrState::SessionCreated)
 				aviso = "Sesion OpenXR lista. Esperando a que el runtime la ponga en READY (ponte el casco).";
 #else
-			resultado = OpenXrState::InstanciaYSistemaListos;
+			resultado = OpenXrState::InstanceAndSystemReady;
 			aviso = "Visor detectado. En esta plataforma no se crea sesion VR (solo implementado en Windows con OpenGL).";
 #endif
 		}
 
-		const bool exito = resultado == OpenXrState::SesionCreada || resultado == OpenXrState::InstanciaYSistemaListos;
+		const bool exito = resultado == OpenXrState::SessionCreated || resultado == OpenXrState::InstanceAndSystemReady;
 		if (!exito) Deactivate();   // fallo parcial: destruir lo creado (Desactivar no toca el estado que fijamos ahora)
 		estado = resultado;
 		mensaje = aviso;
@@ -636,8 +636,8 @@ namespace vr
 	void OpenXrManager::ProcessEvents()
 	{
 		impl->gatilloIzqRecienPulsado = false;
-		impl->gatilloRecienPulsado = false;
-		impl->gatilloRecienSoltado = false;
+		impl->triggerPressedNow = false;
+		impl->triggerReleasedNow = false;
 		if (impl->instancia == XR_NULL_HANDLE) return;
 
 		XrEventDataBuffer evento = { XR_TYPE_EVENT_DATA_BUFFER };
@@ -698,7 +698,7 @@ namespace vr
 			if (XR_SUCCEEDED(xrSyncActions(impl->sesion, &syncInfo)))
 			{
 				XrActionStateGetInfo getInfoIzq = { XR_TYPE_ACTION_STATE_GET_INFO };
-				getInfoIzq.action = impl->accionAgarrar;
+				getInfoIzq.action = impl->grabAction;
 				getInfoIzq.subactionPath = impl->rutaManos[0]; // Mano izquierda (0)
 
 				XrActionStateBoolean estadoBoolIzq = { XR_TYPE_ACTION_STATE_BOOLEAN };
@@ -712,7 +712,7 @@ namespace vr
 				impl->gatilloIzqAnterior = pulsadoIzquierda;
 
 				XrActionStateGetInfo getInfo = { XR_TYPE_ACTION_STATE_GET_INFO };
-				getInfo.action = impl->accionAgarrar;
+				getInfo.action = impl->grabAction;
 				getInfo.subactionPath = impl->rutaManos[1]; // SOLO mano derecha (1)
 
 				XrActionStateBoolean estadoBool = { XR_TYPE_ACTION_STATE_BOOLEAN };
@@ -724,8 +724,8 @@ namespace vr
 				}
 
 				impl->gatilloActual = pulsadoDerecha;
-				impl->gatilloRecienPulsado = (impl->gatilloActual && !impl->gatilloAnterior);
-				impl->gatilloRecienSoltado = (!impl->gatilloActual && impl->gatilloAnterior);
+				impl->triggerPressedNow = (impl->gatilloActual && !impl->gatilloAnterior);
+				impl->triggerReleasedNow = (!impl->gatilloActual && impl->gatilloAnterior);
 				impl->gatilloAnterior = impl->gatilloActual;
 			}
 		}
@@ -739,15 +739,15 @@ namespace vr
 
 	FrameResult OpenXrManager::BeginXrFrame()
 	{
-		if (!IsSessionRunning() || impl->fotogramaAbierto) return FrameResult::NoActivo;
+		if (!IsSessionRunning() || impl->fotogramaAbierto) return FrameResult::Inactive;
 
 		XrFrameState estadoFotograma = { XR_TYPE_FRAME_STATE };
 		XrFrameWaitInfo espera = { XR_TYPE_FRAME_WAIT_INFO };
 		XrResult r = xrWaitFrame(impl->sesion, &espera, &estadoFotograma);
-		if (XR_FAILED(r)) { mensaje = Texto("xrWaitFrame fallo", r); return FrameResult::NoActivo; }
+		if (XR_FAILED(r)) { mensaje = Texto("xrWaitFrame fallo", r); return FrameResult::Inactive; }
 		XrFrameBeginInfo inicio = { XR_TYPE_FRAME_BEGIN_INFO };
 		r = xrBeginFrame(impl->sesion, &inicio);
-		if (XR_FAILED(r)) { mensaje = Texto("xrBeginFrame fallo", r); return FrameResult::NoActivo; }
+		if (XR_FAILED(r)) { mensaje = Texto("xrBeginFrame fallo", r); return FrameResult::Inactive; }
 		impl->fotogramaAbierto = true;
 		impl->tiempoPrediccion = estadoFotograma.predictedDisplayTime;
 		impl->vistasValidas = false;
@@ -764,18 +764,18 @@ namespace vr
 		r = xrLocateViews(impl->sesion, &localizar, &estadoVistas, static_cast<uint32_t>(impl->vistas.size()), &cuantas, impl->vistas.data());
 		for (int i = 0; i < 2; ++i)
 		{
-			impl->poseMandoValida[i] = false;
-			if (impl->espacioApuntar[i] == XR_NULL_HANDLE) continue;
+			impl->controllerPoseValid[i] = false;
+			if (impl->aimSpace[i] == XR_NULL_HANDLE) continue;
 
 			XrSpaceLocation loc = { XR_TYPE_SPACE_LOCATION };
-			if (XR_SUCCEEDED(xrLocateSpace(impl->espacioApuntar[i], impl->espacio, estadoFotograma.predictedDisplayTime, &loc)))
+			if (XR_SUCCEEDED(xrLocateSpace(impl->aimSpace[i], impl->espacio, estadoFotograma.predictedDisplayTime, &loc)))
 			{
 				const XrSpaceLocationFlags flagsReq = XR_SPACE_LOCATION_POSITION_VALID_BIT | XR_SPACE_LOCATION_ORIENTATION_VALID_BIT;
 				if ((loc.locationFlags & flagsReq) == flagsReq)
 				{
-					impl->poseMando[i].posicion = glm::vec3(loc.pose.position.x, loc.pose.position.y, loc.pose.position.z);
-					impl->poseMando[i].orientacion = glm::quat(loc.pose.orientation.w, loc.pose.orientation.x, loc.pose.orientation.y, loc.pose.orientation.z);
-					impl->poseMandoValida[i] = true;
+					impl->controllerPose[i].position = glm::vec3(loc.pose.position.x, loc.pose.position.y, loc.pose.position.z);
+					impl->controllerPose[i].orientacion = glm::quat(loc.pose.orientation.w, loc.pose.orientation.x, loc.pose.orientation.y, loc.pose.orientation.z);
+					impl->controllerPoseValid[i] = true;
 				}
 			}
 		}
@@ -783,7 +783,7 @@ namespace vr
 		if (XR_FAILED(r) || (estadoVistas.viewStateFlags & necesarias) != necesarias || cuantas != impl->vistas.size())
 			return FrameResult::SinRender;   // sin seguimiento valido este fotograma: se envia vacio
 		impl->vistasValidas = true;
-		return FrameResult::Renderizar;
+		return FrameResult::Render;
 	}
 
 	bool OpenXrManager::AcquireEyeImage(int indice, VrEye& ojo)
@@ -792,13 +792,13 @@ namespace vr
 		CadenaOjo& o = impl->ojos[indice];
 		if (o.adquirida) return false;
 
-		uint32_t posicion = 0;
+		uint32_t position = 0;
 		XrSwapchainImageAcquireInfo adquirir = { XR_TYPE_SWAPCHAIN_IMAGE_ACQUIRE_INFO };
-		if (XR_FAILED(xrAcquireSwapchainImage(o.cadena, &adquirir, &posicion))) return false;
+		if (XR_FAILED(xrAcquireSwapchainImage(o.cadena, &adquirir, &position))) return false;
 		XrSwapchainImageWaitInfo esperar = { XR_TYPE_SWAPCHAIN_IMAGE_WAIT_INFO };
 		esperar.timeout = XR_INFINITE_DURATION;
 		const XrResult r = xrWaitSwapchainImage(o.cadena, &esperar);
-		if (XR_FAILED(r) || posicion >= o.imagenes.size())
+		if (XR_FAILED(r) || position >= o.imagenes.size())
 		{
 			XrSwapchainImageReleaseInfo liberar = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
 			xrReleaseSwapchainImage(o.cadena, &liberar);   // la imagen se adquirió: hay que liberarla igualmente
@@ -806,7 +806,7 @@ namespace vr
 		}
 		o.adquirida = true;
 
-		const GLuint textura = o.imagenes[posicion].image;
+		const GLuint textura = o.imagenes[position].image;
 		glBindFramebuffer(GL_FRAMEBUFFER, o.fbo);
 		glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, textura, 0);
 		if (!o.framebufferComprobado)
@@ -831,7 +831,7 @@ namespace vr
 		ojo.textura = textura;
 		ojo.ancho = o.ancho;
 		ojo.alto = o.alto;
-		ojo.pose.posicion = glm::vec3(v.pose.position.x, v.pose.position.y, v.pose.position.z);
+		ojo.pose.position = glm::vec3(v.pose.position.x, v.pose.position.y, v.pose.position.z);
 		ojo.pose.orientacion = glm::quat(v.pose.orientation.w, v.pose.orientation.x, v.pose.orientation.y, v.pose.orientation.z);
 		ojo.fov = { v.fov.angleLeft, v.fov.angleRight, v.fov.angleUp, v.fov.angleDown };
 		o.dibujada = true;
@@ -890,8 +890,8 @@ namespace vr
 
 	bool OpenXrManager::ControllerAimPose(int mano, XrPose& poseOut) const
 	{
-		if (mano < 0 || mano > 1 || !impl->poseMandoValida[mano]) return false;
-		poseOut = impl->poseMando[mano];
+		if (mano < 0 || mano > 1 || !impl->controllerPoseValid[mano]) return false;
+		poseOut = impl->controllerPose[mano];
 		return true;
 	}
 
@@ -904,13 +904,13 @@ namespace vr
 	bool OpenXrManager::IsCompiledIn() { return false; }
 	bool OpenXrManager::HasResources() const { return false; }
 	void OpenXrManager::ProcessEvents() {}
-	void OpenXrManager::Deactivate() { if (estado != OpenXrState::NoCompilado) { estado = OpenXrState::Desactivado; mensaje = "OpenXR no activado."; } }
+	void OpenXrManager::Deactivate() { if (estado != OpenXrState::NotCompiled) { estado = OpenXrState::Disabled; mensaje = "OpenXR no activado."; } }
 	bool OpenXrManager::IsSessionRunning() const { return false; }
 	bool OpenXrManager::IsFocused() const { return false; }
 	const char* OpenXrManager::NombreEstadoSesion() const { return "sin sesion"; }
-	ReferenceSpaceKind OpenXrManager::ReferenceSpaceHandle() const { return ReferenceSpaceKind::Ninguno; }
+	ReferenceSpaceKind OpenXrManager::ReferenceSpaceHandle() const { return ReferenceSpaceKind::None; }
 	int OpenXrManager::EyeCount() const { return 0; }
-	FrameResult OpenXrManager::BeginXrFrame() { return FrameResult::NoActivo; }
+	FrameResult OpenXrManager::BeginXrFrame() { return FrameResult::Inactive; }
 	bool OpenXrManager::AcquireEyeImage(int, VrEye&) { return false; }
 	void OpenXrManager::ReleaseEyeImage(int) {}
 	void OpenXrManager::EndXrFrame() {}
@@ -922,7 +922,7 @@ namespace vr
 
 	OpenXrState OpenXrManager::SetActive(GLFWwindow*, int, int)
 	{
-		estado = OpenXrState::NoCompilado;
+		estado = OpenXrState::NotCompiled;
 		mensaje = "Esta compilacion no incluye OpenXR (macOS, o falta la biblioteca). El juego sigue en modo pantalla.";
 		return estado;
 	}

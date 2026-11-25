@@ -182,7 +182,7 @@ void RegisterWindowCallbacks()
 		if (ec || !std::filesystem::is_regular_file(absoluta, ec)) { error = "El GLB seleccionado no existe."; return false; }
 		const std::string clave = absoluta.string();
 		const bool modeloNuevo = !contexto.escenaGlb.modelos.contains(clave);
-		if (!glb::AddAnimatedObject(contexto.escenaGlb, datos.id, clave, datos.posicion, datos.giroZGrados, error)) return false;
+		if (!glb::AddAnimatedObject(contexto.escenaGlb, datos.id, clave, datos.position, datos.yawDegrees, error)) return false;
 		glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, datos.id);
 		if (instancia == nullptr) { error = "No se pudo crear la instancia GLB."; return false; }
 		instancia->escala = datos.escala;

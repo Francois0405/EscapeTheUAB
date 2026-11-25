@@ -112,7 +112,7 @@ namespace scene::runtime
 		}
 
 		// 5) Todo ha ido bien: AHORA se sustituye la habitación anterior.
-		context.physicsScene->Empty();                // retira sus colisiones del mundo
+		context.physicsScene->ClearBodies();                // retira sus colisiones del mundo
 		context.physicsScene = std::move(nuevaFisica);
 		ReleaseMaterialTextures(context);
 		for (auto& entrada : context.objModels) entrada.second->netejaTextures_OBJ();
@@ -176,11 +176,11 @@ namespace scene::runtime
 		return true;
 	}
 
-	bool RebuildPhysicsAfterEdit(const SceneRuntimeContext& context, std::string& error, bool autoridadFisica)
+	bool RebuildPhysicsAfterEdit(const SceneRuntimeContext& context, std::string& error, bool physicsAuthority)
 	{
 		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
-		if (!nuevaFisica->Create(context.sceneObjects, context.animatedObjects, context.animatedData, error, autoridadFisica)) return false;
-		context.physicsScene->Empty();
+		if (!nuevaFisica->Create(context.sceneObjects, context.animatedObjects, context.animatedData, error, physicsAuthority)) return false;
+		context.physicsScene->ClearBodies();
 		context.physicsScene = std::move(nuevaFisica);
 		return true;
 	}

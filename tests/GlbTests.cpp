@@ -60,7 +60,7 @@ namespace
 	AnimationChannel CanalPosicion(InterpolationMode interpolacion)
 	{
 		AnimationChannel canal;
-		canal.propiedad = AnimatedProperty::Posicion;
+		canal.propiedad = AnimatedProperty::Position;
 		canal.interpolacion = interpolacion;
 		canal.tiempos = { 0.0f, 2.0f, 4.0f };
 		canal.valores = { glm::vec4(0, 0, 0, 0), glm::vec4(10, 0, 0, 0), glm::vec4(10, 20, 0, 0) };
@@ -69,7 +69,7 @@ namespace
 
 	void ProbarInterpolacion()
 	{
-		const AnimationChannel lineal = CanalPosicion(InterpolationMode::Lineal);
+		const AnimationChannel lineal = CanalPosicion(InterpolationMode::Linear);
 		comprobar(casiVec(glm::vec3(ChannelValueAtTime(lineal, 0.0f)), glm::vec3(0, 0, 0)), "t=0 devuelve el primer keyframe");
 		comprobar(casiVec(glm::vec3(ChannelValueAtTime(lineal, 1.0f)), glm::vec3(5, 0, 0)), "mitad del primer tramo = mix al 50%");
 		comprobar(casiVec(glm::vec3(ChannelValueAtTime(lineal, 2.0f)), glm::vec3(10, 0, 0)), "t justo en el keyframe intermedio");
@@ -77,13 +77,13 @@ namespace
 		comprobar(casiVec(glm::vec3(ChannelValueAtTime(lineal, -5.0f)), glm::vec3(0, 0, 0)), "antes del inicio: se queda en el primero");
 		comprobar(casiVec(glm::vec3(ChannelValueAtTime(lineal, 99.0f)), glm::vec3(10, 20, 0)), "despues del final: se queda en el ultimo");
 
-		const AnimationChannel escalon = CanalPosicion(InterpolationMode::Escalon);
+		const AnimationChannel escalon = CanalPosicion(InterpolationMode::Step);
 		comprobar(casiVec(glm::vec3(ChannelValueAtTime(escalon, 1.9f)), glm::vec3(0, 0, 0)), "escalon mantiene el valor anterior");
 		comprobar(casiVec(glm::vec3(ChannelValueAtTime(escalon, 2.0f)), glm::vec3(10, 0, 0)), "escalon salta al llegar al keyframe");
 
 		// Rotación: de 0 a 90 grados alrededor de Y. A mitad de camino deben ser 45 grados.
 		AnimationChannel giro;
-		giro.propiedad = AnimatedProperty::Rotacion;
+		giro.propiedad = AnimatedProperty::Rotation;
 		giro.tiempos = { 0.0f, 2.0f };
 		const glm::quat q90 = glm::angleAxis(glm::radians(90.0f), glm::vec3(0, 1, 0));
 		giro.valores = { glm::vec4(0, 0, 0, 1), glm::vec4(q90.x, q90.y, q90.z, q90.w) };
@@ -179,13 +179,13 @@ namespace
 		comprobar(mallasValidas, "todas las primitivas tienen triangulos, normales e indices validos");
 
 		// --- Pivote: la malla de la puerta llega hasta la bisagra (origen del nodo) ---
-		const GlbMesh& mallaPuerta = modelo.mallas[modelo.nodos[puerta].indiceMalla];
+		const GlbMesh& mallaPuerta = modelo.mallas[modelo.nodos[puerta].meshIndex];
 		float xMin = 1e9f, xMax = -1e9f;
 		for (const GlbPrimitive& p : mallaPuerta.primitivas)
 			for (const glm::vec3& v : p.posiciones) { xMin = std::min(xMin, v.x); xMax = std::max(xMax, v.x); }
 		comprobar(casi(xMax, 0.0f, 0.01f) && casi(xMin, -0.836f, 0.01f), "el origen de Door esta en el borde de la bisagra, no en el centro");
 		// Blender (0.418, -0.022, 1.05) debe llegar como glTF (0.418, 1.05, 0.022): Y arriba.
-		comprobar(casiVec(modelo.nodos[puerta].reposo.posicion, glm::vec3(0.418f, 1.05f, 0.0221f), 0.01f), "la bisagra llega en coordenadas Y-arriba");
+		comprobar(casiVec(modelo.nodos[puerta].reposo.position, glm::vec3(0.418f, 1.05f, 0.0221f), 0.01f), "la bisagra llega en coordenadas Y-arriba");
 
 		// --- Animación ---
 		comprobar(modelo.animaciones.size() == 1, "hay una animacion");
@@ -195,13 +195,13 @@ namespace
 		comprobar(casi(animation.duracion, 7.0417f, 0.01f), "duracion = 170 fotogramas a 24 fps (7.04 s)");
 		bool empiezaEnCero = !animation.canales.empty();
 		for (const AnimationChannel& canal : animation.canales)
-			empiezaEnCero = empiezaEnCero && canal.tiempos.front() == 0.0f && canal.indiceNodo == puerta;
+			empiezaEnCero = empiezaEnCero && canal.tiempos.front() == 0.0f && canal.nodeIndex == puerta;
 		comprobar(empiezaEnCero, "todos los canales empiezan en t=0 y animan el nodo Door");
 
 		// Interpolación contra el archivo: a mitad entre dos keyframes, el valor es el slerp de ambos.
 		for (const AnimationChannel& canal : animation.canales)
 		{
-			if (canal.propiedad != AnimatedProperty::Rotacion || canal.tiempos.size() < 20) continue;
+			if (canal.propiedad != AnimatedProperty::Rotation || canal.tiempos.size() < 20) continue;
 			const size_t k = 10;
 			const float tMedio = 0.5f * (canal.tiempos[k] + canal.tiempos[k + 1]);
 			const glm::quat esperado = glm::slerp(QuaternionFromVec4(canal.valores[k]), QuaternionFromVec4(canal.valores[k + 1]), 0.5f);
@@ -215,18 +215,18 @@ namespace
 		const glm::vec3 pomoInicial = PuntoEnMundo(modelo, pose, pomoDelante, glm::vec3(0.0f));
 
 		ApplyAnimation(pose, animation, 0.0f);
-		comprobar(casi(AnguloGrados(pose.nodos[puerta].rotacion), 0.0f, 0.5f), "t=0: la puerta esta cerrada (0 grados)");
+		comprobar(casi(AnguloGrados(pose.nodos[puerta].eulerRotation), 0.0f, 0.5f), "t=0: la puerta esta cerrada (0 grados)");
 
 		ApplyAnimation(pose, animation, animation.duracion);
-		const float anguloFinal = AnguloGrados(pose.nodos[puerta].rotacion);
+		const float anguloFinal = AnguloGrados(pose.nodos[puerta].eulerRotation);
 		comprobar(anguloFinal > 80.0f && anguloFinal < 90.0f, "al final la puerta esta abierta unos 85 grados");
-		const glm::quat rotacionFinal = pose.nodos[puerta].rotacion;
+		const glm::quat rotacionFinal = pose.nodos[puerta].eulerRotation;
 		comprobar(std::fabs(rotacionFinal.y) > 0.5f && std::fabs(rotacionFinal.x) < 0.01f && std::fabs(rotacionFinal.z) < 0.01f,
 			"el giro es alrededor del eje Y de glTF (el Z de Blender)");
 
 		// Al terminar se queda abierta: pasarse de tiempo no cambia nada.
 		ApplyAnimation(pose, animation, animation.duracion + 100.0f);
-		comprobar(casi(AnguloGrados(pose.nodos[puerta].rotacion), anguloFinal, 0.01f), "despues del final la puerta sigue abierta");
+		comprobar(casi(AnguloGrados(pose.nodos[puerta].eulerRotation), anguloFinal, 0.01f), "despues del final la puerta sigue abierta");
 
 		// --- Pivote durante la animación ---
 		const glm::vec3 bisagraFinal = PuntoEnMundo(modelo, pose, puerta, glm::vec3(0.0f));
@@ -259,8 +259,8 @@ namespace
 		const int marco = FindNodeByName(modelo, "DoorFrame");
 		const int hoja = FindNodeByName(modelo, "Door");
 		if (marco < 0 || hoja < 0) return;
-		const auto& colorMarco = modelo.mallas[modelo.nodos[marco].indiceMalla].primitivas[0].colorBase;
-		const auto& colorHoja = modelo.mallas[modelo.nodos[hoja].indiceMalla].primitivas[0].colorBase;
+		const auto& colorMarco = modelo.mallas[modelo.nodos[marco].meshIndex].primitivas[0].colorBase;
+		const auto& colorHoja = modelo.mallas[modelo.nodos[hoja].meshIndex].primitivas[0].colorBase;
 		comprobar(colorMarco.r < colorHoja.r && colorHoja.r < 0.3f,
 			"marco oscuro y hoja de metal grafito reciben factores de material distintos");
 	}
@@ -347,7 +347,7 @@ namespace
 		comprobar(modelo.nodos[cajon].padre == mueble && modelo.nodos[mueble].padre == -1, "padre/hijo correctos con el hijo escrito primero");
 
 		// El nodo del padre venía como 'matrix': se descompone en posición/escala.
-		comprobar(casiVec(modelo.nodos[mueble].reposo.posicion, glm::vec3(10, 0, 0)), "matrix: posicion (10,0,0)");
+		comprobar(casiVec(modelo.nodos[mueble].reposo.position, glm::vec3(10, 0, 0)), "matrix: posicion (10,0,0)");
 		comprobar(casiVec(modelo.nodos[mueble].reposo.escala, glm::vec3(2, 2, 2)), "matrix: escala 2");
 		comprobar(casiVec(PuntoEnMundo(modelo, pose, cajon, glm::vec3(1, 0, 0)), glm::vec3(12, 0, 0)), "mundo(hijo) = mundo(padre) * local(hijo)");
 
@@ -363,7 +363,7 @@ namespace
 
 		// A mitad (t=1 s) el cajón está a 0.5 de altura LOCAL; el padre escala x2 => 1.0 en el mundo.
 		ApplyAnimation(pose, subir, 1.0f);
-		comprobar(casiVec(pose.nodos[cajon].posicion, glm::vec3(0, 0, 0.5f)), "interpolacion lineal de la posicion local");
+		comprobar(casiVec(pose.nodos[cajon].position, glm::vec3(0, 0, 0.5f)), "interpolacion lineal de la posicion local");
 		comprobar(casiVec(PuntoEnMundo(modelo, pose, cajon, glm::vec3(0.0f)), glm::vec3(10, 0, 1.0f)), "la escala del padre afecta al movimiento del hijo");
 		ApplyAnimation(pose, subir, 99.0f);
 		comprobar(casiVec(PuntoEnMundo(modelo, pose, cajon, glm::vec3(0.0f)), glm::vec3(10, 0, 2.0f)), "al final el cajon se queda arriba");
@@ -378,7 +378,7 @@ namespace
 		{
 			GlbPose poseEscalon = CreateRestPose(escalon);
 			ApplyAnimation(poseEscalon, escalon.animaciones[0], 1.9f);
-			comprobar(casiVec(poseEscalon.nodos[0].posicion, glm::vec3(0, 0, 0)), "STEP mantiene el valor anterior");
+			comprobar(casiVec(poseEscalon.nodos[0].position, glm::vec3(0, 0, 0)), "STEP mantiene el valor anterior");
 		}
 
 		// CUBICSPLINE: se rechaza con un mensaje que explica cómo arreglarlo.
@@ -397,7 +397,7 @@ namespace
 	float AnguloDeLaHoja(const AnimatedObject& objeto)
 	{
 		const int hoja = FindNodeByName(*objeto.modelo, "Door");
-		return AnguloGrados(objeto.pose.nodos[hoja].rotacion);
+		return AnguloGrados(objeto.pose.nodos[hoja].eulerRotation);
 	}
 
 	void ProbarObjetosAnimados(const fs::path& rutaPuerta, const fs::path& carpeta)
@@ -468,7 +468,7 @@ namespace
 		comprobar(casi(AnguloDeLaHoja(p1), 0.0f, 0.5f) && AnguloDeLaHoja(p2) > 80.0f, "reiniciar una puerta no afecta a la otra");
 
 		// Una instancia con una animacion que no existe no debe fallar.
-		p2.indiceAnimacion = 99;
+		p2.animationIndex = 99;
 		BeginAnimation(p2);
 		UpdateAnimatedObjects(escena, 1.0f);
 		comprobar(true, "indice de animacion invalido no falla");
@@ -492,13 +492,13 @@ namespace
 		AnimatedObject& p2 = escena.objetos[1];
 		const float duracion = p1.modelo->animaciones[0].duracion;
 
-		comprobar(p1.estado == DoorState::Cerrada && p2.estado == DoorState::Cerrada, "empiezan Cerradas");
+		comprobar(p1.estado == DoorState::Closed && p2.estado == DoorState::Closed, "empiezan Cerradas");
 
 		// --- Abrir ---
 		ToggleDoor(p1);
-		comprobar(p1.estado == DoorState::Abriendo, "E con la puerta cerrada: Abriendo");
+		comprobar(p1.estado == DoorState::Opening, "E con la puerta cerrada: Abriendo");
 		UpdateAnimatedObjects(escena, 0.1f);
-		comprobar(p1.estado == DoorState::Abriendo && AnguloDeLaHoja(p1) > 5.0f, "a los 0.1 s sigue Abriendo y ya se ha movido");
+		comprobar(p1.estado == DoorState::Opening && AnguloDeLaHoja(p1) > 5.0f, "a los 0.1 s sigue Abriendo y ya se ha movido");
 		UpdateAnimatedObjects(escena, duracion + 1.0f);
 		comprobar(p1.estado == DoorState::Open && p1.reproductor.tiempo == duracion, "al terminar: Abierta, en el ultimo instante");
 		const float anguloAbierta = AnguloDeLaHoja(p1);
@@ -506,11 +506,11 @@ namespace
 
 		// --- Cerrar con la animacion del GLB hacia atras ---
 		ToggleDoor(p1);
-		comprobar(p1.estado == DoorState::Cerrando, "E con la puerta abierta: Cerrando");
+		comprobar(p1.estado == DoorState::Closing, "E con la puerta abierta: Cerrando");
 		UpdateAnimatedObjects(escena, 0.0f);
 		comprobar(casi(AnguloDeLaHoja(p1), anguloAbierta, 1.0e-3f), "al empezar a cerrar no hay salto");
 		UpdateAnimatedObjects(escena, duracion + 1.0f);
-		comprobar(p1.estado == DoorState::Cerrada && p1.reproductor.tiempo == 0.0f, "al terminar: Cerrada, en t = 0");
+		comprobar(p1.estado == DoorState::Closed && p1.reproductor.tiempo == 0.0f, "al terminar: Cerrada, en t = 0");
 		comprobar(casi(AnguloDeLaHoja(p1), 0.0f, 0.5f), "Cerrada: 0 grados");
 
 		// --- La misma animacion en los dos sentidos (sin keyframes manuales) ---
@@ -523,33 +523,33 @@ namespace
 		comprobar(casi(p1.reproductor.tiempo, 0.5f), "cerrando llegamos a t = 0.5");
 		comprobar(casi(AnguloDeLaHoja(p1), anguloAbriendoEn05, 1.0e-3f), "en t = 0.5 la pose es la misma abriendo que cerrando");
 		UpdateAnimatedObjects(escena, duracion);                    // termina de cerrar
-		comprobar(p1.estado == DoorState::Cerrada, "vuelve a Cerrada");
+		comprobar(p1.estado == DoorState::Closed, "vuelve a Cerrada");
 
 		// --- Invertir a mitad de movimiento, sin saltos ---
 		ToggleDoor(p1);                                     // Abriendo
 		UpdateAnimatedObjects(escena, 0.3f);
 		const float anguloA = AnguloDeLaHoja(p1);
 		ToggleDoor(p1);                                     // E mientras se abre -> Cerrando
-		comprobar(p1.estado == DoorState::Cerrando, "E mientras se abre: pasa a Cerrando");
+		comprobar(p1.estado == DoorState::Closing, "E mientras se abre: pasa a Cerrando");
 		UpdateAnimatedObjects(escena, 0.0f);
 		comprobar(casi(AnguloDeLaHoja(p1), anguloA, 1.0e-3f) && casi(p1.reproductor.tiempo, 0.3f), "invertir conserva el instante: sin salto");
 		UpdateAnimatedObjects(escena, 0.1f);
-		comprobar(casi(p1.reproductor.tiempo, 0.2f) && p1.estado == DoorState::Cerrando, "ahora el tiempo baja");
+		comprobar(casi(p1.reproductor.tiempo, 0.2f) && p1.estado == DoorState::Closing, "ahora el tiempo baja");
 		ToggleDoor(p1);                                     // E mientras se cierra -> Abriendo
-		comprobar(p1.estado == DoorState::Abriendo, "E mientras se cierra: pasa a Abriendo");
+		comprobar(p1.estado == DoorState::Opening, "E mientras se cierra: pasa a Abriendo");
 		UpdateAnimatedObjects(escena, 0.1f);
 		comprobar(casi(p1.reproductor.tiempo, 0.3f), "y vuelve a subir desde donde estaba");
 		ToggleDoor(p1);                                     // otra vez -> Cerrando, hasta el final
 		UpdateAnimatedObjects(escena, 5.0f);
-		comprobar(p1.estado == DoorState::Cerrada && p1.reproductor.tiempo == 0.0f, "invertir hasta el principio termina en Cerrada");
+		comprobar(p1.estado == DoorState::Closed && p1.reproductor.tiempo == 0.0f, "invertir hasta el principio termina en Cerrada");
 
 		// --- Pausa: delta 0 no mueve nada ---
 		ToggleDoor(p1);
 		UpdateAnimatedObjects(escena, 0.0f);
-		comprobar(p1.estado == DoorState::Abriendo && p1.reproductor.tiempo == 0.0f, "con delta 0 (pausa) la puerta no avanza");
+		comprobar(p1.estado == DoorState::Opening && p1.reproductor.tiempo == 0.0f, "con delta 0 (pausa) la puerta no avanza");
 
 		// --- La puerta_2 nunca se ha tocado ---
-		comprobar(p2.estado == DoorState::Cerrada && p2.reproductor.tiempo == 0.0f && !p2.reproductor.reproduciendo, "la puerta_2 sigue Cerrada, con su reloj parado");
+		comprobar(p2.estado == DoorState::Closed && p2.reproductor.tiempo == 0.0f && !p2.reproductor.reproduciendo, "la puerta_2 sigue Cerrada, con su reloj parado");
 		comprobar(casi(AnguloDeLaHoja(p2), 0.0f, 0.5f), "la puerta_2 sigue con su pose cerrada");
 
 		// --- Estados independientes ---
@@ -557,10 +557,10 @@ namespace
 		UpdateAnimatedObjects(escena, duracion + 1.0f);
 		comprobar(p2.estado == DoorState::Open && p1.estado == DoorState::Open, "cada puerta termina en su propio estado");
 		ToggleDoor(p1);
-		comprobar(p1.estado == DoorState::Cerrando && p2.estado == DoorState::Open, "cerrar una no cierra la otra");
+		comprobar(p1.estado == DoorState::Closing && p2.estado == DoorState::Open, "cerrar una no cierra la otra");
 
 		// --- Sin animacion valida no pasa nada ---
-		p2.indiceAnimacion = 99;
+		p2.animationIndex = 99;
 		ToggleDoor(p2);
 		comprobar(p2.estado == DoorState::Open, "una instancia sin animacion valida no cambia de estado");
 	}
@@ -589,7 +589,7 @@ namespace
 		comprobar(casiVec(InteractionPoint(puertaA), cerrada), "el punto de interaccion no cambia al abrirse");
 		puertaA.reproductor.tiempo = 0.0f;
 		RestoreRestPose(*puertaA.modelo, puertaA.pose);
-		puertaA.estado = DoorState::Cerrada;
+		puertaA.estado = DoorState::Closed;
 		UpdateAnimatedObjects(escena, 0.0f);
 
 		// Delante y cerca: se elige la puerta.
@@ -623,14 +623,14 @@ namespace
 		comprobar(FindInteractableObject(escena, entre, casiHaciaA) == &puertaA, "dos candidatas: gana la puerta_a, mas centrada");
 
 		AnimatedObject* usada = InteractWithObject(escena, entre, haciaA);
-		comprobar(usada == &puertaA && puertaA.estado == DoorState::Abriendo, "E: la puerta elegida empieza a abrirse");
-		comprobar(puertaB.estado == DoorState::Cerrada && lejana.estado == DoorState::Cerrada, "las demas puertas no se activan");
+		comprobar(usada == &puertaA && puertaA.estado == DoorState::Opening, "E: la puerta elegida empieza a abrirse");
+		comprobar(puertaB.estado == DoorState::Closed && lejana.estado == DoorState::Closed, "las demas puertas no se activan");
 		usada = InteractWithObject(escena, entre, haciaA);
-		comprobar(usada == &puertaA && puertaA.estado == DoorState::Cerrando, "E otra vez: invierte el sentido");
+		comprobar(usada == &puertaA && puertaA.estado == DoorState::Closing, "E otra vez: invierte el sentido");
 		comprobar(InteractWithObject(escena, entre, glm::vec3(1, 0, 0)) == nullptr, "E sin puerta delante no hace nada");
 
 		// Una instancia sin animacion valida no es interactuable.
-		puertaB.indiceAnimacion = 99;
+		puertaB.animationIndex = 99;
 		comprobar(FindInteractableObject(escena, entre, haciaB) != &puertaB, "sin animacion valida no se puede interactuar");
 
 		// Misma funcion con una "mano" que no es la camara: posicion y direccion cualesquiera.

@@ -38,12 +38,12 @@ void emitGrabTrace(const std::string& registro)
 }
 
 void traceGrab(const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
-	const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
+	const glm::vec3& position, const glm::vec3& punto, const char* detalle)
 {
 	if (!grabTraceEnabled()) return;
 	std::ostringstream registro;
 	registro << "[grab] " << evento << " id=" << id << " peer=" << peer << " owner=" << propietario
-		<< " detail=" << detalle << " pos=(" << posicion.x << ',' << posicion.y << ',' << posicion.z
+		<< " detail=" << detalle << " pos=(" << position.x << ',' << position.y << ',' << position.z
 		<< ") point=(" << punto.x << ',' << punto.y << ',' << punto.z << ')';
 	emitGrabTrace(registro.str());
 }

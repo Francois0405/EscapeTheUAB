@@ -142,7 +142,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		{
 			const InteractionTarget& objetivo = currentInteractionTarget;
 			uint32_t idObjetivo = 0;
-			if (objetivo.accion == InteractionAction::Recoger && objetivo.indiceDinamico >= 0 &&
+			if (objetivo.accion == InteractionAction::PickUp && objetivo.indiceDinamico >= 0 &&
 				objetivo.indiceDinamico < static_cast<int>(sceneObjects.size()))
 				idObjetivo = netgame::HashId(sceneObjects[objetivo.indiceDinamico].id);
 			glm::vec3 origenRayo(0.0f), direccionRayo(0.0f);

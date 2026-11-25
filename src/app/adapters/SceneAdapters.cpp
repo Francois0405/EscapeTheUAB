@@ -34,9 +34,9 @@ bool loadAndApplyScene(const std::filesystem::path& ruta)
 	return scene::runtime::LoadAndApplyScene(sceneBindings(), ruta);
 }
 
-bool rebuildPhysicsAfterEditing(std::string& error, bool autoridadFisica)
+bool rebuildPhysicsAfterEditing(std::string& error, bool physicsAuthority)
 {
-	return scene::runtime::RebuildPhysicsAfterEdit(sceneBindings(), error, autoridadFisica);
+	return scene::runtime::RebuildPhysicsAfterEdit(sceneBindings(), error, physicsAuthority);
 }
 
 bool loadEditorModel(const std::filesystem::path& ruta, std::string& modeloCargado, std::string& error)

@@ -130,8 +130,8 @@ namespace editor
 			return false;
 		}
 		ruta = std::move(rutaAbsoluta);
-		rutaFuente = RutaFuenteCorrespondiente(ruta);
-		documentoOriginal = std::move(contenido);
+		sourcePath = RutaFuenteCorrespondiente(ruta);
+		originalDocument = std::move(contenido);
 		cargado = true;
 		error.clear();
 		return true;
@@ -158,7 +158,7 @@ namespace editor
 		for (const SceneObject& objeto : objetos)
 		{
 			if (objeto.id.empty() || !porId.emplace(objeto.id, &objeto).second ||
-				!VectorValido(objeto.posicion, false) || !VectorValido(objeto.rotacion, false) || !VectorValido(objeto.escala, true))
+				!VectorValido(objeto.position, false) || !VectorValido(objeto.eulerRotation, false) || !VectorValido(objeto.escala, true))
 			{
 				error = "La escena contiene un ID duplicado o una transformacion no finita/invalida.";
 				return false;
@@ -195,7 +195,7 @@ namespace editor
 		json documento;
 		try
 		{
-			documento = json::parse(documentoOriginal);
+			documento = json::parse(originalDocument);
 			std::unordered_set<std::string> escritos;
 			for (const char* coleccion : { "architecture", "objects" })
 			{
@@ -206,8 +206,8 @@ namespace editor
 					const auto encontrado = porId.find(id);
 					if (encontrado == porId.end()) { entrada = lista.erase(entrada); continue; }
 					const SceneObject& objeto = *encontrado->second;
-					(*entrada)["position"] = VectorJSON(objeto.posicion);
-					(*entrada)["rotation"] = VectorJSON(objeto.rotacion);
+					(*entrada)["position"] = VectorJSON(objeto.position);
+					(*entrada)["rotation"] = VectorJSON(objeto.eulerRotation);
 					(*entrada)["scale"] = VectorJSON(objeto.escala);
 					if (objeto.permitirPenetracionArquitectura) (*entrada)["allowArchitecturePenetration"] = true;
 					else entrada->erase("allowArchitecturePenetration");
@@ -254,18 +254,18 @@ namespace editor
 						[&](const SceneAnimatedObject& item) { return item.id == id; });
 					if (actual == animados.end()) continue; // deleted instance, even when this was the last GLB
 					const SceneAnimatedObject& animado = *actual;
-					if (!VectorValido(animado.posicion, false) || !std::isfinite(animado.giroZGrados) ||
+					if (!VectorValido(animado.position, false) || !std::isfinite(animado.yawDegrees) ||
 						!std::isfinite(animado.escala) || animado.escala <= 0.0f)
 					{
 						error = "La puerta '" + id + "' tiene una transformacion no finita/invalida.";
 						return false;
 					}
-					entrada["position"] = VectorJSON(animado.posicion);
-					entrada["rotation"] = VectorJSON(glm::vec3(0.0f, 0.0f, animado.giroZGrados));
+					entrada["position"] = VectorJSON(animado.position);
+					entrada["rotation"] = VectorJSON(glm::vec3(0.0f, 0.0f, animado.yawDegrees));
 					if (animado.permitirPenetracionArquitectura) entrada["allowArchitecturePenetration"] = true;
 					else entrada.erase("allowArchitecturePenetration");
 					if (entrada.contains("scale") || animado.escala != 1.0f) entrada["scale"] = animado.escala;
-					if (!animado.paredId.empty()) { entrada["wallId"] = animado.paredId; entrada["openingId"] = animado.aperturaId; }
+					if (!animado.paredId.empty()) { entrada["wallId"] = animado.paredId; entrada["openingId"] = animado.openingId; }
 					else { entrada.erase("wallId"); entrada.erase("openingId"); }
 					animadosEscritos.insert(id);
 					reconciliados.push_back(std::move(entrada));
@@ -273,7 +273,7 @@ namespace editor
 				for (const SceneAnimatedObject& animado : animados)
 				{
 					if (animadosEscritos.contains(animado.id)) continue;
-					if (animado.id.empty() || !VectorValido(animado.posicion, false) || !std::isfinite(animado.giroZGrados) ||
+					if (animado.id.empty() || !VectorValido(animado.position, false) || !std::isfinite(animado.yawDegrees) ||
 						!std::isfinite(animado.escala) || animado.escala <= 0.0f)
 					{ error = "La puerta nueva contiene un ID o una transformacion invalida."; return false; }
 					std::error_code rutaError;
@@ -284,15 +284,15 @@ namespace editor
 					const auto relativa = absoluta.lexically_relative(ruta.parent_path());
 					if (relativa.empty() || relativa.is_absolute()) { error = "No se pudo crear una ruta relativa para el GLB."; return false; }
 					json nueva = {{"id", animado.id}, {"model", relativa.generic_string()},
-						{"position", VectorJSON(animado.posicion)}, {"rotation", VectorJSON(glm::vec3(0, 0, animado.giroZGrados))},
+						{"position", VectorJSON(animado.position)}, {"rotation", VectorJSON(glm::vec3(0, 0, animado.yawDegrees))},
 						{"scale", animado.escala}};
 					if (!animado.animation.empty()) nueva["animation"] = animado.animation;
-					if (!animado.paredId.empty()) { nueva["wallId"] = animado.paredId; nueva["openingId"] = animado.aperturaId; }
+					if (!animado.paredId.empty()) { nueva["wallId"] = animado.paredId; nueva["openingId"] = animado.openingId; }
 					if (animado.permitirPenetracionArquitectura) nueva["allowArchitecturePenetration"] = true;
 					json colisionadores = json::array();
 					for (const SceneCollider& c : animado.colisionadores)
-						colisionadores.push_back({ {"node", c.nodo}, {"type", c.tipo == fisica::BodyType::Cinematico ? "kinematic" : "static"},
-							{"halfSize", VectorJSON(c.mitadTamano)}, {"offset", VectorJSON(c.desplazamiento)} });
+						colisionadores.push_back({ {"node", c.nodo}, {"type", c.tipo == fisica::BodyType::Kinematic ? "kinematic" : "static"},
+							{"halfSize", VectorJSON(c.halfExtents)}, {"offset", VectorJSON(c.desplazamiento)} });
 					if (!colisionadores.empty()) nueva["colliders"] = std::move(colisionadores);
 					reconciliados.push_back(std::move(nueva));
 				}
@@ -319,7 +319,7 @@ namespace editor
 				}
 				json nueva = {
 					{"id", objeto.id}, {"model", modeloRelativo.generic_string()},
-					{"position", VectorJSON(objeto.posicion)}, {"rotation", VectorJSON(objeto.rotacion)},
+					{"position", VectorJSON(objeto.position)}, {"rotation", VectorJSON(objeto.eulerRotation)},
 					{"scale", VectorJSON(objeto.escala)}
 				};
 				if (objeto.permitirPenetracionArquitectura) nueva["allowArchitecturePenetration"] = true;
@@ -342,12 +342,12 @@ namespace editor
 				if (objeto.fisica.presente)
 				{
 					json fisica = {
-						{"type", objeto.fisica.tipo == fisica::BodyType::Rebotador ? "bouncy" :
-							(objeto.fisica.tipo == fisica::BodyType::Dinamico ? "dynamic" : "static")},
-						{"halfSize", VectorJSON(objeto.fisica.mitadTamano)},
+						{"type", objeto.fisica.tipo == fisica::BodyType::Bouncer ? "bouncy" :
+							(objeto.fisica.tipo == fisica::BodyType::Dynamic ? "dynamic" : "static")},
+						{"halfSize", VectorJSON(objeto.fisica.halfExtents)},
 						{"offset", VectorJSON(objeto.fisica.desplazamiento)}
 					};
-					if (objeto.fisica.forma == fisica::BodyShape::Esfera) fisica["shape"] = "sphere";
+					if (objeto.fisica.forma == fisica::BodyShape::Sphere) fisica["shape"] = "sphere";
 					if (fisica::IsDynamicBody(objeto.fisica.tipo)) fisica["mass"] = objeto.fisica.masa;
 					nueva["physics"] = std::move(fisica);
 				}
@@ -413,8 +413,8 @@ namespace editor
 			std::filesystem::remove(temporal, ec);
 			return false;
 		}
-		documentoOriginal = serializado;
-		if (!rutaFuente.empty() && !GuardarCopiaAtomica(rutaFuente, serializado, error))
+		originalDocument = serializado;
+		if (!sourcePath.empty() && !GuardarCopiaAtomica(sourcePath, serializado, error))
 		{
 			error = "La copia de ejecucion se guardo, pero no se pudo actualizar el archivo fuente: " + error;
 			return false;

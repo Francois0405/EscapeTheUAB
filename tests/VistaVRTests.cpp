@@ -53,7 +53,7 @@ int main()
 		a.origen = glm::vec3(10, 0, 0);
 		a.adelante = glm::vec3(0, 1, 0);
 		XrPose pose;
-		pose.posicion = glm::vec3(0.2f, 1.6f, -0.5f);   // 20 cm a la derecha, 1,6 m de altura, 50 cm hacia delante
+		pose.position = glm::vec3(0.2f, 1.6f, -0.5f);   // 20 cm a la derecha, 1,6 m de altura, 50 cm hacia delante
 		comprobar(casi(EyePosition(pose, a), glm::vec3(10.2f, 0.5f, 1.6f)), "posicion del ojo en el motor (Z vertical)");
 
 		a.escala = 2.0f;   // un mundo con 2 unidades por metro
@@ -78,7 +78,7 @@ int main()
 		a.origen = glm::vec3(5, 5, 0);
 		a.adelante = glm::vec3(1, 0, 0);
 		XrPose pose;
-		pose.posicion = glm::vec3(0, 1.6f, 0);
+		pose.position = glm::vec3(0, 1.6f, 0);
 		const glm::mat4 vista = VrEyeViewMatrix(pose, a);
 		comprobar(casi(transforma(vista, EyePosition(pose, a)), glm::vec3(0.0f)), "el ojo queda en el origen de la vista");
 		const glm::vec3 delante = EyePosition(pose, a) + glm::vec3(2, 0, 0);

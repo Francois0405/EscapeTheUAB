@@ -18,7 +18,7 @@ namespace netgame
 		{
 			if (i >= escena_.objetos.size()) return false;
 			const auto e = escena_.objetos[i].estado;
-			return e == glb::DoorState::Open || e == glb::DoorState::Abriendo;
+			return e == glb::DoorState::Open || e == glb::DoorState::Opening;
 		}
 		void SetOpen(size_t i, bool abrir) override
 		{

@@ -32,8 +32,8 @@ void updateSceneLights()
 		const glm::vec3 ejeU = glm::normalize(glm::vec3(modelo[0]));
 		const glm::vec3 ejeV = glm::normalize(glm::vec3(modelo[2]));
 		const glm::vec3 direccion = glm::normalize(glm::mat3(modelo) * glm::vec3(0.0f, -1.0f, 0.0f));
-		const glm::vec3 posicion(modelo * glm::vec4(objeto.luz.desplazamiento, 1.0f));
-		luz.posicio = { posicion.x, posicion.y, posicion.z, 1.0 };
+		const glm::vec3 position(modelo * glm::vec4(objeto.luz.desplazamiento, 1.0f));
+		luz.posicio = { position.x, position.y, position.z, 1.0 };
 		luz.difusa = { objeto.luz.color.r * objeto.luz.intensidad,
 			objeto.luz.color.g * objeto.luz.intensidad,
 			objeto.luz.color.b * objeto.luz.intensidad, 1.0f };
@@ -75,11 +75,11 @@ void updatePhongOccluders()
 	auto mezclar = [&firma](size_t valor) { firma ^= valor; firma *= 1099511628211ull; };
 	for (const SceneObject& objeto : sceneObjects)
 	{
-		if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Estatico) continue;
+		if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Static) continue;
 		for (int eje = 0; eje < 3; ++eje)
 		{
-			mezclar(std::hash<float>{}(objeto.posicion[eje])); mezclar(std::hash<float>{}(objeto.rotacion[eje]));
-			mezclar(std::hash<float>{}(objeto.escala[eje])); mezclar(std::hash<float>{}(objeto.fisica.mitadTamano[eje]));
+			mezclar(std::hash<float>{}(objeto.position[eje])); mezclar(std::hash<float>{}(objeto.eulerRotation[eje]));
+			mezclar(std::hash<float>{}(objeto.escala[eje])); mezclar(std::hash<float>{}(objeto.fisica.halfExtents[eje]));
 			mezclar(std::hash<float>{}(objeto.fisica.desplazamiento[eje]));
 		}
 		mezclar(std::hash<std::string>{}(objeto.categoria));
@@ -132,15 +132,15 @@ void updatePhongOccluders()
 	for (const SceneObject& objeto : sceneObjects)
 	{
 		if (!objeto.fisica.presente ||
-			objeto.fisica.tipo != fisica::BodyType::Estatico) continue;
+			objeto.fisica.tipo != fisica::BodyType::Static) continue;
 		const glm::mat4 matrizObjeto = fisica::ObjectMatrix(objeto);
 		glm::mat4 giro(1.0f);
-		giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
-		giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
-		giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
+		giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.z), glm::vec3(0, 0, 1));
+		giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.y), glm::vec3(0, 1, 0));
+		giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.x), glm::vec3(1, 0, 0));
 		const glm::vec3 centro = glm::vec3(matrizObjeto * glm::vec4(objeto.fisica.desplazamiento, 1.0f));
 		const glm::mat4 mundoCollider = glm::translate(glm::mat4(1.0f), centro) * giro;
-		const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
+		const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.halfExtents;
 		if (cantidad < maxOclusores)
 		{
 			const auto indice = static_cast<std::size_t>(cantidad);

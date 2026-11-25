@@ -28,7 +28,7 @@ namespace vr
 	// Pose en el espacio de OpenXR (posición en metros + orientación).
 	struct XrPose
 	{
-		glm::vec3 posicion{ 0.0f };
+		glm::vec3 position{ 0.0f };
 		glm::quat orientacion{ 1.0f, 0.0f, 0.0f, 0.0f };   // w, x, y, z (identidad)
 	};
 
@@ -82,10 +82,10 @@ namespace vr
 	inline glm::mat4 EyeWorld(const XrPose& pose, const Anchor& anclaje)
 	{
 		const glm::mat3 base = EngineBasisFromXr(anclaje.adelante);
-		const glm::mat3 rotacion = base * glm::mat3_cast(glm::normalize(pose.orientacion));
-		const glm::vec3 posicion = anclaje.origen + base * (pose.posicion * anclaje.escala);
-		glm::mat4 m(rotacion);
-		m[3] = glm::vec4(posicion, 1.0f);
+		const glm::mat3 eulerRotation = base * glm::mat3_cast(glm::normalize(pose.orientacion));
+		const glm::vec3 position = anclaje.origen + base * (pose.position * anclaje.escala);
+		glm::mat4 m(eulerRotation);
+		m[3] = glm::vec4(position, 1.0f);
 		return m;
 	}
 

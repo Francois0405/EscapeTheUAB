@@ -81,7 +81,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 			}
 		}
 	}
-	else if (ImGui::Button(d.fase == NetworkPhase::Arrancando ? "Cancelar" : "Desconectar")) context.stopNetwork();
+	else if (ImGui::Button(d.fase == NetworkPhase::Starting ? "Cancelar" : "Desconectar")) context.stopNetwork();
 	if (d.fase == NetworkPhase::Active)
 	{
 		ImGui::Separator();
@@ -110,7 +110,7 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 		uint32_t idRed = 0;
 		net::PeerId propietario = netgame::kSinDueno;
 		fisica::BodyPose aplicado;
-		fisica::BodyPose autoritativo;
+		fisica::BodyPose authoritative;
 		bool tieneAutoritativo = false;
 		bool activo = false;
 		bool sujeto = false;
@@ -132,8 +132,8 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 				? networkGame.EstadosFisicosRemotos() : std::map<uint32_t, net::DynamicStateEntry>{};
 			for (const auto& cuerpo : cuerpos)
 			{
-				if (cuerpo.indiceObjeto < 0 || cuerpo.indiceObjeto >= static_cast<int>(sceneObjects.size())) continue;
-				const SceneObject& objeto = sceneObjects[static_cast<std::size_t>(cuerpo.indiceObjeto)];
+				if (cuerpo.objectIndex < 0 || cuerpo.objectIndex >= static_cast<int>(sceneObjects.size())) continue;
+				const SceneObject& objeto = sceneObjects[static_cast<std::size_t>(cuerpo.objectIndex)];
 				Fila fila;
 				fila.id = objeto.id;
 				fila.idRed = netgame::HashId(objeto.id);
@@ -151,14 +151,14 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 					const auto remoto = remotos.find(fila.idRed);
 					if (remoto != remotos.end() && netgame::IsValidPhysicsState(remoto->second))
 					{
-						fila.autoritativo.posicion = netgame::PositionOfPose(remoto->second.transform);
-						fila.autoritativo.rotacion = netgame::RotationOfPose(remoto->second.transform);
+						fila.authoritative.position = netgame::PositionOfPose(remoto->second.transform);
+						fila.authoritative.eulerRotation = netgame::RotationOfPose(remoto->second.transform);
 						fila.tieneAutoritativo = true;
 					}
 				}
 				else
 				{
-					fila.autoritativo = cuerpo.pose;
+					fila.authoritative = cuerpo.pose;
 					fila.tieneAutoritativo = true;
 				}
 				filas.push_back(std::move(fila));
@@ -187,10 +187,10 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 		const auto dibujarPose = [](const char* nombre, const fisica::BodyPose& pose)
 		{
 			ImGui::Text("%s p(%.2f,%.2f,%.2f) q(%.2f,%.2f,%.2f,%.2f)", nombre,
-				pose.posicion.x, pose.posicion.y, pose.posicion.z,
-				pose.rotacion.x, pose.rotacion.y, pose.rotacion.z, pose.rotacion.w);
+				pose.position.x, pose.position.y, pose.position.z,
+				pose.eulerRotation.x, pose.eulerRotation.y, pose.eulerRotation.z, pose.eulerRotation.w);
 		};
-		if (fila.tieneAutoritativo) dibujarPose("  auth", fila.autoritativo);
+		if (fila.tieneAutoritativo) dibujarPose("  auth", fila.authoritative);
 		else ImGui::TextUnformatted("  auth: esperando snapshot del host");
 		dibujarPose("  aplicado", fila.aplicado);
 	}

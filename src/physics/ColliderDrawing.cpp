@@ -14,11 +14,11 @@ namespace fisica
 		{
 			switch (caja.tipo)
 			{
-			case BodyType::Estatico:   return glm::vec4(0.2f, 0.5f, 1.0f, 1.0f);
-			case BodyType::Cinematico: return glm::vec4(1.0f, 0.6f, 0.1f, 1.0f);
-			case BodyType::Dinamico:   return caja.dormido ? glm::vec4(0.1f, 0.6f, 0.2f, 1.0f)
+			case BodyType::Static:   return glm::vec4(0.2f, 0.5f, 1.0f, 1.0f);
+			case BodyType::Kinematic: return glm::vec4(1.0f, 0.6f, 0.1f, 1.0f);
+			case BodyType::Dynamic:   return caja.dormido ? glm::vec4(0.1f, 0.6f, 0.2f, 1.0f)
 			                                                 : glm::vec4(0.2f, 1.0f, 0.3f, 1.0f);
-			case BodyType::Rebotador: return caja.dormido ? glm::vec4(0.55f, 0.2f, 0.75f, 1.0f)
+			case BodyType::Bouncer: return caja.dormido ? glm::vec4(0.55f, 0.2f, 0.75f, 1.0f)
 			                                                 : glm::vec4(0.9f, 0.25f, 1.0f, 1.0f);
 			}
 			return glm::vec4(1.0f);

@@ -37,20 +37,20 @@ namespace fisica
 	//   Dinamico   : masa > 0, lo mueven la gravedad y las colisiones.
 	//   Cinematico : lo movemos NOSOTROS cada fotograma (p. ej. la hoja de una puerta animada);
 	//                empuja a los dinámicos pero nada le empuja a él.
-	enum class BodyType { Estatico, Dinamico, Cinematico, Rebotador };
+	enum class BodyType { Static, Dynamic, Kinematic, Bouncer };
 
 	constexpr bool IsDynamicBody(BodyType tipo)
 	{
-		return tipo == BodyType::Dinamico || tipo == BodyType::Rebotador;
+		return tipo == BodyType::Dynamic || tipo == BodyType::Bouncer;
 	}
 
-	enum class BodyShape { Caja, Esfera };
+	enum class BodyShape { Box, Sphere };
 
 	// Posición y orientación de un cuerpo en coordenadas del motor.
 	struct BodyPose
 	{
-		glm::vec3 posicion{ 0.0f };
-		glm::quat rotacion{ 1.0f, 0.0f, 0.0f, 0.0f };   // w, x, y, z
+		glm::vec3 position{ 0.0f };
+		glm::quat eulerRotation{ 1.0f, 0.0f, 0.0f, 0.0f };   // w, x, y, z
 	};
 
 	// Medidas del jugador (metros). Una cápsula vertical (eje Z): un cilindro con dos medias
@@ -68,9 +68,9 @@ namespace fisica
 	// Una caja de colisión tal y como está AHORA en el mundo (para depurar y dibujarla).
 	struct CollisionBox
 	{
-		BodyType tipo = BodyType::Estatico;
+		BodyType tipo = BodyType::Static;
 		BodyPose pose;                         // centro y orientación en el mundo
-		glm::vec3 mitadTamano{ 0.0f };           // medias dimensiones finales, en metros
+		glm::vec3 halfExtents{ 0.0f };           // medias dimensiones finales, en metros
 		bool dormido = false;
 	};
 
@@ -104,8 +104,8 @@ namespace fisica
 		// Crea una caja de cualquier tipo. 'rotacion' es la orientación del mundo y
 		// 'mitadTamano' las medias dimensiones FINALES (ya escaladas). La masa solo importa
 		// en los dinámicos. Devuelve CuerpoInvalido si los datos no son válidos.
-		IdCuerpo CreateBox(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
-			const glm::vec3& mitadTamano, float masaKg);
+		IdCuerpo CreateBox(BodyType tipo, const glm::vec3& centro, const glm::quat& eulerRotation,
+			const glm::vec3& halfExtents, float masaKg);
 		IdCuerpo CreateSphere(BodyType tipo, const glm::vec3& centro, float radio, float masaKg);
 		bool ApplyImpulseToBody(IdCuerpo id, const glm::vec3& impulso);
 		bool ApplyHorizontalAcceleration(IdCuerpo id, const glm::vec3& aceleracion, float deltaSegundos);
@@ -113,17 +113,17 @@ namespace fisica
 		bool CanPlaceDynamicBody(IdCuerpo id, const glm::vec3& centro) const;
 
 		// Mueve un cuerpo cinemático a una pose nueva (llamar antes de Actualizar).
-		void MoveKinematic(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion);
+		void MoveKinematic(IdCuerpo id, const glm::vec3& centro, const glm::quat& eulerRotation);
 
 		// Quita del mundo un cuerpo concreto y libera su memoria (no hace nada si no existe).
 		void RemoveBody(IdCuerpo id);
 
 		// Crea una caja estática (masa 0). 'mitadTamano' son las MEDIAS dimensiones
 		// (como en test.obj, que mide ±1 antes de escalarse).
-		IdCuerpo CreateStaticBox(const glm::vec3& centro, const glm::vec3& mitadTamano);
+		IdCuerpo CreateStaticBox(const glm::vec3& centro, const glm::vec3& halfExtents);
 
 		// Crea una caja dinámica con masa en kg.
-		IdCuerpo CreateDynamicBox(const glm::vec3& centro, const glm::vec3& mitadTamano, float masaKg);
+		IdCuerpo CreateDynamicBox(const glm::vec3& centro, const glm::vec3& halfExtents, float masaKg);
 
 		// Pose actual de un cuerpo (identidad si el id no es válido).
 		BodyPose PoseOf(IdCuerpo id) const;
@@ -138,7 +138,7 @@ namespace fisica
 		bool IsAsleep(IdCuerpo id) const;
 		bool IsBodyActive(IdCuerpo id) const;
 		// Actualiza un cuerpo cinemático ya existente, sin reconstruir forma ni cuerpo.
-		bool SetKinematicPose(IdCuerpo id, const glm::vec3& posicion, const glm::quat& rotacion);
+		bool SetKinematicPose(IdCuerpo id, const glm::vec3& position, const glm::quat& eulerRotation);
 
 		// Elimina todos los cuerpos pero conserva el mundo (se usa al reiniciar la demo).
 		void RemoveAllBodies();
@@ -202,10 +202,10 @@ namespace fisica
 		bool HoldBody(IdCuerpo id);
 		void ReleaseHeldBody();
 		// Suelta el cuerpo sujeto conservando la velocidad inicial indicada.
-		bool ThrowHeldBody(const glm::vec3& velocidad);
+		bool ThrowHeldBody(const glm::vec3& speed);
 		bool HoldBodyAuthoritative(IdCuerpo id);
 		void SetHoldDestination(IdCuerpo id, const glm::vec3& destino);
-		bool ReleaseAuthoritativeBody(IdCuerpo id, const glm::vec3& velocidad = glm::vec3(0.0f));
+		bool ReleaseAuthoritativeBody(IdCuerpo id, const glm::vec3& speed = glm::vec3(0.0f));
 		bool IsHeld(IdCuerpo id) const;
 		IdCuerpo HeldBody() const;
 		// Punto del mundo hacia el que se lleva el cuerpo sujeto (se puede cambiar cada fotograma).
@@ -220,14 +220,14 @@ namespace fisica
 	private:
 		void PushHeldBody();   // un "tirón" de la mano antes de cada paso fijo
 		void PushBouncers();
-		IdCuerpo CreateShape(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
-			const glm::vec3& mitadTamano, float masaKg, BodyShape forma);
+		IdCuerpo CreateShape(BodyType tipo, const glm::vec3& centro, const glm::quat& eulerRotation,
+			const glm::vec3& halfExtents, float masaKg, BodyShape forma);
 
 		// El "pimpl" evita incluir las cabeceras de Bullet en todo el proyecto.
 		struct Impl;
 		std::unique_ptr<Impl> impl;
 
-		float acumulador = 0.0f;      // tiempo real pendiente de simular
+		float accumulator = 0.0f;      // tiempo real pendiente de simular
 		bool pausa = false;
 		float alturaJugador = PlayerDimensions::Altura;
 		float progresoAgachado = 0.0f;   // 0..1 lineal en el tiempo; la altura sale de suavizarlo (curva de Hermite)

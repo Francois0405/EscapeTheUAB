@@ -98,11 +98,11 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 				std::string errorPared;
 				if (GenerateWallSections(glm::abs(obj.escala), obj.pared.aperturas, secciones, errorPared))
 				{
-					const glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(obj.rotacion.z), glm::vec3(0, 0, 1));
+					const glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(obj.eulerRotation.z), glm::vec3(0, 0, 1));
 					for (const auto& seccion : secciones)
 					{
-						glm::mat4 m = glm::translate(glm::mat4(1.0f), obj.posicion + glm::vec3(giro * glm::vec4(seccion.centroLocal, 0.0f)));
-						m = glm::rotate(m, glm::radians(obj.rotacion.z), glm::vec3(0, 0, 1));
+						glm::mat4 m = glm::translate(glm::mat4(1.0f), obj.position + glm::vec3(giro * glm::vec4(seccion.centroLocal, 0.0f)));
+						m = glm::rotate(m, glm::radians(obj.eulerRotation.z), glm::vec3(0, 0, 1));
 						matrices.push_back(glm::scale(m, seccion.mitad));
 					}
 				}
@@ -191,8 +191,8 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			if (!modelo.first.ends_with("test.obj")) continue;
 			const fisica::BodyPose pose = ctx.fallingCubeDemo.CubePose();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
-			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
-				* glm::mat4_cast(pose.rotacion)
+			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.position)
+				* glm::mat4_cast(pose.eulerRotation)
 				* glm::scale(glm::mat4(1.0f), ctx.fallingCubeDemo.CubeHalfSize());
 			dibuixa_EscenaGL(
 				ctx.shader_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid,
@@ -233,19 +233,19 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	if (ctx.sceneEditor.IsEnabled() && ctx.sceneEditor.ShowCollidersEnabled())
 	{
 		std::vector<fisica::CollisionBox> cajasEditor;
-		for (std::size_t indiceObjeto = 0; indiceObjeto < ctx.sceneObjects.size(); ++indiceObjeto)
+		for (std::size_t objectIndex = 0; objectIndex < ctx.sceneObjects.size(); ++objectIndex)
 		{
-			const SceneObject& objeto = ctx.sceneObjects[indiceObjeto];
-			if (!objeto.fisica.presente || !ctx.sceneEditor.IsObjectVisible(indiceObjeto)) continue;
+			const SceneObject& objeto = ctx.sceneObjects[objectIndex];
+			if (!objeto.fisica.presente || !ctx.sceneEditor.IsObjectVisible(objectIndex)) continue;
 			glm::mat4 giro(1.0f);
-			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
-			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
-			giro = glm::rotate(giro, glm::radians(objeto.rotacion.x), glm::vec3(1, 0, 0));
+			giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.z), glm::vec3(0, 0, 1));
+			giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.y), glm::vec3(0, 1, 0));
+			giro = glm::rotate(giro, glm::radians(objeto.eulerRotation.x), glm::vec3(1, 0, 0));
 			fisica::CollisionBox caja;
 			caja.tipo = objeto.fisica.tipo;
-			caja.pose.posicion = objeto.posicion + glm::vec3(giro * glm::vec4(objeto.escala * objeto.fisica.desplazamiento, 0.0f));
-			caja.pose.rotacion = glm::quat_cast(glm::mat3(giro));
-			caja.mitadTamano = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
+			caja.pose.position = objeto.position + glm::vec3(giro * glm::vec4(objeto.escala * objeto.fisica.desplazamiento, 0.0f));
+			caja.pose.eulerRotation = glm::quat_cast(glm::mat3(giro));
+			caja.halfExtents = glm::abs(objeto.escala) * objeto.fisica.halfExtents;
 			cajasEditor.push_back(caja);
 		}
 		fisica::DrawColliders(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, cajasEditor);

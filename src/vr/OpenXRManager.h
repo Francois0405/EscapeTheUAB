@@ -36,14 +36,14 @@ namespace vr
 {
 	enum class OpenXrState
 	{
-		Desactivado,             // aún no se ha pedido (estado normal al arrancar)
-		NoCompilado,             // esta compilación no incluye OpenXR
-		SinRuntime,              // no hay runtime OpenXR activo (Quest Link / SteamVR / Oculus no instalado o cerrado)
-		SinVisor,                // hay runtime pero ningún visor conectado
-		FaltaExtensionOpenGL,    // el runtime no ofrece XR_KHR_opengl_enable
-		OpenGLInsuficiente,      // la versión de OpenGL de la ventana no llega al mínimo del runtime
-		InstanciaYSistemaListos, // instancia y visor correctos, pero esta plataforma no crea sesión (solo Windows)
-		SesionCreada,            // sesión creada, con swapchains y espacio listos (se empieza a dibujar al llegar a READY)
+		Disabled,             // aún no se ha pedido (estado normal al arrancar)
+		NotCompiled,             // esta compilación no incluye OpenXR
+		NoRuntime,              // no hay runtime OpenXR activo (Quest Link / SteamVR / Oculus no instalado o cerrado)
+		NoHeadset,                // hay runtime pero ningún visor conectado
+		MissingOpenGLExtension,    // el runtime no ofrece XR_KHR_opengl_enable
+		OpenGLTooOld,      // la versión de OpenGL de la ventana no llega al mínimo del runtime
+		InstanceAndSystemReady, // instancia y visor correctos, pero esta plataforma no crea sesión (solo Windows)
+		SessionCreated,            // sesión creada, con swapchains y espacio listos (se empieza a dibujar al llegar a READY)
 		Error                    // cualquier otro fallo (ver Mensaje())
 	};
 
@@ -51,18 +51,18 @@ namespace vr
 
 	// Modo de dibujo del juego. Solo es VR si se ha pedido Y la sesión existe; en cualquier otro caso se
 	// sigue jugando en pantalla (F2 no cuenta: es una prueba en pantalla).
-	enum class GamePlayMode { Pantalla, VR };
+	enum class GamePlayMode { Screen, VR };
 	GamePlayMode ChooseGamePlayMode(bool vrSolicitado, OpenXrState estado);
 
 	// Espacio de referencia elegido: STAGE (origen en el suelo del área de juego) o LOCAL (origen en la cabeza).
-	enum class ReferenceSpaceKind { Ninguno, Suelo, Local };
+	enum class ReferenceSpaceKind { None, Floor, Local };
 
 	// Qué hay que hacer con el fotograma actual.
 	enum class FrameResult
 	{
-		NoActivo,    // no hay sesión en marcha: NO llamar a TerminarFotograma()
+		Inactive,    // no hay sesión en marcha: NO llamar a TerminarFotograma()
 		SinRender,   // el visor no está visible: llamar a TerminarFotograma() sin dibujar
-		Renderizar   // dibujar cada ojo (AdquirirOjo/LiberarOjo) y llamar a TerminarFotograma()
+		Render   // dibujar cada ojo (AdquirirOjo/LiberarOjo) y llamar a TerminarFotograma()
 	};
 
 	// Un ojo listo para dibujar: framebuffer con la imagen del swapchain ya adjunta, pose y campo de visión.
@@ -129,7 +129,7 @@ namespace vr
 	private:
 		struct Impl;   // oculta los tipos de OpenXR: el resto del juego no incluye sus cabeceras
 		std::unique_ptr<Impl> impl;
-		OpenXrState estado = OpenXrState::Desactivado;
+		OpenXrState estado = OpenXrState::Disabled;
 		std::string mensaje = "OpenXR no activado.";
 		std::string diagnostico;
 	};

@@ -38,10 +38,10 @@ namespace glb
 			{
 				primitiva.boundsMin = glm::vec3(std::numeric_limits<float>::max());
 				primitiva.boundsMax = glm::vec3(std::numeric_limits<float>::lowest());
-				for (const glm::vec3& posicion : primitiva.posiciones)
+				for (const glm::vec3& position : primitiva.posiciones)
 				{
-					primitiva.boundsMin = glm::min(primitiva.boundsMin, posicion);
-					primitiva.boundsMax = glm::max(primitiva.boundsMax, posicion);
+					primitiva.boundsMin = glm::min(primitiva.boundsMin, position);
+					primitiva.boundsMax = glm::max(primitiva.boundsMax, position);
 				}
 				primitiva.tieneBounds = true;
 			}
@@ -115,8 +115,8 @@ namespace glb
 
 		for (size_t i = 0; i < modelo.nodos.size(); ++i)
 		{
-			const int indiceMalla = modelo.nodos[i].indiceMalla;
-			if (indiceMalla < 0) continue;
+			const int meshIndex = modelo.nodos[i].meshIndex;
+			if (meshIndex < 0) continue;
 
 			const glm::mat4 matriz = cambioDeEjes * NodeWorldMatrix(modelo, pose, static_cast<int>(i));
 			bool nodoVisible = !aplicarCulling;
@@ -125,7 +125,7 @@ namespace glb
 				// Compute bounds from the actual primitive vertices in its current node pose.
 				// Empty or malformed geometry is kept visible to preserve correctness.
 				bool tieneBounds = false;
-				for (const GlbPrimitive& primitiva : modelo.mallas[indiceMalla].primitivas)
+				for (const GlbPrimitive& primitiva : modelo.mallas[meshIndex].primitivas)
 				{
 					if (!primitiva.tieneBounds) continue;
 					tieneBounds = true;
@@ -138,7 +138,7 @@ namespace glb
 			if (!nodoVisible) continue;
 			glUniformMatrix4fv(glcache::UniformLocation(programa, "modelMatrix"), 1, GL_FALSE, &matriz[0][0]);
 
-			for (const GlbPrimitive& primitiva : modelo.mallas[indiceMalla].primitivas)
+			for (const GlbPrimitive& primitiva : modelo.mallas[meshIndex].primitivas)
 			{
 				if (primitiva.vao == 0) continue;   // no se subió a la GPU
 				ActivarMaterial(programa, primitiva.colorBase);

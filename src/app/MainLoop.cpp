@@ -64,14 +64,14 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 			{
 				fps::MovementInput entrada;
 				entrada.activo = !sceneEditor.IsEnabled() && fpsInputActive() && physicsWorld.HasPlayerBody();
-				entrada.quiereMoverse = entrada.activo && movementKeyPressed(window);
-				entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
+				entrada.wantsToMove = entrada.activo && movementKeyPressed(window);
+				entrada.sprintRequested = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
 					glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 				entrada.enSuelo = physicsWorld.IsPlayerGrounded();
-				entrada.fraccionAgachado = physicsWorld.CrouchFraction();
-				const float velocidad = playerMovement.Update(static_cast<float>(delta), entrada);
+				entrada.crouchRatio = physicsWorld.CrouchFraction();
+				const float speed = playerMovement.Update(static_cast<float>(delta), entrada);
 				if (entrada.activo)
-					moveFirstPersonPlayer(window, velocidad);
+					moveFirstPersonPlayer(window, speed);
 				staminaBar.Update(static_cast<float>(delta), playerMovement.StaminaFraction(), playerMovement.IsSprinting());
 			}
 

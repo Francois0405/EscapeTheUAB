@@ -67,7 +67,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	{
 		fps::MovementParameters& pm = playerMovement.parametros;
 		fps::BobParameters& pb = cameraBob.parametros;
-		ImGui::Text("Estamina: %.1f / %.1f%s", playerMovement.StaminaValue(), pm.estaminaMaxima,
+		ImGui::Text("Estamina: %.1f / %.1f%s", playerMovement.StaminaValue(), pm.maxStamina,
 			playerMovement.IsExhausted() ? "  (AGOTADA)" : (playerMovement.IsSprinting() ? "  (corriendo)" : ""));
 		ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", playerMovement.VelocityValue(),
 			physicsWorld.CrouchFraction() * 100.0f, physicsWorld.IsPlayerGrounded() ? "si" : "no");
@@ -88,14 +88,14 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 			ImGui::Text("GPU escena (consulta retardada): %.3f ms", lastGpuMs);
 		}
 		ImGui::SeparatorText("Velocidades (m/s)");
-		ImGui::SliderFloat("Caminar", &pm.velocidadCaminar, 0.5f, 6.0f, "%.2f");
-		ImGui::SliderFloat("Agachado", &pm.velocidadAgachado, 0.3f, 4.0f, "%.2f");
-		ImGui::SliderFloat("Sprint", &pm.velocidadSprint, 1.0f, 9.0f, "%.2f");
-		ImGui::SliderFloat("Suavizado de velocidad", &pm.suavizadoVelocidad, 1.0f, 30.0f, "%.1f");
+		ImGui::SliderFloat("Caminar", &pm.walkSpeed, 0.5f, 6.0f, "%.2f");
+		ImGui::SliderFloat("Agachado", &pm.crouchSpeed, 0.3f, 4.0f, "%.2f");
+		ImGui::SliderFloat("Sprint", &pm.sprintSpeed, 1.0f, 9.0f, "%.2f");
+		ImGui::SliderFloat("Suavizado de velocidad", &pm.velocitySmoothing, 1.0f, 30.0f, "%.1f");
 		ImGui::SeparatorText("Estamina");
-		ImGui::SliderFloat("Maxima", &pm.estaminaMaxima, 10.0f, 300.0f, "%.0f");
-		ImGui::SliderFloat("Consumo / s", &pm.consumoPorSegundo, 1.0f, 100.0f, "%.1f");
-		ImGui::SliderFloat("Recuperacion / s", &pm.recuperacionPorSegundo, 1.0f, 100.0f, "%.1f");
+		ImGui::SliderFloat("Maxima", &pm.maxStamina, 10.0f, 300.0f, "%.0f");
+		ImGui::SliderFloat("Consumo / s", &pm.drainPerSecond, 1.0f, 100.0f, "%.1f");
+		ImGui::SliderFloat("Recuperacion / s", &pm.recoveryPerSecond, 1.0f, 100.0f, "%.1f");
 		ImGui::SliderFloat("Retardo de recuperacion (s)", &pm.retardoRecuperacion, 0.0f, 5.0f, "%.2f");
 		ImGui::SliderFloat("Minimo tras agotarse", &pm.minimoTrasAgotarse, 0.0f, 100.0f, "%.0f");
 		ImGui::SeparatorText("Balanceo de camara y movil");
@@ -104,8 +104,8 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		ImGui::SliderFloat("Amplitud correr (m)", &pb.amplitudCorrer, 0.0f, 0.08f, "%.4f");
 		ImGui::SliderFloat("Amplitud agachado (m)", &pb.amplitudAgachado, 0.0f, 0.03f, "%.4f");
 		ImGui::SliderFloat("Lateral relativo", &pb.lateralRelativo, 0.0f, 1.5f, "%.2f");
-		ImGui::SliderFloat("Zancada caminar (m)", &pb.zancadaCaminar, 0.5f, 3.0f, "%.2f");
-		ImGui::SliderFloat("Zancada correr (m)", &pb.zancadaCorrer, 0.5f, 4.0f, "%.2f");
+		ImGui::SliderFloat("Zancada caminar (m)", &pb.walkStride, 0.5f, 3.0f, "%.2f");
+		ImGui::SliderFloat("Zancada correr (m)", &pb.runStride, 0.5f, 4.0f, "%.2f");
 		ImGui::SliderFloat("Amortiguacion al parar", &pb.salida, 1.0f, 20.0f, "%.1f");
 		ImGui::Text("fase: %.2f rad | peso: %.2f", cameraBob.CurrentPhase(), cameraBob.WeightValue());
 	}
@@ -144,7 +144,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	{
 		ImGui::Text("Sesion: %s%s | espacio: %s | ojos: %d", openXrManager.NombreEstadoSesion(),
 			openXrManager.IsSessionRunning() ? " (en marcha)" : "",
-			openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo ? "STAGE" : (openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
+			openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Floor ? "STAGE" : (openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
 			openXrManager.EyeCount());
 	}
 	if (!openXrManager.Diagnostico().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
@@ -205,11 +205,11 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		ImGui::SameLine();
 		if (ImGui::Button("Quitar demo")) fallingCubeDemo.Stop();
 		const fisica::BodyPose pose = fallingCubeDemo.CubePose();
-		const glm::vec3 velocidad = fallingCubeDemo.CubeVelocity();
+		const glm::vec3 speed = fallingCubeDemo.CubeVelocity();
 		const glm::vec3 gravedad = physicsWorld.GravityValue();
 		ImGui::Text("gravedad: (%.2f, %.2f, %.2f) m/s2", gravedad.x, gravedad.y, gravedad.z);
-		ImGui::Text("cubo pos: (%.3f, %.3f, %.3f) m", pose.posicion.x, pose.posicion.y, pose.posicion.z);
-		ImGui::Text("cubo vel: (%.3f, %.3f, %.3f) m/s", velocidad.x, velocidad.y, velocidad.z);
+		ImGui::Text("cubo pos: (%.3f, %.3f, %.3f) m", pose.position.x, pose.position.y, pose.position.z);
+		ImGui::Text("cubo vel: (%.3f, %.3f, %.3f) m/s", speed.x, speed.y, speed.z);
 		ImGui::Text("estado: %s", fallingCubeDemo.CubeAtRest() ? "en reposo (dormido)" : "en movimiento");
 	}
 	ImGui::End();

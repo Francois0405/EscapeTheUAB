@@ -26,7 +26,7 @@ namespace netgame::session
 			{
 				const glm::vec3 pies = context.bodyFeetPosition();
 				const vr::Anchor anclaje = vr::PlayerAnchor(pies, frente,
-					openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo, physicsWorld.PlayerEyeHeight());
+					openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Floor, physicsWorld.PlayerEyeHeight());
 				vr::XrPose izq, der;
 				const bool hayIzq = openXrManager.ControllerAimPose(0, izq), hayDer = openXrManager.ControllerAimPose(1, der);
 				if (netgame::PoseFromVr(context.headPose, hayIzq ? &izq : nullptr, hayDer ? &der : nullptr, anclaje, pose)) return true;
@@ -69,12 +69,12 @@ namespace netgame::session
 				SceneObject& objeto = sceneObjects[aplicacion.first];
 				anteriores.push_back({ aplicacion.first, objeto });
 				const auto& e = *aplicacion.second;
-				objeto.posicion = e.posicion; objeto.rotacion = e.rotacion; objeto.escala = e.escala;
-				objeto.fisica.presente = e.colisionPresente;
-				objeto.fisica.tipo = netgame::ReplicaPhysicsType(e.colisionPresente, e.tipoColision,
-					objeto.fisica.tipo, fisica::BodyType::Dinamico, fisica::BodyType::Rebotador,
-					fisica::BodyType::Estatico);
-				objeto.fisica.mitadTamano = e.mitadTamano; objeto.fisica.desplazamiento = e.desplazamiento; objeto.fisica.masa = e.masa;
+				objeto.position = e.position; objeto.eulerRotation = e.eulerRotation; objeto.escala = e.escala;
+				objeto.fisica.presente = e.hasCollision;
+				objeto.fisica.tipo = netgame::ReplicaPhysicsType(e.hasCollision, e.collisionKind,
+					objeto.fisica.tipo, fisica::BodyType::Dynamic, fisica::BodyType::Bouncer,
+					fisica::BodyType::Static);
+				objeto.fisica.halfExtents = e.halfExtents; objeto.fisica.desplazamiento = e.desplazamiento; objeto.fisica.masa = e.masa;
 			}
 			std::string error;
 			if (!aplicaciones.empty() && !rebuildPhysicsAfterEditing(error, !networkGame.IsClient()))
@@ -152,9 +152,9 @@ namespace netgame::session
 				if (FindDynamicObject(context, par.first, indice))
 				{
 					const bool liberado = physicsScene->ReleaseRemoteDynamic(static_cast<int>(indice), glm::vec3(0.0f));
-					glm::vec3 posicion(0.0f);
-					if (liberado) physicsScene->DynamicObjectPosition(static_cast<int>(indice), posicion);
-					traceGrab("disconnect-release", par.first, par.second, par.second, posicion,
+					glm::vec3 position(0.0f);
+					if (liberado) physicsScene->DynamicObjectPosition(static_cast<int>(indice), position);
+					traceGrab("disconnect-release", par.first, par.second, par.second, position,
 						glm::vec3(0.0f), liberado ? "host-session-stopped-and-cleared-peer-owner" : "host-session-stopped-constraint-not-active");
 				}
 				agarresRemotosDesdeCabeza.erase(par.first);
@@ -208,7 +208,7 @@ namespace netgame::session
 			{
 				const net::PeerId propietario = networkGame.DynamicOwner(solicitud.id);
 				std::size_t indice = 0;
-				if (solicitud.agarrar)
+				if (solicitud.grabActionHandle)
 				{
 					if (!netgame::CanAcquireDynamic(propietario, solicitud.peer,
 						networkGame.DynamicObjectOfPeer(solicitud.peer)) || !FindDynamicObject(context, solicitud.id, indice))
@@ -253,24 +253,24 @@ namespace netgame::session
 				else if (propietario == solicitud.peer)
 				{
 					const bool liberado = FindDynamicObject(context, solicitud.id, indice) &&
-						physicsScene->ReleaseRemoteDynamic(static_cast<int>(indice), solicitud.velocidad);
+						physicsScene->ReleaseRemoteDynamic(static_cast<int>(indice), solicitud.speed);
 					glm::vec3 posicionLiberada(0.0f);
 					if (liberado) physicsScene->DynamicObjectPosition(static_cast<int>(indice), posicionLiberada);
 					traceGrab(solicitud.desconexionPeer ? "disconnect-release" : (liberado ? "released" : "release-rejected"), solicitud.id, solicitud.peer,
-						propietario, posicionLiberada, solicitud.velocidad,
+						propietario, posicionLiberada, solicitud.speed,
 						solicitud.desconexionPeer
 							? (liberado ? "peer-left-and-host-restored-gravity" : "peer-left-but-constraint-not-active")
 							: (liberado ? "host-restored-gravity-and-applied-throw-velocity" : "constraint-was-not-active"));
 					if (liberado && sceneObjects[indice].id == "hiriti")
-						context.onHiritiThrown(ThrowChargeFromReleaseVelocity(solicitud.velocidad));
+						context.onHiritiThrown(ThrowChargeFromReleaseVelocity(solicitud.speed));
 					agarresRemotosDesdeCabeza.erase(solicitud.id);
 					// La propiedad también se limpia si el cuerpo ya no existe/reconstruyó.
 					networkGame.SetDynamicOwner(solicitud.id, netgame::kSinDueno);
 				}
-				else if (!solicitud.agarrar)
+				else if (!solicitud.grabActionHandle)
 				{
 					traceGrab("release-rejected", solicitud.id, solicitud.peer, propietario,
-						solicitud.velocidad, glm::vec3(0.0f), "requester-is-not-current-owner");
+						solicitud.speed, glm::vec3(0.0f), "requester-is-not-current-owner");
 				}
 			}
 
@@ -294,10 +294,10 @@ namespace netgame::session
 						auto& ultima = ultimaMuestraAgarre[par.first];
 						if (ahora - ultima >= 0.5)
 						{
-							glm::vec3 posicion(0.0f);
-							if (physicsScene->DynamicObjectPosition(static_cast<int>(indice), posicion))
-								traceGrab("holding", par.first, net::kHostPeerId, net::kHostPeerId, posicion,
-									posicion, "host-local-dynamic-constraint-active");
+							glm::vec3 position(0.0f);
+							if (physicsScene->DynamicObjectPosition(static_cast<int>(indice), position))
+								traceGrab("holding", par.first, net::kHostPeerId, net::kHostPeerId, position,
+									position, "host-local-dynamic-constraint-active");
 							ultima = ahora;
 						}
 					}
@@ -312,7 +312,7 @@ namespace netgame::session
 				const glm::vec3 destino = fisica::PhysicsScene::GrabDestination(origenAgarre, direccionAgarre);
 				std::vector<fisica::PhysicsScene::DynamicState> actuales;
 				physicsScene->CaptureDynamicStates(actuales);
-				auto actual = std::find_if(actuales.begin(), actuales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
+				auto actual = std::find_if(actuales.begin(), actuales.end(), [&](const auto& e) { return e.objectIndex == static_cast<int>(indice); });
 				if (actual == actuales.end())
 				{
 					traceGrab("auto-drop", par.first, par.second, par.second, glm::vec3(0.0f),
@@ -320,10 +320,10 @@ namespace netgame::session
 					agarresRemotosDesdeCabeza.erase(par.first);
 					networkGame.SetDynamicOwner(par.first, netgame::kSinDueno);
 				}
-				else if (glm::distance(actual->pose.posicion, destino) > fisica::PhysicsScene::SoltarSiSeAleja)
+				else if (glm::distance(actual->pose.position, destino) > fisica::PhysicsScene::SoltarSiSeAleja)
 				{
 					const bool liberado = physicsScene->ReleaseRemoteDynamic(static_cast<int>(indice), glm::vec3(0.0f));
-					traceGrab(liberado ? "auto-release" : "auto-drop", par.first, par.second, par.second, actual->pose.posicion,
+					traceGrab(liberado ? "auto-release" : "auto-drop", par.first, par.second, par.second, actual->pose.position,
 						destino, liberado ? "host-dynamic-constraint-exceeded-two-meter-limit" : "distance-limit-but-constraint-not-active");
 					agarresRemotosDesdeCabeza.erase(par.first);
 					networkGame.SetDynamicOwner(par.first, netgame::kSinDueno);
@@ -336,7 +336,7 @@ namespace netgame::session
 						auto& ultima = ultimaMuestraAgarre[par.first];
 						if (ahora - ultima >= 0.5)
 						{
-							traceGrab("holding", par.first, par.second, par.second, actual->pose.posicion,
+							traceGrab("holding", par.first, par.second, par.second, actual->pose.position,
 								destino, physicsScene->HeldDynamicObject(static_cast<int>(indice))
 									? "host-dynamic-constraint-active" : "owner-set-but-constraint-missing");
 							ultima = ahora;
@@ -353,15 +353,15 @@ namespace netgame::session
 				estados.reserve(fisicos.size());
 				for (const auto& fisico : fisicos)
 				{
-					if (fisico.indiceObjeto < 0 || fisico.indiceObjeto >= static_cast<int>(sceneObjects.size())) continue;
+					if (fisico.objectIndex < 0 || fisico.objectIndex >= static_cast<int>(sceneObjects.size())) continue;
 					net::DynamicStateEntry estado;
-					estado.objectId = netgame::HashId(sceneObjects[fisico.indiceObjeto].id);
+					estado.objectId = netgame::HashId(sceneObjects[fisico.objectIndex].id);
 					estado.tick = PhysicsSnapshotTick(ahora);
-					estado.transform = netgame::ToTransform(fisico.pose.posicion, fisico.pose.rotacion);
+					estado.transform = netgame::ToTransform(fisico.pose.position, fisico.pose.eulerRotation);
 					for (int i = 0; i < 3; ++i)
 					{
-						estado.linearVelocity[i] = fisico.velocidad[i];
-						estado.angularVelocity[i] = fisico.velocidadAngular[i];
+						estado.linearVelocity[i] = fisico.speed[i];
+						estado.angularVelocity[i] = fisico.angularSpeed[i];
 					}
 					estado.owner = networkGame.DynamicOwner(estado.objectId);
 					estado.flags = PhysicsStateFlags(fisico.activo, estado.owner);
@@ -401,21 +401,21 @@ namespace netgame::session
 				if (!FindDynamicObject(context, par.first, indice) || par.second.empty()) continue;
 				auto objetivo = netgame::timeline::InterpolateRemotePhysicsState(par.second, ahora);
 				fisica::PhysicsScene::DynamicState aplicado;
-				aplicado.indiceObjeto = static_cast<int>(indice);
-				aplicado.pose.posicion = netgame::PositionOfPose(objetivo.transform);
-				aplicado.pose.rotacion = netgame::RotationOfPose(objetivo.transform);
+				aplicado.objectIndex = static_cast<int>(indice);
+				aplicado.pose.position = netgame::PositionOfPose(objetivo.transform);
+				aplicado.pose.eulerRotation = netgame::RotationOfPose(objetivo.transform);
 				if ((objetivo.flags & 1) != 0)
 				{
 					std::vector<fisica::PhysicsScene::DynamicState> locales;
 					physicsScene->CaptureDynamicStates(locales);
-					auto actual = std::find_if(locales.begin(), locales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
+					auto actual = std::find_if(locales.begin(), locales.end(), [&](const auto& e) { return e.objectIndex == static_cast<int>(indice); });
 					if (actual != locales.end())
 					{
 						const auto mezcla = netgame::timeline::BlendRemotePhysicsPose(
-							actual->pose.posicion, actual->pose.rotacion,
-							aplicado.pose.posicion, aplicado.pose.rotacion, delta);
-						aplicado.pose.posicion = mezcla.position;
-						aplicado.pose.rotacion = mezcla.rotation;
+							actual->pose.position, actual->pose.eulerRotation,
+							aplicado.pose.position, aplicado.pose.eulerRotation, delta);
+						aplicado.pose.position = mezcla.position;
+						aplicado.pose.eulerRotation = mezcla.rotation;
 					}
 				}
 				physicsScene->ApplyReplicatedState(aplicado);
@@ -427,14 +427,14 @@ namespace netgame::session
 					auto& ultima = ultimaMuestraReplica[par.first];
 					if (ahora - ultima >= 0.5)
 					{
-						const auto& rotacion = aplicado.pose.rotacion;
+						const auto& eulerRotation = aplicado.pose.eulerRotation;
 						const auto rotacionObjetivo = netgame::RotationOfPose(objetivo.transform);
 						std::ostringstream detalle;
 						detalle << "client-kinematic;hostSnapshotTick=" << objetivo.tick << ";position-is-interpolated-from-host;rotation=("
-							<< rotacion.x << ',' << rotacion.y << ',' << rotacion.z << ',' << rotacion.w
+							<< eulerRotation.x << ',' << eulerRotation.y << ',' << eulerRotation.z << ',' << eulerRotation.w
 							<< ");host-target-rotation=(" << rotacionObjetivo.x << ',' << rotacionObjetivo.y << ','
 							<< rotacionObjetivo.z << ',' << rotacionObjetivo.w << ')';
-						traceGrab("replica", par.first, propietario, propietario, aplicado.pose.posicion,
+						traceGrab("replica", par.first, propietario, propietario, aplicado.pose.position,
 							netgame::PositionOfPose(objetivo.transform), detalle.str().c_str());
 						ultima = ahora;
 					}

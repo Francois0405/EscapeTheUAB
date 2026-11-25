@@ -25,14 +25,14 @@ namespace editor
 
 	inline bool AreEqual(const ScenePhysics& a, const ScenePhysics& b)
 	{
-		return a.presente == b.presente && a.tipo == b.tipo && a.forma == b.forma && a.mitadTamano == b.mitadTamano &&
+		return a.presente == b.presente && a.tipo == b.tipo && a.forma == b.forma && a.halfExtents == b.halfExtents &&
 			a.desplazamiento == b.desplazamiento && a.masa == b.masa;
 	}
 
 	inline bool AreEqual(const SceneObject& a, const SceneObject& b)
 	{
-		return a.id == b.id && a.categoria == b.categoria && a.modelo == b.modelo && a.posicion == b.posicion &&
-			a.rotacion == b.rotacion && a.escala == b.escala && AreEqual(a.fisica, b.fisica) &&
+		return a.id == b.id && a.categoria == b.categoria && a.modelo == b.modelo && a.position == b.position &&
+			a.eulerRotation == b.eulerRotation && a.escala == b.escala && AreEqual(a.fisica, b.fisica) &&
 			a.luz.presente == b.luz.presente && a.luz.encendida == b.luz.encendida &&
 			a.luz.desplazamiento == b.luz.desplazamiento && a.luz.color == b.luz.color &&
 			a.luz.intensidad == b.luz.intensidad && a.luz.areaSize == b.luz.areaSize &&
@@ -45,7 +45,7 @@ namespace editor
 
 	inline bool AreEqual(const SceneAnimatedObject& a, const SceneAnimatedObject& b)
 	{
-		if (a.id != b.id || a.modelo != b.modelo || a.posicion != b.posicion || a.giroZGrados != b.giroZGrados ||
+		if (a.id != b.id || a.modelo != b.modelo || a.position != b.position || a.yawDegrees != b.yawDegrees ||
 			a.escala != b.escala || a.animation != b.animation ||
 			a.permitirPenetracionArquitectura != b.permitirPenetracionArquitectura ||
 			a.colisionadores.size() != b.colisionadores.size()) return false;
@@ -53,7 +53,7 @@ namespace editor
 		{
 			const auto& ca = a.colisionadores[i];
 			const auto& cb = b.colisionadores[i];
-			if (ca.nodo != cb.nodo || ca.tipo != cb.tipo || ca.mitadTamano != cb.mitadTamano || ca.desplazamiento != cb.desplazamiento) return false;
+			if (ca.nodo != cb.nodo || ca.tipo != cb.tipo || ca.halfExtents != cb.halfExtents || ca.desplazamiento != cb.desplazamiento) return false;
 		}
 		return true;
 	}
@@ -75,7 +75,7 @@ namespace editor
 		{
 			deshacer.clear();
 			rehacer.clear();
-			transaccionAbierta = false;
+			transactionOpen = false;
 		}
 
 		// Operación puntual (añadir, eliminar, duplicar...): 'antes' es el estado ANTERIOR al cambio.
@@ -90,18 +90,18 @@ namespace editor
 		// Arrastre o edición continua: se llama UNA vez al empezar (con el estado sin modificar).
 		void BeginTransaction(const SceneState& antes)
 		{
-			if (transaccionAbierta) return;
+			if (transactionOpen) return;
 			inicioTransaccion = antes;
-			transaccionAbierta = true;
+			transactionOpen = true;
 		}
 
-		bool IsTransactionOpen() const { return transaccionAbierta; }
+		bool IsTransactionOpen() const { return transactionOpen; }
 
 		// Al terminar: registra UNA operación si el estado cambió de verdad. Devuelve si registró algo.
 		bool CommitTransaction(const SceneState& despues)
 		{
-			if (!transaccionAbierta) return false;
-			transaccionAbierta = false;
+			if (!transactionOpen) return false;
+			transactionOpen = false;
 			if (AreEqual(inicioTransaccion, despues)) return false;
 			RegisterElement(std::move(inicioTransaccion));
 			return true;
@@ -115,7 +115,7 @@ namespace editor
 		// 'actual' es el estado visible ahora; se sustituye por el anterior y el actual pasa a la pila de rehacer.
 		bool Undo(SceneState& actual)
 		{
-			transaccionAbierta = false;
+			transactionOpen = false;
 			if (deshacer.empty()) return false;
 			rehacer.push_back(std::move(actual));
 			actual = std::move(deshacer.back());
@@ -125,7 +125,7 @@ namespace editor
 
 		bool Redo(SceneState& actual)
 		{
-			transaccionAbierta = false;
+			transactionOpen = false;
 			if (rehacer.empty()) return false;
 			deshacer.push_back(std::move(actual));
 			actual = std::move(rehacer.back());
@@ -137,6 +137,6 @@ namespace editor
 		std::vector<SceneState> deshacer;
 		std::vector<SceneState> rehacer;
 		SceneState inicioTransaccion;
-		bool transaccionAbierta = false;
+		bool transactionOpen = false;
 	};
 }

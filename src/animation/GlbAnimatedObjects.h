@@ -31,20 +31,20 @@ namespace glb
 	//   Abierta  --E-->  Cerrando  --(llega al principio)--> Cerrada
 	// Si se pulsa E mientras se mueve, el sentido se invierte desde donde esté:
 	//   Abriendo --E--> Cerrando      Cerrando --E--> Abriendo
-	enum class DoorState { Cerrada, Abriendo, Open, Cerrando };
+	enum class DoorState { Closed, Opening, Open, Closing };
 
 	// Una puerta (o cajón...) concreta dentro de la habitación.
 	struct AnimatedObject
 	{
 		std::string id;                       // nombre único, por ejemplo "puerta_entrada"
 		const GlbModel* modelo = nullptr;    // compartido con las demás instancias del mismo .glb
-		glm::vec3 posicion = glm::vec3(0.0f); // dónde está el origen del modelo en el mundo del juego
-		float giroZGrados = 0.0f;             // orientación alrededor del eje vertical (Z)
+		glm::vec3 position = glm::vec3(0.0f); // dónde está el origen del modelo en el mundo del juego
+		float yawDegrees = 0.0f;             // orientación alrededor del eje vertical (Z)
 		float escala = 1.0f;                  // escala uniforme de la instancia (1 = tamaño del archivo)
 		GlbPose pose;                         // pose propia: la de ESTA puerta
 		AnimationPlayer reproductor;     // reloj propio: el de ESTA puerta
-		int indiceAnimacion = 0;              // qué animación del archivo reproduce
-		DoorState estado = DoorState::Cerrada;
+		int animationIndex = 0;              // qué animación del archivo reproduce
+		DoorState estado = DoorState::Closed;
 		glm::vec3 centroDelModelo = glm::vec3(0.0f);   // punto "de la puerta" (espacio glTF) para saber si se mira
 	};
 
@@ -59,7 +59,7 @@ namespace glb
 	// Añade una instancia. Carga el .glb solo si todavía no estaba cargado.
 	// Devuelve false (y no cambia nada) si el archivo falla o el id ya existe.
 	bool AddAnimatedObject(AnimatedScene& escena, const std::string& id, const std::string& rutaGlb,
-		const glm::vec3& posicion, float giroZGrados, std::string& error);
+		const glm::vec3& position, float yawDegrees, std::string& error);
 
 	// Elige qué animación del archivo reproduce la instancia, por su nombre ("" = la primera).
 	// Devuelve false (y no cambia nada) si el archivo no tiene una animación con ese nombre.

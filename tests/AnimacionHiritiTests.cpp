@@ -142,18 +142,18 @@ int main()
 		"reiniciar Hiriti limpia el cooldown antes de cambiar o reinicializar la escena");
 
 	game::HiritiAudioTimer temporizadorAudio;
-	comprobar(temporizadorAudio.Update(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
+	comprobar(temporizadorAudio.Update(true, 29.0f) == game::HiritiAudioTimer::Evento::None &&
+		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambient,
 		"el sonido ambiente se activa al cumplirse treinta segundos de PLAY");
-	comprobar(temporizadorAudio.Update(true, 14.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Buscando,
+	comprobar(temporizadorAudio.Update(true, 14.0f) == game::HiritiAudioTimer::Evento::None &&
+		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Searching,
 		"el sonido searching alterna quince segundos despues del ambiente");
-	comprobar(temporizadorAudio.Update(true, 15.0f) == game::HiritiAudioTimer::Evento::Ambiente &&
-		temporizadorAudio.Update(true, 15.0f) == game::HiritiAudioTimer::Evento::Buscando,
+	comprobar(temporizadorAudio.Update(true, 15.0f) == game::HiritiAudioTimer::Evento::Ambient &&
+		temporizadorAudio.Update(true, 15.0f) == game::HiritiAudioTimer::Evento::Searching,
 		"cada categoria de sonido se repite con treinta segundos de diferencia");
-	comprobar(temporizadorAudio.Update(false, 30.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Update(true, 29.0f) == game::HiritiAudioTimer::Evento::Ninguno &&
-		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambiente,
+	comprobar(temporizadorAudio.Update(false, 30.0f) == game::HiritiAudioTimer::Evento::None &&
+		temporizadorAudio.Update(true, 29.0f) == game::HiritiAudioTimer::Evento::None &&
+		temporizadorAudio.Update(true, 1.0f) == game::HiritiAudioTimer::Evento::Ambient,
 		"salir de PLAY reinicia la secuencia empezando por ambiente");
 
 	comprobar(!hiriti.Update(true, origen, haciaHiriti,

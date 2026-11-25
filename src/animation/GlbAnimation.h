@@ -25,22 +25,22 @@
 namespace glb
 {
 	// Qué propiedad del nodo anima un canal.
-	enum class AnimatedProperty { Posicion, Rotacion, Escala };
+	enum class AnimatedProperty { Position, Rotation, Scale };
 
 	// Cómo se pasa de un keyframe al siguiente.
 	enum class InterpolationMode
 	{
-		Lineal,   // mezcla progresiva (mix / slerp)
-		Escalon   // mantiene el valor anterior hasta llegar al siguiente keyframe
+		Linear,   // mezcla progresiva (mix / slerp)
+		Step   // mantiene el valor anterior hasta llegar al siguiente keyframe
 	};
 
 	// Un canal: los keyframes de una propiedad de un nodo.
 	// 'valores' usa vec4 para todo: posición y escala usan x,y,z; la rotación usa x,y,z,w.
 	struct AnimationChannel
 	{
-		int indiceNodo = -1;
-		AnimatedProperty propiedad = AnimatedProperty::Posicion;
-		InterpolationMode interpolacion = InterpolationMode::Lineal;
+		int nodeIndex = -1;
+		AnimatedProperty propiedad = AnimatedProperty::Position;
+		InterpolationMode interpolacion = InterpolationMode::Linear;
 		std::vector<float> tiempos;       // segundos, de menor a mayor
 		std::vector<glm::vec4> valores;   // un valor por cada tiempo
 	};
@@ -118,7 +118,7 @@ namespace glb
 	// Mezcla dos valores de un canal: slerp para rotaciones, mix para lo demás.
 	inline glm::vec4 BlendValues(AnimatedProperty propiedad, const glm::vec4& a, const glm::vec4& b, float fraccion)
 	{
-		if (propiedad == AnimatedProperty::Rotacion)
+		if (propiedad == AnimatedProperty::Rotation)
 		{
 			const glm::quat q = glm::slerp(QuaternionFromVec4(a), QuaternionFromVec4(b), fraccion);
 			return glm::vec4(q.x, q.y, q.z, q.w);
@@ -137,7 +137,7 @@ namespace glb
 
 		const size_t anterior = FindPreviousKeyframe(canal.tiempos, tiempo);
 		const size_t siguiente = anterior + 1;
-		if (canal.interpolacion == InterpolationMode::Escalon) return canal.valores[anterior];
+		if (canal.interpolacion == InterpolationMode::Step) return canal.valores[anterior];
 
 		// fraccion = 0 en el keyframe anterior, 1 en el siguiente.
 		const float duracionTramo = canal.tiempos[siguiente] - canal.tiempos[anterior];

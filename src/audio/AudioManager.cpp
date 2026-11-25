@@ -160,7 +160,7 @@ void AudioManager::setMasterVolume(float volume) {
 }
 
 void AudioManager::playFootstep(fps::StepState estado) {
-    if (!m_initialized || estado == fps::StepState::Reposo) return;
+    if (!m_initialized || estado == fps::StepState::Idle) return;
 
     std::vector<std::string> disponibles;
     for (const auto& id : {"paso_0", "paso_1", "paso_2"}) {
@@ -188,11 +188,11 @@ void AudioManager::playFootstep(fps::StepState estado) {
             volumen = 0.90f;
             pitch   = 1.15f;
             break;
-        case fps::StepState::Agachado:
+        case fps::StepState::Crouched:
             volumen = 0.25f;
             pitch   = 0.85f;
             break;
-        case fps::StepState::Caminando:
+        case fps::StepState::Walking:
         default:
             volumen = 0.55f;
             pitch   = 1.0f;

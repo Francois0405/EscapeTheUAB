@@ -146,8 +146,8 @@ namespace netgame
 	{
 		uint32_t id = 0;
 		net::PeerId peer = net::kUnassignedPeerId;
-		bool agarrar = false;
-		glm::vec3 velocidad{ 0.0f }, origen{ 0.0f }, direccion{ 0.0f };
+		bool grabActionHandle = false;
+		glm::vec3 speed{ 0.0f }, origen{ 0.0f }, direccion{ 0.0f };
 		bool desconexionPeer = false;
 	};
 
@@ -266,14 +266,14 @@ namespace netgame
 
 	// Admite únicamente el pequeño exceso que puede introducir float32 al normalizar
 	// y escalar el lanzamiento máximo; velocidades mayores se rechazan sin cambiar.
-	inline bool ClampHostThrowSpeed(glm::vec3& velocidad)
+	inline bool ClampHostThrowSpeed(glm::vec3& speed)
 	{
-		if (!IsValidCoordinate(velocidad)) return false;
-		const float rapidez = glm::length(velocidad);
+		if (!IsValidCoordinate(speed)) return false;
+		const float rapidez = glm::length(speed);
 		if (!std::isfinite(rapidez) || rapidez > kRapidezMaximaLanzamiento + kMargenRedondeoLanzamiento)
 			return false;
 		if (rapidez > kRapidezMaximaLanzamiento)
-			velocidad *= kRapidezMaximaLanzamiento / rapidez;
+			speed *= kRapidezMaximaLanzamiento / rapidez;
 		return true;
 	}
 
@@ -292,10 +292,10 @@ namespace netgame
 	struct SceneObjectState
 	{
 		uint32_t id = 0;
-		glm::vec3 posicion{ 0.0f }, rotacion{ 0.0f }, escala{ 1.0f };
-		bool colisionPresente = false;
-		uint8_t tipoColision = 0; // 0 = none, 1 = static, 2 = dynamic
-		glm::vec3 mitadTamano{ 0.5f }, desplazamiento{ 0.0f };
+		glm::vec3 position{ 0.0f }, eulerRotation{ 0.0f }, escala{ 1.0f };
+		bool hasCollision = false;
+		uint8_t collisionKind = 0; // 0 = none, 1 = static, 2 = dynamic
+		glm::vec3 halfExtents{ 0.5f }, desplazamiento{ 0.0f };
 		float masa = 0.0f;
 	};
 
@@ -307,21 +307,21 @@ namespace netgame
 			return std::isfinite(v.x) && std::isfinite(v.y) && std::isfinite(v.z) &&
 				std::fabs(v.x) <= maximo && std::fabs(v.y) <= maximo && std::fabs(v.z) <= maximo;
 		};
-		if (!vectorValido(e.posicion, net::kMaxCoordinate) || !vectorValido(e.rotacion, 360000.0f) ||
+		if (!vectorValido(e.position, net::kMaxCoordinate) || !vectorValido(e.eulerRotation, 360000.0f) ||
 			!vectorValido(e.escala, 10000.0f) || e.escala.x == 0.0f || e.escala.y == 0.0f || e.escala.z == 0.0f ||
 			!std::isfinite(e.masa) || e.masa < 0.0f || e.masa > 1000000.0f) return false;
-		if (!e.colisionPresente) return e.tipoColision == 0;
-		return (e.tipoColision == 1 || e.tipoColision == 2) &&
-			vectorValido(e.mitadTamano, 10000.0f) && e.mitadTamano.x > 0.0f && e.mitadTamano.y > 0.0f && e.mitadTamano.z > 0.0f &&
+		if (!e.hasCollision) return e.collisionKind == 0;
+		return (e.collisionKind == 1 || e.collisionKind == 2) &&
+			vectorValido(e.halfExtents, 10000.0f) && e.halfExtents.x > 0.0f && e.halfExtents.y > 0.0f && e.halfExtents.z > 0.0f &&
 			vectorValido(e.desplazamiento, net::kMaxCoordinate) &&
-			(e.tipoColision != 2 || e.masa > 0.0f);
+			(e.collisionKind != 2 || e.masa > 0.0f);
 	}
 
 	inline bool SameSceneObjectState(const SceneObjectState& a, const SceneObjectState& b)
 	{
-		return a.id == b.id && a.posicion == b.posicion && a.rotacion == b.rotacion && a.escala == b.escala &&
-			a.colisionPresente == b.colisionPresente && a.tipoColision == b.tipoColision &&
-			a.mitadTamano == b.mitadTamano && a.desplazamiento == b.desplazamiento && a.masa == b.masa;
+		return a.id == b.id && a.position == b.position && a.eulerRotation == b.eulerRotation && a.escala == b.escala &&
+			a.hasCollision == b.hasCollision && a.collisionKind == b.collisionKind &&
+			a.halfExtents == b.halfExtents && a.desplazamiento == b.desplazamiento && a.masa == b.masa;
 	}
 
 	inline std::string SceneNetworkFingerprint(const std::string& sceneName, const std::vector<SceneObjectState>& sceneState)
@@ -348,11 +348,11 @@ namespace netgame
 		std::vector<uint8_t> b;
 		if (!IsValidSceneObjectState(e)) return b;
 		b.reserve(66);
-		for (float f : { e.posicion.x, e.posicion.y, e.posicion.z, e.rotacion.x, e.rotacion.y, e.rotacion.z,
-			e.escala.x, e.escala.y, e.escala.z, e.mitadTamano.x, e.mitadTamano.y, e.mitadTamano.z,
+		for (float f : { e.position.x, e.position.y, e.position.z, e.eulerRotation.x, e.eulerRotation.y, e.eulerRotation.z,
+			e.escala.x, e.escala.y, e.escala.z, e.halfExtents.x, e.halfExtents.y, e.halfExtents.z,
 			e.desplazamiento.x, e.desplazamiento.y, e.desplazamiento.z, e.masa }) detalle::WriteF32(b, f);
-		b.push_back(e.colisionPresente ? 1 : 0);
-		b.push_back(e.tipoColision);
+		b.push_back(e.hasCollision ? 1 : 0);
+		b.push_back(e.collisionKind);
 		return b;
 	}
 
@@ -360,12 +360,12 @@ namespace netgame
 	{
 		if (b.size() != 66) return false;
 		SceneObjectState e; e.id = id;
-		float* valores[] = { &e.posicion.x, &e.posicion.y, &e.posicion.z, &e.rotacion.x, &e.rotacion.y, &e.rotacion.z,
-			&e.escala.x, &e.escala.y, &e.escala.z, &e.mitadTamano.x, &e.mitadTamano.y, &e.mitadTamano.z,
+		float* valores[] = { &e.position.x, &e.position.y, &e.position.z, &e.eulerRotation.x, &e.eulerRotation.y, &e.eulerRotation.z,
+			&e.escala.x, &e.escala.y, &e.escala.z, &e.halfExtents.x, &e.halfExtents.y, &e.halfExtents.z,
 			&e.desplazamiento.x, &e.desplazamiento.y, &e.desplazamiento.z, &e.masa };
 		for (std::size_t i = 0; i < 16; ++i) *valores[i] = detalle::ReadF32(&b[i * 4]);
 		if (b[64] > 1) return false;
-		e.colisionPresente = b[64] != 0; e.tipoColision = b[65];
+		e.hasCollision = b[64] != 0; e.collisionKind = b[65];
 		if (!IsValidSceneObjectState(e)) return false;
 		out = e;
 		return true;
@@ -569,7 +569,7 @@ namespace netgame
 		virtual glm::vec3 Point(size_t i) const = 0;             // punto de interaccion (mundo, Z arriba)
 	};
 
-	enum class RequestResult { Aplicada, IdDesconocido, FueraDeAlcance, SinPose, NoEsDueno, Ocupado, Invalida };
+	enum class RequestResult { Applied, UnknownId, OutOfReach, NoPose, NotOwner, Busy, Invalid };
 
 	class DoorSync
 	{
@@ -610,11 +610,11 @@ namespace netgame
 		// HOST: valida y aplica. 'cabeza' = ultima pose conocida del solicitante (nullptr si no hay).
 		RequestResult HostHandleRequest(ISceneDoors& p, uint32_t id, const glm::vec3* cabeza)
 		{
-			size_t i; if (!IndexOf(id, i) || i >= p.Count()) return RequestResult::IdDesconocido;
-			if (!cabeza) return RequestResult::SinPose;
-			if (glm::distance(*cabeza, p.Point(i)) > kAlcanceHost) return RequestResult::FueraDeAlcance;
+			size_t i; if (!IndexOf(id, i) || i >= p.Count()) return RequestResult::UnknownId;
+			if (!cabeza) return RequestResult::NoPose;
+			if (glm::distance(*cabeza, p.Point(i)) > kAlcanceHost) return RequestResult::OutOfReach;
 			p.SetOpen(i, !p.IsOpen(i));
-			return RequestResult::Aplicada;
+			return RequestResult::Applied;
 		}
 		// HOST: emite el estado de las puertas que cambiaron (por E del host, por clientes o por depuracion).
 		void HostDetectChanges(const ISceneDoors& p, std::vector<OutputEvent>& out)
@@ -672,32 +672,32 @@ namespace netgame
 
 		RequestResult RequestToggle(uint32_t id, net::PeerId quien, const glm::vec3* cabeza, double ahora)
 		{
-			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::IdDesconocido;
-			if (!cabeza || !IsValidCoordinate(*cabeza)) return RequestResult::SinPose;
+			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::UnknownId;
+			if (!cabeza || !IsValidCoordinate(*cabeza)) return RequestResult::NoPose;
 			SharedObject& o = it->second;
-			if (o.dueno != kSinDueno && o.dueno != quien) return RequestResult::Ocupado;
-			if (glm::distance(*cabeza, o.pos) > kAlcance) return RequestResult::FueraDeAlcance;
+			if (o.dueno != kSinDueno && o.dueno != quien) return RequestResult::Busy;
+			if (glm::distance(*cabeza, o.pos) > kAlcance) return RequestResult::OutOfReach;
 			if (o.dueno != quien) { o.dueno = quien; cambios_.push_back(id); }
 			o.expira = ahora + kConcesion;
-			return RequestResult::Aplicada;
+			return RequestResult::Applied;
 		}
 		RequestResult ReleaseGpu(uint32_t id, net::PeerId quien)
 		{
-			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::IdDesconocido;
-			if (it->second.dueno != quien) return RequestResult::NoEsDueno;
+			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::UnknownId;
+			if (it->second.dueno != quien) return RequestResult::NotOwner;
 			it->second.dueno = kSinDueno; cambios_.push_back(id);
-			return RequestResult::Aplicada;
+			return RequestResult::Applied;
 		}
 		RequestResult Move(uint32_t id, net::PeerId quien, const glm::vec3& nueva, const glm::vec3* cabeza, double ahora)
 		{
-			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::IdDesconocido;
+			auto it = obj_.find(id); if (it == obj_.end()) return RequestResult::UnknownId;
 			SharedObject& o = it->second;
-			if (o.dueno != quien) return RequestResult::NoEsDueno;
-			if (!IsValidCoordinate(nueva)) return RequestResult::Invalida;
-			if (!cabeza || !IsValidCoordinate(*cabeza)) return RequestResult::SinPose;
-			if (glm::distance(*cabeza, nueva) > kAlcanceAcarreo || glm::distance(o.pos, nueva) > kSaltoMaximo) return RequestResult::FueraDeAlcance;
+			if (o.dueno != quien) return RequestResult::NotOwner;
+			if (!IsValidCoordinate(nueva)) return RequestResult::Invalid;
+			if (!cabeza || !IsValidCoordinate(*cabeza)) return RequestResult::NoPose;
+			if (glm::distance(*cabeza, nueva) > kAlcanceAcarreo || glm::distance(o.pos, nueva) > kSaltoMaximo) return RequestResult::OutOfReach;
 			o.pos = nueva; o.expira = ahora + kConcesion; cambios_.push_back(id);
-			return RequestResult::Aplicada;
+			return RequestResult::Applied;
 		}
 		// Desconexion o expulsion: libera todo lo que tuviera ese jugador.
 		void OnPeerLeft(net::PeerId p)

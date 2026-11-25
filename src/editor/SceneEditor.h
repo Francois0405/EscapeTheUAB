@@ -20,7 +20,7 @@
 
 namespace editor
 {
-	enum class Herramienta { Move, Rotar, Escalar };
+	enum class EditorTool { Move, Rotate, Scale };
 
 	// Lo que el editor puede modificar. Los objetos OBJ (arquitectura y objetos) y las instancias GLB animadas (puertas)
 	// viven en listas distintas; el editor las presenta como una sola jerarquía.
@@ -48,14 +48,14 @@ namespace editor
 		bool ConsumeSaveRequest();
 		bool ConsumeCloseConfirmed();
 		bool ConsumeCloseAfterSave();
-		bool ConsumeRebuildPhysicsRequest() { const bool v = reconstruirFisicaSolicitada; reconstruirFisicaSolicitada = false; return v; }
+		bool ConsumeRebuildPhysicsRequest() { const bool v = rebuildPhysicsRequested; rebuildPhysicsRequested = false; return v; }
 
-		void SetModelLoader(CargadorModelo cargador) { cargadorModelos = std::move(cargador); }
-		void SetTextureLoader(CargadorTextura cargador) { cargadorTexturas = std::move(cargador); }
-		void SetDoorLoader(CargadorPuerta cargador) { cargadorPuertas = std::move(cargador); }
+		void SetModelLoader(CargadorModelo cargador) { modelLoader = std::move(cargador); }
+		void SetTextureLoader(CargadorTextura cargador) { textureLoader = std::move(cargador); }
+		void SetDoorLoader(CargadorPuerta cargador) { doorLoader = std::move(cargador); }
 		void SetModelsRoot(const std::filesystem::path& raiz);
-		void SetSceneRoot(const std::filesystem::path& raiz) { raizEscena = raiz; }
-		void SetAnimationsRoot(const std::filesystem::path& raiz) { raizAnimaciones = raiz; inventarioPuertasCargado = false; }
+		void SetSceneRoot(const std::filesystem::path& raiz) { sceneRoot = raiz; }
+		void SetAnimationsRoot(const std::filesystem::path& raiz) { animationsRoot = raiz; inventarioPuertasCargado = false; }
 		// Una escena nueva (cargada desde disco) borra historial y selección.
 		void NewScene();
 
@@ -75,8 +75,8 @@ namespace editor
 		int IsSelected() const { return seleccionado; }
 		void MarkSaved() { modificada = false; }
 		bool HasUnsavedChanges() const { return modificada; }
-		void ReportStatus(std::string estado, bool error = false) { mensajeEstado = std::move(estado); mensajeEsError = error; }
-		void RequestCloseConfirmation() { confirmacionCierre = true; }
+		void ReportStatus(std::string estado, bool error = false) { statusMessage = std::move(estado); messageIsError = error; }
+		void RequestCloseConfirmation() { closeConfirmation = true; }
 
 		// --- Operaciones (públicas para poder probarlas sin ventana) ---
 		bool Undo(EditorSceneContext contexto);
@@ -89,7 +89,7 @@ namespace editor
 		void SelectElement(int indice)
 		{
 			if (seleccionado != indice) { previsualizacionGizmoActiva = false; previsualizacionGizmoInvalida = false; idPrevisualizacionGizmo.clear(); }
-			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Lock();
+			seleccionado = indice; selectionChanged = true; bloqueoGizmoTrasSeleccion.Lock();
 		}
 		EditorVisibility& VisibilityState() { return visibilidad; }
 
@@ -130,7 +130,7 @@ namespace editor
 		void SetSelection(int indice)
 		{
 			if (seleccionado != indice) { previsualizacionGizmoActiva = false; previsualizacionGizmoInvalida = false; idPrevisualizacionGizmo.clear(); }
-			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Lock();
+			seleccionado = indice; selectionChanged = true; bloqueoGizmoTrasSeleccion.Lock();
 		}
 		void DrawSelectionOutline(EditorSceneContext contexto, int ancho, int alto);
 		void SelectByMouse(EditorSceneContext contexto, int ancho, int alto);
@@ -144,66 +144,66 @@ namespace editor
 		void EndCapture();
 
 		bool activo = false;
-		bool salirAPlay = false;
-		bool guardarSolicitado = false;
-		bool deshacerSolicitado = false;
-		bool rehacerSolicitado = false;
-		bool duplicarSolicitado = false;
-		bool eliminarSolicitado = false;
+		bool exitToPlay = false;
+		bool saveRequested = false;
+		bool undoRequested = false;
+		bool redoRequested = false;
+		bool duplicateRequested = false;
+		bool deleteRequested = false;
 		bool eliminarConservarHuecoSolicitado = false;
-		bool anadirSolicitado = false;
-		bool confirmacionCierre = false;
-		bool cerrarConfirmado = false;
-		bool cerrarTrasGuardar = false;
-		bool enfocarSolicitado = false;
+		bool addRequested = false;
+		bool closeConfirmation = false;
+		bool closeConfirmed = false;
+		bool closeAfterSave = false;
+		bool focusRequested = false;
 		bool modificada = false;
-		bool reconstruirFisicaSolicitada = false;
+		bool rebuildPhysicsRequested = false;
 		std::unordered_map<std::string, glb::AnimatedObject> glbEliminados;
 		bool local = false;
 		bool snap = false;
 		GizmoPostSelectionLock bloqueoGizmoTrasSeleccion;
 		bool showColliders = false;
-		bool seleccionCambiada = false;
-		bool mensajeEsError = false;
+		bool selectionChanged = false;
+		bool messageIsError = false;
 		int seleccionado = -1;
-		Herramienta herramienta = Herramienta::Move;
+		EditorTool herramienta = EditorTool::Move;
 
 		// --- Cámara estilo Unity y arbitraje de la entrada ---
-		enum class CameraMode { Ninguno, Look, Pan, Orbit };
+		enum class CameraMode { None, Look, Pan, Orbit };
 		CamaraEditor camara;
 		CameraOptions opciones;
-		CameraMode modoCamara = CameraMode::Ninguno;
-		glm::vec3 pivoteOrbita{ 0.0f };
+		CameraMode modoCamara = CameraMode::None;
+		glm::vec3 orbitPivot{ 0.0f };
 		GLFWwindow* ventanaCaptura = nullptr;   // != nullptr mientras el cursor está capturado (botón derecho / Alt+izquierdo)
 		double cursorGuardadoX = 0.0, cursorGuardadoY = 0.0;
 		double anteriorX = 0.0, anteriorY = 0.0;
 		bool reiniciarDelta = true;             // descarta el primer delta tras capturar/liberar el cursor (sin saltos)
-		bool mostrarOpcionesCamara = false;
+		bool showCameraOptions = false;
 		struct EditorInput
 		{
 			bool sobrePanel = false;     // el cursor está sobre una ventana ImGui
 			bool imguiActivo = false;    // un widget de ImGui está en uso (campo de texto, slider...)
 			bool gizmoUsando = false;    // ImGuizmo está arrastrando
 			bool popup = false;
-			bool altPulsado = false;
+			bool altPressed = false;
 			bool viewportLibre = false;  // prioridad 1-2 libres: la cámara y la selección pueden actuar
 		} entrada;
 
 		// Flechas: se acumulan en el callback de teclado y se aplican en DibujarInterfaz (con el historial).
 		struct ArrowPress { ArrowKey flecha; bool ctrl; bool shift; };
-		std::vector<ArrowPress> flechasPendientes;
+		std::vector<ArrowPress> pendingArrows;
 		unsigned teclasFlechaPulsadas = 0;      // máscara de flechas mantenidas: mientras haya alguna, es UNA operación de historial
 		bool haySeleccionValida = false;
 
 		// Instrumentación del gizmo (F1 del editor: casilla "Debug input" o variable ESCAPETHEUAB_EDITOR_DEBUG=1).
-		bool depurarEntrada = false;
+		bool debugInput = false;
 		bool matrizCambiada = false;
-		bool depuracionPorConsola = false;
+		bool consoleDebugging = false;
 		bool depuracionIniciada = false;
 		int operacionDepuracion = 0;
 		bool gizmoSobre = false;
-		std::string mensajeEstado;
-		std::string mensajeColocacion;
+		std::string statusMessage;
+		std::string placementMessage;
 		bool previsualizacionGizmoActiva = false;
 		bool previsualizacionGizmoInvalida = false;
 		glm::mat4 matrizPrevisualizacionGizmo{ 1.0f };
@@ -224,25 +224,25 @@ namespace editor
 		// Cajas envolventes (por modelo) y assets.
 		std::unordered_map<std::string, LocalBox> cajasObj;
 		std::unordered_map<std::string, LocalBox> cajasGlb;
-		CargadorModelo cargadorModelos;
-		CargadorTextura cargadorTexturas;
-		CargadorPuerta cargadorPuertas;
-		std::filesystem::path raizModelos = "assets/models";
-		std::filesystem::path raizEscena;
-		std::filesystem::path raizAnimaciones = "assets/animations";
-		std::vector<std::filesystem::path> modelosDisponibles;
-		bool inventarioCargado = false;
-		std::string assetSeleccionado;
-		char filtroAssets[64] = {};
-		char filtroTexturas[128] = {};
-		int categoriaTexturas = 0;
+		CargadorModelo modelLoader;
+		CargadorTextura textureLoader;
+		CargadorPuerta doorLoader;
+		std::filesystem::path modelsRoot = "assets/models";
+		std::filesystem::path sceneRoot;
+		std::filesystem::path animationsRoot = "assets/animations";
+		std::vector<std::filesystem::path> availableModels;
+		bool inventoryLoaded = false;
+		std::string selectedAsset;
+		char assetFilter[64] = {};
+		char textureFilter[128] = {};
+		int textureCategory = 0;
 		int paredDestinoPuerta = -1;
-		std::vector<std::filesystem::path> puertasDisponibles;
+		std::vector<std::filesystem::path> availableDoors;
 		bool inventarioPuertasCargado = false;
-		bool assetEsPuerta = false;
-		std::filesystem::path puertaSeleccionada;
+		bool assetIsDoor = false;
+		std::filesystem::path selectedDoor;
 		bool assetYArriba = true;
-		bool assetColisionador = false;
-		bool assetDinamico = false;
+		bool assetCollider = false;
+		bool assetDynamic = false;
 	};
 }

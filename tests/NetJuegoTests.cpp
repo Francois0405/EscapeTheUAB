@@ -336,12 +336,12 @@ int main()
 		{
 			std::string id;
 			bool colision = true;
-			fisica::BodyType tipo = fisica::BodyType::Estatico;
+			fisica::BodyType tipo = fisica::BodyType::Static;
 		};
 		const std::vector<ObjetoConFisica> objetos = {
-			{ "mueble", true, fisica::BodyType::Estatico },
-			{ "hiriti", true, fisica::BodyType::Rebotador },
-			{ "caja", true, fisica::BodyType::Dinamico }
+			{ "mueble", true, fisica::BodyType::Static },
+			{ "hiriti", true, fisica::BodyType::Bouncer },
+			{ "caja", true, fisica::BodyType::Dynamic }
 		};
 		const auto hashObjeto = [](const ObjetoConFisica& objeto) { return HashId(objeto.id); };
 		const auto objetoReplicable = [](const ObjetoConFisica& objeto)
@@ -353,8 +353,8 @@ int main()
 		const uint8_t tipoHiriti = SceneCollisionType(hiriti.colision, fisica::IsDynamicBody(hiriti.tipo));
 		ok(tipoHiriti == 2, "Rebotador de Hiriti se anuncia como cuerpo dynamic replicable");
 		SceneObjectState estadoHiriti;
-		estadoHiriti.id = hiritiId; estadoHiriti.colisionPresente = true;
-		estadoHiriti.tipoColision = tipoHiriti; estadoHiriti.masa = 0.25f;
+		estadoHiriti.id = hiritiId; estadoHiriti.hasCollision = true;
+		estadoHiriti.collisionKind = tipoHiriti; estadoHiriti.masa = 0.25f;
 		ok(IsValidSceneObjectState(estadoHiriti) &&
 			EncodeSceneObjectState(estadoHiriti).size() == 66,
 			"estado inicial de Hiriti conserva su ID persistente y acepta clase replicable");
@@ -366,14 +366,14 @@ int main()
 			"filtro de snapshots rechaza IDs persistentes ambiguos");
 		ok(!UniqueNetworkObjectIndex(HashId("mueble"), objetos, hashObjeto, objetoReplicable, indiceHiriti),
 			"filtro de snapshots sigue rechazando objetos estáticos");
-		ok(ReplicaPhysicsType(true, 2, fisica::BodyType::Rebotador,
-			fisica::BodyType::Dinamico, fisica::BodyType::Rebotador, fisica::BodyType::Estatico) == fisica::BodyType::Rebotador &&
-			ReplicaPhysicsType(true, 2, fisica::BodyType::Estatico,
-				fisica::BodyType::Dinamico, fisica::BodyType::Rebotador, fisica::BodyType::Estatico) == fisica::BodyType::Dinamico &&
-			ReplicaPhysicsType(true, 1, fisica::BodyType::Rebotador,
-				fisica::BodyType::Dinamico, fisica::BodyType::Rebotador, fisica::BodyType::Estatico) == fisica::BodyType::Estatico &&
-			ReplicaPhysicsType(false, 2, fisica::BodyType::Rebotador,
-				fisica::BodyType::Dinamico, fisica::BodyType::Rebotador, fisica::BodyType::Estatico) == fisica::BodyType::Estatico,
+		ok(ReplicaPhysicsType(true, 2, fisica::BodyType::Bouncer,
+			fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Bouncer &&
+			ReplicaPhysicsType(true, 2, fisica::BodyType::Static,
+				fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Dynamic &&
+			ReplicaPhysicsType(true, 1, fisica::BodyType::Bouncer,
+				fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Static &&
+			ReplicaPhysicsType(false, 2, fisica::BodyType::Bouncer,
+				fisica::BodyType::Dynamic, fisica::BodyType::Bouncer, fisica::BodyType::Static) == fisica::BodyType::Static,
 			"el estado recibido conserva Rebotador local solo con dynamic; static/none del host manda y dynamic discrepante cae a Dinamico");
 		ok(!ShouldPauseGameWorld(true, false, false, false, false, true) &&
 			ShouldPauseGameWorld(true, false, false, false, false, false) &&
@@ -395,11 +395,11 @@ int main()
 
 		SceneObjectState original;
 		original.id = HashId("caja_sobre_mesa");
-		original.posicion = glm::vec3(1.25f, -2.0f, 3.5f);
-		original.rotacion = glm::vec3(0.0f, 15.0f, 90.0f);
+		original.position = glm::vec3(1.25f, -2.0f, 3.5f);
+		original.eulerRotation = glm::vec3(0.0f, 15.0f, 90.0f);
 		original.escala = glm::vec3(0.5f, 0.75f, 1.0f);
-		original.colisionPresente = true; original.tipoColision = 2;
-		original.mitadTamano = glm::vec3(0.4f, 0.5f, 0.6f);
+		original.hasCollision = true; original.collisionKind = 2;
+		original.halfExtents = glm::vec3(0.4f, 0.5f, 0.6f);
 		original.desplazamiento = glm::vec3(0.1f, 0.0f, -0.2f); original.masa = 4.0f;
 		const auto payload = EncodeSceneObjectState(original);
 		SceneObjectState recibido;
@@ -417,23 +417,23 @@ int main()
 		{
 			SceneObject object;
 			object.id = id;
-			object.posicion = glm::vec3(1.0f, 2.0f, 3.0f);
-			object.rotacion = glm::vec3(0.0f, 10.0f, 20.0f);
+			object.position = glm::vec3(1.0f, 2.0f, 3.0f);
+			object.eulerRotation = glm::vec3(0.0f, 10.0f, 20.0f);
 			object.escala = glm::vec3(1.0f);
 			object.fisica.presente = collider;
 			object.fisica.tipo = bodyType;
-			object.fisica.mitadTamano = glm::vec3(0.7f, 0.8f, 0.9f);
+			object.fisica.halfExtents = glm::vec3(0.7f, 0.8f, 0.9f);
 			object.fisica.desplazamiento = glm::vec3(0.11f, -0.22f, 0.33f);
 			object.fisica.masa = mass;
 			return object;
 		};
 		std::vector<SceneObjectState> states;
 		const std::vector<SceneObject> objects = {
-			makeObject("sin_collider", false, fisica::BodyType::Estatico, 0.0f),
-			makeObject("estatico", true, fisica::BodyType::Estatico, 0.0f),
-			makeObject("dinamico", true, fisica::BodyType::Dinamico, 2.0f),
-			makeObject("hiriti", true, fisica::BodyType::Rebotador, 0.25f),
-			makeObject("dinamico_sin_collider", false, fisica::BodyType::Dinamico, 2.0f)
+			makeObject("sin_collider", false, fisica::BodyType::Static, 0.0f),
+			makeObject("estatico", true, fisica::BodyType::Static, 0.0f),
+			makeObject("dinamico", true, fisica::BodyType::Dynamic, 2.0f),
+			makeObject("hiriti", true, fisica::BodyType::Bouncer, 0.25f),
+			makeObject("dinamico_sin_collider", false, fisica::BodyType::Dynamic, 2.0f)
 		};
 		ok(netgame::scene_network_state::CaptureSceneNetworkStates(objects, states) && states.size() == 5,
 			"captura conserva los cinco objetos de escena");
@@ -443,14 +443,14 @@ int main()
 			ok(states[0].id == HashId("sin_collider") && states[1].id == HashId("estatico") &&
 				states[2].id == HashId("dinamico") && states[3].id == HashId("hiriti"),
 				"captura preserva el orden de objetos de escena");
-			ok(states[0].tipoColision == 0 && !states[0].colisionPresente &&
-				states[1].tipoColision == 1 && states[1].colisionPresente &&
-				states[2].tipoColision == 2 && states[3].tipoColision == 2 &&
-				states[4].tipoColision == 0 && !states[4].colisionPresente,
+			ok(states[0].collisionKind == 0 && !states[0].hasCollision &&
+				states[1].collisionKind == 1 && states[1].hasCollision &&
+				states[2].collisionKind == 2 && states[3].collisionKind == 2 &&
+				states[4].collisionKind == 0 && !states[4].hasCollision,
 				"captura conserva none, static, dynamic y Rebotador como clases de colision de red");
-			ok(cerca(states[2].posicion, glm::vec3(1.0f, 2.0f, 3.0f)) &&
-				cerca(states[2].rotacion, glm::vec3(0.0f, 10.0f, 20.0f)) &&
-				cerca(states[2].mitadTamano, glm::vec3(0.7f, 0.8f, 0.9f)) &&
+			ok(cerca(states[2].position, glm::vec3(1.0f, 2.0f, 3.0f)) &&
+				cerca(states[2].eulerRotation, glm::vec3(0.0f, 10.0f, 20.0f)) &&
+				cerca(states[2].halfExtents, glm::vec3(0.7f, 0.8f, 0.9f)) &&
 				cerca(states[2].desplazamiento, glm::vec3(0.11f, -0.22f, 0.33f)),
 				"captura copia posicion, rotacion, mitad de tamano y desplazamiento de la fisica");
 		}
@@ -542,12 +542,12 @@ int main()
 
 		// OpenXR: identidad con anclaje mirando +Y
 		vr::Anchor anc; anc.origen = glm::vec3(5, 6, 0); anc.adelante = glm::vec3(0, 1, 0);
-		vr::XrPose cab; cab.posicion = glm::vec3(0, 1.6f, 0);   // XR: Y arriba
+		vr::XrPose cab; cab.position = glm::vec3(0, 1.6f, 0);   // XR: Y arriba
 		net::PoseEntry vrp;
 		ok(PoseFromVr(cab, nullptr, nullptr, anc, vrp), "pose VR sin mandos");
 		ok(cerca(PositionOfPose(vrp.head), glm::vec3(5, 6, 1.6f)), "pose VR: Y de XR -> Z del motor");
 		ok(cerca(RotationOfPose(vrp.head) * glm::vec3(0, 1, 0), glm::vec3(0, 1, 0)), "pose VR: -Z de XR = adelante");
-		vr::XrPose manoD; manoD.posicion = glm::vec3(0.3f, 1.2f, -0.4f);   // 30 cm a la derecha, 40 cm delante
+		vr::XrPose manoD; manoD.position = glm::vec3(0.3f, 1.2f, -0.4f);   // 30 cm a la derecha, 40 cm delante
 		PoseFromVr(cab, nullptr, &manoD, anc, vrp);
 		ok(cerca(PositionOfPose(vrp.rightHand), glm::vec3(5.3f, 6.4f, 1.2f)), "pose VR: mano derecha real (no el offset de PC)");
 		anc.adelante = glm::vec3(1, 0, 0);   // el anclaje gira: adelante de XR = +X del motor
@@ -556,8 +556,8 @@ int main()
 		ok(cerca(PositionOfPose(vrp.rightHand), glm::vec3(5.4f, 5.7f, 1.2f)), "pose VR: mano rotada con el anclaje");
 		// la conversion no modifica sus entradas (pose local intacta)
 		const vr::XrPose copia = cab; PoseFromVr(cab, nullptr, &manoD, anc, vrp);
-		ok(cab.posicion == copia.posicion && cab.orientacion == copia.orientacion, "pose VR: la pose local no se altera");
-		vr::XrPose rara; rara.posicion = glm::vec3(NAN, 0, 0);
+		ok(cab.position == copia.position && cab.orientacion == copia.orientacion, "pose VR: la pose local no se altera");
+		vr::XrPose rara; rara.position = glm::vec3(NAN, 0, 0);
 		ok(!PoseFromVr(rara, nullptr, nullptr, anc, vrp), "pose VR: NaN rechazado");
 	}
 
@@ -599,11 +599,11 @@ int main()
 		ok(sp.RebuildScene(*pu, err) && sp.Count() == 2, "tabla de puertas por id de escena");
 		const uint32_t idE = HashId("puerta_entrada"), idL = HashId("puerta_lab");
 		const glm::vec3 cerca1(0, 0, 1.7f), lejos(100, 100, 1.7f);
-		ok(sp.HostHandleRequest(*pu, idE, &cerca1) == RequestResult::Aplicada && pu->v[0].abierta, "host abre la puerta pedida");
-		ok(sp.HostHandleRequest(*pu, idE, &lejos) == RequestResult::FueraDeAlcance && pu->v[0].abierta, "fuera de alcance: rechazada");
-		ok(sp.HostHandleRequest(*pu, idE, nullptr) == RequestResult::SinPose, "sin pose: rechazada");
-		ok(sp.HostHandleRequest(*pu, 0xDEADBEEF, &cerca1) == RequestResult::IdDesconocido, "id desconocido rechazado");
-		ok(sp.HostHandleRequest(*pu, idL, &cerca1) == RequestResult::FueraDeAlcance && !pu->v[1].abierta, "otra puerta lejana: rechazada");
+		ok(sp.HostHandleRequest(*pu, idE, &cerca1) == RequestResult::Applied && pu->v[0].abierta, "host abre la puerta pedida");
+		ok(sp.HostHandleRequest(*pu, idE, &lejos) == RequestResult::OutOfReach && pu->v[0].abierta, "fuera de alcance: rechazada");
+		ok(sp.HostHandleRequest(*pu, idE, nullptr) == RequestResult::NoPose, "sin pose: rechazada");
+		ok(sp.HostHandleRequest(*pu, 0xDEADBEEF, &cerca1) == RequestResult::UnknownId, "id desconocido rechazado");
+		ok(sp.HostHandleRequest(*pu, idL, &cerca1) == RequestResult::OutOfReach && !pu->v[1].abierta, "otra puerta lejana: rechazada");
 		std::vector<OutputEvent> ev; sp.HostDetectChanges(*pu, ev);
 		ok(ev.size() == 1 && ev[0].tipo == kEvPuertaEstado && ev[0].objetivo == idE && ev[0].payload == std::vector<uint8_t>{ 1 }, "cambio difundido una vez");
 		ev.clear(); sp.HostDetectChanges(*pu, ev);
@@ -628,15 +628,15 @@ int main()
 	{
 		OwnershipArbiter a; a.DefineAnimation(kObjetoPrueba, glm::vec3(0, 2, 1)); a.TakeChanges();
 		const glm::vec3 cerca1(0, 0, 1.7f), lejos(50, 50, 1.7f);
-		ok(a.RequestToggle(kObjetoPrueba, 1, &lejos, 0) == RequestResult::FueraDeAlcance && a.Buscar(kObjetoPrueba)->dueno == kSinDueno, "fuera de alcance no concede");
-		ok(a.RequestToggle(kObjetoPrueba, 1, nullptr, 0) == RequestResult::SinPose, "sin pose no concede");
-		ok(a.RequestToggle(kObjetoPrueba, 1, &cerca1, 0) == RequestResult::Aplicada && a.Buscar(kObjetoPrueba)->dueno == 1, "concede al primero");
-		ok(a.RequestToggle(kObjetoPrueba, 2, &cerca1, 1) == RequestResult::Ocupado, "segundo solicitante: ocupado");
-		ok(a.Move(kObjetoPrueba, 2, glm::vec3(0, 1, 1), &cerca1, 1) == RequestResult::NoEsDueno, "solo el dueno mueve");
-		ok(a.Move(kObjetoPrueba, 1, glm::vec3(0, 1.5f, 1.5f), &cerca1, 1) == RequestResult::Aplicada && cerca(a.Buscar(kObjetoPrueba)->pos, glm::vec3(0, 1.5f, 1.5f)), "dueno mueve");
-		ok(a.Move(kObjetoPrueba, 1, glm::vec3(NAN, 0, 0), &cerca1, 1) == RequestResult::Invalida, "posicion NaN rechazada");
-		ok(a.Move(kObjetoPrueba, 1, glm::vec3(0, 40, 1), &cerca1, 1) == RequestResult::FueraDeAlcance, "teletransporte rechazado");
-		ok(a.ReleaseGpu(kObjetoPrueba, 2) == RequestResult::NoEsDueno, "otro no puede soltar");
+		ok(a.RequestToggle(kObjetoPrueba, 1, &lejos, 0) == RequestResult::OutOfReach && a.Buscar(kObjetoPrueba)->dueno == kSinDueno, "fuera de alcance no concede");
+		ok(a.RequestToggle(kObjetoPrueba, 1, nullptr, 0) == RequestResult::NoPose, "sin pose no concede");
+		ok(a.RequestToggle(kObjetoPrueba, 1, &cerca1, 0) == RequestResult::Applied && a.Buscar(kObjetoPrueba)->dueno == 1, "concede al primero");
+		ok(a.RequestToggle(kObjetoPrueba, 2, &cerca1, 1) == RequestResult::Busy, "segundo solicitante: ocupado");
+		ok(a.Move(kObjetoPrueba, 2, glm::vec3(0, 1, 1), &cerca1, 1) == RequestResult::NotOwner, "solo el dueno mueve");
+		ok(a.Move(kObjetoPrueba, 1, glm::vec3(0, 1.5f, 1.5f), &cerca1, 1) == RequestResult::Applied && cerca(a.Buscar(kObjetoPrueba)->pos, glm::vec3(0, 1.5f, 1.5f)), "dueno mueve");
+		ok(a.Move(kObjetoPrueba, 1, glm::vec3(NAN, 0, 0), &cerca1, 1) == RequestResult::Invalid, "posicion NaN rechazada");
+		ok(a.Move(kObjetoPrueba, 1, glm::vec3(0, 40, 1), &cerca1, 1) == RequestResult::OutOfReach, "teletransporte rechazado");
+		ok(a.ReleaseGpu(kObjetoPrueba, 2) == RequestResult::NotOwner, "otro no puede soltar");
 		a.TakeChanges();
 		a.Tick(5.0);
 		ok(a.Buscar(kObjetoPrueba)->dueno == 1, "la concesion sigue viva a mitad de plazo");
@@ -645,7 +645,7 @@ int main()
 		a.RequestToggle(kObjetoPrueba, 3, &cerca1, 20.0); a.TakeChanges();
 		a.OnPeerLeft(3);
 		ok(a.Buscar(kObjetoPrueba)->dueno == kSinDueno && a.TakeChanges().size() == 1, "desconexion libera la propiedad");
-		ok(a.RequestToggle(kObjetoPrueba, 4, &cerca1, 30.0) == RequestResult::Aplicada, "queda disponible para otro");
+		ok(a.RequestToggle(kObjetoPrueba, 4, &cerca1, 30.0) == RequestResult::Applied, "queda disponible para otro");
 		a.ReleaseGpu(kObjetoPrueba, 4);
 		ok(a.Buscar(kObjetoPrueba)->dueno == kSinDueno, "soltar libera");
 
@@ -666,8 +666,8 @@ int main()
 		int fabricas = 0;
 		auto host = Create(hub, Role::Host, "aula", glm::vec3(0, 0, 1.7f), &fabricas);
 		SceneObjectState caja;
-		caja.id = HashId("caja_sobre_mesa"); caja.posicion = glm::vec3(2, 1, 0.5f);
-		caja.colisionPresente = true; caja.tipoColision = 2; caja.masa = 2.0f;
+		caja.id = HashId("caja_sobre_mesa"); caja.position = glm::vec3(2, 1, 0.5f);
+		caja.hasCollision = true; caja.collisionKind = 2; caja.masa = 2.0f;
 		ok(host->red->SetSceneState({ caja }, false), "host registra el estado inicial de la escena");
 		auto c1 = Create(hub, Role::Client, "aula", glm::vec3(0, -0.5f, 1.7f), &fabricas);
 		std::vector<Nodo*> hostYC1 = { host.get(), c1.get() };
@@ -675,15 +675,15 @@ int main()
 		std::vector<SceneObjectState> estadosEscena;
 		const bool inicialRecibido = Esperar(hostYC1, [&] {
 			c1->red->TakeSceneStates(estadosEscena);
-			return std::any_of(estadosEscena.begin(), estadosEscena.end(), [&](const auto& e) { return e.id == caja.id && cerca(e.posicion, caja.posicion); });
+			return std::any_of(estadosEscena.begin(), estadosEscena.end(), [&](const auto& e) { return e.id == caja.id && cerca(e.position, caja.position); });
 		});
 		ok(inicialRecibido, "cliente recibe el estado inicial del objeto por ID");
-		caja.posicion = glm::vec3(3, 2, 1); caja.tipoColision = 1; caja.masa = 2.0f;
+		caja.position = glm::vec3(3, 2, 1); caja.collisionKind = 1; caja.masa = 2.0f;
 		ok(host->red->SetSceneState({ caja }, true), "host publica un cambio discreto de objeto");
 		const bool cambioRecibido = Esperar(hostYC1, [&] {
 			c1->red->TakeSceneStates(estadosEscena);
 			return std::any_of(estadosEscena.begin(), estadosEscena.end(), [&](const auto& e) {
-				return e.id == caja.id && cerca(e.posicion, caja.posicion) && e.tipoColision == 1;
+				return e.id == caja.id && cerca(e.position, caja.position) && e.collisionKind == 1;
 			});
 		});
 		ok(cambioRecibido,
@@ -719,7 +719,7 @@ int main()
 			host->red->TakePhysicsRequests(solicitudes);
 			return !solicitudes.empty();
 		});
-		ok(agarreRecibido && solicitudes.size() == 1 && solicitudes[0].id == enVuelo.objectId && solicitudes[0].peer == peerC1 && solicitudes[0].agarrar,
+		ok(agarreRecibido && solicitudes.size() == 1 && solicitudes[0].id == enVuelo.objectId && solicitudes[0].peer == peerC1 && solicitudes[0].grabActionHandle,
 			"host recibe la solicitud con peer e ID asignados por el protocolo");
 		host->red->SetDynamicOwner(enVuelo.objectId, peerC1);
 		ok(Esperar(hostYC1, [&] { return c1->red->DynamicOwner(enVuelo.objectId) == peerC1; }),
@@ -730,7 +730,7 @@ int main()
 			host->red->TakePhysicsRequests(solicitudes);
 			return !solicitudes.empty();
 		});
-		ok(lanzamientoRecibido && solicitudes.size() == 1 && !solicitudes[0].agarrar && solicitudes[0].peer == peerC1 && cerca(solicitudes[0].velocidad.z, 5.0f),
+		ok(lanzamientoRecibido && solicitudes.size() == 1 && !solicitudes[0].grabActionHandle && solicitudes[0].peer == peerC1 && cerca(solicitudes[0].speed.z, 5.0f),
 			"el host recibe solicitud de lanzamiento del propietario actual");
 		ok(c1->red->RequestDynamicRelease(enVuelo.objectId,
 			{ kRapidezMaximaLanzamiento + 5e-5f, 0.0f, 0.0f }),
@@ -741,7 +741,7 @@ int main()
 			return !solicitudes.empty();
 		});
 		ok(lanzamientoRedondeadoRecibido && solicitudes.size() == 1 &&
-			cerca(glm::length(solicitudes[0].velocidad), kRapidezMaximaLanzamiento, 1e-6f),
+			cerca(glm::length(solicitudes[0].speed), kRapidezMaximaLanzamiento, 1e-6f),
 			"el host entrega una velocidad ajustada exactamente al límite de 15 m/s");
 		const size_t ignoradosAntes = host->red->GetDiagnosticInfo().eventosIgnorados;
 		ok(c1->red->RequestDynamicRelease(enVuelo.objectId,
@@ -761,7 +761,7 @@ int main()
 		const bool tardioEscena = Esperar(todos, [&] {
 			c2->red->TakeSceneStates(estadosEscena);
 			return std::any_of(estadosEscena.begin(), estadosEscena.end(), [&](const auto& e) {
-				return e.id == caja.id && cerca(e.posicion, caja.posicion) && e.tipoColision == 1;
+				return e.id == caja.id && cerca(e.position, caja.position) && e.collisionKind == 1;
 			});
 		});
 		ok(tardioEscena,

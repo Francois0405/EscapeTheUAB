@@ -19,21 +19,21 @@ namespace stereo
 	// Distancia entre las pupilas: 6,4 cm de media.
 	constexpr float MitadSeparacionOjos = 0.032f;
 
-	enum class Ojo { Izquierdo, Derecho };
+	enum class Eye { Left, Right };
 
 	// Matriz de vista de un ojo a partir de la vista CENTRAL (la de la cámara FPS).
 	// Se desplaza el MUNDO en el espacio de la cámara: para el ojo izquierdo el mundo se mueve hacia
 	// la derecha (+X de cámara), es decir, el ojo queda a la izquierda del centro. La orientación no cambia.
-	inline glm::mat4 EyeViewMatrix(const glm::mat4& vistaCentral, Ojo ojo, float mitadSeparacion = MitadSeparacionOjos)
+	inline glm::mat4 EyeViewMatrix(const glm::mat4& vistaCentral, Eye ojo, float mitadSeparacion = MitadSeparacionOjos)
 	{
-		const float desplazamiento = (ojo == Ojo::Izquierdo) ? mitadSeparacion : -mitadSeparacion;
+		const float desplazamiento = (ojo == Eye::Left) ? mitadSeparacion : -mitadSeparacion;
 		return glm::translate(glm::mat4(1.0f), glm::vec3(desplazamiento, 0.0f, 0.0f)) * vistaCentral;
 	}
 
 	// Rectángulo de pantalla de cada ojo: mitad izquierda / mitad derecha.
 	struct Rectangulo { int x, ancho; };
-	inline Rectangulo ScreenHalf(Ojo ojo, int anchoTotal)
+	inline Rectangulo ScreenHalf(Eye ojo, int anchoTotal)
 	{
-		return { ojo == Ojo::Izquierdo ? 0 : anchoTotal / 2, anchoTotal / 2 };
+		return { ojo == Eye::Left ? 0 : anchoTotal / 2, anchoTotal / 2 };
 	}
 }

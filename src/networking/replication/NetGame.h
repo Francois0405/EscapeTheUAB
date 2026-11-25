@@ -22,7 +22,7 @@
 
 namespace netgame
 {
-	enum class NetworkPhase { Offline, Arrancando, Active, Error };
+	enum class NetworkPhase { Offline, Starting, Active, Error };
 
 	struct Diagnostico
 	{
@@ -67,7 +67,7 @@ namespace netgame
 		bool PublishFinalPhysicsState(const net::DynamicStateEntry& estado, net::PeerId soloPara = net::kUnassignedPeerId);
 		void TakePhysicsRequests(std::vector<DynamicObjectRequest>& salida);
 		bool RequestDynamicGrab(uint32_t id, const glm::vec3& origen, const glm::vec3& direccion);
-		bool RequestDynamicRelease(uint32_t id, const glm::vec3& velocidad);
+		bool RequestDynamicRelease(uint32_t id, const glm::vec3& speed);
 		void SetDynamicOwner(uint32_t id, net::PeerId propietario);
 		net::PeerId DynamicOwner(uint32_t id) const;
 		std::map<uint32_t, net::PeerId> PropietariosDinamicos() const { return propietariosDinamicos_; }
@@ -75,8 +75,8 @@ namespace netgame
 		bool PoseOfPeer(net::PeerId peer, net::PoseEntry& salida) const;
 
 		bool IsActive() const { return fase_ == NetworkPhase::Active; }
-		bool IsConnecting() const { return fase_ == NetworkPhase::Arrancando; }
-		bool IsOnline() const { return fase_ == NetworkPhase::Active || fase_ == NetworkPhase::Arrancando; }
+		bool IsConnecting() const { return fase_ == NetworkPhase::Starting; }
+		bool IsOnline() const { return fase_ == NetworkPhase::Active || fase_ == NetworkPhase::Starting; }
 		bool IsHosting() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Host; }
 		bool IsClient() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Client; }
 		net::PeerId LocalPeerId() const { return servicio_ ? servicio_->LocalPeer() : net::kUnassignedPeerId; }

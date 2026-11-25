@@ -131,10 +131,10 @@ namespace
         if (valor.is_string())
         {
             const std::string texto = valor.get<std::string>();
-            if (texto == "static") { tipo = fisica::BodyType::Estatico; return true; }
-            if (texto == "dynamic" && !permitirCinematico) { tipo = fisica::BodyType::Dinamico; return true; }
-            if (texto == "bouncy" && !permitirCinematico) { tipo = fisica::BodyType::Rebotador; return true; }
-            if (texto == "kinematic" && permitirCinematico) { tipo = fisica::BodyType::Cinematico; return true; }
+            if (texto == "static") { tipo = fisica::BodyType::Static; return true; }
+            if (texto == "dynamic" && !permitirCinematico) { tipo = fisica::BodyType::Dynamic; return true; }
+            if (texto == "bouncy" && !permitirCinematico) { tipo = fisica::BodyType::Bouncer; return true; }
+            if (texto == "kinematic" && permitirCinematico) { tipo = fisica::BodyType::Kinematic; return true; }
         }
         error = contexto + ".type debe ser " +
             (permitirCinematico ? "\"static\" o \"kinematic\"." : "\"static\", \"dynamic\" o \"bouncy\".");
@@ -186,14 +186,14 @@ namespace
             if (!datos["shape"].is_string())
             { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
             const std::string forma = datos["shape"].get<std::string>();
-            if (forma == "box") fisica.forma = fisica::BodyShape::Caja;
-            else if (forma == "sphere") fisica.forma = fisica::BodyShape::Esfera;
+            if (forma == "box") fisica.forma = fisica::BodyShape::Box;
+            else if (forma == "sphere") fisica.forma = fisica::BodyShape::Sphere;
             else
             { error = ctx + ".shape debe ser \"box\" o \"sphere\"."; return false; }
         }
-        if (fisica.tipo == fisica::BodyType::Rebotador && fisica.forma != fisica::BodyShape::Esfera)
+        if (fisica.tipo == fisica::BodyType::Bouncer && fisica.forma != fisica::BodyShape::Sphere)
         { error = ctx + " de tipo bouncy requiere shape \"sphere\"."; return false; }
-        if (!leerCaja(datos, fisica.mitadTamano, fisica.desplazamiento, ctx, error)) return false;
+        if (!leerCaja(datos, fisica.halfExtents, fisica.desplazamiento, ctx, error)) return false;
 
         if (fisica::IsDynamicBody(fisica.tipo))
         {
@@ -339,7 +339,7 @@ namespace
                 entrada["wallId"].get<std::string>().empty() || entrada["openingId"].get<std::string>().empty())
             { error = contexto + ".wallId/openingId deben ser textos no vacios."; return false; }
             objeto.paredId = entrada["wallId"].get<std::string>();
-            objeto.aperturaId = entrada["openingId"].get<std::string>();
+            objeto.openingId = entrada["openingId"].get<std::string>();
         }
         if (entrada.contains("allowArchitecturePenetration"))
         {
@@ -347,18 +347,18 @@ namespace
             { error = contexto + ".allowArchitecturePenetration debe ser booleano."; return false; }
             objeto.permitirPenetracionArquitectura = entrada["allowArchitecturePenetration"].get<bool>();
         }
-        if (!leerVector3(entrada["position"], objeto.posicion, contexto + ".position", error)) return false;
+        if (!leerVector3(entrada["position"], objeto.position, contexto + ".position", error)) return false;
 
         if (entrada.contains("rotation"))
         {
-            glm::vec3 rotacion(0.0f);
-            if (!leerVector3(entrada["rotation"], rotacion, contexto + ".rotation", error)) return false;
-            if (rotacion.x != 0.0f || rotacion.y != 0.0f)
+            glm::vec3 eulerRotation(0.0f);
+            if (!leerVector3(entrada["rotation"], eulerRotation, contexto + ".rotation", error)) return false;
+            if (eulerRotation.x != 0.0f || eulerRotation.y != 0.0f)
             {
                 error = contexto + ".rotation: los objetos animados solo giran sobre Z, usa [0, 0, grados].";
                 return false;
             }
-            objeto.giroZGrados = rotacion.z;
+            objeto.yawDegrees = eulerRotation.z;
         }
         if (entrada.contains("scale"))
         {
@@ -404,7 +404,7 @@ namespace
                 SceneCollider colisionador;
                 colisionador.nodo = caja["node"].get<std::string>();
                 if (!leerTipo(caja["type"], true, colisionador.tipo, ctx, error)) return false;
-                if (!leerCaja(caja, colisionador.mitadTamano, colisionador.desplazamiento, ctx, error)) return false;
+                if (!leerCaja(caja, colisionador.halfExtents, colisionador.desplazamiento, ctx, error)) return false;
                 objeto.colisionadores.push_back(std::move(colisionador));
             }
         }
@@ -564,8 +564,8 @@ bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datosSalida
                     { error = contexto + ".allowArchitecturePenetration debe ser booleano."; return false; }
                     objeto.permitirPenetracionArquitectura = entrada["allowArchitecturePenetration"].get<bool>();
                 }
-                if (!leerVector3(entrada["position"], objeto.posicion, contexto + ".position", error) ||
-                    !leerVector3(entrada["rotation"], objeto.rotacion, contexto + ".rotation", error) ||
+                if (!leerVector3(entrada["position"], objeto.position, contexto + ".position", error) ||
+                    !leerVector3(entrada["rotation"], objeto.eulerRotation, contexto + ".rotation", error) ||
                     !leerVector3(entrada["scale"], objeto.escala, contexto + ".scale", error))
                     return false;
 
@@ -600,10 +600,10 @@ bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datosSalida
                         objeto.pared.aperturas.push_back(std::move(ap));
                     }
                     std::vector<SceneWallSection> comprobacion;
-                    if (!GenerateWallSections(glm::abs(objeto.escala) * objeto.fisica.mitadTamano, objeto.pared.aperturas, comprobacion, error))
+                    if (!GenerateWallSections(glm::abs(objeto.escala) * objeto.fisica.halfExtents, objeto.pared.aperturas, comprobacion, error))
                     { error = contexto + ".wall: " + error; return false; }
-                    if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Estatico ||
-                        objeto.fisica.mitadTamano != glm::vec3(1.0f) ||
+                    if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Static ||
+                        objeto.fisica.halfExtents != glm::vec3(1.0f) ||
                         objeto.fisica.desplazamiento != glm::vec3(0.0f))
                     { error = contexto + ".wall requiere un collider static centrado en el cubo de pared."; return false; }
                 }
@@ -656,7 +656,7 @@ bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datosSalida
                 const auto puerta = std::find_if(candidatosAnimados.begin(), candidatosAnimados.end(), [&](const auto& a) {
                     return a.id == apertura.idPuerta && a.paredId == pared.id;
                 });
-                if (puerta == candidatosAnimados.end() || puerta->aperturaId != apertura.id)
+                if (puerta == candidatosAnimados.end() || puerta->openingId != apertura.id)
                 { error = "La apertura de '" + pared.id + "' no tiene una puerta animada asociada de forma univoca."; return false; }
             }
         for (const SceneAnimatedObject& puerta : candidatosAnimados)
@@ -666,7 +666,7 @@ bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datosSalida
                 if (pared == candidatos.end() || !pared->pared.presente)
                 { error = "La puerta '" + puerta.id + "' referencia una pared paramétrica inexistente."; return false; }
                 const auto apertura = std::find_if(pared->pared.aperturas.begin(), pared->pared.aperturas.end(),
-                    [&](const SceneWallOpening& item) { return item.id == puerta.aperturaId && item.idPuerta == puerta.id; });
+                    [&](const SceneWallOpening& item) { return item.id == puerta.openingId && item.idPuerta == puerta.id; });
                 if (apertura == pared->pared.aperturas.end())
                 { error = "La puerta '" + puerta.id + "' referencia un vano inexistente o asociado a otra instancia."; return false; }
             }

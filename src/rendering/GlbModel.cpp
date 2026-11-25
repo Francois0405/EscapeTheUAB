@@ -169,12 +169,12 @@ namespace glb
 		{
 			LocalTransform resultado;
 			const glm::mat4 matriz = glm::make_mat4(m);
-			resultado.posicion = glm::vec3(matriz[3]);
+			resultado.position = glm::vec3(matriz[3]);
 			resultado.escala = glm::vec3(glm::length(glm::vec3(matriz[0])),
 				glm::length(glm::vec3(matriz[1])), glm::length(glm::vec3(matriz[2])));
 			glm::mat3 giro(glm::vec3(matriz[0]) / resultado.escala.x,
 				glm::vec3(matriz[1]) / resultado.escala.y, glm::vec3(matriz[2]) / resultado.escala.z);
-			resultado.rotacion = glm::normalize(glm::quat_cast(giro));
+			resultado.eulerRotation = glm::normalize(glm::quat_cast(giro));
 			return resultado;
 		}
 
@@ -184,9 +184,9 @@ namespace glb
 
 			LocalTransform resultado;
 			if (nodo.has_translation)
-				resultado.posicion = glm::vec3(nodo.translation[0], nodo.translation[1], nodo.translation[2]);
+				resultado.position = glm::vec3(nodo.translation[0], nodo.translation[1], nodo.translation[2]);
 			if (nodo.has_rotation)   // el archivo guarda x,y,z,w
-				resultado.rotacion = glm::normalize(glm::quat(nodo.rotation[3], nodo.rotation[0], nodo.rotation[1], nodo.rotation[2]));
+				resultado.eulerRotation = glm::normalize(glm::quat(nodo.rotation[3], nodo.rotation[0], nodo.rotation[1], nodo.rotation[2]));
 			if (nodo.has_scale)
 				resultado.escala = glm::vec3(nodo.scale[0], nodo.scale[1], nodo.scale[2]);
 			return resultado;
@@ -201,7 +201,7 @@ namespace glb
 				GlbNode& nodo = modelo.nodos[i];
 				nodo.nombre = origen.name ? origen.name : "";
 				nodo.padre = origen.parent ? static_cast<int>(origen.parent - datos.nodes) : -1;
-				nodo.indiceMalla = origen.mesh ? static_cast<int>(origen.mesh - datos.meshes) : -1;
+				nodo.meshIndex = origen.mesh ? static_cast<int>(origen.mesh - datos.meshes) : -1;
 				nodo.reposo = LeerTransformacion(origen);
 
 				if (origen.skin != nullptr)
@@ -217,9 +217,9 @@ namespace glb
 		{
 			switch (tipo)
 			{
-			case cgltf_animation_path_type_translation: propiedad = AnimatedProperty::Posicion; return true;
-			case cgltf_animation_path_type_rotation:    propiedad = AnimatedProperty::Rotacion; return true;
-			case cgltf_animation_path_type_scale:       propiedad = AnimatedProperty::Escala;   return true;
+			case cgltf_animation_path_type_translation: propiedad = AnimatedProperty::Position; return true;
+			case cgltf_animation_path_type_rotation:    propiedad = AnimatedProperty::Rotation; return true;
+			case cgltf_animation_path_type_scale:       propiedad = AnimatedProperty::Scale;   return true;
 			default: return false;   // "weights" (morph targets): no soportado
 			}
 		}
@@ -253,11 +253,11 @@ namespace glb
 				return false;
 			}
 			canal.interpolacion = (muestreador.interpolation == cgltf_interpolation_type_step)
-				? InterpolationMode::Escalon : InterpolationMode::Lineal;
-			canal.indiceNodo = static_cast<int>(origen.target_node - datos.nodes);
+				? InterpolationMode::Step : InterpolationMode::Linear;
+			canal.nodeIndex = static_cast<int>(origen.target_node - datos.nodes);
 			canal.tiempos = LeerFlotantes(muestreador.input);
 
-			const size_t componentes = (canal.propiedad == AnimatedProperty::Rotacion) ? 4 : 3;
+			const size_t componentes = (canal.propiedad == AnimatedProperty::Rotation) ? 4 : 3;
 			canal.valores = AgruparValores(LeerFlotantes(muestreador.output), componentes);
 			if (canal.tiempos.empty() || canal.tiempos.size() != canal.valores.size())
 			{
@@ -300,7 +300,7 @@ namespace glb
 						error = "animacion '" + animation.nombre + "': " + error;
 						return false;
 					}
-					if (canal.indiceNodo >= 0) animation.canales.push_back(std::move(canal));
+					if (canal.nodeIndex >= 0) animation.canales.push_back(std::move(canal));
 				}
 				NormalizarTiempos(animation);
 				modelo.animaciones.push_back(std::move(animation));
@@ -351,22 +351,22 @@ namespace glb
 	glm::mat4 LocalMatrix(const LocalTransform& transformacion)
 	{
 		glm::mat4 matriz(1.0f);
-		matriz = glm::translate(matriz, transformacion.posicion);   // 3. mover
-		matriz = matriz * glm::mat4_cast(transformacion.rotacion);  // 2. girar
+		matriz = glm::translate(matriz, transformacion.position);   // 3. mover
+		matriz = matriz * glm::mat4_cast(transformacion.eulerRotation);  // 2. girar
 		matriz = glm::scale(matriz, transformacion.escala);         // 1. escalar (se aplica primero a los vértices)
 		return matriz;
 	}
 
-	glm::mat4 NodeWorldMatrix(const GlbModel& modelo, const GlbPose& pose, int indiceNodo)
+	glm::mat4 NodeWorldMatrix(const GlbModel& modelo, const GlbPose& pose, int nodeIndex)
 	{
 		glm::mat4 mundo(1.0f);
 		size_t pasos = 0;
 		// Subimos del nodo a su padre, al padre del padre... y vamos multiplicando por la izquierda.
 		// El límite de pasos evita un bucle infinito si un archivo corrupto tuviera un ciclo.
-		while (indiceNodo >= 0 && pasos++ <= modelo.nodos.size())
+		while (nodeIndex >= 0 && pasos++ <= modelo.nodos.size())
 		{
-			mundo = LocalMatrix(pose.nodos[indiceNodo]) * mundo;
-			indiceNodo = modelo.nodos[indiceNodo].padre;
+			mundo = LocalMatrix(pose.nodos[nodeIndex]) * mundo;
+			nodeIndex = modelo.nodos[nodeIndex].padre;
 		}
 		return mundo;
 	}
@@ -384,9 +384,9 @@ namespace glb
 		glm::vec3 maximo(-1.0e30f);
 		for (size_t i = 0; i < modelo.nodos.size(); ++i)
 		{
-			if (modelo.nodos[i].indiceMalla < 0) continue;
+			if (modelo.nodos[i].meshIndex < 0) continue;
 			const glm::mat4 mundo = NodeWorldMatrix(modelo, pose, static_cast<int>(i));
-			for (const GlbPrimitive& primitiva : modelo.mallas[modelo.nodos[i].indiceMalla].primitivas)
+			for (const GlbPrimitive& primitiva : modelo.mallas[modelo.nodos[i].meshIndex].primitivas)
 				for (const glm::vec3& vertice : primitiva.posiciones)
 				{
 					const glm::vec3 punto = glm::vec3(mundo * glm::vec4(vertice, 1.0f));
@@ -424,15 +424,15 @@ namespace glb
 	{
 		for (const AnimationChannel& canal : animation.canales)
 		{
-			if (canal.indiceNodo < 0 || canal.indiceNodo >= static_cast<int>(pose.nodos.size())) continue;
+			if (canal.nodeIndex < 0 || canal.nodeIndex >= static_cast<int>(pose.nodos.size())) continue;
 
 			const glm::vec4 valor = ChannelValueAtTime(canal, tiempo);
-			LocalTransform& nodo = pose.nodos[canal.indiceNodo];
+			LocalTransform& nodo = pose.nodos[canal.nodeIndex];
 			switch (canal.propiedad)
 			{
-			case AnimatedProperty::Posicion: nodo.posicion = glm::vec3(valor); break;
-			case AnimatedProperty::Escala:   nodo.escala = glm::vec3(valor); break;
-			case AnimatedProperty::Rotacion: nodo.rotacion = QuaternionFromVec4(valor); break;
+			case AnimatedProperty::Position: nodo.position = glm::vec3(valor); break;
+			case AnimatedProperty::Scale:   nodo.escala = glm::vec3(valor); break;
+			case AnimatedProperty::Rotation: nodo.eulerRotation = QuaternionFromVec4(valor); break;
 			}
 		}
 	}

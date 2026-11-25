@@ -48,7 +48,7 @@ void RuntimeRenderer::drawStereoScene(int anchoVentana, int altoVentana)
 		objecte, true, pas, front_faces, oculta, test_vis, back_line, ilumina, llum_ambient, llumGL, ifixe, ilum2sides,
 		eixos, grid, hgrid);
 
-	for (const stereo::Ojo ojo : { stereo::Ojo::Izquierdo, stereo::Ojo::Derecho })
+	for (const stereo::Eye ojo : { stereo::Eye::Left, stereo::Eye::Right })
 	{
 		const stereo::Rectangulo mitad = stereo::ScreenHalf(ojo, anchoVentana);
 		// Cada mitad tiene SU relación de aspecto (la mitad de ancho): Projeccio_Perspectiva fija el viewport y la proyección.
@@ -103,15 +103,15 @@ void RuntimeRenderer::copyEyeToWindow(const vr::VrEye& ojo)
 bool RuntimeRenderer::drawVrScene()
 {
 	const vr::FrameResult resultado = openXrManager.BeginXrFrame();
-	if (resultado == vr::FrameResult::NoActivo) return false;
+	if (resultado == vr::FrameResult::Inactive) return false;
 
 	bool dibujado = false;
-	if (resultado == vr::FrameResult::Renderizar)
+	if (resultado == vr::FrameResult::Render)
 	{
 		const glm::vec3 pies = piesJugador();
 		const glm::vec3 haciaDondeMira(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
 		const vr::Anchor anclaje = vr::PlayerAnchor(pies, haciaDondeMira,
-			openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo, alturaOjosJugador());
+			openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Floor, alturaOjosJugador());
 
 		glDisable(GL_SCISSOR_TEST);
 		glm::vec3 sumaOjos(0.0f); int ojosCabeza = 0; vr::XrPose primerOjo;
@@ -120,7 +120,7 @@ bool RuntimeRenderer::drawVrScene()
 			vr::VrEye ojo;
 			if (!openXrManager.AcquireEyeImage(i, ojo)) continue;   // el fotograma se enviará vacío; AdquirirOjo no deja nada a medias
 			if (ojosCabeza++ == 0) primerOjo = ojo.pose;       // para la red: pose real de la cabeza (media de los ojos)
-			sumaOjos += ojo.pose.posicion;
+			sumaOjos += ojo.pose.position;
 
 			glViewport(0, 0, ojo.ancho, ojo.alto);
 			ProjectionMatrix = vr::ProjectionFromFov(ojo.fov, vrPlanoCercano, vrPlanoLejano);
@@ -145,7 +145,7 @@ bool RuntimeRenderer::drawVrScene()
 		if (ojosCabeza > 0)
 		{
 			lastVrHead = primerOjo;
-			lastVrHead.posicion = sumaOjos / static_cast<float>(ojosCabeza);
+			lastVrHead.position = sumaOjos / static_cast<float>(ojosCabeza);
 			hasVrHead = true;
 		}
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);

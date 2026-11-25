@@ -54,7 +54,7 @@ namespace animation
 	}
 
 	// Lleva la cuenta del tiempo: empieza, avanza con el delta de cada fotograma y termina.
-	struct Reproductor
+	struct Playback
 	{
 		float tiempo = 0.0f;           // segundos transcurridos
 		float duracion = 0.0f;         // segundos totales de la animación
@@ -97,19 +97,19 @@ namespace animation
 	//   3. girar: como la bisagra está en el origen, gira alrededor de ella.
 	//   4. llevar la bisagra a su sitio en el mundo.
 	inline glm::mat4 HingedDoorMatrix(
-		const glm::vec3& mitadTamano,
+		const glm::vec3& halfExtents,
 		const glm::vec3& posicionBisagra,
 		float anguloGrados)
 	{
 		// Tras escalar, la bisagra (en el borde y=-1 del cubo, a ras de suelo z=-1)
 		// está en (0, -mitad.y, -mitad.z). Sumamos lo contrario para llevarla al origen.
-		const glm::vec3 desplazamientoBisagra(0.0f, mitadTamano.y, mitadTamano.z);
+		const glm::vec3 desplazamientoBisagra(0.0f, halfExtents.y, halfExtents.z);
 
 		glm::mat4 matriz(1.0f);
 		matriz = glm::translate(matriz, posicionBisagra);                                   // 4
 		matriz = glm::rotate(matriz, glm::radians(anguloGrados), glm::vec3(0, 0, 1));       // 3
 		matriz = glm::translate(matriz, desplazamientoBisagra);                             // 2
-		matriz = glm::scale(matriz, mitadTamano);                                           // 1
+		matriz = glm::scale(matriz, halfExtents);                                           // 1
 		return matriz;
 	}
 }

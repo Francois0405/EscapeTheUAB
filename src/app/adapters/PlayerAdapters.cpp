@@ -62,15 +62,15 @@ void gazeOriginAndDirection(glm::vec3& origen, glm::vec3& direccion)
 {
 	if (openXrManager.IsSessionRunning())
 	{
-		vr::XrPose poseMando;
-		if (openXrManager.ControllerAimPose(1, poseMando)) // Solo mando derecho (1)
+		vr::XrPose controllerPose;
+		if (openXrManager.ControllerAimPose(1, controllerPose)) // Solo mando derecho (1)
 		{
 			const glm::vec3 pies = physicsWorld.HasPlayerBody() ? physicsWorld.PlayerFeetPosition() : feetPositionFromCamera();
 			const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
 			const vr::Anchor anclaje = vr::PlayerAnchor(pies, frenteFPS,
-				openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo, physicsWorld.PlayerEyeHeight());
+				openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Floor, physicsWorld.PlayerEyeHeight());
 
-			const glm::mat4 vistaMando = vr::VrEyeViewMatrix(poseMando, anclaje);
+			const glm::mat4 vistaMando = vr::VrEyeViewMatrix(controllerPose, anclaje);
 			const glm::mat4 mundoMando = glm::inverse(vistaMando);
 
 			origen = glm::vec3(mundoMando[3]);

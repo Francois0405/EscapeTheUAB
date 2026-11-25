@@ -43,7 +43,7 @@ namespace netgame
 	bool NetworkGame::Start(const NetworkConfig& cfg, const std::string& escenaId, ISceneDoors* puertas, const glm::vec3& posObjeto)
 	{
 		if (cfg.rol == net::Role::Offline) return true;          // OFFLINE: ni servicio, ni hilo, ni ENet
-		if (fase_ == NetworkPhase::Arrancando || fase_ == NetworkPhase::Active) return false;
+		if (fase_ == NetworkPhase::Starting || fase_ == NetworkPhase::Active) return false;
 		if (arranque_.joinable()) arranque_.join();
 		if (servicio_) { servicio_->Stop(); servicio_.reset(); }
 		if (escenaId.empty() || escenaId.size() > net::kMaxSceneIdLength) { FailSession("Identificador de escena no valido para la red"); return false; }
@@ -77,7 +77,7 @@ namespace netgame
 			if (!t) sinTransporte_ = true;
 			return t;
 		});
-		fase_ = NetworkPhase::Arrancando; pendienteDetener_ = false; arrancando_ = true;
+		fase_ = NetworkPhase::Starting; pendienteDetener_ = false; arrancando_ = true;
 		// Start() puede resolver DNS / abrir sockets: fuera del hilo de render.
 		arranque_ = std::thread([this] { arranqueOk_.store(servicio_->Start()); arrancando_.store(false, std::memory_order_release); });
 		return true;
@@ -93,7 +93,7 @@ namespace netgame
 
 	void NetworkGame::Stop()
 	{
-		if (fase_ == NetworkPhase::Arrancando) { pendienteDetener_ = true; return; }   // se completa en Actualizar, sin bloquear
+		if (fase_ == NetworkPhase::Starting) { pendienteDetener_ = true; return; }   // se completa en Actualizar, sin bloquear
 		if (arranque_.joinable()) arranque_.join();
 		if (servicio_) { servicio_->Stop(); servicio_.reset(); }   // los pares ven la desconexion y liberan la propiedad
 		ResetRemoteState();
@@ -205,10 +205,10 @@ namespace netgame
 		return !payload.empty() && Enqueue({ kEvSolicitarAgarreDinamico, id, std::move(payload) });
 	}
 
-	bool NetworkGame::RequestDynamicRelease(uint32_t id, const glm::vec3& velocidad)
+	bool NetworkGame::RequestDynamicRelease(uint32_t id, const glm::vec3& speed)
 	{
-		if (cfg_.rol != net::Role::Client || !IsActive() || id == 0 || !IsValidCoordinate(velocidad)) return false;
-		OutputEvent evento{ kEvSolicitarSoltarDinamico, id, EncodeVec3(velocidad) };
+		if (cfg_.rol != net::Role::Client || !IsActive() || id == 0 || !IsValidCoordinate(speed)) return false;
+		OutputEvent evento{ kEvSolicitarSoltarDinamico, id, EncodeVec3(speed) };
 		return Enqueue(evento);
 	}
 
@@ -259,7 +259,7 @@ namespace netgame
 		const double dt = std::clamp(ahora - ultimoAhora_, 0.0, 0.25);
 		ultimoAhora_ = ahora;
 
-		if (fase_ == NetworkPhase::Arrancando)
+		if (fase_ == NetworkPhase::Starting)
 		{
 			if (arrancando_.load(std::memory_order_acquire)) return;   // el render sigue sin esperar
 			if (arranque_.joinable()) arranque_.join();
@@ -371,7 +371,7 @@ namespace netgame
 	{
 		const net::EventMsg& ev = e.event;
 		glm::vec3 cabeza; const bool hay = HeadPose(e.peer, poses, cabeza);
-		RequestResult r = RequestResult::Invalida;
+		RequestResult r = RequestResult::Invalid;
 		switch (ev.eventType)
 		{
 		case kEvPuertaSolicitud:
@@ -399,15 +399,15 @@ namespace netgame
 		}
 		case kEvSolicitarSoltarDinamico:
 		{
-			glm::vec3 velocidad;
-			if (DecodeVec3(ev.payload, velocidad) && ClampHostThrowSpeed(velocidad))
-				solicitudesFisicas_.push_back({ ev.targetId, e.peer, false, velocidad });
+			glm::vec3 speed;
+			if (DecodeVec3(ev.payload, speed) && ClampHostThrowSpeed(speed))
+				solicitudesFisicas_.push_back({ ev.targetId, e.peer, false, speed });
 			else ++ignorados_;
 			break;
 		}
 		default: break;   // los clientes no dictan estados
 		}
-		if (r != RequestResult::Aplicada) ++ignorados_;
+		if (r != RequestResult::Applied) ++ignorados_;
 	}
 
 	void NetworkGame::ProcessClient(const net::NetEvent& e)
@@ -533,7 +533,7 @@ namespace netgame
 		if (fase_ == NetworkPhase::Offline) { d.modo = "Offline"; d.estado = "Sin red"; return d; }
 		switch (fase_)
 		{
-		case NetworkPhase::Arrancando: d.estado = "Iniciando..."; break;
+		case NetworkPhase::Starting: d.estado = "Iniciando..."; break;
 		case NetworkPhase::Error: d.estado = "Error (offline)"; break;
 		default:
 			switch (servicio_ ? servicio_->State() : net::ConnectionState::Idle)

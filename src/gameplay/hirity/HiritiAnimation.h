@@ -135,7 +135,7 @@ namespace game
 			return variante;
 		}
 
-		bool UpdateFollowSuspension(bool jugadorManipula, const glm::vec3& velocidad, float delta)
+		bool UpdateFollowSuspension(bool jugadorManipula, const glm::vec3& speed, float delta)
 		{
 			if (jugadorManipula)
 			{
@@ -146,8 +146,8 @@ namespace game
 			if (!m_seguimientoSuspendido) return true;
 
 			if (std::isfinite(delta) && delta > 0.0f &&
-				std::isfinite(velocidad.x) && std::isfinite(velocidad.y) && std::isfinite(velocidad.z) &&
-				glm::length(velocidad) <= VelocidadEstableParaReanudarSeguimiento)
+				std::isfinite(speed.x) && std::isfinite(speed.y) && std::isfinite(speed.z) &&
+				glm::length(speed) <= VelocidadEstableParaReanudarSeguimiento)
 			{
 				m_tiempoEstable += delta;
 				if (m_tiempoEstable >= TiempoEstableParaReanudarSeguimiento)
@@ -164,13 +164,13 @@ namespace game
 		}
 
 		static glm::vec3 ComputeFollowAcceleration(const glm::vec3& posicionHiriti,
-			const glm::vec3& posicionJugador, const glm::vec3& velocidad,
+			const glm::vec3& posicionJugador, const glm::vec3& speed,
 			const glm::vec3& direccionSeguimiento, float distanciaParada,
 			float velocidadMaxima, float aceleracionMaxima)
 		{
 			const glm::vec2 haciaJugador(posicionJugador.x - posicionHiriti.x,
 				posicionJugador.y - posicionHiriti.y);
-			const glm::vec2 velocidadHorizontal(velocidad.x, velocidad.y);
+			const glm::vec2 velocidadHorizontal(speed.x, speed.y);
 			const float distancia = glm::length(haciaJugador);
 			if (!std::isfinite(distancia) || !std::isfinite(velocidadHorizontal.x) ||
 				!std::isfinite(velocidadHorizontal.y) || !std::isfinite(distanciaParada) ||

@@ -27,13 +27,13 @@ const netgame::session::SessionContext& sessionBindings()
 		[] { return glm::vec3(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z)); },
 		[] { return physicsWorld.HasPlayerBody() ? physicsWorld.PlayerFeetPosition() : feetPositionFromCamera(); },
 		[] { return sceneSerializer.IsLoaded() ? sceneSerializer.Ruta().stem().string() : std::string(); },
-		[](std::string& error, bool autoridadFisica) { return rebuildPhysicsAfterEditing(error, autoridadFisica); },
+		[](std::string& error, bool physicsAuthority) { return rebuildPhysicsAfterEditing(error, physicsAuthority); },
 		[] { return fpsInputActive(); },
 		[](glm::vec3& origen, glm::vec3& direccion) { gazeOriginAndDirection(origen, direccion); },
 		[] { return grabTraceEnabled(); },
 		[](const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
-			const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
-			{ traceGrab(evento, id, peer, propietario, posicion, punto, detalle); },
+			const glm::vec3& position, const glm::vec3& punto, const char* detalle)
+			{ traceGrab(evento, id, peer, propietario, position, punto, detalle); },
 		[]
 		{
 			hiritiAnimator.DiscoverByInteraction();

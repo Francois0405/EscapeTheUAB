@@ -21,11 +21,11 @@
 namespace game::interaction
 {
 	// El valor numerico aparece en los registros de diagnostico de agarre: no reordenar.
-	enum class InteractionAction { Ninguna, Recoger, Abrir, Cerrar };
+	enum class InteractionAction { None, PickUp, Open, Close };
 
 	struct InteractionTarget
 	{
-		InteractionAction accion = InteractionAction::Ninguna;
+		InteractionAction accion = InteractionAction::None;
 		int indiceDinamico = -1;
 		glb::AnimatedObject* objetoAnimado = nullptr;
 		float distancia = std::numeric_limits<float>::infinity();

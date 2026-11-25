@@ -19,7 +19,7 @@ namespace
 	MovementInput corriendo()
 	{
 		MovementInput e;
-		e.activo = e.quiereMoverse = e.sprintPedido = e.enSuelo = true;
+		e.activo = e.wantsToMove = e.sprintRequested = e.enSuelo = true;
 		return e;
 	}
 
@@ -36,10 +36,10 @@ int main()
 	// 1) Parametros iniciales pedidos.
 	{
 		PlayerMovement m;
-		comprobar(m.parametros.velocidadCaminar == 3.0f && m.parametros.velocidadAgachado == 1.4f &&
-			m.parametros.velocidadSprint == 5.2f, "velocidades iniciales 3,0 / 1,4 / 5,2 m/s");
-		comprobar(m.parametros.estaminaMaxima == 100.0f && m.parametros.consumoPorSegundo == 20.0f &&
-			m.parametros.recuperacionPorSegundo == 12.0f && m.parametros.retardoRecuperacion == 1.0f,
+		comprobar(m.parametros.walkSpeed == 3.0f && m.parametros.crouchSpeed == 1.4f &&
+			m.parametros.sprintSpeed == 5.2f, "velocidades iniciales 3,0 / 1,4 / 5,2 m/s");
+		comprobar(m.parametros.maxStamina == 100.0f && m.parametros.drainPerSecond == 20.0f &&
+			m.parametros.recoveryPerSecond == 12.0f && m.parametros.retardoRecuperacion == 1.0f,
 			"estamina 100, consumo 20/s, recuperacion 12/s tras 1 s");
 		comprobar(m.StaminaValue() == 100.0f, "empieza con la estamina llena");
 	}
@@ -59,7 +59,7 @@ int main()
 		PlayerMovement m;
 		Simular(m, corriendo(), 2.0f, f);                 // 60
 		MovementInput quieto = corriendo();
-		quieto.sprintPedido = false;
+		quieto.sprintRequested = false;
 		Simular(m, quieto, 0.9f, f);
 		comprobar(casi(m.StaminaValue(), 60.0f, 0.5f), "no recupera durante el retardo de 1 s");
 		Simular(m, quieto, 1.1f, f);                       // 1 s mas de recuperacion efectiva
@@ -94,12 +94,12 @@ int main()
 		comprobar(m.StaminaValue() == 100.0f && !m.IsSprinting(), "en pausa no consume");
 
 		e = corriendo();
-		e.quiereMoverse = false;
+		e.wantsToMove = false;
 		Simular(m, e, 3.0f, 60);
 		comprobar(m.StaminaValue() == 100.0f && !m.IsSprinting(), "Shift sin desplazamiento no consume");
 
 		e = corriendo();
-		e.fraccionAgachado = 0.5f;
+		e.crouchRatio = 0.5f;
 		Simular(m, e, 3.0f, 60);
 		comprobar(m.StaminaValue() == 100.0f && !m.IsSprinting(), "agachado no se puede correr ni se consume");
 
@@ -121,7 +121,7 @@ int main()
 	{
 		PlayerMovement m;
 		MovementInput caminar = corriendo();
-		caminar.sprintPedido = false;
+		caminar.sprintRequested = false;
 		Simular(m, caminar, 2.0f, 60);
 		comprobar(casi(m.VelocityValue(), 3.0f, 0.01f), "caminando va a 3 m/s");
 
@@ -134,10 +134,10 @@ int main()
 		comprobar(casi(m.VelocityValue(), 3.0f, 0.05f), "al soltar Shift vuelve a 3 m/s suavemente");
 
 		MovementInput agachado = caminar;
-		agachado.fraccionAgachado = 1.0f;
+		agachado.crouchRatio = 1.0f;
 		Simular(m, agachado, 2.0f, 60);
 		comprobar(casi(m.VelocityValue(), 1.4f, 0.02f), "agachado va a 1,4 m/s");
-		agachado.fraccionAgachado = 0.5f;
+		agachado.crouchRatio = 0.5f;
 		Simular(m, agachado, 2.0f, 60);
 		comprobar(casi(m.VelocityValue(), 2.2f, 0.03f), "a medio agachar la velocidad esta a medio camino");
 
