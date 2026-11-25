@@ -3567,7 +3567,7 @@ static void dibujarPanelObjetosDinamicos()
 		bool activo = false;
 		bool sujeto = false;
 		bool hiriti = false;
-		bool seguimiento = false;
+		const char* estadoSeguimiento = "";
 	};
 	static std::vector<Fila> filas;
 	static double siguienteActualizacion = 0.0;
@@ -3595,7 +3595,13 @@ static void dibujarPanelObjetosDinamicos()
 				fila.activo = cuerpo.activo;
 				fila.sujeto = cuerpo.agarrado || fila.propietario != netjuego::kSinDueno;
 				fila.hiriti = objeto.id == "hiriti";
-				fila.seguimiento = fila.hiriti && hiritiFollowPlayerEnabled && !animacionHiriti.SeguimientoSuspendido();
+				if (fila.hiriti)
+				{
+					if (redJuego.EsCliente()) fila.estadoSeguimiento = " | Hiriti: seguimiento autoritativo desconocido (host)";
+					else if (!hiritiFollowPlayerEnabled) fila.estadoSeguimiento = " | Hiriti: seguimiento local inactivo";
+					else if (animacionHiriti.SeguimientoSuspendido()) fila.estadoSeguimiento = " | Hiriti: seguimiento local suspendido";
+					else fila.estadoSeguimiento = " | Hiriti: seguimiento local elegible";
+				}
 				if (redJuego.EsCliente())
 				{
 					const auto remoto = remotos.find(fila.idRed);
@@ -3634,12 +3640,12 @@ static void dibujarPanelObjetosDinamicos()
 		if (fila.propietario == netjuego::kSinDueno)
 			ImGui::Text("%s  id=%08x  owner=libre  %s/%s  %s%s", fila.id.c_str(), fila.idRed,
 				rol, cuerpo, fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),
-				fila.hiriti ? (fila.seguimiento ? " | Hiriti: seguimiento" : " | Hiriti: seguimiento pausado") : "");
+				fila.estadoSeguimiento);
 		else
 			ImGui::Text("%s  id=%08x  owner=%u  %s/%s  %s%s", fila.id.c_str(), fila.idRed,
 				static_cast<unsigned>(fila.propietario), rol, cuerpo,
 				fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),
-				fila.hiriti ? (fila.seguimiento ? " | Hiriti: seguimiento" : " | Hiriti: seguimiento pausado") : "");
+				fila.estadoSeguimiento);
 		const auto dibujarPose = [](const char* nombre, const fisica::PoseCuerpo& pose)
 		{
 			ImGui::Text("%s p(%.2f,%.2f,%.2f) q(%.2f,%.2f,%.2f,%.2f)", nombre,
