@@ -40,6 +40,9 @@ Decisiones del usuario, transmitidas por el coordinador el 2026-11-25 (los punto
 7. Los **nombres en inglés son obligatorios para el código propio** (etapa P12): código y módulos del equipo, adaptadores, pruebas, herramientas y documentación, incluidos sus nombres de fichero y carpeta. `src/legacy_vgi/` contiene solo la base académica VGI original, que conserva sus identificadores y API. El código de terceros permanece en `third_party/`, sin modificar ni traducir. El **cuerpo** de la documentación conserva su idioma actual; los nombres oficiales y los términos de contrato se mantienen. Los contratos de §4 y los textos visibles para el jugador no cambian.
 8. Se mantienen el **ejecutable único**, la disposición `build/<preset>/bin/` y el contrato de recursos en ejecución, incluida la comprobación de la raíz (§4.2).
 
+> **Cumplimiento de la decisión 7 (2026-11-25): parcial.** `src/legacy_vgi/Vgi*` todavía mezcla la base académica con código del juego: `MostraEntornVGIWindow` (menú de pausa), las cargas de escena de `ShowArxiusOptions`, la casilla «Lamparas de escena» de `ShowEntornVGIWindow`, las ramas de juego de `Teclat_*` y `applyMaterialIntensity`. Además quedan campos, locales y enumeradores en español.
+
+
 ## 2. Autorización y estado de aprobación
 
 | Asunto | Estado a 2026-11-25 |

@@ -207,24 +207,8 @@ CMake. Ejecútalas con `ctest --test-dir build/<preset> --output-on-failure`.
 `ObjLoaderTests` necesita un contexto OpenGL oculto; si no hay sesión gráfica o
 no se puede crear el contexto, CTest lo marca como omitido.
 
-Estado de esta revisión (5 de noviembre de 2026):
-
-- **Windows/MSVC:** `EntornVGI.slnx`, Debug|x64, compiló con MSBuild 18.10 en
-  `build/msbuild-debug/`, con 0 warnings y 0 errores. Las pruebas
-  `SceneLoaderTests` pasaron. El preset CMake `windows-debug` no pudo completar
-  la configuración: vcpkg intentó consultar el registro Git remoto y este
-  entorno bloqueó la operación. No se abrió el juego ni se validaron sus
-  controles visualmente.
-- **Linux:** no se ejecutó en esta revisión. Se solicitó el registro completo
-  del equipo Linux antes de diagnosticar sus errores; la plataforma queda
-  pendiente.
-- **macOS:** no se ejecutó en esta revisión y queda pendiente Apple Clang,
-  vcpkg, contexto OpenGL 4.1 y comprobación interactiva.
-- `SceneLoaderTests` pasó al compilarse y ejecutarse directamente con MSVC.
-  `ObjLoaderTests` está preparado para CTest y requiere un contexto gráfico,
-  pero no se ejecutó porque la configuración CMake no llegó a completarse.
-  No se declara validada la carga gráfica del teléfono.
-- No se implementaron Bullet Physics ni OpenXR.
+El estado de validación vigente, con sus limitaciones, está en la sección 30 de
+[docs/REFACTOR_MIGRATION_MAP.md](docs/REFACTOR_MIGRATION_MAP.md).
 
 `archive/legacy/ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
 no estaba incluido en el proyecto original. `SceneLoader` y el cargador propio

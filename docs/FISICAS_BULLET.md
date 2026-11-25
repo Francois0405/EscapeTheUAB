@@ -29,7 +29,7 @@ sala tiene su cara superior en `z = -1.70`; la demo usa esa misma altura.
 
 ## Cómo se actualiza cada fotograma
 
-En el bucle de `main.cpp`: `fallingCubeDemo.Advance(delta, animacionPausada)`.
+En el bucle de `src/app/MainLoop.cpp`: `fallingCubeDemo.Update(delta, animacionPausada)`.
 
 * El tiempo real se **acumula**; mientras haya ≥ 1/60 s se ejecuta un paso fijo de 1/60 s.
   Con 30 FPS son 2 pasos por fotograma; con 144 FPS, a veces 0 (resultado idéntico).
@@ -54,12 +54,12 @@ fisica::PhysicsWorld mundo;
 auto suelo = mundo.CreateStaticBox(glm::vec3(0, 0, -1.85), glm::vec3(8, 5, 0.15));
 auto caja  = mundo.CreateDynamicBox(glm::vec3(2, 0, 1), glm::vec3(0.2f), /*kg*/ 1.0f);
 // cada fotograma:
-mundo.Advance(delta);
+mundo.Update(delta);
 fisica::BodyPose pose = mundo.PoseOf(caja);   // pose.posicion, pose.rotacion
 ```
 
 Los tamaños son **medias dimensiones**. Para formas nuevas (esfera, cápsula), añade una
-función `CreatePlayback...` junto a `CreateBox` cambiando solo la `btCollisionShape`.
+función `Create...` junto a `CreateBox` cambiando solo la `btCollisionShape`.
 
 ## Notas de comportamiento
 
@@ -136,7 +136,7 @@ entera taparía el hueco) y la hoja es **1 caja cinemática** pegada al nodo `Do
 
 1. `UpdateAnimatedObjects` avanza la animación (pose de cada puerta).
 2. `SyncKinematics` mueve la caja de la hoja a la pose de su nodo (la bisagra queda fija, la hoja gira).
-3. `PhysicsWorld::Advance` simula. El marco no se mueve nunca.
+3. `PhysicsWorld::Update` simula. El marco no se mueve nunca.
 
 Las dos puertas comparten el mismo `GlbModel` pero tienen pose y reloj propios (se prueba en los tests).
 Los nombres de animación se comparan tal cual están en el GLB; `Puerta.glb` guarda `Door_acci\u00f3n` con
@@ -147,7 +147,7 @@ nombres ASCII en Blender si se quiere elegirlas por nombre.
 
 `loadAndApplyScene` hace: (1) leer/validar JSON, (2) cargar OBJ, (3) cargar GLB, (4) crear los cuerpos
 nuevos, (5) **solo si todo salió bien** vaciar la habitación anterior y sustituirla. Si algo falla se descartan
-los temporales y la habitación activa queda intacta (sin cuerpos a medias: `PhysicsScene::CreatePlayback` es atómica).
+los temporales y la habitación activa queda intacta (sin cuerpos a medias: `PhysicsScene::Create` es atómica).
 Hay un único `PhysicsWorld`; la demo del cubo y cada habitación quitan solo sus propios cuerpos.
 
 ## Depuración: "Mostrar colisionadores"

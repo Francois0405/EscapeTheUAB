@@ -418,8 +418,11 @@ Implementado y supervisado por Claude Sonnet 5.5 desde `0d727a8`, sin agentes se
 | `5cfb91e` | 95 tipos y namespaces y 40 ficheros en inglés |
 | `e9dff17` | 151 nombres de la capa de aplicación en inglés |
 | `60a4610` | 421 métodos y funciones de módulo en inglés |
+| `963bb02` | Verbos neutros en métodos compartidos por varias clases y nombres correctos en enumeradores |
 
 `src/app/main.cpp` tiene 41 líneas (6.302 al empezar; 8.947 en el checkpoint). El script de comprobación comparó las 194 funciones del `main.cpp` de `0d727a8` con su definición actual, aplicando los renombrados: 193 cuerpos idénticos token a token; el único distinto es `main`, dividido a propósito. En el cierre, la textura y el renderbuffer PS1 se borran antes que la textura del menú (antes, después). Los renombrados no tocan cadenas ni comentarios, así que claves JSON, protocolo, textos de log, IDs persistidos y nombres de test no cambian.
+
+**Validación final sobre `963bb02` (Windows):** lanzadores Debug y Release con código 0, CTest 23/23 y arranque de 15 s en ambas; includes sin discrepancias de mayúsculas.
 
 **Validación sobre `60a4610` (Windows):** lanzadores oficiales Debug y Release con código 0; CTest 23/23 en ambas; `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10 en ambas; arranque de 15 s en ambas con escena y spawn validados y cierre con código 0.
 

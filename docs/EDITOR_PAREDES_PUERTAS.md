@@ -89,7 +89,7 @@ Las cajas laterales definen las jambas y el dintel define el borde superior del 
 
 ## Colliders Bullet
 
-`PhysicsScene::CreatePlayback` usa la misma lista calculada por `GenerateWallSections` para sustituir el collider de caja completa por un collider estático por segmento. Cada centro local se transforma con la rotación de la pared y cada media dimensión se entrega a `PhysicsWorld::CreateBox`.
+`PhysicsScene::Create` usa la misma lista calculada por `GenerateWallSections` para sustituir el collider de caja completa por un collider estático por segmento. Cada centro local se transforma con la rotación de la pared y cada media dimensión se entrega a `PhysicsWorld::CreateBox`.
 
 Esto mantiene una colisión por paño sólido, en lugar de una colisión que tape el hueco. Los colliders de marco y hoja del GLB se crean además desde sus nodos definidos en JSON. La hoja conserva su collider cinemático y se sincroniza con la animación; el hueco de pared no depende del estado abierto/cerrado de la hoja.
 
