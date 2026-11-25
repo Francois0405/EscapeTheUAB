@@ -45,9 +45,9 @@ namespace juego::hiriti
 			const glm::vec3& position, const glm::vec3& point, const char* detail)> traceGrab;
 	};
 
-	void PlayHiritiSound(const HiritiContext& context, const std::string& ruta,
-		float volumenBase = 1.0f);
-	void UpdateHiriti(const HiritiContext& context, bool puedeDescubrir,
-		bool puedeProcesarColisiones, float delta);
-	void UpdateAmbientAudio(const HiritiContext& context, bool activo, float delta);
+	void PlayHiritiSound(const HiritiContext& context, const std::string& path,
+		float baseVolume = 1.0f);
+	void UpdateHiriti(const HiritiContext& context, bool canDiscover,
+		bool canProcessCollisions, float delta);
+	void UpdateAmbientAudio(const HiritiContext& context, bool active, float delta);
 }

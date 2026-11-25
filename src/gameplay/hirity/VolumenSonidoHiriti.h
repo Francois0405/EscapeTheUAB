@@ -6,13 +6,13 @@
 
 namespace juego::hiriti
 {
-	inline float AttenuateVolumeByDistance(float volumenBase, float distancia)
+	inline float AttenuateVolumeByDistance(float baseVolume, float distance)
 	{
 		constexpr float distanciaCompleta = 2.0f;
 		constexpr float distanciaMaxima = 20.0f;
 		constexpr float volumenMinimo = 0.15f;
 		const float atenuacion = 1.0f - (1.0f - volumenMinimo) *
-			std::clamp((distancia - distanciaCompleta) / (distanciaMaxima - distanciaCompleta), 0.0f, 1.0f);
-		return volumenBase * atenuacion;
+			std::clamp((distance - distanciaCompleta) / (distanciaMaxima - distanciaCompleta), 0.0f, 1.0f);
+		return baseVolume * atenuacion;
 	}
 }
