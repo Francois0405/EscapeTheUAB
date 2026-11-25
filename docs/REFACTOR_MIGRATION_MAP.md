@@ -15,7 +15,7 @@ El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cort
 - **Las líneas base de P1 siguen incompletas**, en particular las capturas y las referencias de ejecución. La puerta de P2 compara contra ellas.
 - P3 se ha iniciado, al amparo de la autorización provisional, con la puerta de P2 abierta y P1 incompleta: el corte S3 (`RemotePhysicsTimeline`) está integrado como `0ccaea3` (§9).
 - El corte S4 (mezcla de réplica y transición a dormido) está integrado como `fe4d7da` (§10).
-- `origin/Issue#5` (`469e822`) **no se integra**: es redundante con el árbol actual. La rama se conserva como respaldo ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §2.5).
+- `origin/Issue#5` (`469e822`) **no se integra**: es redundante. Su icono no añade una capacidad que falte al HUD actual, sus `setInteractuable`/`getInteractuable` no tienen llamadores en el árbol, desactiva `glfwSetErrorCallback(error_callback)` (regresión) y crea una textura GL por fotograma sin liberarla. No se porta nada; la rama se conserva como respaldo ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §2.5).
 - Conviene coordinar antes de editar CMake o `main.cpp`.
 
 ## 2. Reglas
@@ -71,7 +71,7 @@ macOS, Linux y VR se declaran **no validados** mientras no se ejecuten en esas p
 | **P9. Red** | Sincronización de escena, réplica cliente, autoridad del host. **Sin tocar el formato en cable** | Bytes e identidades de P1 idénticos; QA host/cliente |
 | **P10. Aplicación** | `main()` queda como composición; RAII conservando el orden de limpieza | Cierre limpio; editor con cambios sin guardar |
 | **P11. Mover ficheros** | `git mv` por módulo solo cuando su target y sus pruebas existan; actualizar CMake, pruebas, `.vscode` y documentación. Enmienda (decisión del usuario): el movimiento físico es obligatorio y los recursos **sí** se mueven en el árbol fuente, sin cambiar nombres ni la disposición de `bin/`; parte se adelanta como lotes B2 a B5 del [plan físico](REFACTOR_PHYSICAL_PLAN.md) | Build desde cero; revisar mayúsculas y Unicode |
-| **P12. Nombres** | Último, por módulo. **Obligatorio** para el código propio (decisión del usuario): código y módulos del equipo, pruebas, herramientas y documentación. Excluye IDs persistentes, claves JSON, protocolo, nombres de escena, rutas de assets, textos de jugador, base VGI y terceros | Bytes e identidades sin cambios |
+| **P12. Nombres** | Último, por módulo. **Obligatorio** para el código propio (decisión del usuario): código y módulos del equipo, pruebas, herramientas y documentación. Excluye IDs persistentes, claves JSON, protocolo, nombres de escena, rutas de assets, textos de jugador, base académica VGI (`legacy_vgi`, solo la original) y terceros (`third_party/`, sin modificar). En la documentación cambian nombres de fichero y carpeta, no el idioma del cuerpo | Bytes e identidades sin cambios |
 | **Aparte** | Reorganizar el contenido de assets, limpiar artefactos versionados, decidir sobre `.slnx`/`.vcxproj` | Decisión y rama propias |
 
 P6 a P9 no empiezan sin las pruebas de P3 en verde y sin P4. Ajuste propuesto, pendiente de aprobación: P6 y P7 solo esperan a los cortes S1, S2 y S5 a S9; S10 va tras la QA de agarre en cliente y bloquea P8 en adelante ([plan físico](REFACTOR_PHYSICAL_PLAN.md) §3).

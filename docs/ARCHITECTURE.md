@@ -35,7 +35,7 @@ Decisiones del usuario, transmitidas por el coordinador el 2026-11-25 (los punto
 
 5. La **reorganización física es un resultado obligatorio**. Extraer targets CMake es solo un paso intermedio.
 6. El alcance incluye fuentes y cabeceras, recursos, shaders, pruebas, documentación, herramientas y terceros.
-7. Los **nombres en inglés son obligatorios para el código propio** (etapa P12): código y módulos del equipo, pruebas, herramientas y documentación. La base académica VGI conserva sus identificadores y API originales en `legacy_vgi`, y el código de terceros no se traduce. Los adaptadores nuevos del equipo sobre API heredadas usan nombres en inglés. Los contratos de §4 y los textos visibles para el jugador no cambian.
+7. Los **nombres en inglés son obligatorios para el código propio** (etapa P12): código y módulos del equipo, adaptadores, pruebas, herramientas y documentación, incluidos sus nombres de fichero y carpeta. `src/legacy_vgi/` contiene solo la base académica VGI original, que conserva sus identificadores y API. El código de terceros permanece en `third_party/`, sin modificar ni traducir. El **cuerpo** de la documentación conserva su idioma actual; los nombres oficiales y los términos de contrato se mantienen. Los contratos de §4 y los textos visibles para el jugador no cambian.
 8. Se mantienen el **ejecutable único**, la disposición `build/<preset>/bin/` y el contrato de recursos en ejecución, incluida la comprobación de la raíz (§4.2).
 
 ## 2. Autorización y estado de aprobación
@@ -197,13 +197,13 @@ Nada de esta sección está implementado. Los nombres y las carpetas pueden ajus
 | `gameplay` | Control del jugador, interacción, agarre, Hirity, temporizadores | `main.cpp`, `MovimientoFPS.h`, `AnimacionHiriti.h` | `core`, `scene`, `physics` |
 | `networking/transport` | Protocolo, sesión, servicio, ENet | `EntornVGI_network` | `core` |
 | `networking` (juego) | Sincronización de escena, réplica cliente, autoridad del host | `NetJuego`, `NetJuegoLogica.h`, `actualizarRed` | `transport`, `gameplay`, `physics`, `scene` |
-| `rendering` | Render, luces, oclusores, FBO PS1, modelos OBJ/GLB, avatares | `dibuixa_Escena`, `objLoader`, `DibujoGLB`, `NetAvatar` | Consume estado |
+| `rendering` | Render, luces, oclusores, FBO PS1, modelos GLB, avatares | `dibuixa_Escena`, `DibujoGLB`, `NetAvatar` | Consume estado |
 | `audio` | Reproducción | `AudioManager` | `core` |
 | `vr` | OpenXR, vistas, entrada VR | `OpenXRManager`, `VistaVR.h` | `core` |
 | `ui` | HUD, menús, paneles | `draw_Menu_ImGui` | Consume estado |
 | `editor` | Editor de escenas | `Editor/` | `scene`, `animation` |
 | `diagnostics` | Registro de agarre, panel de dinámicos, colisionadores | `GrabDiagnostics`, `DibujoColisionadores` | Lectura de estado |
-| `legacy_vgi` | Base académica, sin traducir ni renombrar | Base VGI y bloque VGI de `main.cpp` | Sus propios ficheros |
+| `legacy_vgi` | Solo la base académica original, sin traducir ni renombrar | Base VGI, `objLoader` y bloque VGI de `main.cpp` | Sus ficheros y la capa de soporte del equipo |
 
 Dirección (la flecha va **del que depende al dependido**):
 
@@ -213,7 +213,10 @@ app ──> rendering, audio, ui, vr, editor, diagnostics
 physics ──> animation ──> core
 networking(juego) ──> networking/transport ──> core
 rendering ──> legacy_vgi          (solo rendering y app ven legacy_vgi)
+legacy_vgi ──> soporte del equipo
 ```
+
+La «capa de soporte del equipo» es código propio que hoy usa la base académica (compatibilidad de plataforma, optimización de mallas, caché de uniforms, métricas). Parte depende de GLEW, así que no encaja en `core` tal como se define arriba; su ubicación está abierta ([plan físico](REFACTOR_PHYSICAL_PLAN.md), I3).
 
 Reglas:
 
@@ -245,6 +248,7 @@ Esta es la dirección **objetivo**. La primera etapa de bibliotecas sigue las de
 - Sin cambios de gameplay, equilibrio, controles, arte, audio ni iluminación.
 - Sin renombrar assets, shaders ni texturas: sus nombres y rutas relativas son contratos. Sí se mueven dentro del árbol fuente (lote B4 del [plan físico](REFACTOR_PHYSICAL_PLAN.md)) sin cambiar las rutas en ejecución. Sin borrar los que parezcan no usados (el editor enumera `assets/models` y el audio se referencia desde código).
 - Sin cambios de protocolo ni de contrato JSON, IDs o nombres de escena.
+- Sin modificar ni traducir código de terceros, y sin traducir el cuerpo de la documentación existente.
 - Sin sustituir bibliotecas, motor de render ni sistema de build.
 - Sin corregir dentro del refactor las observaciones de §10.
 - Sin completar la funcionalidad VGI incompleta.
