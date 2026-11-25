@@ -361,11 +361,10 @@ namespace
 	bool linternaMovilActiva = true;
 	bool lamparasLaboratorioActivas = true;
 
-	// Slots 4-7 pertenecen a luces declaradas en JSON. El 3 sigue reservado
-	// para la linterna móvil, cuya posición se actualiza desde la cámara FPS.
+	// Los slots 4-12 son para luces de escena; el 3 queda reservado para la linterna móvil.
 	void actualizarLucesDeEscena()
 	{
-		constexpr int primerSlot = 4;
+		constexpr int primerSlot = SLOT_PRIMERA_LLUM_ESCENA;
 		const bool hayLucesDeEscena = std::any_of(objetosEscena.begin(), objetosEscena.end(),
 			[](const SceneObject& objeto) { return objeto.luz.presente; });
 		for (int slot = primerSlot; slot < NUM_MAX_LLUMS; ++slot)
@@ -416,7 +415,7 @@ namespace
 		{
 			ultimoAviso = lucesSinSlot;
 			if (lucesSinSlot != 0)
-				std::cerr << "Iluminacion Phong limitada a " << (NUM_MAX_LLUMS - primerSlot)
+				std::cerr << "Iluminacion Phong limitada a " << NUM_MAX_LLUMS_ESCENA
 					<< " lamparas de escena; quedan " << lucesSinSlot << " sin slot.\n";
 		}
 	}
@@ -522,6 +521,37 @@ namespace
 		luz.spotInnerCosCutoff = std::cos(glm::radians(28.0f));
 		luz.spotexponent = 1.15f;
 		luz.areaSource = false;
+	}
+
+	void subirLinternaMovilAlShader()
+	{
+		const auto& luz = llumGL[3];
+		const std::string prefijo = "LightSource[3].";
+		glm::vec4 posicion(luz.posicio.x, luz.posicio.y, luz.posicio.z, luz.posicio.w);
+		if (!ifixe) posicion = ViewMatrix * posicion;
+
+		glUniform4f(glGetUniformLocation(shader_programID, (prefijo + "position").c_str()),
+			posicion.x, posicion.y, posicion.z, posicion.w);
+		glUniform4f(glGetUniformLocation(shader_programID, (prefijo + "diffuse").c_str()),
+			luz.difusa.r, luz.difusa.g, luz.difusa.b, luz.difusa.a);
+		glUniform4f(glGetUniformLocation(shader_programID, (prefijo + "specular").c_str()),
+			luz.especular.r, luz.especular.g, luz.especular.b, luz.especular.a);
+		glUniform3f(glGetUniformLocation(shader_programID, (prefijo + "attenuation").c_str()),
+			luz.atenuacio.a, luz.atenuacio.b, luz.atenuacio.c);
+		glUniform1i(glGetUniformLocation(shader_programID, (prefijo + "restricted").c_str()), luz.restringida);
+		glUniform3f(glGetUniformLocation(shader_programID, (prefijo + "spotDirection").c_str()),
+			luz.spotdirection.x, luz.spotdirection.y, luz.spotdirection.z);
+		glUniform1f(glGetUniformLocation(shader_programID, (prefijo + "spotCosCutoff").c_str()), luz.spotcoscutoff);
+		glUniform1f(glGetUniformLocation(shader_programID, (prefijo + "spotInnerCosCutoff").c_str()), luz.spotInnerCosCutoff);
+		glUniform1f(glGetUniformLocation(shader_programID, (prefijo + "spotExponent").c_str()), luz.spotexponent);
+		glUniform1i(glGetUniformLocation(shader_programID, (prefijo + "areaSource").c_str()), luz.areaSource ? GL_TRUE : GL_FALSE);
+		glUniform3f(glGetUniformLocation(shader_programID, (prefijo + "areaAxisU").c_str()),
+			luz.areaAxisU.x, luz.areaAxisU.y, luz.areaAxisU.z);
+		glUniform3f(glGetUniformLocation(shader_programID, (prefijo + "areaAxisV").c_str()),
+			luz.areaAxisV.x, luz.areaAxisV.y, luz.areaAxisV.z);
+		glUniform2f(glGetUniformLocation(shader_programID, (prefijo + "areaHalfSize").c_str()),
+			luz.areaHalfSizeU, luz.areaHalfSizeV);
+		glUniform1i(glGetUniformLocation(shader_programID, (prefijo + "sw_light").c_str()), luz.encesa);
 	}
 
 	enum class AccionInteraccion { Ninguna, Recoger, Abrir, Cerrar };
@@ -2177,6 +2207,7 @@ void dibuixa_Escena() {
 	}
 
 	else llumGL[3].encesa = false;
+	subirLinternaMovilAlShader();
 	glUniform1f(glGetUniformLocation(shader_programID, "uDirtStrength"), 0.0f);
 	glUniform1f(glGetUniformLocation(shader_programID, "uTextureEmission"), 0.0f);
 	glUniform1i(glGetUniformLocation(shader_programID, "uMobileSurface"), GL_FALSE);

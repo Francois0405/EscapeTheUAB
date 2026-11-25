@@ -680,7 +680,32 @@ namespace editor
 				objeto.fisica.masa = dinamico ? 5.0f : 0.0f;
 			}
 		}
-		const ResultadoColocacion resultado = ValidarObjeto(contexto, objeto, -1);
+		ResultadoColocacion resultado = ValidarObjeto(contexto, objeto, -1);
+		bool enZonaPreparacion = false;
+		if (!resultado.valida)
+		{
+			std::vector<CajaOrientada> cajasObstaculo;
+			for (const SceneObject& existente : contexto.objetos)
+			{
+				const auto cajas = CajasDeObjeto(existente, fisica::MatrizDeObjeto(existente));
+				cajasObstaculo.insert(cajasObstaculo.end(), cajas.begin(), cajas.end());
+			}
+			for (const SceneObjetoAnimado& existente : contexto.animados)
+			{
+				const auto cajas = CajasDeAnimado(contexto, existente);
+				cajasObstaculo.insert(cajasObstaculo.end(), cajas.begin(), cajas.end());
+			}
+
+			const auto cajasPropuestas = CajasDeObjeto(objeto, fisica::MatrizDeObjeto(objeto));
+			float desplazamientoX = 0.0f;
+			if (CalcularDesplazamientoZonaPreparacionX(cajasPropuestas, cajasObstaculo, 1.0f, desplazamientoX) &&
+				std::isfinite(objeto.posicion.x + desplazamientoX))
+			{
+				objeto.posicion.x += desplazamientoX;
+				resultado = ValidarObjeto(contexto, objeto, -1);
+				enZonaPreparacion = resultado.valida;
+			}
+		}
 		if (!resultado.valida)
 		{
 			mensajeColocacion = "Placement blocked by " + resultado.bloqueador;
@@ -693,9 +718,12 @@ namespace editor
 		const std::string id = objeto.id;
 		contexto.objetos.push_back(std::move(objeto));
 		FijarSeleccion(static_cast<int>(contexto.objetos.size()) - 1);
+		if (enZonaPreparacion) EnfocarSeleccion(contexto);
 		hayRespaldo = false;
 		MarcarModificada();
-		InformarEstado("Added " + id + aviso);
+		InformarEstado(enZonaPreparacion
+			? "Added " + id + " in the staging area; scale it down, then move it into the scene." + aviso
+			: "Added " + id + aviso);
 		return id;
 	}
 

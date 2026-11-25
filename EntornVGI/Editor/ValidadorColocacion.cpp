@@ -52,6 +52,51 @@ namespace editor
 		return profundidadMinima;
 	}
 
+	bool CalcularDesplazamientoZonaPreparacionX(const std::vector<CajaOrientada>& propuesta,
+		const std::vector<CajaOrientada>& obstaculos, float margen, float& desplazamiento)
+	{
+		desplazamiento = 0.0f;
+		if (!std::isfinite(margen) || margen < 0.0f) return false;
+
+		auto mitadEnX = [](const CajaOrientada& caja, float& mitad)
+		{
+			if (!caja.valida || !std::isfinite(caja.centro.x)) return false;
+			mitad = 0.0f;
+			for (int eje = 0; eje < 3; ++eje)
+			{
+				const glm::vec3& direccion = caja.ejes[static_cast<std::size_t>(eje)];
+				if (!std::isfinite(direccion.x) || !std::isfinite(caja.mitad[eje]) || caja.mitad[eje] < 0.0f)
+					return false;
+				mitad += std::abs(direccion.x) * caja.mitad[eje];
+			}
+			return std::isfinite(mitad);
+		};
+
+		float minimoPropuesta = std::numeric_limits<float>::max();
+		bool hayPropuesta = false;
+		for (const CajaOrientada& caja : propuesta)
+		{
+			float mitad = 0.0f;
+			if (!mitadEnX(caja, mitad)) continue;
+			minimoPropuesta = std::min(minimoPropuesta, caja.centro.x - mitad);
+			hayPropuesta = true;
+		}
+
+		float maximoObstaculos = std::numeric_limits<float>::lowest();
+		bool hayObstaculos = false;
+		for (const CajaOrientada& caja : obstaculos)
+		{
+			float mitad = 0.0f;
+			if (!mitadEnX(caja, mitad)) continue;
+			maximoObstaculos = std::max(maximoObstaculos, caja.centro.x + mitad);
+			hayObstaculos = true;
+		}
+		if (!hayPropuesta || !hayObstaculos) return false;
+
+		desplazamiento = std::max(0.0f, maximoObstaculos + margen - minimoPropuesta);
+		return std::isfinite(desplazamiento);
+	}
+
 	ResultadoColocacion ValidarColocacion(const std::vector<CajaOrientada>& propuesta,
 		const std::vector<CajaOrientada>& anterior, const std::vector<ObstaculoColocacion>& obstaculos,
 		bool permitirArquitectura, float toleranciaContacto)

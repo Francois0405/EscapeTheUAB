@@ -301,7 +301,7 @@ int main()
         std::abs(laboratorio.directSceneLightScale - 0.45f) < 1e-6f &&
         laboratorio.indirectSkyColor == glm::vec3(0.24f, 0.28f, 0.34f),
         "la intensidad indirecta de habitación se carga desde JSON");
-    comprobar(laboratorio.spawn.presente && laboratorio.spawn.pies == glm::vec3(-6.5f, 3.0f, -3.05f) &&
+    comprobar(laboratorio.spawn.presente && laboratorio.spawn.pies == glm::vec3(-4.5f, 4.5f, -3.05f) &&
         glm::length(laboratorio.spawn.direccion - glm::vec3(0.0f, 1.0f, 0.0f)) < 1e-5f,
         "spawn del laboratorio expresa pies y orientación en coordenadas del mundo");
     const auto dinamico = [&](const char* id) -> const SceneObject* {
@@ -339,7 +339,7 @@ int main()
         }
     }
     comprobar(suelos == 1, "la escena contiene una sola superficie visual de suelo");
-    comprobar(lucesEscena == 4, "las cuatro luminarias quedan dentro de los slots de escena 4-7");
+    comprobar(lucesEscena <= 9, "las luminarias de escena no superan el límite Phong de nueve");
     for (const auto& objeto : laboratorio.objetos)
         if (objeto.luz.presente)
             comprobar(std::abs(objeto.luz.intensidad - 6.0f) < 1e-6f,

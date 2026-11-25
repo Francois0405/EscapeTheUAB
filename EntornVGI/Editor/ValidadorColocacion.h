@@ -36,6 +36,11 @@ namespace editor
 	// Devuelve la profundidad mínima SAT en metros; cero significa separación o contacto permitido.
 	float PenetracionOBB(const CajaOrientada& a, const CajaOrientada& b, float toleranciaContacto = 0.01f);
 
+	// Calcula cuánto desplazar las cajas propuestas hacia +X para dejarlas a la derecha
+	// de todos los obstáculos, con un margen. Devuelve false si no hay cajas válidas.
+	bool CalcularDesplazamientoZonaPreparacionX(const std::vector<CajaOrientada>& propuesta,
+		const std::vector<CajaOrientada>& obstaculos, float margen, float& desplazamiento);
+
 	// Las penetraciones preexistentes se pueden reducir sin bloquear la edición de escenas antiguas.
 	// La excepción omite únicamente obstáculos marcados como arquitectura y solo es opt-in.
 	ResultadoColocacion ValidarColocacion(const std::vector<CajaOrientada>& propuesta,

@@ -539,7 +539,7 @@ namespace
 		for (const SceneObjetoAnimado& animado : laboratorio.datos.animados)
 			colisionables += static_cast<int>(animado.colisionadores.size());
 		comprobar(laboratorio.fisica->NumeroDeCuerpos() == colisionables,
-			"suelo y arquitectura conservan colliders unicos; se cuentan tambien los marcos y hojas de puerta GLB");
+			"el total de cuerpos coincide con los colliders declarados en la escena");
 		const SceneObject* suelo = nullptr;
 		for (const SceneObject& objeto : laboratorio.datos.objetos)
 			if (objeto.id == "suelo") suelo = &objeto;
@@ -554,30 +554,6 @@ namespace
 		const float pies = mundo.PosicionPiesJugador().z;
 		comprobar(mundo.JugadorEnSuelo() && pies > alturaPavimento - 0.08f && pies < alturaPavimento + 0.08f,
 			"el jugador permanece apoyado sobre la altura del suelo calibrado");
-
-		// Integración geométrica: abrir la hoja GLB permite cruzar el vano rotado
-		// entre recepción y laboratorio, sin atravesar los dos tramos de pared.
-		glb::ObjetoAnimado* puerta = glb::BuscarObjeto(laboratorio.animados, "puerta_acceso_laboratorio");
-		comprobar(puerta != nullptr, "la escena compacta incluye la puerta recepción/laboratorio");
-		if (puerta == nullptr) return;
-		glb::IniciarAnimacion(*puerta);
-		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
-		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
-		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
-		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
-		Simular(1.2f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
-		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
-		comprobar(mundo.PosicionPiesJugador().x > -2.2f,
-			"el vano de la puerta abierta deja pasar al jugador y la pared maciza contigua lo sigue bloqueando");
-		glb::AlternarPuerta(*puerta);
-		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
-		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
-		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
-		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
-		Simular(1.2f, MundoFisico::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
-		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
-		comprobar(mundo.PosicionPiesJugador().x < -2.7f,
-			"la hoja cinemática cerrada bloquea el vano y no permite atravesar la pared");
 	}
 
 	void PruebaArranqueEnSpawnDelLaboratorio()

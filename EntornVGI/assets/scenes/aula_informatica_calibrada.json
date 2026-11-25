@@ -34,7 +34,7 @@
         0.0
       ],
       "scale": [
-        9.0,
+        12.0,
         21.0,
         0.15000000596046448
       ]
@@ -63,7 +63,7 @@
       },
       "position": [
         0.0,
-        0.0,
+        -40.0,
         0.0
       ],
       "rotation": [
@@ -72,7 +72,7 @@
         0.0
       ],
       "scale": [
-        9.0,
+        12.0,
         21.0,
         0.15000000596046448
       ]
@@ -110,47 +110,9 @@
         0.0
       ],
       "scale": [
-        9.0,
+        12.0,
         0.15000000596046448,
         1.4499996900558472
-      ]
-    },
-    {
-      "id": "pared_oeste_s1",
-      "material": {
-        "dirtScale": 0.44999998807907104,
-        "dirtSeed": 0.0,
-        "dirtStrength": 0.0,
-        "roughness": 0.9399999976158142,
-        "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
-        "tileSize": [
-          2.0,
-          2.9000000953674316
-        ]
-      },
-      "model": "../models/escape_pack/arquitectura/pared.obj",
-      "physics": {
-        "halfSize": [
-          1,
-          1,
-          1
-        ],
-        "type": "static"
-      },
-      "position": [
-        -9.149999618530273,
-        0.0,
-        -1.600000023841858
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        90.0
-      ],
-      "scale": [
-        21.0,
-        0.15000000596046448,
-        1.449999213218689
       ]
     },
     {
@@ -176,7 +138,7 @@
         "type": "static"
       },
       "position": [
-        9.149999618530273,
+        12.149999618530273,
         0.0,
         -1.600000023841858
       ],
@@ -247,46 +209,9 @@
         0.0
       ],
       "scale": [
-        9.0,
+        12.0,
         0.15000002086162567,
         1.449999451637268
-      ]
-    },
-    {
-      "id": "obj_Prop_Light_Wide_mesa_copy",
-      "light": {
-        "areaSize": [
-          2.4000000953674316,
-          0.3799999952316284
-        ],
-        "color": [
-          0.8199999928474426,
-          0.9399999976158142,
-          1.0
-        ],
-        "enabled": true,
-        "intensity": 6.0,
-        "offset": [
-          0.0,
-          -0.05400000140070915,
-          0.0
-        ]
-      },
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
-      "position": [
-        7.0,
-        0.0,
-        -0.23999999463558197
-      ],
-      "rotation": [
-        90.0,
-        0.0,
-        90.0
-      ],
-      "scale": [
-        0.9999998211860657,
-        0.9999998807907104,
-        1.0
       ]
     },
     {
@@ -311,7 +236,7 @@
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
-        7.0,
+        10.0,
         6.0,
         -0.23999999463558197
       ],
@@ -348,45 +273,8 @@
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
-        7.0,
+        10.0,
         -6.0,
-        -0.23999999463558197
-      ],
-      "rotation": [
-        90.0,
-        0.0,
-        90.0
-      ],
-      "scale": [
-        0.9999998211860657,
-        0.9999998807907104,
-        1.0
-      ]
-    },
-    {
-      "id": "obj_Prop_Light_Wide_mesa_copy_copy_copy_copy",
-      "light": {
-        "areaSize": [
-          2.4000000953674316,
-          0.3799999952316284
-        ],
-        "color": [
-          0.8199999928474426,
-          0.9399999976158142,
-          1.0
-        ],
-        "enabled": true,
-        "intensity": 6.0,
-        "offset": [
-          0.0,
-          -0.05400000140070915,
-          0.0
-        ]
-      },
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
-      "position": [
-        7.0,
-        -12.0,
         -0.23999999463558197
       ],
       "rotation": [
@@ -422,7 +310,7 @@
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
-        7.0,
+        10.0,
         -18.0,
         -0.23999999463558197
       ],
@@ -459,45 +347,8 @@
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
-        7.0,
+        10.0,
         18.0,
-        -0.23999999463558197
-      ],
-      "rotation": [
-        90.0,
-        0.0,
-        90.0
-      ],
-      "scale": [
-        0.9999998211860657,
-        0.9999998807907104,
-        1.0
-      ]
-    },
-    {
-      "id": "obj_Prop_Light_Wide_mesa_copy_copy_copy_copy_copy_copy_copy",
-      "light": {
-        "areaSize": [
-          2.4000000953674316,
-          0.3799999952316284
-        ],
-        "color": [
-          0.8199999928474426,
-          0.9399999976158142,
-          1.0
-        ],
-        "enabled": true,
-        "intensity": 6.0,
-        "offset": [
-          0.0,
-          -0.05400000140070915,
-          0.0
-        ]
-      },
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
-      "position": [
-        7.0,
-        12.0,
         -0.23999999463558197
       ],
       "rotation": [
@@ -539,7 +390,7 @@
         "type": "static"
       },
       "position": [
-        -2.1500000953674316,
+        0.6499998569488525,
         -7.0,
         -1.600000023841858
       ],
@@ -582,7 +433,7 @@
         "type": "static"
       },
       "position": [
-        -2.1500000953674316,
+        0.6499999761581421,
         7.0,
         -1.600000023841858
       ],
@@ -598,95 +449,54 @@
       ]
     },
     {
-      "id": "obj_Prop_Light_Wide_mesa_copy_copy_copy_copy_1",
-      "light": {
-        "areaSize": [
-          2.4000000953674316,
-          0.3799999952316284
-        ],
-        "color": [
-          0.8199999928474426,
-          0.9399999976158142,
-          1.0
-        ],
-        "enabled": true,
-        "intensity": 6.0,
-        "offset": [
-          0.0,
-          -0.05400000140070915,
-          0.0
-        ]
-      },
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
-      "position": [
-        -6.35329532623291,
-        -3.460226535797119,
-        -0.23999999463558197
-      ],
-      "rotation": [
-        90.0,
-        0.0,
-        90.0
-      ],
-      "scale": [
-        0.9999997615814209,
-        0.9999998211860657,
-        1.0
-      ]
-    },
-    {
-      "id": "obj_Prop_Light_Wide_mesa_copy_copy_copy_copy_1_copy",
-      "light": {
-        "areaSize": [
-          2.4000000953674316,
-          0.3799999952316284
-        ],
-        "color": [
-          0.8199999928474426,
-          0.9399999976158142,
-          1.0
-        ],
-        "enabled": true,
-        "intensity": 6.0,
-        "offset": [
-          0.0,
-          -0.05400000140070915,
-          0.0
-        ]
-      },
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
-      "position": [
-        -6.282087802886963,
-        3.004641532897949,
-        -0.23999999463558197
-      ],
-      "rotation": [
-        90.0,
-        0.0,
-        90.0
-      ],
-      "scale": [
-        0.9999997019767761,
-        0.9999997615814209,
-        1.0
-      ]
-    },
-    {
       "id": "hiriti",
       "model": "../models/Hiriti.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mass": 0.25,
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "shape": "sphere",
+        "type": "bouncy"
+      },
       "position": [
-        -5.5,
-        -5.650000095367432,
-        -3.0
+        -4.881631851196289,
+        -6.168013095855713,
+        -2.2692325115203857
       ],
       "rotation": [
         0.0,
         0.0,
         0.0
       ],
+      "scale": [
+        0.20000000298023224,
+        0.20000000298023224,
+        0.20000000298023224
+      ]
+    },
+    {
+      "id": "pared_oeste_s1_copy",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
-        "type": "bouncy",
-        "shape": "sphere",
         "halfSize": [
           1.0,
           1.0,
@@ -697,19 +507,72 @@
           0.0,
           0.0
         ],
-        "mass": 0.25
+        "type": "static"
       },
+      "position": [
+        -6.349999904632568,
+        0.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        90.0
+      ],
       "scale": [
-        0.20000000298023224,
-        0.20000000298023224,
-        0.20000000298023224
+        21.0,
+        0.15000000596046448,
+        1.4499989748001099
+      ]
+    },
+    {
+      "id": "pared_oeste_s1_copy_copy",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_mid_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -12.149999618530273,
+        0.0,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "scale": [
+        21.0,
+        0.15000000596046448,
+        1.449999213218689
       ]
     }
   ],
   "playerSpawn": {
     "feetPosition": [
-      -6.5,
-      3.0,
+      -4.5,
+      4.5,
       -3.05
     ],
     "lookDirection": [
