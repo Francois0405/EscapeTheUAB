@@ -153,6 +153,7 @@ void dibuixa_Escena()
 		.leftControllerWorldMatrix = leftControllerWorldMatrix,
 		.currentPhoneLocalMatrix = currentPhoneLocalMatrix,
 		.updatePhoneFlashlight = updatePhoneFlashlight,
+		.uploadPhoneFlashlight = uploadPhoneFlashlight,
 		.materialTexture = materialTexture,
 		.drawVrControllerRay = drawVrControllerRay,
 		.endGpuQuery = endGpuQuery,

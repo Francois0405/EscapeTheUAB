@@ -53,6 +53,19 @@ void updatePhoneFlashlight(const glm::mat4& matrizMovilMundo)
 	luz.areaSource = false;
 }
 
+// Iluminacio() sube las luces antes de que la linterna se ancle al movil: sin esto iria un fotograma
+// (o un ojo) por detras.
+void uploadPhoneFlashlight()
+{
+	LLUM luz = llumGL[3];
+	if (!ifixe)
+	{	// con luz ligada a la camara el shader espera la posicion en coordenadas de vista
+		const glm::vec4 vista = ViewMatrix * glm::vec4(luz.posicio.x, luz.posicio.y, luz.posicio.z, luz.posicio.w);
+		luz.posicio = { vista.x, vista.y, vista.z, vista.w };
+	}
+	SubirLlum(shader_programID, 3, luz);
+}
+
 bool leftControllerWorldMatrix(glm::mat4& matrizMundo)
 {
 	if (!openXrManager.IsSessionRunning()) return false;

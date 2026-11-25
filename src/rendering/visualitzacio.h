@@ -12,6 +12,7 @@
 /* ------------------------------------------------------------------------- */
 
 // Entorn VGI: Il.luminació
+	void SubirLlum(GLint sh_programID, int i, const LLUM& luz);
 void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool ll_amb, LLUM* lumin, char obj, bool frnt_fcs, bool bc_lin, int step);
 
 

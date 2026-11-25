@@ -58,6 +58,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 		ctx.updatePhoneFlashlight(matrizMovilMundo);
 	}
 	else ctx.llumGL[3].encesa = false;
+	ctx.uploadPhoneFlashlight();
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uDirtStrength"), 0.0f);
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uTextureEmission"), 0.0f);
 	glUniform1i(glcache::UniformLocation(ctx.shader_programID, "uMobileSurface"), GL_FALSE);

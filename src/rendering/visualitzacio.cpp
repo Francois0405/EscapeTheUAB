@@ -25,6 +25,31 @@
 #include <algorithm>
 #include <string>
 
+// Sube una sola fuente de luz. La usa Iluminacio() y la linterna, que se coloca despues.
+void SubirLlum(GLint sh_programID, int i, const LLUM& luz)
+{
+	const std::string prefijo = "LightSource[" + std::to_string(i) + "].";
+	auto ubicacion = [&](const char* campo) { return glGetUniformLocation(sh_programID, (prefijo + campo).c_str()); };
+	const GLfloat exterior = std::clamp(luz.spotcoscutoff, -0.999f, 0.999f);
+	const GLfloat interior = luz.spotInnerCosCutoff > exterior
+		? std::min(luz.spotInnerCosCutoff, 0.9999f)
+		: std::cos(std::acos(exterior) * 0.72f);
+	glUniform4f(ubicacion("position"), luz.posicio.x, luz.posicio.y, luz.posicio.z, luz.posicio.w);
+	glUniform4f(ubicacion("diffuse"), luz.difusa.r, luz.difusa.g, luz.difusa.b, luz.difusa.a);
+	glUniform4f(ubicacion("specular"), luz.especular.r, luz.especular.g, luz.especular.b, luz.especular.a);
+	glUniform3f(ubicacion("attenuation"), luz.atenuacio.a, luz.atenuacio.b, luz.atenuacio.c);
+	glUniform1i(ubicacion("restricted"), luz.restringida ? GL_TRUE : GL_FALSE);
+	glUniform3f(ubicacion("spotDirection"), luz.spotdirection.x, luz.spotdirection.y, luz.spotdirection.z);
+	glUniform1f(ubicacion("spotCosCutoff"), exterior);
+	glUniform1f(ubicacion("spotInnerCosCutoff"), interior);
+	glUniform1f(ubicacion("spotExponent"), luz.spotexponent);
+	glUniform1i(ubicacion("sw_light"), luz.encesa ? GL_TRUE : GL_FALSE);
+	glUniform1i(ubicacion("areaSource"), luz.areaSource ? GL_TRUE : GL_FALSE);
+	glUniform3f(ubicacion("areaAxisU"), luz.areaAxisU.x, luz.areaAxisU.y, luz.areaAxisU.z);
+	glUniform3f(ubicacion("areaAxisV"), luz.areaAxisV.x, luz.areaAxisV.y, luz.areaAxisV.z);
+	glUniform2f(ubicacion("areaHalfSize"), luz.areaHalfSizeU, luz.areaHalfSizeV);
+}
+
 // Iluminaci�: Configurar iluminaci� de l'escena
 void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool ll_amb, LLUM* lumin, char obj, bool frnt_fcs,
 	bool bc_lin, int step)
@@ -43,30 +68,7 @@ void Iluminacio(GLint sh_programID, char ilumin, bool ifix, bool ilu2sides, bool
 // Passar llum fixe a Coordenades M�n o llum lligada a c�mera
 	glUniform1i(glGetUniformLocation(sh_programID, "fixedLight"), ifix);
 	// Subir todas las fuentes con un bucle: el rango debe coincidir con MaxLights en los shaders.
-	for (int i = 0; i < NUM_MAX_LLUMS; ++i)
-	{
-		const LLUM& luz = lumin[i];
-		const std::string prefijo = "LightSource[" + std::to_string(i) + "].";
-		auto ubicacion = [&](const char* campo) { return glGetUniformLocation(sh_programID, (prefijo + campo).c_str()); };
-		const GLfloat exterior = std::clamp(luz.spotcoscutoff, -0.999f, 0.999f);
-		const GLfloat interior = luz.spotInnerCosCutoff > exterior
-			? std::min(luz.spotInnerCosCutoff, 0.9999f)
-			: std::cos(std::acos(exterior) * 0.72f);
-		glUniform4f(ubicacion("position"), luz.posicio.x, luz.posicio.y, luz.posicio.z, luz.posicio.w);
-		glUniform4f(ubicacion("diffuse"), luz.difusa.r, luz.difusa.g, luz.difusa.b, luz.difusa.a);
-		glUniform4f(ubicacion("specular"), luz.especular.r, luz.especular.g, luz.especular.b, luz.especular.a);
-		glUniform3f(ubicacion("attenuation"), luz.atenuacio.a, luz.atenuacio.b, luz.atenuacio.c);
-		glUniform1i(ubicacion("restricted"), luz.restringida ? GL_TRUE : GL_FALSE);
-		glUniform3f(ubicacion("spotDirection"), luz.spotdirection.x, luz.spotdirection.y, luz.spotdirection.z);
-		glUniform1f(ubicacion("spotCosCutoff"), exterior);
-		glUniform1f(ubicacion("spotInnerCosCutoff"), interior);
-		glUniform1f(ubicacion("spotExponent"), luz.spotexponent);
-		glUniform1i(ubicacion("sw_light"), luz.encesa ? GL_TRUE : GL_FALSE);
-		glUniform1i(ubicacion("areaSource"), luz.areaSource ? GL_TRUE : GL_FALSE);
-		glUniform3f(ubicacion("areaAxisU"), luz.areaAxisU.x, luz.areaAxisU.y, luz.areaAxisU.z);
-		glUniform3f(ubicacion("areaAxisV"), luz.areaAxisV.x, luz.areaAxisV.y, luz.areaAxisV.z);
-		glUniform2f(ubicacion("areaHalfSize"), luz.areaHalfSizeU, luz.areaHalfSizeV);
-	}
+	for (int i = 0; i < NUM_MAX_LLUMS; ++i) SubirLlum(sh_programID, i, lumin[i]);
 // Selecci� del model d'iluminaci� segons variable ilumin
 	switch(ilumin)
 	{

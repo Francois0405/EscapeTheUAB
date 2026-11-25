@@ -82,6 +82,7 @@ struct SceneRenderContext
 	bool (*leftControllerWorldMatrix)(glm::mat4&);
 	glm::mat4 (*currentPhoneLocalMatrix)();
 	void (*updatePhoneFlashlight)(const glm::mat4&);
+	void (*uploadPhoneFlashlight)();
 	GLuint (*materialTexture)(const SceneMaterial&);
 	void (*drawVrControllerRay)();
 	void (*endGpuQuery)();
