@@ -8,7 +8,8 @@
 
 // Entorn VGI.ImGui: Includes llibreria ImGui
 
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/GameplayState.h"
 #include "src/app/Application.h"
 #include "src/app/MainLoop.h"
 #include "src/app/Shutdown.h"

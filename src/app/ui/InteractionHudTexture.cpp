@@ -1,5 +1,6 @@
-#include "src/app/AppState.h"
-#include "src/ui/InteractionHudTexture.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/ui/InteractionHudTexture.h"
 
 void loadInteractionHandTexture()
 {

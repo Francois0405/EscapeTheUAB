@@ -1,5 +1,12 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
 #include "src/app/DemoDoor.h"
+
+// State used only by this file.
+namespace
+{
+	std::vector<animation::AngleKeyframe> demoDoorKeyframes = { {0.0f, 0.0f}, {2.0f, 90.0f} };
+}
 
 // Se llama una vez por fotograma: avanza el reloj y calcula el ángulo con los keyframes.
 void updateDemoDoor(float deltaSegundos)

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
 
 void OnWindowFocus(GLFWwindow* window, int focused);
 void OnWindowCloseRequest(GLFWwindow* window);

@@ -98,7 +98,7 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/app/Shutdown.cpp
 	${REPO_ROOT}/src/rendering/Ps1Framebuffer.cpp
 	${REPO_ROOT}/src/app/main.cpp
-	${REPO_ROOT}/src/diagnostics/GrabTrace.cpp
+	${REPO_ROOT}/src/app/adapters/GrabTrace.cpp
 	${REPO_ROOT}/src/legacy_vgi/LegacyVgiState.cpp
 	${REPO_ROOT}/src/legacy_vgi/VgiFileActions.cpp
 	${REPO_ROOT}/src/legacy_vgi/VgiKeyboard.cpp
@@ -108,12 +108,12 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/legacy_vgi/VgiMenus.cpp
 	${REPO_ROOT}/src/legacy_vgi/VgiStatusBar.cpp
 	${REPO_ROOT}/src/legacy_vgi/VgiTimer.cpp
-	${REPO_ROOT}/src/rendering/GpuFrameTimer.cpp
-	${REPO_ROOT}/src/rendering/HandheldDevices.cpp
-	${REPO_ROOT}/src/rendering/MaterialTextures.cpp
-	${REPO_ROOT}/src/rendering/SceneLighting.cpp
-	${REPO_ROOT}/src/ui/InteractionHudTexture.cpp
-	${REPO_ROOT}/src/ui/UiFrame.cpp
+	${REPO_ROOT}/src/app/render/GpuFrameTimer.cpp
+	${REPO_ROOT}/src/app/render/HandheldDevices.cpp
+	${REPO_ROOT}/src/app/render/MaterialTextures.cpp
+	${REPO_ROOT}/src/app/render/SceneLighting.cpp
+	${REPO_ROOT}/src/app/ui/InteractionHudTexture.cpp
+	${REPO_ROOT}/src/app/ui/UiFrame.cpp
 	${REPO_ROOT}/src/rendering/material.cpp
 	${REPO_ROOT}/src/networking/replication/NetAvatar.cpp
 	${REPO_ROOT}/src/scene/objLoader.cpp

@@ -1,8 +1,17 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/PlayerState.h"
 #include "src/app/input/MouseInput.h"
 #include "src/app/adapters/PlayerAdapters.h"
 #include "src/app/input/CursorCapture.h"
 #include "src/legacy_vgi/VgiTimer.h"
+
+// State used only by this file.
+namespace
+{
+	double fpsLastX = 0.0;
+	double fpsLastY = 0.0;
+}
 
 /* ------------------------------------------------------------------------- */
 /*                           CONTROL DEL RATOLI                              */

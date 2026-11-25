@@ -1,4 +1,4 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
 #include "src/legacy_vgi/VgiStatusBar.h"
 
 // Barra_Estat: Actualitza la barra d'estat (Status Bar) de l'aplicació en la consola amb els

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
 
 const netgame::session::SessionContext& sessionBindings();
 bool captureNetworkSceneState(std::vector<netgame::SceneObjectState>& salida);

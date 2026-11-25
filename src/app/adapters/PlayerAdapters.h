@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
 
 gameplay::player::PlayerContext& playerBindings();
 void placeCameraAtSpawn(const SceneSpawn& spawn);

@@ -1,5 +1,11 @@
 // Game state definitions. One translation unit keeps the original construction order.
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/state/PlayerState.h"
+#include "src/app/state/GameplayState.h"
+#include "src/app/state/NetworkState.h"
+#include "src/app/state/VrState.h"
 
 // ---------------------------
 
@@ -49,19 +55,9 @@ bool phongOccludersDirty = true;
 
 GLuint gpuQueries[3]{};
 
-bool gpuQueryPending[3]{};
-
-int currentGpuQuery = 0;
-
 double lastGpuMs = 0.0;
 
-bool gpuQueryActive = false;
-
 int lightingDiagnosticMode = 0;
-
-double fpsLastX = 0.0;
-
-double fpsLastY = 0.0;
 
 bool showPhone = true;
 
@@ -95,11 +91,7 @@ float deltaFPS = 0.0f;
 
 AudioManager audioManager;
 
-float masterVolumePercent = 100.0f;
-
 game::HiritiAnimator hiritiAnimator;
-
-game::HiritiAudioTimer hiritiAudioTimer;
 
 // --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
 fps::PlayerMovement playerMovement;
@@ -110,22 +102,15 @@ fps::StaminaBar staminaBar;
 
 bool showStaminaPercent = true;
 
-glm::vec3 previousFrameFeet(0.0f);
-
 bool hasPreviousFrameFeet = false;
 
 // --- DEMO FASE 1: puerta que se abre girando sobre su bisagra ---
 // Keyframes: en 0 s la puerta está cerrada (0 grados), en 2 s abierta (90 grados).
 // Para cambiar la duración o el ángulo basta con editar esta lista.
-std::vector<animation::AngleKeyframe> demoDoorKeyframes = { {0.0f, 0.0f}, {2.0f, 90.0f} };
 
 animation::Reproductor demoDoorPlayback;
 
 float demoDoorAngle = 0.0f;                              // ángulo actual (se recalcula cada fotograma)
-
-extern const glm::vec3 demoDoorHalfSize(0.05f, 0.5f, 1.0f);   // puerta de 1 m de ancho, 10 cm de grosor y 2 m de alto
-
-extern const glm::vec3 demoDoorHinge(6.0f, -0.5f, -1.7f);      // punto del mundo (a ras de suelo)
 
 // --- OBJETOS ANIMADOS GLB: las animaciones vienen de Blender (assets/animations/*.glb) ---
 // No hay keyframes ni puertas escritas aquí: la lista "animated" del JSON de la habitación
@@ -175,8 +160,6 @@ bool showNetworkPanel = true;
 std::unique_ptr<netgame::GlbDoors> networkDoors;       // adaptador de las puertas GLB (IDs de escena)
 
 netgame::NetworkConfig pendingNetworkConfig;                 // lo que editan el menu y la linea de comandos
-
-netgame::session::SessionRuntimeState networkSessionState;  // estado propio de src/networking/session
 
 vr::XrPose lastVrHead;                              // pose real del visor, la rellena el render VR
 

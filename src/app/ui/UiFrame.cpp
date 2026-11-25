@@ -1,10 +1,22 @@
-#include "src/app/AppState.h"
-#include "src/ui/UiFrame.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/state/PlayerState.h"
+#include "src/app/state/GameplayState.h"
+#include "src/app/state/NetworkState.h"
+#include "src/app/state/VrState.h"
+#include "src/app/ui/UiFrame.h"
 #include "src/app/DemoDoor.h"
 #include "src/app/VrToggle.h"
 #include "src/app/adapters/SessionAdapters.h"
 #include "src/app/input/CursorCapture.h"
 #include "src/legacy_vgi/VgiMainWindow.h"
+
+// State used only by this file.
+namespace
+{
+	float masterVolumePercent = 100.0f;
+}
 
 // Ventanas ImGui heredadas del entorno VGI (demo, EntornVGI y "Status Menu").
 void drawLegacyImGuiWindows()

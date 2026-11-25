@@ -1,6 +1,6 @@
 #pragma once
 
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
 
 bool fpsModeActive();
 void setCursorCapture(GLFWwindow* window, bool capturar);

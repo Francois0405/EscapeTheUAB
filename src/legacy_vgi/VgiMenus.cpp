@@ -1,4 +1,5 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/PlayerState.h"
 #include "src/legacy_vgi/VgiMenus.h"
 #include "src/app/adapters/InteractionAdapters.h"
 #include "src/app/adapters/SceneAdapters.h"

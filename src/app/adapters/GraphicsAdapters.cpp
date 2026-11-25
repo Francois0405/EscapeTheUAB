@@ -1,4 +1,4 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
 #include "src/app/adapters/GraphicsAdapters.h"
 
 // Estado y recursos GL iniciales: src/rendering/LegacyVgiGraphicsBootstrap.cpp.

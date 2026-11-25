@@ -1,5 +1,14 @@
-#include "src/app/AppState.h"
-#include "src/rendering/GpuFrameTimer.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/render/GpuFrameTimer.h"
+
+// State used only by this file.
+namespace
+{
+	bool gpuQueryPending[3]{};
+	int currentGpuQuery = 0;
+	bool gpuQueryActive = false;
+}
 
 void beginGpuQuery()
 {

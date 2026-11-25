@@ -1,5 +1,6 @@
-#include "src/app/AppState.h"
-#include "src/rendering/MaterialTextures.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/render/MaterialTextures.h"
 
 GLuint materialTexture(const SceneMaterial& material)
 {

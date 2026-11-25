@@ -1,9 +1,14 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/PlayerState.h"
+#include "src/app/state/GameplayState.h"
+#include "src/app/state/NetworkState.h"
+#include "src/app/state/VrState.h"
 #include "src/app/adapters/InteractionAdapters.h"
 #include "src/app/adapters/HirityAdapters.h"
 #include "src/app/adapters/PlayerAdapters.h"
 #include "src/app/input/CursorCapture.h"
-#include "src/diagnostics/GrabTrace.h"
+#include "src/app/adapters/GrabTrace.h"
 
 // Contexto prestado a src/gameplay/interaction: el estado sigue siendo de main.cpp.
 const game::interaction::InteractionContext& interactionBindings()

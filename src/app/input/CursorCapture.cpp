@@ -1,4 +1,7 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/PlayerState.h"
+#include "src/app/state/VrState.h"
 #include "src/app/input/CursorCapture.h"
 #include "src/app/adapters/PlayerAdapters.h"
 

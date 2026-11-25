@@ -1,7 +1,16 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/PlayerState.h"
+#include "src/app/state/VrState.h"
 #include "src/app/adapters/PlayerAdapters.h"
 #include "src/app/input/CursorCapture.h"
 #include "src/legacy_vgi/VgiMenuCallbacks.h"
+
+// State used only by this file.
+namespace
+{
+	glm::vec3 previousFrameFeet(0.0f);
+}
 
 gameplay::player::PlayerContext& playerBindings()
 {

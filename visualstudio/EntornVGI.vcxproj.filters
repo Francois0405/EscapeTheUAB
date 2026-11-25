@@ -6,6 +6,9 @@
     <Filter Include="src\app" />
     <Filter Include="src\app\adapters" />
     <Filter Include="src\app\input" />
+    <Filter Include="src\app\render" />
+    <Filter Include="src\app\state" />
+    <Filter Include="src\app\ui" />
     <Filter Include="src\audio" />
     <Filter Include="src\diagnostics" />
     <Filter Include="src\editor" />
@@ -39,6 +42,9 @@
     </ClCompile>
     <ClCompile Include="..\src\animation\GlbAnimatedObjects.cpp">
       <Filter>src\animation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\GrabTrace.cpp">
+      <Filter>src\app\adapters</Filter>
     </ClCompile>
     <ClCompile Include="..\src\app\adapters\GraphicsAdapters.cpp">
       <Filter>src\app\adapters</Filter>
@@ -85,8 +91,26 @@
     <ClCompile Include="..\src\app\MainLoop.cpp">
       <Filter>src\app</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\app\render\GpuFrameTimer.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\render\HandheldDevices.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\render\MaterialTextures.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\render\SceneLighting.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\app\Shutdown.cpp">
       <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\ui\InteractionHudTexture.cpp">
+      <Filter>src\app\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\ui\UiFrame.cpp">
+      <Filter>src\app\ui</Filter>
     </ClCompile>
     <ClCompile Include="..\src\app\VrToggle.cpp">
       <Filter>src\app</Filter>
@@ -101,9 +125,6 @@
       <Filter>src\audio</Filter>
     </ClCompile>
     <ClCompile Include="..\src\diagnostics\GrabDiagnostics.cpp">
-      <Filter>src\diagnostics</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\diagnostics\GrabTrace.cpp">
       <Filter>src\diagnostics</Filter>
     </ClCompile>
     <ClCompile Include="..\src\editor\EditorVisibility.cpp">
@@ -202,12 +223,6 @@
     <ClCompile Include="..\src\rendering\glut_geometry.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\rendering\GpuFrameTimer.cpp">
-      <Filter>src\rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\rendering\HandheldDevices.cpp">
-      <Filter>src\rendering</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\rendering\LegacyVgiGeometryControls.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
@@ -223,9 +238,6 @@
     <ClCompile Include="..\src\rendering\material.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\rendering\MaterialTextures.cpp">
-      <Filter>src\rendering</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\rendering\ObjMeshOptimization.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
@@ -239,9 +251,6 @@
       <Filter>src\rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\src\rendering\RuntimeRenderer.cpp">
-      <Filter>src\rendering</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\rendering\SceneLighting.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
     <ClCompile Include="..\src\rendering\shader.cpp">
@@ -265,9 +274,6 @@
     <ClCompile Include="..\src\ui\DebugPanels.cpp">
       <Filter>src\ui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ui\InteractionHudTexture.cpp">
-      <Filter>src\ui</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\ui\NetworkPanels.cpp">
       <Filter>src\ui</Filter>
     </ClCompile>
@@ -275,9 +281,6 @@
       <Filter>src\ui</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ui\StatusBar.cpp">
-      <Filter>src\ui</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\ui\UiFrame.cpp">
       <Filter>src\ui</Filter>
     </ClCompile>
     <ClCompile Include="..\src\vr\OpenXRManager.cpp">
@@ -331,6 +334,9 @@
     <ClInclude Include="..\src\animation\GlbAnimation.h">
       <Filter>src\animation</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\app\adapters\GrabTrace.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\app\adapters\GraphicsAdapters.h">
       <Filter>src\app\adapters</Filter>
     </ClInclude>
@@ -358,9 +364,6 @@
     <ClInclude Include="..\src\app\Application.h">
       <Filter>src\app</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\app\AppState.h">
-      <Filter>src\app</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\app\DemoDoor.h">
       <Filter>src\app</Filter>
     </ClInclude>
@@ -376,8 +379,44 @@
     <ClInclude Include="..\src\app\MainLoop.h">
       <Filter>src\app</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\app\render\GpuFrameTimer.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\render\HandheldDevices.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\render\MaterialTextures.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\render\SceneLighting.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\app\Shutdown.h">
       <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\GameplayState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\NetworkState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\PlayerState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\RenderState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\SceneState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\VrState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\ui\InteractionHudTexture.h">
+      <Filter>src\app\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\ui\UiFrame.h">
+      <Filter>src\app\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\app\VrToggle.h">
       <Filter>src\app</Filter>
@@ -392,9 +431,6 @@
       <Filter>src\audio</Filter>
     </ClInclude>
     <ClInclude Include="..\src\diagnostics\GrabDiagnostics.h">
-      <Filter>src\diagnostics</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\diagnostics\GrabTrace.h">
       <Filter>src\diagnostics</Filter>
     </ClInclude>
     <ClInclude Include="..\src\editor\EditorCamera.h">
@@ -550,12 +586,6 @@
     <ClInclude Include="..\src\rendering\glut_geometry.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\rendering\GpuFrameTimer.h">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\rendering\HandheldDevices.h">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\rendering\LegacyVgiGeometryControls.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
@@ -569,9 +599,6 @@
       <Filter>src\rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\material.h">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\rendering\MaterialTextures.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\ObjMeshOptimization.h">
@@ -590,9 +617,6 @@
       <Filter>src\rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\RuntimeRenderer.h">
-      <Filter>src\rendering</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\rendering\SceneLighting.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\shader.h">
@@ -616,9 +640,6 @@
     <ClInclude Include="..\src\scene\SceneRuntime.h">
       <Filter>src\scene</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\ui\InteractionHudTexture.h">
-      <Filter>src\ui</Filter>
-    </ClInclude>
     <ClInclude Include="..\src\ui\RuntimeUi.h">
       <Filter>src\ui</Filter>
     </ClInclude>
@@ -626,9 +647,6 @@
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\StatusBar.h">
-      <Filter>src\ui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ui\UiFrame.h">
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\UiScale.h">

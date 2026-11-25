@@ -1,5 +1,7 @@
-#include "src/app/AppState.h"
-#include "src/rendering/SceneLighting.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/render/SceneLighting.h"
 
 // Slots 4-16 pertenecen a las luces declaradas en JSON. Los slots 0-3 siguen
 // reservados para las fuentes generales y la linterna móvil.

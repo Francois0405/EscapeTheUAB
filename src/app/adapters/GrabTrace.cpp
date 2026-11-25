@@ -1,5 +1,6 @@
-#include "src/app/AppState.h"
-#include "src/diagnostics/GrabTrace.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/NetworkState.h"
+#include "src/app/adapters/GrabTrace.h"
 
 bool grabTraceEnabled()
 {

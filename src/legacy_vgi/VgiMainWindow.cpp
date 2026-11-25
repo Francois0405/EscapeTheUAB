@@ -1,4 +1,5 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/RenderState.h"
 #include "src/legacy_vgi/VgiMainWindow.h"
 #include "src/legacy_vgi/VgiFileActions.h"
 #include "src/legacy_vgi/VgiMaterial.h"

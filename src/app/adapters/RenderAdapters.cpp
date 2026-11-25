@@ -1,12 +1,23 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/state/NetworkState.h"
+#include "src/app/state/VrState.h"
 #include "src/app/adapters/RenderAdapters.h"
 #include "src/app/adapters/PlayerAdapters.h"
 #include "src/app/input/CursorCapture.h"
 #include "src/legacy_vgi/VgiStatusBar.h"
-#include "src/rendering/GpuFrameTimer.h"
-#include "src/rendering/HandheldDevices.h"
-#include "src/rendering/MaterialTextures.h"
-#include "src/rendering/SceneLighting.h"
+#include "src/app/render/GpuFrameTimer.h"
+#include "src/app/render/HandheldDevices.h"
+#include "src/app/render/MaterialTextures.h"
+#include "src/app/render/SceneLighting.h"
+
+// State used only by this file.
+namespace
+{
+	const glm::vec3 demoDoorHalfSize(0.05f, 0.5f, 1.0f);   // puerta de 1 m de ancho, 10 cm de grosor y 2 m de alto
+	const glm::vec3 demoDoorHinge(6.0f, -0.5f, -1.7f);      // punto del mundo (a ras de suelo)
+}
 
 // Viewport i dibuix del fotograma: implementacions a src/rendering/RuntimeRenderer.cpp.
 RuntimeRenderer& runtimeRenderer()

@@ -1,4 +1,10 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/state/PlayerState.h"
+#include "src/app/state/GameplayState.h"
+#include "src/app/state/NetworkState.h"
+#include "src/app/state/VrState.h"
 #include "src/app/MainLoop.h"
 #include "src/app/DemoDoor.h"
 #include "src/app/adapters/HirityAdapters.h"
@@ -9,8 +15,8 @@
 #include "src/app/adapters/SessionAdapters.h"
 #include "src/app/input/CursorCapture.h"
 #include "src/legacy_vgi/VgiTimer.h"
-#include "src/rendering/SceneLighting.h"
-#include "src/ui/UiFrame.h"
+#include "src/app/render/SceneLighting.h"
+#include "src/app/ui/UiFrame.h"
 #include "src/rendering/Ps1Framebuffer.h"
 
 void RunMainLoop(const Ps1Framebuffer& ps1, float previous)

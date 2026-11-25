@@ -1,4 +1,5 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/VrState.h"
 #include "src/app/VrToggle.h"
 
 void toggleOpenXr()

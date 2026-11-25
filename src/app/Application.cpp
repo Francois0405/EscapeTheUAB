@@ -1,4 +1,8 @@
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/SceneState.h"
+#include "src/app/state/RenderState.h"
+#include "src/app/state/NetworkState.h"
+#include "src/app/state/VrState.h"
 #include "src/app/Application.h"
 #include "src/app/WindowCallbacks.h"
 #include "src/app/adapters/GraphicsAdapters.h"
@@ -8,8 +12,8 @@
 #include "src/app/adapters/SessionAdapters.h"
 #include "src/app/input/KeyboardInput.h"
 #include "src/app/input/MouseInput.h"
-#include "src/rendering/MaterialTextures.h"
-#include "src/ui/InteractionHudTexture.h"
+#include "src/app/render/MaterialTextures.h"
+#include "src/app/ui/InteractionHudTexture.h"
 
 void ParseNetworkArguments(int argc, char** argv)
 {

@@ -1,6 +1,7 @@
 #pragma once
 
-#include "src/app/AppState.h"
+#include "src/app/AppIncludes.h"
+#include "src/app/state/GameplayState.h"
 
 const game::interaction::InteractionContext& interactionBindings();
 bool playerHoldsObject();

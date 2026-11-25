@@ -1,4 +1,4 @@
-#include "src/app/AppState.h"
+#include "src/legacy_vgi/framework.h"
 #include "src/rendering/Ps1Framebuffer.h"
 
 #include <iostream>
