@@ -201,7 +201,7 @@ Commit `4418c2d08c1186ce896309c9487315a9e3ec4a21` en `refactor/project-architect
 | P1 | Sin commit | **Incompleta** | Líneas base completas de capturas y ejecución, y el resto de referencias de §5 sin registrar |
 | B1 | `1baca0e` + `0f0927d` + `a4b03be` | Claude: no encontró defecto de código; los sondas, objetivos y tests están correctos. Debug/Release oficiales PASS; CTest 21/21; NetJuegoTests 20/20 y ENetLoopbackTests 10/10 por configuración sobre `a4b03be` | G1 condicionado a build limpio Debug/Release. Se difiere la sustitución de rutas literales de tests a un commit antes de B4; no bloquea B2. P1 no tiene un manifiesto formal. Arranque desde `bin/` y capturas P1 pendientes |
 | P2 | `4418c2d` (origen `0aa6329`) | Extracción de bibliotecas completada e integrada; Debug y Release compilan y CTest 21/21 en ambas, según el supervisor (§6.4) | Build limpio, arranque desde `bin/`, guardado del editor y comparación con P1 |
-| P3 | S2 `181ed93` (origen `273fbab`), S3 `0ccaea3` (origen `7c8b174`), S4 `fe4d7da` (origen `943e658`) | **Parcial.** S2, S3 y S4 integrados. S2: Debug/Release y CTest 21/21 por configuración tras la revisión y ajuste de pruebas; repeticiones de red informadas antes del renombrado final de identificadores. S3/S4 tienen evidencia en §§9–10 | S1 y S5 a S10, pruebas de enlace de shaders y QA de gameplay/gráfica |
+| P3 | S1 `52f00c4` (origen `6abf1c7`), S2 `181ed93`, S3 `0ccaea3`, S4 `fe4d7da` | **Parcial.** S1–S4 integrados; S1 necesita validación oficial en el HEAD integrado. S2–S4 conservan la evidencia descrita en §§9–10 y 12 | S5 a S10, pruebas de enlace de shaders y QA de gameplay/gráfica |
 
 ## 9. P3, corte S3: `RemotePhysicsTimeline` (2026-11-25)
 
@@ -304,3 +304,17 @@ Commit `41ca5dc` (`refactor: relocate network transport module`) sobre `refactor
 | `ENetLoopbackTests --repeat until-fail:10` | 10/10 | 10/10 |
 
 Los lanzadores confirmaron ENet, Bullet, OpenXR y meshoptimizer habilitados. Se observaron avisos ya existentes de `getenv`, `strncpy` y redefinición de `NOMINMAX`; no impidieron la compilación. `git diff --check` pasó. No se ejecutó el juego: el lote solo traslada el transporte. No hay validación Linux/macOS ni OpenXR con hardware. La evidencia corresponde al árbol exacto que se confirmó en `41ca5dc`, no a una ejecución posterior del hash confirmado.
+
+## 14. B3, traslado físico de dependencias vendorizadas (2026-11-25)
+
+Commit integrado `f34616d` (`refactor: relocate vendored dependencies (B3)`), origen `11602bf`, sobre `9e13716`; follow-up documental `a095e9a` corrige el estado de la licencia de Dear ImGui. Los blobs de las dependencias movidas se conservaron idénticos (23 renombres R100): Dear ImGui pasa de `include/ImGui` a `third_party/imgui`, ImGuizmo de `EntornVGI/third_party` a `third_party/imguizmo` y nlohmann/json a `third_party/nlohmann`. Se actualizaron CMake, includes y referencias de Visual Studio. El upstream identifica la licencia MIT, pero el snapshot no trae el `LICENSE.txt` al que remite `imgui.cpp`; no se inventó ni descargó una licencia.
+
+La revisión estática Claude no encontró bloqueos. La rama de implementación informó build oficial y CTest 21/21 en Windows Debug/Release; el HEAD central integrado B3/S1 acaba de validar con ambos lanzadores oficiales y CTest 21/21 por configuración. Linux/macOS no se probaron. El arranque de la rama informó que `EntornVGI/textures/fonde-menu.png` contiene datos WebP incompatibles con SOIL2; el archivo coincide con el checkpoint y B3 no lo causó. La validación gráfica sigue pendiente.
+
+## 15. P3, corte S1: fingerprint de escena de red (2026-11-25)
+
+Commit integrado `52f00c4` (`refactor: extract scene network fingerprint from main.cpp`), origen `6abf1c7`. `SceneNetworkFingerprint` vive en `EntornVGI/NetJuegoLogica.h`; `main.cpp` llama al helper y `NetJuegoTests` fija los vectores FNV-1a/ET2, incluyendo la escena calibrada. Se conservan el nombre de escena, IDs ordenados, endianess y formato `ET2-%08X`.
+
+La validación del agente fue una compilación no oficial del target y CTest focalizado Debug 1/1; el resultado central actual sustituye esa evidencia: Debug y Release compilaron con los lanzadores oficiales y CTest completo pasó 21/21 en ambas. La prueba de escena usa `ENTORNVGI_SOURCE_ASSETS_DIR` apuntando a `EntornVGI/assets`; debe actualizarse en el lote que mueva assets. No hubo QA de juego ni validación Linux/macOS.
+
+**Métrica verificada en Git en HEAD `52f00c4`:** `main.cpp` tiene 8.870 líneas frente a 8.947 en `62a7018` (−77). El número anterior de 8.888 era incorrecto y queda sustituido aquí.

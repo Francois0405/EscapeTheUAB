@@ -90,7 +90,7 @@ Las aristas de llamadas entre unidades salen de la lista de `#include` y de un a
 
 | Área | Ficheros |
 |---|---|
-| Composición y todo lo no extraído | `main.cpp` (8 888 líneas en el refactor; 8 947 en el checkpoint), `main.h` (413) |
+| Composición y todo lo no extraído | `main.cpp` (8 870 líneas en el HEAD 52f00c4; 8 947 en el checkpoint), `main.h` (413) |
 | Base académica VGI | `escena`, `visualitzacio`, `glut_geometry`, `material`, `shader`, `quatern`, `constants.h`, `framework.h`, `*_compat.h` |
 | Modelos y animación | `objLoader`, `ObjMeshOptimization`, `ModeloGLB`, `ObjetosAnimadosGLB`, `DibujoGLB`, `AnimacionGLB.h`, `AnimacionPuerta.h` |
 | Escena y física | `SceneLoader`, `MundoFisico`, `EscenaFisica`, `DibujoColisionadores` |
