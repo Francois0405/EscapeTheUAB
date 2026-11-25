@@ -1392,6 +1392,18 @@ namespace editor
 					}
 					ImGui::TextDisabled("Colliders are rebuilt when you press Play.");
 				}
+				ImGui::Separator();
+				ImGui::TextUnformatted("Puzzle");
+				int TipoPuzzle = objeto.puzzle.tipo == fisica::TipoPuzzle::SlidingPuzzle ? 1 : 0;
+
+				const char* tiposPuzzle[] = {"None", "Sliding Puzzle"};
+
+				if (ImGui::Combo("Interactable type", &TipoPuzzle, tiposPuzzle, 
+					IM_ARRAYSIZE(tiposPuzzle))) {
+					objeto.puzzle.tipo = TipoPuzzle == 1 ? fisica::TipoPuzzle::SlidingPuzzle : 
+					fisica::TipoPuzzle::Ninguno;
+					MarcarModificada();
+				}
 			}
 			else
 			{

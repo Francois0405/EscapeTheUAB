@@ -674,6 +674,21 @@
     {
       "id": "hiriti",
       "model": "../models/Hiriti.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "mass": 0.25,
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "shape": "sphere",
+        "type": "bouncy"
+      },
       "position": [
         -5.5,
         -5.650000095367432,
@@ -684,21 +699,6 @@
         0.0,
         0.0
       ],
-      "physics": {
-        "type": "bouncy",
-        "shape": "sphere",
-        "halfSize": [
-          1.0,
-          1.0,
-          1.0
-        ],
-        "offset": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "mass": 0.25
-      },
       "scale": [
         0.20000000298023224,
         0.20000000298023224,

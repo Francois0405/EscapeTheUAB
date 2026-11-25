@@ -38,6 +38,7 @@ namespace fisica
 	//   Cinematico : lo movemos NOSOTROS cada fotograma (p. ej. la hoja de una puerta animada);
 	//                empuja a los dinámicos pero nada le empuja a él.
 	enum class TipoCuerpo { Estatico, Dinamico, Cinematico, Rebotador };
+    enum class TipoPuzzle { Ninguno, SlidingPuzzle };
 
 	constexpr bool EsCuerpoDinamico(TipoCuerpo tipo)
 	{
