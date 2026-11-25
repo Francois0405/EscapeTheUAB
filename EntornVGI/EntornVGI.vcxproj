@@ -178,6 +178,10 @@
     <ClCompile Include="..\src\app\input\CursorCapture.cpp" />
     <ClCompile Include="..\src\app\input\KeyboardInput.cpp" />
     <ClCompile Include="..\src\app\input\MouseInput.cpp" />
+    <ClCompile Include="..\src\app\Application.cpp" />
+    <ClCompile Include="..\src\app\MainLoop.cpp" />
+    <ClCompile Include="..\src\app\Shutdown.cpp" />
+    <ClCompile Include="..\src\rendering\Ps1Framebuffer.cpp" />
     <ClCompile Include="..\src\app\main.cpp" />
     <ClCompile Include="..\src\diagnostics\GrabTrace.cpp" />
     <ClCompile Include="..\src\legacy_vgi\LegacyVgiState.cpp" />
@@ -265,6 +269,10 @@
     <ClInclude Include="..\src\rendering\DibujoGLB.h" />
     <ClInclude Include="..\src\physics\EscenaFisica.h" />
     <ClInclude Include="..\src\app\AppIncludes.h" />
+    <ClInclude Include="..\src\app\Application.h" />
+    <ClInclude Include="..\src\app\MainLoop.h" />
+    <ClInclude Include="..\src\app\Shutdown.h" />
+    <ClInclude Include="..\src\rendering\Ps1Framebuffer.h" />
     <ClInclude Include="..\src\app\AppState.h" />
     <ClInclude Include="..\src\app\DemoDoor.h" />
     <ClInclude Include="..\src\app\VrToggle.h" />

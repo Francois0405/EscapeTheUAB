@@ -93,6 +93,10 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/app/input/CursorCapture.cpp
 	${REPO_ROOT}/src/app/input/KeyboardInput.cpp
 	${REPO_ROOT}/src/app/input/MouseInput.cpp
+	${REPO_ROOT}/src/app/Application.cpp
+	${REPO_ROOT}/src/app/MainLoop.cpp
+	${REPO_ROOT}/src/app/Shutdown.cpp
+	${REPO_ROOT}/src/rendering/Ps1Framebuffer.cpp
 	${REPO_ROOT}/src/app/main.cpp
 	${REPO_ROOT}/src/diagnostics/GrabTrace.cpp
 	${REPO_ROOT}/src/legacy_vgi/LegacyVgiState.cpp
