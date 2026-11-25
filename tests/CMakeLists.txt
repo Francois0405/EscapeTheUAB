@@ -158,6 +158,7 @@ add_executable(ObjLoaderTests
 )
 target_include_directories(ObjLoaderTests PRIVATE
 	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}/src/legacy_vgi
 	${PROJECT_SOURCE_DIR}/src/scene
 	${PROJECT_SOURCE_DIR}/src/platform
 	${PROJECT_SOURCE_DIR}/third_party/imgui

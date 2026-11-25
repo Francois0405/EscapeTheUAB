@@ -106,6 +106,7 @@ endif()
 target_include_directories(EntornVGI PRIVATE
 	${REPO_ROOT}
 	${CMAKE_CURRENT_SOURCE_DIR}
+	${REPO_ROOT}/src/legacy_vgi
 	${REPO_ROOT}/src/scene
 	${REPO_ROOT}/src/platform
 	${IMGUI_DIR}

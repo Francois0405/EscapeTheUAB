@@ -101,10 +101,10 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="constants.h">
+    <ClInclude Include="..\src\legacy_vgi\constants.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="file_dialog_compat.h">
+    <ClInclude Include="..\src\platform\file_dialog_compat.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\third_party\nlohmann\json.hpp">
@@ -116,13 +116,13 @@
     <ClInclude Include="..\src\platform\platform_compat.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="framework.h">
+    <ClInclude Include="..\src\legacy_vgi\framework.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\glut_geometry.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
-    <ClInclude Include="main.h">
+    <ClInclude Include="..\src\legacy_vgi\main.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="..\src\rendering\material.h">

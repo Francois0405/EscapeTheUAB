@@ -108,8 +108,8 @@
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PrecompiledHeaderFile>framdework.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\legacy_vgi;$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>..\src\legacy_vgi\framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -128,8 +128,8 @@
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp20</LanguageStandard>
-      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PrecompiledHeaderFile>framework.h</PrecompiledHeaderFile>
+      <AdditionalIncludeDirectories>$(ProjectDir);$(ProjectDir)..\src\legacy_vgi;$(ProjectDir)..\src\scene;$(ProjectDir)..\src\platform;..\;..\include;..\third_party;..\third_party\imgui;..\third_party\imguizmo;..\third_party\SOIL2\src;..\third_party\cgltf;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <PrecompiledHeaderFile>..\src\legacy_vgi\framework.h</PrecompiledHeaderFile>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -206,8 +206,8 @@
     </ClInclude>
     <ClInclude Include="..\third_party\imgui\imstb_textedit.h" />
     <ClInclude Include="..\third_party\imgui\nfd.h" />
-    <ClInclude Include="constants.h" />
-    <ClInclude Include="file_dialog_compat.h" />
+    <ClInclude Include="..\src\legacy_vgi\constants.h" />
+    <ClInclude Include="..\src\platform\file_dialog_compat.h" />
     <ClInclude Include="..\src\editor\EditorEscenas.h" />
     <ClInclude Include="..\src\editor\HistorialEscena.h" />
     <ClInclude Include="..\src\editor\LimitesModelo.h" />
@@ -217,7 +217,7 @@
     <ClInclude Include="..\third_party\nlohmann\json.hpp" />
     <ClInclude Include="..\third_party\imguizmo\ImGuizmo.h" />
     <ClInclude Include="..\src\scene\escena.h" />
-    <ClInclude Include="framework.h" />
+    <ClInclude Include="..\src\legacy_vgi\framework.h" />
     <ClInclude Include="..\src\platform\platform_compat.h" />
     <ClInclude Include="..\src\rendering\glut_geometry.h" />
     <ClInclude Include="..\src\animation\AnimacionGLB.h" />
@@ -225,7 +225,7 @@
     <ClInclude Include="..\src\physics\DibujoColisionadores.h" />
     <ClInclude Include="..\src\rendering\DibujoGLB.h" />
     <ClInclude Include="..\src\physics\EscenaFisica.h" />
-    <ClInclude Include="main.h" />
+    <ClInclude Include="..\src\legacy_vgi\main.h" />
     <ClInclude Include="..\src\rendering\material.h" />
     <ClInclude Include="..\src\rendering\ModeloGLB.h" />
     <ClInclude Include="..\src\physics\MundoFisico.h" />
