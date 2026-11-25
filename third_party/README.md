@@ -36,7 +36,7 @@ configurado por CMake.
 ## Dear ImGui
 
 - Ubicación: `third_party/imgui/`; versión indicada en `third_party/imgui/Version.txt`.
-- Licencia: MIT, conservada en el encabezado de los archivos fuente.
+- Licencia: Dear ImGui identifica MIT como su licencia; `imgui.cpp` remite a `LICENSE.txt`, que no está incluida en esta copia vendorizada.
 
 ## ImGuizmo
 
