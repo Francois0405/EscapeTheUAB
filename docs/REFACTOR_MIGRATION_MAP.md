@@ -2,7 +2,7 @@
 
 Plan **propuesto** sobre la base `62a7018571559df2490bf2a879734bed647bfe10`, fechado el 2026-11-25. El contexto, los contratos, los no objetivos y las marcas de evidencia ([C], [H], [D], [P]) están en [ARCHITECTURE.md](ARCHITECTURE.md).
 
-**Estado a 2026-11-25: inventario y diseño completos; extracción de bibliotecas de P2 completada e integrada en `4418c2d` (§6.4), con comprobaciones de la puerta de P2 aún abiertas; P3 iniciada, con los cortes S3 (`0ccaea3`, §9) y S4 (`fe4d7da`, §10) integrados; S2 y B1 en curso y sin integrar (§8). P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
+**Estado a 2026-11-25: inventario y diseño completos; targets de P2/B1 integrados (`4418c2d`, `1baca0e`, `0f0927d`); P3 con S2 (`181ed93`), S3 (`0ccaea3`) y S4 (`fe4d7da`) integrados. Las puertas de P1/P2 siguen abiertas, P0 no está superada y no hay GO funcional.** El estado de cada etapa se anota en §8; una etapa solo se da por superada con commit y resultados reales.
 
 El árbol destino, la tabla de rutas, los lotes de movimiento físico y los cortes S1 a S10 están en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md). Es un objetivo, no está realizado. [ARCHITECTURE.md](ARCHITECTURE.md) (§1 y §7) está alineado con él: la reorganización física y los nombres en inglés del código propio son resultados obligatorios.
 
@@ -199,9 +199,9 @@ Commit `4418c2d08c1186ce896309c9487315a9e3ec4a21` en `refactor/project-architect
 |---|---|---|---|
 | P0 | Sin commit de superación | **No superada.** No detiene las etapas arquitectónicas provisionales autorizadas (§1) | Agarre y lanzamiento de objeto normal desde el cliente, paridad visual host/cliente, reanudación de Hirity y el resto de la QA de ARCHITECTURE.md §2 |
 | P1 | Sin commit | **Incompleta** | Líneas base completas de capturas y ejecución, y el resto de referencias de §5 sin registrar |
-| B1 | Sin commit; no integrado | Informado por el coordinador, no verificado aquí: bloqueo de rutas de include detectado | Corrección, validación, commit y G1 |
+| B1 | `1baca0e` + `0f0927d` (orígenes `9e76e6c` + `fe42dc7`) | Claude: sin bloqueos; Debug y Release oficiales PASS; CTest 21/21 en ambas; NetJuegoTests 20/20 y ENetLoopbackTests 10/10 por configuración | G1 integral del SHA `0f0927d`, build desde directorio limpio, arranque desde `bin/` y comparación con P1 |
 | P2 | `4418c2d` (origen `0aa6329`) | Extracción de bibliotecas completada e integrada; Debug y Release compilan y CTest 21/21 en ambas, según el supervisor (§6.4) | Build limpio, arranque desde `bin/`, guardado del editor y comparación con P1 |
-| P3 | `0ccaea3` (origen `7c8b174`), corte S3; `fe4d7da` (origen `943e658`), corte S4 | **Parcial.** S3 y S4 integrados; evidencia informada por el coordinador en §9 y §10. S2, informado por el coordinador y no verificado aquí: validado mecánicamente en su worktree aislado; sin commit ni integración | Revisión independiente, commit e integración de S2; cortes S1 y S5 a S10, pruebas de enlace de shaders y QA de gameplay y gráfica |
+| P3 | S2 `181ed93` (origen `273fbab`), S3 `0ccaea3` (origen `7c8b174`), S4 `fe4d7da` (origen `943e658`) | **Parcial.** S2, S3 y S4 integrados. S2: Debug/Release y CTest 21/21 por configuración tras la revisión y ajuste de pruebas; repeticiones de red informadas antes del renombrado final de identificadores. S3/S4 tienen evidencia en §§9–10 | S1 y S5 a S10, pruebas de enlace de shaders y QA de gameplay/gráfica |
 
 ## 9. P3, corte S3: `RemotePhysicsTimeline` (2026-11-25)
 
@@ -268,3 +268,20 @@ El coordinador presenta esta evidencia como la del corte de origen. Durante la r
 **Sobre `fe4d7da`:** este registro no contiene una ejecución propia. La evidencia se traslada porque el parche de `943e658` y el de `fe4d7da` son equivalentes y entre ambos árboles solo cambia documentación, no por haberla repetido.
 
 **Pendiente:** QA gráfica y de gameplay (incluida la réplica en cliente), comparación con las líneas base de P1, Linux, macOS y OpenXR. **No es un GO funcional ni autoriza consolidar o publicar en `master`.**
+
+## 11. B1, targets de build y recursos (2026-11-25)
+
+La extracción B1 está integrada en `1baca0e` (targets iniciales, origen `9e76e6c`) y `0f0927d` (target de `NetJuego.cpp`, origen `fe42dc7`). Las pruebas se ejecutaron en el worktree dedicado de B1 con el mismo árbol que el commit de origen; después se aplicó el commit a la rama central como `0f0927d`.
+
+- `EntornVGI_network_game` compila `NetJuego.cpp` una vez y publica dependencias a `EntornVGI_network` y GLM; el ejecutable y `NetJuegoTests` lo enlazan.
+- Se mantienen 21 pruebas registradas, sin duplicar `NetJuego.cpp` entre consumidores.
+- La revisión estática de Claude al cambio exacto no encontró bloqueos. La revisión G1 de la integración completa `0f0927d` está solicitada y pendiente.
+- El lanzador oficial Debug y Release terminó con código 0; ENet, Bullet, OpenXR y meshoptimizer se detectaron habilitados.
+- CTest completo pasó 21/21 en ambas configuraciones. `NetJuegoTests` pasó 20/20 y `ENetLoopbackTests` 10/10, ejecutados secuencialmente en Debug y Release.
+- La puerta de P2 sigue abierta: no se ha repetido desde un directorio limpio, no se ha arrancado el juego desde `bin/` ni se han capturado las comparaciones P1. No hubo validación en macOS/Linux ni con hardware OpenXR.
+
+## 12. P3, corte S2: estado de red de escena (2026-11-25)
+
+Commit integrado `181ed931506123df5fb944a8ca2dbcbe55a50dd9` (origen `273fbab43d25fc956b35f12e685dd71464767f53`). Crea `EntornVGI/Network/Game/SceneNetworkState.h` y sustituye en `main.cpp` la captura de estados y la búsqueda única de objetos dinámicos por helpers con dependencias explícitas. `NetJuegoTests.cpp` cubre IDs duplicados, objeto Hirity/Rebotador, collider ausente y copia de pose y dimensiones no predeterminadas.
+
+Claude revisó el cambio y no encontró bloqueos; los casos de regresión fueron reforzados antes de integrar. Los lanzadores oficiales Debug y Release y CTest completo pasaron tras los ajustes finales de nomenclatura (21/21 por configuración). Las repeticiones NetJuego 20/20 y ENetLoopback 10/10 se ejecutaron antes de ese último cambio exclusivamente de identificadores; no se han repetido sobre el commit central `181ed93`. No hubo ejecución del juego.
