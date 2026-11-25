@@ -5,6 +5,7 @@
 #include "NetJuego.h"
 #include "MundoFisico.h"
 #include "Network/Game/RemotePhysicsTimeline.h"
+#include "Network/Game/HostPhysicsPublication.h"
 
 #include <chrono>
 #include <cmath>
@@ -185,6 +186,49 @@ int main()
 	// ---------------- buffer e interpolacion de fisica remota ----------------
 	{
 		using namespace netjuego::timeline;
+		const glm::vec3 poseActual(1.0f, 2.0f, 3.0f);
+		const glm::quat rotacionActual = glm::angleAxis(0.4f, glm::vec3(0, 0, 1));
+		const glm::vec3 poseObjetivo(5.0f, 6.0f, 7.0f);
+		const glm::quat rotacionObjetivo = glm::angleAxis(1.0f, glm::vec3(0, 0, 1));
+		const auto sinTiempo = BlendRemotePhysicsPose(poseActual, rotacionActual,
+			poseObjetivo, rotacionObjetivo, 0.0f);
+		ok(cerca(sinTiempo.position, poseActual),
+			"delta cero conserva la posicion actual durante la mezcla");
+		ok(cerca(sinTiempo.rotation.z, rotacionActual.z) && cerca(sinTiempo.rotation.w, rotacionActual.w),
+			"delta cero conserva la rotacion actual durante la mezcla");
+
+		constexpr float mezclaEsperada = 0.834701f;
+		ok(cerca(RemotePhysicsBlendFactor(0.1f), mezclaEsperada, 2e-6f),
+			"delta 0.1 conserva el factor de mezcla aproximado 0.834701");
+		const auto mezclada = BlendRemotePhysicsPose(poseActual, rotacionActual,
+			poseObjetivo, rotacionObjetivo, 0.1f);
+		const glm::vec3 posicionEsperada = glm::mix(poseActual, poseObjetivo, mezclaEsperada);
+		const glm::quat rotacionEsperada = glm::slerp(rotacionActual, rotacionObjetivo, mezclaEsperada);
+		ok(cerca(mezclada.position, posicionEsperada),
+			"delta 0.1 aplica la posicion interpolada esperada");
+		ok(cerca(mezclada.rotation.z, rotacionEsperada.z) && cerca(mezclada.rotation.w, rotacionEsperada.w),
+			"delta 0.1 aplica la rotacion interpolada esperada");
+
+		std::map<uint32_t, bool> dormidosAntes;
+		ok(!netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 42, false),
+			"primera observacion dormida no publica estado final");
+		ok(!netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 7, true),
+			"primera observacion despierta no publica estado final");
+		ok(!netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 42, false),
+			"estado dormido repetido no publica estado final");
+		ok(!netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 42, true),
+			"transicion dormido-a-despierto no publica estado final");
+		ok(!netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 42, true),
+			"estado despierto repetido no publica estado final");
+		ok(netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 42, false),
+			"transicion despierto-a-dormido publica estado final");
+		ok(!netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 42, false),
+			"estado dormido posterior a transicion no repite publicacion");
+		ok(!netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 99, false),
+			"ID independiente no hereda estado previo y su primera observacion no publica");
+		ok(netjuego::publication::ObserveHostSleepTransition(dormidosAntes, 7, false),
+			"ID independiente publica su propia transicion despierto-a-dormido");
+
 		const auto estado = [](uint32_t tick, float x, uint8_t flags = 0,
 			net::PeerId owner = net::kUnassignedPeerId)
 		{

@@ -3,6 +3,7 @@
 #include "../../NetJuegoLogica.h"
 
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -17,6 +18,26 @@ namespace netjuego::timeline
 	};
 
 	using RemotePhysicsBuffers = std::map<uint32_t, std::deque<RemotePhysicsSample>>;
+
+	struct RemotePhysicsPose
+	{
+		glm::vec3 position;
+		glm::quat rotation;
+	};
+
+	inline float RemotePhysicsBlendFactor(float delta)
+	{
+		return 1.0f - std::exp(-18.0f * delta);
+	}
+
+	inline RemotePhysicsPose BlendRemotePhysicsPose(const glm::vec3& currentPosition,
+		const glm::quat& currentRotation, const glm::vec3& targetPosition,
+		const glm::quat& targetRotation, float delta)
+	{
+		const float blend = RemotePhysicsBlendFactor(delta);
+		return { glm::mix(currentPosition, targetPosition, blend),
+			glm::slerp(currentRotation, targetRotation, blend) };
+	}
 
 	inline void StoreRemotePhysicsSample(RemotePhysicsBuffers& buffers,
 		const net::DynamicStateEntry& state, double now)

@@ -37,6 +37,7 @@
 #include "Network/PreferenciasRed.h"
 #include "Network/GrabDiagnostics.h"
 #include "Network/Game/RemotePhysicsTimeline.h"
+#include "Network/Game/HostPhysicsPublication.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
 #include "EscalaUI.h"
@@ -1560,11 +1561,9 @@ namespace
 					estado.owner = redJuego.PropietarioDinamico(estado.objectId);
 					estado.flags = static_cast<uint8_t>((fisico.activo ? 1 : 0) | (estado.owner != netjuego::kSinDueno ? 2 : 0));
 					estados.push_back(estado);
-					const bool dormido = !fisico.activo;
-					auto previo = objetosDormidosAntes.find(estado.objectId);
-					if (dormido && previo != objetosDormidosAntes.end() && !previo->second)
+					if (netjuego::publication::ObserveHostSleepTransition(
+						objetosDormidosAntes, estado.objectId, fisico.activo))
 						redJuego.PublicarEstadoFisicoFinal(estado);
-					objetosDormidosAntes[estado.objectId] = dormido;
 				}
 				redJuego.EnviarEstadosFisicos(estados);
 			}
@@ -1612,9 +1611,11 @@ namespace
 					auto actual = std::find_if(locales.begin(), locales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
 					if (actual != locales.end())
 					{
-						const float mezcla = 1.0f - std::exp(-18.0f * delta);
-					aplicado.pose.posicion = glm::mix(actual->pose.posicion, aplicado.pose.posicion, mezcla);
-					aplicado.pose.rotacion = glm::slerp(actual->pose.rotacion, aplicado.pose.rotacion, mezcla);
+						const auto mezcla = netjuego::timeline::BlendRemotePhysicsPose(
+							actual->pose.posicion, actual->pose.rotacion,
+							aplicado.pose.posicion, aplicado.pose.rotacion, delta);
+						aplicado.pose.posicion = mezcla.position;
+						aplicado.pose.rotacion = mezcla.rotation;
 					}
 				}
 				escenaFisica->AplicarEstadoReplicado(aplicado);
