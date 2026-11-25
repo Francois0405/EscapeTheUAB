@@ -781,14 +781,22 @@ namespace
 			}
 			else if (redJuego.Activa() && redJuego.EsHost())
 			{
-				if (redJuego.PropietarioDinamico(id) == netjuego::kSinDueno &&
+				const net::PeerId propietario = redJuego.PropietarioDinamico(id);
+				if (propietario == netjuego::kSinDueno &&
 					escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion))
 				{
 					agarrado = true;
 					redJuego.FijarPropietarioDinamico(id, net::kHostPeerId);
 				}
+				else trazarAgarre("reject", id, redJuego.PeerLocal(), propietario, origen, direccion,
+					propietario == netjuego::kSinDueno ? "host-local-physics-rejected-grab" : "host-local-object-owned-by-peer");
 			}
-			else agarrado = escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
+			else
+			{
+				agarrado = escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion);
+				if (!agarrado) trazarAgarre("reject", id, net::kUnassignedPeerId, netjuego::kSinDueno,
+					origen, direccion, "offline-local-physics-rejected-grab");
+			}
 			if (agarrado && objetosEscena[objetivo.indiceDinamico].id == "hiriti")
 			{
 				animacionHiriti.DescubrirPorInteraccion();
@@ -909,7 +917,8 @@ namespace
 				registro << "[grab] hiriti id=" << idHiriti << " owner=" << propietario
 					<< " body=" << (redJuego.EsCliente() ? "kinematic-replica" : "authoritative-dynamic")
 					<< " held=" << (jugadorManipulaHiriti ? "yes" : "no")
-					<< " tracking=" << (puedeSeguir ? "eligible" : "suspended-or-stabilizing")
+					<< " tracking=" << (redJuego.EsCliente() ? "host-authoritative-unknown" :
+						(puedeSeguir ? "eligible" : "suspended-or-stabilizing"))
 					<< " followTarget=" << (redJuego.EsHost() ? "host-local-player" : (redJuego.EsCliente() ? "host-authoritative" : "offline-local-player"))
 					<< " respawnElapsed=" << animacionHiriti.TiempoDesdeReaparicion()
 					<< " pos=(" << centro.x << ',' << centro.y << ',' << centro.z << ") velocity=("
@@ -1371,7 +1380,13 @@ namespace
 				if (par.second == netjuego::kSinDueno || par.second == net::kHostPeerId) continue;
 				std::size_t indice = 0;
 				if (indiceUnicoObjetoRed(par.first, indice))
-					escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
+				{
+					const bool liberado = escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
+					glm::vec3 posicion(0.0f);
+					if (liberado) escenaFisica->PosicionObjetoDinamico(static_cast<int>(indice), posicion);
+					trazarAgarre("disconnect-release", par.first, par.second, par.second, posicion,
+						glm::vec3(0.0f), liberado ? "host-session-stopped-and-cleared-peer-owner" : "host-session-stopped-constraint-not-active");
+				}
 				agarresRemotosDesdeCabeza.erase(par.first);
 				redJuego.FijarPropietarioDinamico(par.first, netjuego::kSinDueno);
 			}
@@ -1469,28 +1484,50 @@ namespace
 						escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), solicitud.velocidad);
 					glm::vec3 posicionLiberada(0.0f);
 					if (liberado) escenaFisica->PosicionObjetoDinamico(static_cast<int>(indice), posicionLiberada);
-					trazarAgarre(liberado ? "released" : "release-rejected", solicitud.id, solicitud.peer,
+					trazarAgarre(solicitud.desconexionPeer ? "disconnect-release" : (liberado ? "released" : "release-rejected"), solicitud.id, solicitud.peer,
 						propietario, posicionLiberada, solicitud.velocidad,
-						liberado ? "host-restored-gravity-and-applied-throw-velocity" : "constraint-was-not-active");
+						solicitud.desconexionPeer
+							? (liberado ? "peer-left-and-host-restored-gravity" : "peer-left-but-constraint-not-active")
+							: (liberado ? "host-restored-gravity-and-applied-throw-velocity" : "constraint-was-not-active"));
 					if (liberado && objetosEscena[indice].id == "hiriti")
 						animacionHiriti.MarcarLanzadoPorJugador(std::clamp((glm::length(solicitud.velocidad) - 3.0f) / 12.0f, 0.0f, 1.0f));
 					agarresRemotosDesdeCabeza.erase(solicitud.id);
 					// La propiedad también se limpia si el cuerpo ya no existe/reconstruyó.
 					redJuego.FijarPropietarioDinamico(solicitud.id, netjuego::kSinDueno);
 				}
+				else if (!solicitud.agarrar)
+				{
+					trazarAgarre("release-rejected", solicitud.id, solicitud.peer, propietario,
+						solicitud.velocidad, glm::vec3(0.0f), "requester-is-not-current-owner");
+				}
 			}
 
 			for (const auto& par : redJuego.PropietariosDinamicos())
 			{
 				if (par.second == netjuego::kSinDueno) continue;
+				static std::map<uint32_t, double> ultimaMuestraAgarre;
 				std::size_t indice = 0; net::PoseEntry poseRemota;
 				if (!indiceUnicoObjetoRed(par.first, indice)) continue;
 				if (par.second == net::kHostPeerId)
 				{
 					if (escenaFisica->ObjetoAgarrado() != static_cast<int>(indice))
 					{
+						trazarAgarre("auto-drop", par.first, par.second, par.second, glm::vec3(0.0f),
+							glm::vec3(0.0f), "host-owner-set-but-local-constraint-missing-owner-cleared");
 						agarresRemotosDesdeCabeza.erase(par.first);
 						redJuego.FijarPropietarioDinamico(par.first, netjuego::kSinDueno);
+					}
+					else if (diagnosticoAgarreActivo())
+					{
+						auto& ultima = ultimaMuestraAgarre[par.first];
+						if (ahora - ultima >= 0.5)
+						{
+							glm::vec3 posicion(0.0f);
+							if (escenaFisica->PosicionObjetoDinamico(static_cast<int>(indice), posicion))
+								trazarAgarre("holding", par.first, net::kHostPeerId, net::kHostPeerId, posicion,
+									posicion, "host-local-dynamic-constraint-active");
+							ultima = ahora;
+						}
 					}
 					continue;
 				}
@@ -1506,14 +1543,16 @@ namespace
 				auto actual = std::find_if(actuales.begin(), actuales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
 				if (actual == actuales.end())
 				{
+					trazarAgarre("auto-drop", par.first, par.second, par.second, glm::vec3(0.0f),
+						glm::vec3(0.0f), "host-body-missing-position-unavailable-owner-cleared");
 					agarresRemotosDesdeCabeza.erase(par.first);
 					redJuego.FijarPropietarioDinamico(par.first, netjuego::kSinDueno);
 				}
 				else if (glm::distance(actual->pose.posicion, destino) > fisica::EscenaFisica::SoltarSiSeAleja)
 				{
-					trazarAgarre("auto-release", par.first, par.second, par.second, actual->pose.posicion,
-						destino, "host-dynamic-constraint-exceeded-two-meter-limit");
-					escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
+					const bool liberado = escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
+					trazarAgarre(liberado ? "auto-release" : "auto-drop", par.first, par.second, par.second, actual->pose.posicion,
+						destino, liberado ? "host-dynamic-constraint-exceeded-two-meter-limit" : "distance-limit-but-constraint-not-active");
 					agarresRemotosDesdeCabeza.erase(par.first);
 					redJuego.FijarPropietarioDinamico(par.first, netjuego::kSinDueno);
 				}
@@ -1522,7 +1561,6 @@ namespace
 					escenaFisica->ActualizarAgarreRemoto(static_cast<int>(indice), destino);
 					if (diagnosticoAgarreActivo())
 					{
-						static std::map<uint32_t, double> ultimaMuestraAgarre;
 						auto& ultima = ultimaMuestraAgarre[par.first];
 						if (ahora - ultima >= 0.5)
 						{
@@ -1633,7 +1671,7 @@ namespace
 						const auto& rotacion = aplicado.pose.rotacion;
 						const auto rotacionObjetivo = netjuego::RotDe(objetivo.transform);
 						std::ostringstream detalle;
-						detalle << "client-kinematic;position-is-interpolated-from-host;rotation=("
+						detalle << "client-kinematic;hostSnapshotTick=" << objetivo.tick << ";position-is-interpolated-from-host;rotation=("
 							<< rotacion.x << ',' << rotacion.y << ',' << rotacion.z << ',' << rotacion.w
 							<< ");host-target-rotation=(" << rotacionObjetivo.x << ',' << rotacionObjetivo.y << ','
 							<< rotacionObjetivo.z << ',' << rotacionObjetivo.w << ')';
@@ -1779,8 +1817,15 @@ namespace
 			const uint32_t id = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
 			const auto it = std::find_if(objetosEscena.begin(), objetosEscena.end(), [id](const SceneObject& objeto)
 				{ return id != 0 && netjuego::HashId(objeto.id) == id; });
-			if (id != 0 && redJuego.SolicitarSoltarDinamico(id, velocidad) && it != objetosEscena.end() && it->id == "hiriti")
-				animacionHiriti.MarcarLanzadoPorJugador(carga);
+			if (id != 0)
+			{
+				const bool encolada = redJuego.SolicitarSoltarDinamico(id, velocidad);
+				trazarAgarre(encolada ? "release-request" : "release-rejected", id, redJuego.PeerLocal(),
+					redJuego.PropietarioDinamico(id), glm::vec3(0.0f), velocidad,
+					encolada ? "client-release-request-queued" : "client-release-request-queue-failed");
+				if (encolada && it != objetosEscena.end() && it->id == "hiriti")
+					animacionHiriti.MarcarLanzadoPorJugador(carga);
+			}
 		}
 		else if (escenaFisica->HayAgarre())
 		{
@@ -1793,6 +1838,10 @@ namespace
 					redJuego.FijarPropietarioDinamico(id, netjuego::kSinDueno);
 				if (indice >= 0 && indice < static_cast<int>(objetosEscena.size()) && objetosEscena[indice].id == "hiriti")
 					animacionHiriti.MarcarLanzadoPorJugador(carga);
+				glm::vec3 posicion(0.0f);
+				if (indice >= 0) escenaFisica->PosicionObjetoDinamico(indice, posicion);
+				trazarAgarre("released", id, redJuego.Activa() ? redJuego.PeerLocal() : net::kUnassignedPeerId,
+					netjuego::kSinDueno, posicion, velocidad, "local-launch-applied-throw-velocity");
 			}
 		}
 	}

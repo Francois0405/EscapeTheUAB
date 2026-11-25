@@ -1,5 +1,6 @@
 #include "GrabDiagnostics.h"
 
+#include <chrono>
 #include <cstdlib>
 #include <sstream>
 
@@ -47,16 +48,22 @@ namespace net
 	void GrabDiagnostics::Write(const std::string& record)
 	{
 		if (!stream_.is_open() || capNoticeWritten_) return;
+		const auto monotonicNs = std::chrono::duration_cast<std::chrono::nanoseconds>(
+			std::chrono::steady_clock::now().time_since_epoch()).count();
+		std::ostringstream timestamp;
+		timestamp << "mono_ns=" << monotonicNs << ' ';
+		const std::string persisted = timestamp.str() + record;
 		const std::size_t remaining = MaxBytesPerRun - bytesWritten_;
-		if (record.size() + 1 <= remaining)
+		if (persisted.size() + 1 <= remaining)
 		{
-			stream_ << record << '\n';
+			stream_ << persisted << '\n';
 			stream_.flush();
-			if (stream_) bytesWritten_ += record.size() + 1;
+			if (stream_) bytesWritten_ += persisted.size() + 1;
 			return;
 		}
 
-		static const std::string notice = "[grab] persistence stopped: 1 MiB per-process limit reached\n";
+		const std::string notice = timestamp.str() +
+			"[grab] persistence stopped: 1 MiB per-process limit reached\n";
 		if (remaining >= notice.size())
 		{
 			stream_ << notice;

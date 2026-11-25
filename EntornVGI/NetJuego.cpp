@@ -345,7 +345,12 @@ namespace netjuego
 			{
 				arbitro_.PeerDesconectado(e.peer);
 				for (const auto& par : propietariosDinamicos_)
-					if (par.second == e.peer) solicitudesFisicas_.push_back({ par.first, e.peer, false, glm::vec3(0.0f) });
+					if (par.second == e.peer)
+					{
+						SolicitudObjetoDinamico solicitud{ par.first, e.peer, false, glm::vec3(0.0f) };
+						solicitud.desconexionPeer = true;
+						solicitudesFisicas_.push_back(solicitud);
+					}
 			}
 			break;
 		case net::NetEvent::StateChanged: estadoConexion_ = e.state; break;

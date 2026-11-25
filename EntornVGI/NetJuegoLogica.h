@@ -147,6 +147,7 @@ namespace netjuego
 		net::PeerId peer = net::kUnassignedPeerId;
 		bool agarrar = false;
 		glm::vec3 velocidad{ 0.0f }, origen{ 0.0f }, direccion{ 0.0f };
+		bool desconexionPeer = false;
 	};
 
 	inline bool PuedeCargarLanzamiento(bool agarreFisicoLocal, net::Role rol, uint32_t objetoPropio)
