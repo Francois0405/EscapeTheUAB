@@ -52,7 +52,7 @@ namespace vr
 	// Modo de dibujo del juego. Solo es VR si se ha pedido Y la sesión existe; en cualquier otro caso se
 	// sigue jugando en pantalla (F2 no cuenta: es una prueba en pantalla).
 	enum class GamePlayMode { Pantalla, VR };
-	GamePlayMode ElegirModoDeJuego(bool vrSolicitado, OpenXrState estado);
+	GamePlayMode ChooseGamePlayMode(bool vrSolicitado, OpenXrState estado);
 
 	// Espacio de referencia elegido: STAGE (origen en el suelo del área de juego) o LOCAL (origen en la cabeza).
 	enum class ReferenceSpaceKind { Ninguno, Suelo, Local };
@@ -84,48 +84,48 @@ namespace vr
 		OpenXrManager& operator=(const OpenXrManager&) = delete;
 
 		// True si esta compilación incluye OpenXR (ENTORNVGI_HAS_OPENXR).
-		static bool EstaCompilado();
+		static bool IsCompiledIn();
 
 		// Activación EXPLÍCITA. Necesita el contexto OpenGL de 'ventana' activo y su versión (por ejemplo 4, 6).
 		// Si algo falla no queda ningún recurso a medias (se destruye lo creado) y se devuelve el motivo.
-		OpenXrState Activar(GLFWwindow* ventana, int glMajorVersion, int glMinorVersion);
+		OpenXrState SetActive(GLFWwindow* ventana, int glMajorVersion, int glMinorVersion);
 
 		// Atiende los eventos de OpenXR (inicia/termina la sesión según su estado). Llamar una vez por
 		// fotograma; no hace nada si no está activo.
-		void ProcesarEventos();
+		void ProcessEvents();
 
 		// ---- Bucle de fotogramas (Etapa C). Necesita el contexto OpenGL activo. ----
 		// ¿La sesión ha empezado (READY) y no ha terminado? Solo entonces se dibuja en el visor.
-		bool SesionEnMarcha() const;
-		bool Enfocada() const;   // estado FOCUSED: recibe entrada y es lo que ve el usuario
+		bool IsSessionRunning() const;
+		bool IsFocused() const;   // estado FOCUSED: recibe entrada y es lo que ve el usuario
 		const char* NombreEstadoSesion() const;
-		ReferenceSpaceKind Espacio() const;
-		int NumeroDeOjos() const;
+		ReferenceSpaceKind ReferenceSpaceHandle() const;
+		int EyeCount() const;
 
 		// xrWaitFrame + xrBeginFrame + xrLocateViews. Si no devuelve NoActivo hay que cerrar con TerminarFotograma().
-		FrameResult EmpezarFotograma();
+		FrameResult BeginXrFrame();
 		// Adquiere la imagen del ojo 'indice' y deja su framebuffer enlazado. False si falla (el fotograma se
 		// enviará vacío, sin dejar nada a medias).
-		bool AdquirirOjo(int indice, VrEye& ojo);
-		void LiberarOjo(int indice);
+		bool AcquireEyeImage(int indice, VrEye& ojo);
+		void ReleaseEyeImage(int indice);
 		// xrEndFrame con una capa de proyección (si los dos ojos se dibujaron) o vacío.
-		void TerminarFotograma();
+		void EndXrFrame();
 
 		// Informe de diagnóstico (runtime, visor, GPU, extensiones, formatos, swapchains) para consola y panel.
 		const std::string& Diagnostico() const { return diagnostico; }
 
 		// Destruye sesión e instancia (en ese orden). Se puede llamar siempre, también sin haber activado.
-		void Desactivar();
+		void Deactivate();
 
-		OpenXrState Estado() const { return estado; }
+		OpenXrState CurrentState() const { return estado; }
 		const std::string& Mensaje() const { return mensaje; }
-		bool TieneRecursos() const;   // ¿queda alguna instancia o sesión de OpenXR viva?
+		bool HasResources() const;   // ¿queda alguna instancia o sesión de OpenXR viva?
  		bool GatilloRecienPulsado() const;
-		bool GatilloRecienSoltado() const;
+		bool TriggerJustReleased() const;
     	bool GatilloPulsado() const;
-		bool GatilloIzquierdoRecienPulsado() const;
+		bool LeftTriggerJustPressed() const;
 
-		bool PoseApuntadoMando(int mano, XrPose& poseOut) const;
+		bool ControllerAimPose(int mano, XrPose& poseOut) const;
 	private:
 		struct Impl;   // oculta los tipos de OpenXR: el resto del juego no incluye sus cabeceras
 		std::unique_ptr<Impl> impl;

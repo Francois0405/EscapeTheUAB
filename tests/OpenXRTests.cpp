@@ -34,65 +34,65 @@ namespace
 int main()
 {
 	// 1) Seleccion del modo: solo es VR si se pidio Y existe la sesion. Nunca "por accidente".
-	comprobar(ElegirModoDeJuego(false, OpenXrState::SesionCreada) == GamePlayMode::Pantalla, "sin pedir VR se juega en pantalla aunque haya sesion");
-	comprobar(ElegirModoDeJuego(true, OpenXrState::SinRuntime) == GamePlayMode::Pantalla, "VR pedido sin runtime: pantalla");
-	comprobar(ElegirModoDeJuego(true, OpenXrState::NoCompilado) == GamePlayMode::Pantalla, "VR pedido sin OpenXR compilado: pantalla");
-	comprobar(ElegirModoDeJuego(true, OpenXrState::InstanciaYSistemaListos) == GamePlayMode::Pantalla, "visor detectado pero sin sesion: pantalla");
-	comprobar(ElegirModoDeJuego(true, OpenXrState::SesionCreada) == GamePlayMode::VR, "VR pedido y sesion creada: VR");
+	comprobar(ChooseGamePlayMode(false, OpenXrState::SesionCreada) == GamePlayMode::Pantalla, "sin pedir VR se juega en pantalla aunque haya sesion");
+	comprobar(ChooseGamePlayMode(true, OpenXrState::SinRuntime) == GamePlayMode::Pantalla, "VR pedido sin runtime: pantalla");
+	comprobar(ChooseGamePlayMode(true, OpenXrState::NoCompilado) == GamePlayMode::Pantalla, "VR pedido sin OpenXR compilado: pantalla");
+	comprobar(ChooseGamePlayMode(true, OpenXrState::InstanciaYSistemaListos) == GamePlayMode::Pantalla, "visor detectado pero sin sesion: pantalla");
+	comprobar(ChooseGamePlayMode(true, OpenXrState::SesionCreada) == GamePlayMode::VR, "VR pedido y sesion creada: VR");
 
 	// 2) Crear el gestor NO activa nada: OpenXR solo se inicia de forma explicita.
 	{
 		OpenXrManager gestor;
-		comprobar(gestor.Estado() == OpenXrState::Desactivado, "al crear el gestor, OpenXR esta desactivado");
-		comprobar(!gestor.TieneRecursos(), "al crear el gestor no hay instancia ni sesion");
-		gestor.ProcesarEventos();   // sin activar no debe hacer nada ni fallar
-		comprobar(!gestor.TieneRecursos(), "procesar eventos sin activar no crea nada");
-		gestor.Desactivar();        // desactivar sin haber activado es seguro
-		gestor.Desactivar();        // y repetirlo tambien
-		comprobar(!gestor.TieneRecursos(), "desactivar sin activar es seguro");
+		comprobar(gestor.CurrentState() == OpenXrState::Desactivado, "al crear el gestor, OpenXR esta desactivado");
+		comprobar(!gestor.HasResources(), "al crear el gestor no hay instancia ni sesion");
+		gestor.ProcessEvents();   // sin activar no debe hacer nada ni fallar
+		comprobar(!gestor.HasResources(), "procesar eventos sin activar no crea nada");
+		gestor.Deactivate();        // desactivar sin haber activado es seguro
+		gestor.Deactivate();        // y repetirlo tambien
+		comprobar(!gestor.HasResources(), "desactivar sin activar es seguro");
 		// Bucle de fotogramas sin sesion: todo es inerte y no toca OpenGL.
-		comprobar(!gestor.SesionEnMarcha() && !gestor.Enfocada(), "sin sesion no hay sesion en marcha");
-		comprobar(gestor.EmpezarFotograma() == FrameResult::NoActivo, "sin sesion no hay fotograma");
+		comprobar(!gestor.IsSessionRunning() && !gestor.IsFocused(), "sin sesion no hay sesion en marcha");
+		comprobar(gestor.BeginXrFrame() == FrameResult::NoActivo, "sin sesion no hay fotograma");
 		VrEye ojo;
-		comprobar(!gestor.AdquirirOjo(0, ojo), "sin sesion no se adquiere ningun ojo");
-		gestor.LiberarOjo(0);
-		gestor.TerminarFotograma();   // sin fotograma abierto: no hace nada
-		comprobar(gestor.NumeroDeOjos() == 0 && gestor.Espacio() == ReferenceSpaceKind::Ninguno, "sin sesion no hay ojos ni espacio");
+		comprobar(!gestor.AcquireEyeImage(0, ojo), "sin sesion no se adquiere ningun ojo");
+		gestor.ReleaseEyeImage(0);
+		gestor.EndXrFrame();   // sin fotograma abierto: no hace nada
+		comprobar(gestor.EyeCount() == 0 && gestor.ReferenceSpaceHandle() == ReferenceSpaceKind::Ninguno, "sin sesion no hay ojos ni espacio");
 	}
 
 	// 3) Activacion explicita sin visor/runtime: falla con un motivo, sin recursos a medias.
 	{
 		OpenXrManager gestor;
-		const OpenXrState resultado = gestor.Activar(nullptr, 4, 6);
+		const OpenXrState resultado = gestor.SetActive(nullptr, 4, 6);
 		std::cout << "  (info) Activar -> " << NombreDelEstado(resultado) << ": " << gestor.Mensaje() << "\n";
 		comprobar(!gestor.Mensaje().empty(), "siempre hay un mensaje comprensible");
-		if (!OpenXrManager::EstaCompilado())
+		if (!OpenXrManager::IsCompiledIn())
 		{
 			comprobar(resultado == OpenXrState::NoCompilado, "sin OpenXR compilado, Activar informa NoCompilado");
-			comprobar(!gestor.TieneRecursos(), "sin OpenXR no hay recursos");
+			comprobar(!gestor.HasResources(), "sin OpenXR no hay recursos");
 		}
 		else if (EsFallo(resultado))
 		{
-			comprobar(!gestor.TieneRecursos(), "tras un fallo de inicializacion no queda ninguna instancia ni sesion viva");
-			comprobar(gestor.Estado() == resultado, "el estado conserva el motivo del fallo");
+			comprobar(!gestor.HasResources(), "tras un fallo de inicializacion no queda ninguna instancia ni sesion viva");
+			comprobar(gestor.CurrentState() == resultado, "el estado conserva el motivo del fallo");
 			// Reintentar tras un fallo es seguro (no acumula recursos).
-			gestor.Activar(nullptr, 4, 6);
-			comprobar(!gestor.TieneRecursos() || !EsFallo(gestor.Estado()), "reintentar tras un fallo no deja recursos a medias");
+			gestor.SetActive(nullptr, 4, 6);
+			comprobar(!gestor.HasResources() || !EsFallo(gestor.CurrentState()), "reintentar tras un fallo no deja recursos a medias");
 		}
 		else
 			std::cout << "  (info) esta maquina tiene runtime y visor OpenXR: se omiten las pruebas de ausencia\n";
 
-		gestor.Desactivar();
-		comprobar(!gestor.TieneRecursos(), "Desactivar libera todo");
-		comprobar(gestor.Estado() == OpenXrState::Desactivado || gestor.Estado() == OpenXrState::NoCompilado, "tras desactivar vuelve al estado inicial");
+		gestor.Deactivate();
+		comprobar(!gestor.HasResources(), "Desactivar libera todo");
+		comprobar(gestor.CurrentState() == OpenXrState::Desactivado || gestor.CurrentState() == OpenXrState::NoCompilado, "tras desactivar vuelve al estado inicial");
 	}
 
 	// 4) Version de OpenGL insuficiente: se informa y se limpia (solo comprobable si hay visor; si no, cae en SinRuntime/SinVisor antes).
 	{
 		OpenXrManager gestor;
-		const OpenXrState e = gestor.Activar(nullptr, 1, 0);   // OpenGL 1.0 nunca basta
+		const OpenXrState e = gestor.SetActive(nullptr, 1, 0);   // OpenGL 1.0 nunca basta
 		comprobar(e != OpenXrState::SesionCreada && e != OpenXrState::InstanciaYSistemaListos, "OpenGL 1.0 nunca da una sesion valida");
-		comprobar(!gestor.TieneRecursos() || e == OpenXrState::NoCompilado, "y no deja recursos vivos");
+		comprobar(!gestor.HasResources() || e == OpenXrState::NoCompilado, "y no deja recursos vivos");
 	}
 
 	if (fallos == 0) std::cout << "OpenXRTests: OK (sin hardware)\n";

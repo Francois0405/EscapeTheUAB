@@ -15,7 +15,7 @@ void ParseNetworkArguments(int argc, char** argv)
 {
 	{	// Red: --host [--port N] | --connect HOST[:PUERTO] [--name N]. Sin argumentos: OFFLINE.
 		std::string errorRed;
-		if (!netgame::ParsearArgumentos(argc, argv, pendingNetworkConfig, errorRed))
+		if (!netgame::ParseArguments(argc, argv, pendingNetworkConfig, errorRed))
 		{
 			std::cerr << "Argumentos de red ignorados: " << errorRed << std::endl;
 			pendingNetworkConfig = netgame::NetworkConfig{};
@@ -23,7 +23,7 @@ void ParseNetworkArguments(int argc, char** argv)
 		else if (pendingNetworkConfig.rol == net::Role::Client)
 		{
 			std::string errorGuardado;
-			if (!netgame::GuardarUltimoEndpoint({ pendingNetworkConfig.host, pendingNetworkConfig.puerto }, errorGuardado))
+			if (!netgame::SaveLastEndpoint({ pendingNetworkConfig.host, pendingNetworkConfig.puerto }, errorGuardado))
 				std::cerr << "Red: no se guardo la ultima direccion: " << errorGuardado << std::endl;
 		}
 	}
@@ -168,9 +168,9 @@ void RegisterWindowCallbacks()
 	glfwSetFramebufferSizeCallback(window, OnFramebufferSize);							// - Medidas del framebuffer en píxeles
 	glfwSetWindowFocusCallback(window, OnWindowFocus);
 	glfwSetWindowCloseCallback(window, OnWindowCloseRequest);
-	sceneEditor.FijarCargadorModelos(loadEditorModel);
-	sceneEditor.FijarCargadorTexturas(editorTexture);
-	sceneEditor.FijarCargadorPuertas([](const std::filesystem::path& ruta, const SceneAnimatedObject& datos,
+	sceneEditor.SetModelLoader(loadEditorModel);
+	sceneEditor.SetTextureLoader(editorTexture);
+	sceneEditor.SetDoorLoader([](const std::filesystem::path& ruta, const SceneAnimatedObject& datos,
 		editor::EditorSceneContext contexto, std::string& error)
 	{
 		std::error_code ec;
@@ -178,12 +178,12 @@ void RegisterWindowCallbacks()
 		if (ec || !std::filesystem::is_regular_file(absoluta, ec)) { error = "El GLB seleccionado no existe."; return false; }
 		const std::string clave = absoluta.string();
 		const bool modeloNuevo = !contexto.escenaGlb.modelos.contains(clave);
-		if (!glb::AnadirObjeto(contexto.escenaGlb, datos.id, clave, datos.posicion, datos.giroZGrados, error)) return false;
-		glb::AnimatedObject* instancia = glb::BuscarObjeto(contexto.escenaGlb, datos.id);
+		if (!glb::AddAnimatedObject(contexto.escenaGlb, datos.id, clave, datos.posicion, datos.giroZGrados, error)) return false;
+		glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, datos.id);
 		if (instancia == nullptr) { error = "No se pudo crear la instancia GLB."; return false; }
 		instancia->escala = datos.escala;
-		if (!datos.animation.empty() && !glb::SeleccionarAnimacion(*instancia, datos.animation, error)) return false;
-		if (modeloNuevo) glb::SubirModeloAGPU(contexto.escenaGlb.modelos.at(clave));
+		if (!datos.animation.empty() && !glb::SelectAnimation(*instancia, datos.animation, error)) return false;
+		if (modeloNuevo) glb::UploadModelToGpu(contexto.escenaGlb.modelos.at(clave));
 		return true;
 	});
 	glfwSetMouseButtonCallback(window, (GLFWmousebuttonfun)OnMouseButton);			// - Directly redirect GLFW mouse button events

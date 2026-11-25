@@ -8,7 +8,7 @@
 namespace netgame
 {
 	// 'programaEjes' = shader eixos ya compilado; matrices de la camara actual (escritorio o un ojo VR).
-	void DibujarAvataresRemotos(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
+	void DrawRemoteAvatars(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
 		const std::vector<net::PoseEntry>& remotos, bool dibujarObjeto, const glm::vec3& posObjeto, bool objetoMio, bool objetoOcupado);
-	void LiberarDibujoAvatares();   // con el contexto GL activo, antes de cerrar la ventana
+	void ReleaseAvatarDrawing();   // con el contexto GL activo, antes de cerrar la ventana
 }

@@ -102,11 +102,11 @@ namespace fisica
 
 	PhysicsWorld::~PhysicsWorld()
 	{
-		EliminarJugador();
-		EliminarTodosLosCuerpos();   // los cuerpos se sacan del mundo antes de destruirlo
+		RemovePlayerBody();
+		RemoveAllBodies();   // los cuerpos se sacan del mundo antes de destruirlo
 	}
 
-	int PhysicsWorld::Actualizar(float deltaSegundos)
+	int PhysicsWorld::Advance(float deltaSegundos)
 	{
 		// En pausa el tiempo se descarta: al reanudar no hay "salto" de golpe.
 		if (pausa || deltaSegundos <= 0.0f) return 0;
@@ -120,8 +120,8 @@ namespace fisica
 		{
 			// maxSubSteps = 0 y fixedTimeStep = PasoFijo => Bullet hace EXACTAMENTE un paso
 			// de 1/60 s. El bucle de acumulación lo controlamos nosotros, no Bullet.
-			EmpujarRebotadores();
-			ImpulsarCuerpoSujeto();   // antes de cada paso: la mano tira del objeto
+			PushBouncers();
+			PushHeldBody();   // antes de cada paso: la mano tira del objeto
 			impl->mundo.stepSimulation(PasoFijo, 0, PasoFijo);
 			acumulador -= PasoFijo;
 			++pasos;
@@ -134,7 +134,7 @@ namespace fisica
 	// contra una pared, Bullet tenga que deshacer un choque violento: 6 m/s son 10 cm por paso.
 	namespace { constexpr float VelocidadMaximaDeSujecion = 6.0f; }
 
-	void PhysicsWorld::ImpulsarCuerpoSujeto()
+	void PhysicsWorld::PushHeldBody()
 	{
 		for (const auto& sujecion : impl->destinosSujecion)
 		{
@@ -150,7 +150,7 @@ namespace fisica
 		}
 	}
 
-	void PhysicsWorld::EmpujarRebotadores()
+	void PhysicsWorld::PushBouncers()
 	{
 		if (!impl->fantasmaJugador || !impl->controladorJugador) return;
 		glm::vec2 movimiento(impl->velocidadDeseadaJugador.x, impl->velocidadDeseadaJugador.y);
@@ -194,28 +194,28 @@ namespace fisica
 		}
 	}
 
-	glm::vec3 PhysicsWorld::Gravedad() const { return AGlm(impl->mundo.getGravity()); }
+	glm::vec3 PhysicsWorld::GravityValue() const { return AGlm(impl->mundo.getGravity()); }
 
-	IdCuerpo PhysicsWorld::CrearCaja(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
+	IdCuerpo PhysicsWorld::CreateBox(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
 		const glm::vec3& mitadTamano, float masaKg)
 	{
-		return CrearForma(tipo, centro, rotacion, mitadTamano, masaKg, BodyShape::Caja);
+		return CreateShape(tipo, centro, rotacion, mitadTamano, masaKg, BodyShape::Caja);
 	}
 
-	IdCuerpo PhysicsWorld::CrearEsfera(BodyType tipo, const glm::vec3& centro, float radio, float masaKg)
+	IdCuerpo PhysicsWorld::CreateSphere(BodyType tipo, const glm::vec3& centro, float radio, float masaKg)
 	{
-		return CrearForma(tipo, centro, glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
+		return CreateShape(tipo, centro, glm::quat(1.0f, 0.0f, 0.0f, 0.0f),
 			glm::vec3(radio), masaKg, BodyShape::Esfera);
 	}
 
-	IdCuerpo PhysicsWorld::CrearForma(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
+	IdCuerpo PhysicsWorld::CreateShape(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
 		const glm::vec3& mitadTamano, float masaKg, BodyShape forma)
 	{
 		const bool tamanoValido = mitadTamano.x > 0.0f && mitadTamano.y > 0.0f && mitadTamano.z > 0.0f &&
 			std::isfinite(mitadTamano.x + mitadTamano.y + mitadTamano.z);
 		if (!tamanoValido) return CuerpoInvalido;
-		if (EsCuerpoDinamico(tipo) && !(masaKg > 0.0f)) return CuerpoInvalido;
-		const float masa = EsCuerpoDinamico(tipo) ? masaKg : 0.0f;
+		if (IsDynamicBody(tipo) && !(masaKg > 0.0f)) return CuerpoInvalido;
+		const float masa = IsDynamicBody(tipo) ? masaKg : 0.0f;
 
 		Impl::Cuerpo nuevo;
 		nuevo.tipo = tipo;
@@ -258,19 +258,19 @@ namespace fisica
 		return impl->GuardarCuerpo(std::move(nuevo));
 	}
 
-	bool PhysicsWorld::AplicarImpulso(IdCuerpo id, const glm::vec3& impulso)
+	bool PhysicsWorld::ApplyImpulseToBody(IdCuerpo id, const glm::vec3& impulso)
 	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
-		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo)) return false;
+		if (cuerpo == nullptr || !IsDynamicBody(impl->cuerpos[static_cast<std::size_t>(id)].tipo)) return false;
 		cuerpo->activate(true);
 		cuerpo->applyCentralImpulse(ABullet(impulso));
 		return true;
 	}
 
-	bool PhysicsWorld::AplicarAceleracionHorizontal(IdCuerpo id, const glm::vec3& aceleracion, float deltaSegundos)
+	bool PhysicsWorld::ApplyHorizontalAcceleration(IdCuerpo id, const glm::vec3& aceleracion, float deltaSegundos)
 	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
-		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
+		if (cuerpo == nullptr || !IsDynamicBody(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
 			!std::isfinite(aceleracion.x) || !std::isfinite(aceleracion.y) ||
 			!std::isfinite(deltaSegundos) || deltaSegundos <= 0.0f)
 			return false;
@@ -283,10 +283,10 @@ namespace fisica
 		return true;
 	}
 
-	bool PhysicsWorld::TeletransportarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro)
+	bool PhysicsWorld::TeleportDynamicBody(IdCuerpo id, const glm::vec3& centro)
 	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
-		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
+		if (cuerpo == nullptr || !IsDynamicBody(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
 			!std::isfinite(centro.x) || !std::isfinite(centro.y) || !std::isfinite(centro.z))
 			return false;
 
@@ -308,10 +308,10 @@ namespace fisica
 		return true;
 	}
 
-	bool PhysicsWorld::PuedeColocarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro) const
+	bool PhysicsWorld::CanPlaceDynamicBody(IdCuerpo id, const glm::vec3& centro) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);
-		if (cuerpo == nullptr || !EsCuerpoDinamico(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
+		if (cuerpo == nullptr || !IsDynamicBody(impl->cuerpos[static_cast<std::size_t>(id)].tipo) ||
 			!std::isfinite(centro.x) || !std::isfinite(centro.y) || !std::isfinite(centro.z))
 			return false;
 
@@ -346,7 +346,7 @@ namespace fisica
 		return !resultado.bloqueado;
 	}
 
-	void PhysicsWorld::MoverCinematico(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion)
+	void PhysicsWorld::MoveKinematic(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion)
 	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
 		if (cuerpo == nullptr || impl->cuerpos[id].tipo != BodyType::Cinematico) return;
@@ -358,7 +358,7 @@ namespace fisica
 		cuerpo->setWorldTransform(t);                     // y lo que devuelve PoseDe() ya
 	}
 
-	void PhysicsWorld::EliminarCuerpo(IdCuerpo id)
+	void PhysicsWorld::RemoveBody(IdCuerpo id)
 	{
 		if (impl->Buscar(id) == nullptr) return;
 		if (id == impl->cuerpoSujeto) impl->cuerpoSujeto = CuerpoInvalido;   // no dejar un agarre colgando
@@ -370,17 +370,17 @@ namespace fisica
 		c.forma.reset();
 	}
 
-	IdCuerpo PhysicsWorld::CrearCajaEstatica(const glm::vec3& centro, const glm::vec3& mitadTamano)
+	IdCuerpo PhysicsWorld::CreateStaticBox(const glm::vec3& centro, const glm::vec3& mitadTamano)
 	{
-		return CrearCaja(BodyType::Estatico, centro, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), mitadTamano, 0.0f);
+		return CreateBox(BodyType::Estatico, centro, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), mitadTamano, 0.0f);
 	}
 
-	IdCuerpo PhysicsWorld::CrearCajaDinamica(const glm::vec3& centro, const glm::vec3& mitadTamano, float masaKg)
+	IdCuerpo PhysicsWorld::CreateDynamicBox(const glm::vec3& centro, const glm::vec3& mitadTamano, float masaKg)
 	{
-		return CrearCaja(BodyType::Dinamico, centro, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), mitadTamano, masaKg);
+		return CreateBox(BodyType::Dinamico, centro, glm::quat(1.0f, 0.0f, 0.0f, 0.0f), mitadTamano, masaKg);
 	}
 
-	BodyPose PhysicsWorld::PoseDe(IdCuerpo id) const
+	BodyPose PhysicsWorld::PoseOf(IdCuerpo id) const
 	{
 		BodyPose pose;
 		const btRigidBody* cuerpo = impl->Buscar(id);
@@ -393,13 +393,13 @@ namespace fisica
 		return pose;
 	}
 
-	glm::vec3 PhysicsWorld::VelocidadDe(IdCuerpo id) const
+	glm::vec3 PhysicsWorld::VelocityOf(IdCuerpo id) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);
 		return cuerpo ? AGlm(cuerpo->getLinearVelocity()) : glm::vec3(0.0f);
 	}
 
-	bool PhysicsWorld::HayContacto(IdCuerpo id) const
+	bool PhysicsWorld::HasContact(IdCuerpo id) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);
 		if (cuerpo == nullptr) return false;
@@ -413,25 +413,25 @@ namespace fisica
 		}
 		return false;
 	}
-	glm::vec3 PhysicsWorld::VelocidadAngularDe(IdCuerpo id) const
+	glm::vec3 PhysicsWorld::AngularVelocityOf(IdCuerpo id) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);
 		return cuerpo ? AGlm(cuerpo->getAngularVelocity()) : glm::vec3(0.0f);
 	}
 
-	bool PhysicsWorld::EstaDormido(IdCuerpo id) const
+	bool PhysicsWorld::IsAsleep(IdCuerpo id) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);
 		return cuerpo != nullptr && cuerpo->getActivationState() == ISLAND_SLEEPING;
 	}
 
-	bool PhysicsWorld::EstaActivo(IdCuerpo id) const
+	bool PhysicsWorld::IsBodyActive(IdCuerpo id) const
 	{
 		const btRigidBody* cuerpo = impl->Buscar(id);
 		return cuerpo != nullptr && cuerpo->isActive();
 	}
 
-	bool PhysicsWorld::FijarPoseCinematica(IdCuerpo id, const glm::vec3& posicion, const glm::quat& rotacion)
+	bool PhysicsWorld::SetKinematicPose(IdCuerpo id, const glm::vec3& posicion, const glm::quat& rotacion)
 	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
 		if (!cuerpo || impl->cuerpos[id].tipo != BodyType::Cinematico ||
@@ -448,21 +448,21 @@ namespace fisica
 		return true;
 	}
 
-	void PhysicsWorld::EliminarTodosLosCuerpos()
+	void PhysicsWorld::RemoveAllBodies()
 	{
 		for (std::size_t i = 0; i < impl->cuerpos.size(); ++i)
-			EliminarCuerpo(static_cast<IdCuerpo>(i));
+			RemoveBody(static_cast<IdCuerpo>(i));
 		impl->cuerpos.clear();
 		acumulador = 0.0f;
 	}
 
-	int PhysicsWorld::NumeroDeCuerpos() const
+	int PhysicsWorld::BodyCount() const
 	{
 		return static_cast<int>(std::count_if(impl->cuerpos.begin(), impl->cuerpos.end(),
 			[](const Impl::Cuerpo& c) { return c.cuerpo != nullptr; }));
 	}
 
-	std::vector<CollisionBox> PhysicsWorld::CajasDeColision() const
+	std::vector<CollisionBox> PhysicsWorld::CollisionBoxes() const
 	{
 		std::vector<CollisionBox> cajas;
 		for (std::size_t i = 0; i < impl->cuerpos.size(); ++i)
@@ -471,9 +471,9 @@ namespace fisica
 			if (!c.cuerpo) continue;
 			CollisionBox caja;
 			caja.tipo = c.tipo;
-			caja.pose = PoseDe(static_cast<IdCuerpo>(i));
+			caja.pose = PoseOf(static_cast<IdCuerpo>(i));
 			caja.mitadTamano = c.mitadTamano;
-			caja.dormido = EstaDormido(static_cast<IdCuerpo>(i));
+			caja.dormido = IsAsleep(static_cast<IdCuerpo>(i));
 			cajas.push_back(caja);
 		}
 		return cajas;
@@ -485,7 +485,7 @@ namespace fisica
 	{
 		// La cápsula mide 'Altura' en total: cilindro + una semiesfera arriba y otra abajo.
 		constexpr float AlturaCilindroDePie = PlayerDimensions::Altura - 2.0f * PlayerDimensions::Radio;
-		float SuavizadoHermite(float t)
+		float HermiteSmoothing(float t)
 		{
 			t = std::clamp(t, 0.0f, 1.0f);
 			return t * t * (3.0f - 2.0f * t);
@@ -501,10 +501,10 @@ namespace fisica
 			return ABullet(pies + glm::vec3(0.0f, 0.0f, altura * 0.5f));
 		}
 
-		class ComprobarEspacioParaLevantarse : public btCollisionWorld::ContactResultCallback
+		class CheckStandUpClearance : public btCollisionWorld::ContactResultCallback
 		{
 		public:
-			ComprobarEspacioParaLevantarse(const btCollisionObject& jugador, float alturaMinimaContacto)
+			CheckStandUpClearance(const btCollisionObject& jugador, float alturaMinimaContacto)
 				: objetoJugador(jugador), alturaMinimaContacto(alturaMinimaContacto)
 			{
 				m_collisionFilterGroup = btBroadphaseProxy::CharacterFilter;
@@ -531,10 +531,10 @@ namespace fisica
 			bool hayObstaculo = false;
 		};
 
-		class ComprobarSolapeSpawn : public btCollisionWorld::ContactResultCallback
+		class CheckSpawnOverlap : public btCollisionWorld::ContactResultCallback
 		{
 		public:
-			ComprobarSolapeSpawn()
+			CheckSpawnOverlap()
 			{
 				m_collisionFilterGroup = btBroadphaseProxy::CharacterFilter;
 				m_collisionFilterMask = btBroadphaseProxy::StaticFilter | btBroadphaseProxy::DefaultFilter;
@@ -551,7 +551,7 @@ namespace fisica
 		};
 	}
 
-	bool PhysicsWorld::ValidarSpawnJugador(const glm::vec3& posicionPies, glm::vec3& piesAjustados,
+	bool PhysicsWorld::ValidatePlayerSpawn(const glm::vec3& posicionPies, glm::vec3& piesAjustados,
 		glm::vec3& normalSuelo, std::string& error) const
 	{
 		if (!std::isfinite(posicionPies.x) || !std::isfinite(posicionPies.y) || !std::isfinite(posicionPies.z))
@@ -588,7 +588,7 @@ namespace fisica
 		transformacion.setIdentity();
 		transformacion.setOrigin(CentroDesdePies(piesAjustados + glm::vec3(0.0f, 0.0f, 0.035f), PlayerDimensions::Altura));
 		prueba.setWorldTransform(transformacion);
-		ComprobarSolapeSpawn contacto;
+		CheckSpawnOverlap contacto;
 		impl->mundo.contactTest(&prueba, contacto);
 		if (contacto.HaySolape())
 		{
@@ -599,9 +599,9 @@ namespace fisica
 		return true;
 	}
 
-	bool PhysicsWorld::CrearJugador(const glm::vec3& posicionPies)
+	bool PhysicsWorld::CreatePlayerBody(const glm::vec3& posicionPies)
 	{
-		if (HayJugador()) return false;
+		if (HasPlayerBody()) return false;
 		impl->velocidadDeseadaJugador = glm::vec3(0.0f);
 		alturaJugador = PlayerDimensions::Altura;
 		impl->formaJugador = std::make_unique<btCapsuleShapeZ>(PlayerDimensions::Radio, AlturaCilindroDePie);
@@ -633,9 +633,9 @@ namespace fisica
 		return true;
 	}
 
-	void PhysicsWorld::EliminarJugador()
+	void PhysicsWorld::RemovePlayerBody()
 	{
-		if (!HayJugador()) return;
+		if (!HasPlayerBody()) return;
 		impl->velocidadDeseadaJugador = glm::vec3(0.0f);
 		impl->mundo.removeAction(impl->controladorJugador.get());
 		impl->mundo.removeCollisionObject(impl->fantasmaJugador.get());
@@ -646,21 +646,21 @@ namespace fisica
 		progresoAgachado = 0.0f;
 	}
 
-	bool PhysicsWorld::HayJugador() const { return impl->controladorJugador != nullptr; }
+	bool PhysicsWorld::HasPlayerBody() const { return impl->controladorJugador != nullptr; }
 
-	void PhysicsWorld::FijarVelocidadJugador(const glm::vec3& metrosPorSegundo)
+	void PhysicsWorld::SetPlayerVelocity(const glm::vec3& metrosPorSegundo)
 	{
 		impl->velocidadDeseadaJugador = glm::vec3(metrosPorSegundo.x, metrosPorSegundo.y, 0.0f);
-		if (!HayJugador()) return;
+		if (!HasPlayerBody()) return;
 		// Bullet no quiere una velocidad sino el DESPLAZAMIENTO de cada paso. Como todos los
 		// pasos duran lo mismo (PasoFijo), basta multiplicar: independiente de los FPS.
 		const glm::vec3 porPaso(metrosPorSegundo.x * PasoFijo, metrosPorSegundo.y * PasoFijo, 0.0f);
 		impl->controladorJugador->setWalkDirection(ABullet(porPaso));
 	}
 
-	bool PhysicsWorld::ActualizarJugadorAgachado(bool agachado, float deltaSegundos)
+	bool PhysicsWorld::UpdatePlayerCrouch(bool agachado, float deltaSegundos)
 	{
-		if (!HayJugador()) return false;
+		if (!HasPlayerBody()) return false;
 
 		// El tiempo avanza de forma lineal (progreso 0..1) y la altura se obtiene con una curva suave
 		// (arranca y llega con velocidad 0): el cambio se nota progresivo, sin tirones al empezar/terminar.
@@ -672,9 +672,9 @@ namespace fisica
 		const float progresoNuevo = progresoAgachado + std::copysign(
 			std::min(std::abs(objetivo - progresoAgachado), avance), objetivo - progresoAgachado);
 		const float alturaNueva = PlayerDimensions::Altura -
-			(PlayerDimensions::Altura - PlayerDimensions::AlturaAgachado) * SuavizadoHermite(progresoNuevo);
+			(PlayerDimensions::Altura - PlayerDimensions::AlturaAgachado) * HermiteSmoothing(progresoNuevo);
 		if (progresoNuevo == progresoAgachado) return true;   // delta 0 (pausa): no se toca Bullet
-		const glm::vec3 pies = PosicionPiesJugador();
+		const glm::vec3 pies = PlayerFeetPosition();
 
 		if (alturaNueva > alturaJugador)
 		{
@@ -687,7 +687,7 @@ namespace fisica
 			prueba.setWorldTransform(transformacion);
 			prueba.setCollisionShape(&formaCandidata);
 
-			ComprobarEspacioParaLevantarse comprobar(prueba, pies.z + alturaJugador - 0.01f);
+			CheckStandUpClearance comprobar(prueba, pies.z + alturaJugador - 0.01f);
 			impl->mundo.contactTest(&prueba, comprobar);
 			if (comprobar.HayObstaculo()) return false;   // el techo manda: el progreso no avanza
 		}
@@ -702,30 +702,30 @@ namespace fisica
 		return true;
 	}
 
-	void PhysicsWorld::TeletransportarJugador(const glm::vec3& posicionPies)
+	void PhysicsWorld::TeleportPlayer(const glm::vec3& posicionPies)
 	{
-		if (!HayJugador()) return;
+		if (!HasPlayerBody()) return;
 		impl->velocidadDeseadaJugador = glm::vec3(0.0f);
 		impl->controladorJugador->warp(CentroDesdePies(posicionPies, alturaJugador));
 	}
 
-	glm::vec3 PhysicsWorld::PosicionPiesJugador() const
+	glm::vec3 PhysicsWorld::PlayerFeetPosition() const
 	{
-		if (!HayJugador()) return glm::vec3(0.0f);
+		if (!HasPlayerBody()) return glm::vec3(0.0f);
 		return AGlm(impl->fantasmaJugador->getWorldTransform().getOrigin())
 			- glm::vec3(0.0f, 0.0f, alturaJugador * 0.5f);
 	}
 
-	float PhysicsWorld::AlturaOjosJugador() const
+	float PhysicsWorld::PlayerEyeHeight() const
 	{
 		return alturaJugador - (PlayerDimensions::Altura - PlayerDimensions::AlturaOjos);
 	}
 
-	bool PhysicsWorld::JugadorEnSuelo() const { return HayJugador() && impl->controladorJugador->onGround(); }
+	bool PhysicsWorld::IsPlayerGrounded() const { return HasPlayerBody() && impl->controladorJugador->onGround(); }
 
 	// ---- Agarre --------------------------------------------------------------
 
-	IdCuerpo PhysicsWorld::CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
+	IdCuerpo PhysicsWorld::BodyAtRayEnd(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
 		float* distanciaImpacto) const
 	{
 		if (distanciaImpacto != nullptr) *distanciaImpacto = std::numeric_limits<float>::infinity();
@@ -744,7 +744,7 @@ namespace fisica
 		return CuerpoInvalido;
 	}
 
-	float PhysicsWorld::DistanciaObstaculoEnRayo(const glm::vec3& origen, const glm::vec3& direccion,
+	float PhysicsWorld::ObstacleDistanceOnRay(const glm::vec3& origen, const glm::vec3& direccion,
 		float alcance, IdCuerpo ignorar) const
 	{
 		if (!std::isfinite(alcance) || alcance <= 0.0f || glm::length(direccion) < 1.0e-6f)
@@ -776,36 +776,36 @@ namespace fisica
 			: alcance;
 	}
 
-	bool PhysicsWorld::EsDinamico(IdCuerpo id) const
+	bool PhysicsWorld::IsDynamic(IdCuerpo id) const
 	{
-		return impl->Buscar(id) != nullptr && EsCuerpoDinamico(impl->cuerpos[id].tipo);
+		return impl->Buscar(id) != nullptr && IsDynamicBody(impl->cuerpos[id].tipo);
 	}
 
-	bool PhysicsWorld::SujetarCuerpo(IdCuerpo id)
+	bool PhysicsWorld::HoldBody(IdCuerpo id)
 	{
-		if (!EsDinamico(id)) return false;
-		SoltarCuerpoSujeto();
-		if (!SujetarCuerpoAutoritativo(id)) return false;
+		if (!IsDynamic(id)) return false;
+		ReleaseHeldBody();
+		if (!HoldBodyAuthoritative(id)) return false;
 		impl->cuerpoSujeto = id;
 		impl->destinoSujecion = AGlm(impl->Buscar(id)->getWorldTransform().getOrigin());
 		return true;
 	}
 
-	void PhysicsWorld::SoltarCuerpoSujeto()
+	void PhysicsWorld::ReleaseHeldBody()
 	{
-		LanzarCuerpoSujeto(glm::vec3(0.0f));
+		ThrowHeldBody(glm::vec3(0.0f));
 	}
 
-	bool PhysicsWorld::LanzarCuerpoSujeto(const glm::vec3& velocidad)
+	bool PhysicsWorld::ThrowHeldBody(const glm::vec3& velocidad)
 	{
 		const IdCuerpo id = impl->cuerpoSujeto;
 		impl->cuerpoSujeto = CuerpoInvalido;
-		return SoltarCuerpoAutoritativo(id, velocidad);
+		return ReleaseAuthoritativeBody(id, velocidad);
 	}
 
-	bool PhysicsWorld::SujetarCuerpoAutoritativo(IdCuerpo id)
+	bool PhysicsWorld::HoldBodyAuthoritative(IdCuerpo id)
 	{
-		if (!EsDinamico(id) || EstaSujeto(id)) return false;
+		if (!IsDynamic(id) || IsHeld(id)) return false;
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
 		cuerpo->setFlags(cuerpo->getFlags() | BT_DISABLE_WORLD_GRAVITY);
 		cuerpo->setGravity(btVector3(0, 0, 0));
@@ -814,13 +814,13 @@ namespace fisica
 		return true;
 	}
 
-	void PhysicsWorld::FijarDestinoDeSujecion(IdCuerpo id, const glm::vec3& destino)
+	void PhysicsWorld::SetHoldDestination(IdCuerpo id, const glm::vec3& destino)
 	{
 		auto it = impl->destinosSujecion.find(id);
 		if (it != impl->destinosSujecion.end() && std::isfinite(destino.x + destino.y + destino.z)) it->second = destino;
 	}
 
-	bool PhysicsWorld::SoltarCuerpoAutoritativo(IdCuerpo id, const glm::vec3& velocidad)
+	bool PhysicsWorld::ReleaseAuthoritativeBody(IdCuerpo id, const glm::vec3& velocidad)
 	{
 		btRigidBody* cuerpo = const_cast<btRigidBody*>(impl->Buscar(id));
 		if (!cuerpo || impl->destinosSujecion.erase(id) == 0) return false;
@@ -831,17 +831,17 @@ namespace fisica
 		return true;
 	}
 
-	bool PhysicsWorld::EstaSujeto(IdCuerpo id) const { return impl->destinosSujecion.find(id) != impl->destinosSujecion.end(); }
+	bool PhysicsWorld::IsHeld(IdCuerpo id) const { return impl->destinosSujecion.find(id) != impl->destinosSujecion.end(); }
 
-	IdCuerpo PhysicsWorld::CuerpoSujeto() const { return impl->cuerpoSujeto; }
-	void PhysicsWorld::FijarDestinoDeSujecion(const glm::vec3& destino)
+	IdCuerpo PhysicsWorld::HeldBody() const { return impl->cuerpoSujeto; }
+	void PhysicsWorld::SetHoldDestination(const glm::vec3& destino)
 	{
 		impl->destinoSujecion = destino;
-		if (impl->cuerpoSujeto != CuerpoInvalido) FijarDestinoDeSujecion(impl->cuerpoSujeto, destino);
+		if (impl->cuerpoSujeto != CuerpoInvalido) SetHoldDestination(impl->cuerpoSujeto, destino);
 	}
-	glm::vec3 PhysicsWorld::DestinoDeSujecion() const { return impl->destinoSujecion; }
+	glm::vec3 PhysicsWorld::HoldDestination() const { return impl->destinoSujecion; }
 
-	std::vector<glm::vec3> AristasDeCaja(const CollisionBox& caja)
+	std::vector<glm::vec3> BoxEdges(const CollisionBox& caja)
 	{
 		// Las 8 esquinas: cada bit del índice elige el signo (-/+) en X, Y y Z.
 		glm::vec3 esquinas[8];
@@ -864,26 +864,26 @@ namespace fisica
 
 	// ---- DemoCuboCaida -------------------------------------------------------
 
-	void FallingCubeDemo::Iniciar()
+	void FallingCubeDemo::BeginPlayback()
 	{
-		Detener();   // quita SOLO los cuerpos de la demo anterior (los de la habitación no se tocan)
+		StopSessionGame();   // quita SOLO los cuerpos de la demo anterior (los de la habitación no se tocan)
 
 		// Suelo estático: una caja grande y fina (masa 0). Su cara superior queda en
 		// AlturaSuperiorSuelo, igual que el suelo visible de la habitación.
 		const glm::vec3 mitadSuelo(8.0f, 5.0f, 0.15f);
 		const glm::vec3 centroSuelo(5.0f, 0.0f, AlturaSuperiorSuelo - mitadSuelo.z);
-		suelo = mundo.CrearCajaEstatica(centroSuelo, mitadSuelo);
+		suelo = mundo.CreateStaticBox(centroSuelo, mitadSuelo);
 
 		// Cubo dinámico: empieza en el aire, en una zona libre de la sala.
 		const glm::vec3 centroCubo(6.0f, -1.0f, AlturaInicialCentro);
-		cubo = mundo.CrearCajaDinamica(centroCubo, glm::vec3(MitadCubo), MasaCuboKg);
+		cubo = mundo.CreateDynamicBox(centroCubo, glm::vec3(MitadCubo), MasaCuboKg);
 		activa = true;
 	}
 
-	void FallingCubeDemo::Detener()
+	void FallingCubeDemo::StopSessionGame()
 	{
-		mundo.EliminarCuerpo(suelo);
-		mundo.EliminarCuerpo(cubo);
+		mundo.RemoveBody(suelo);
+		mundo.RemoveBody(cubo);
 		suelo = cubo = CuerpoInvalido;
 		activa = false;
 	}

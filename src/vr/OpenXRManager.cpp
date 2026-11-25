@@ -42,7 +42,7 @@ namespace vr
 		return "?";
 	}
 
-	GamePlayMode ElegirModoDeJuego(bool vrSolicitado, OpenXrState estado)
+	GamePlayMode ChooseGamePlayMode(bool vrSolicitado, OpenXrState estado)
 	{
 		return (vrSolicitado && estado == OpenXrState::SesionCreada) ? GamePlayMode::VR : GamePlayMode::Pantalla;
 	}
@@ -511,20 +511,20 @@ namespace vr
 	}
 
 	OpenXrManager::OpenXrManager() : impl(std::make_unique<Impl>()) {}
-	OpenXrManager::~OpenXrManager() { Desactivar(); }
-	bool OpenXrManager::EstaCompilado() { return true; }
-	bool OpenXrManager::TieneRecursos() const { return impl->instancia != XR_NULL_HANDLE || impl->sesion != XR_NULL_HANDLE; }
-	bool OpenXrManager::SesionEnMarcha() const { return impl->sesion != XR_NULL_HANDLE && impl->sesionIniciada; }
-	bool OpenXrManager::Enfocada() const { return SesionEnMarcha() && impl->estadoSesion == XR_SESSION_STATE_FOCUSED; }
+	OpenXrManager::~OpenXrManager() { Deactivate(); }
+	bool OpenXrManager::IsCompiledIn() { return true; }
+	bool OpenXrManager::HasResources() const { return impl->instancia != XR_NULL_HANDLE || impl->sesion != XR_NULL_HANDLE; }
+	bool OpenXrManager::IsSessionRunning() const { return impl->sesion != XR_NULL_HANDLE && impl->sesionIniciada; }
+	bool OpenXrManager::IsFocused() const { return IsSessionRunning() && impl->estadoSesion == XR_SESSION_STATE_FOCUSED; }
 	const char* OpenXrManager::NombreEstadoSesion() const { return impl->sesion != XR_NULL_HANDLE ? NombreSesion(impl->estadoSesion) : "sin sesion"; }
-	ReferenceSpaceKind OpenXrManager::Espacio() const { return impl->tipoEspacio; }
-	int OpenXrManager::NumeroDeOjos() const { return static_cast<int>(impl->ojos.size()); }
+	ReferenceSpaceKind OpenXrManager::ReferenceSpaceHandle() const { return impl->tipoEspacio; }
+	int OpenXrManager::EyeCount() const { return static_cast<int>(impl->ojos.size()); }
 	bool OpenXrManager::GatilloRecienPulsado() const { return impl->gatilloRecienPulsado; }
-	bool OpenXrManager::GatilloRecienSoltado() const { return impl->gatilloRecienSoltado; }
+	bool OpenXrManager::TriggerJustReleased() const { return impl->gatilloRecienSoltado; }
 	bool OpenXrManager::GatilloPulsado() const { return impl->gatilloActual; }
-	bool OpenXrManager::GatilloIzquierdoRecienPulsado() const { return impl->gatilloIzqRecienPulsado; }
+	bool OpenXrManager::LeftTriggerJustPressed() const { return impl->gatilloIzqRecienPulsado; }
 
-	void OpenXrManager::Desactivar()
+	void OpenXrManager::Deactivate()
 	{
 		// Orden inverso al de creación: swapchains, espacio, sesión (se termina antes si estaba en marcha), instancia.
 		if (impl->fotogramaAbierto && impl->sesion != XR_NULL_HANDLE)
@@ -575,10 +575,10 @@ namespace vr
 		if (estado != OpenXrState::Desactivado && estado != OpenXrState::NoCompilado) { estado = OpenXrState::Desactivado; mensaje = "OpenXR desactivado."; }
 	}
 
-	OpenXrState OpenXrManager::Activar(GLFWwindow* ventana, int glMajorVersion, int glMinorVersion)
+	OpenXrState OpenXrManager::SetActive(GLFWwindow* ventana, int glMajorVersion, int glMinorVersion)
 	{
 		(void)ventana;   // solo se usa en Windows (ya hay un contexto activo); se conserva para otras plataformas
-		if (TieneRecursos()) return estado;   // ya activo: no se crea nada dos veces
+		if (HasResources()) return estado;   // ya activo: no se crea nada dos veces
 		std::string aviso;
 		std::string informe;
 		std::vector<std::string> extensiones;
@@ -615,7 +615,7 @@ namespace vr
 		}
 
 		const bool exito = resultado == OpenXrState::SesionCreada || resultado == OpenXrState::InstanciaYSistemaListos;
-		if (!exito) Desactivar();   // fallo parcial: destruir lo creado (Desactivar no toca el estado que fijamos ahora)
+		if (!exito) Deactivate();   // fallo parcial: destruir lo creado (Desactivar no toca el estado que fijamos ahora)
 		estado = resultado;
 		mensaje = aviso;
 
@@ -633,7 +633,7 @@ namespace vr
 		return estado;
 	}
 
-	void OpenXrManager::ProcesarEventos()
+	void OpenXrManager::ProcessEvents()
 	{
 		impl->gatilloIzqRecienPulsado = false;
 		impl->gatilloRecienPulsado = false;
@@ -665,14 +665,14 @@ namespace vr
 					break;
 				case XR_SESSION_STATE_STOPPING:
 					// El runtime pide parar: se termina la sesión (sigue viva; puede volver a READY).
-					if (impl->fotogramaAbierto) TerminarFotograma();
+					if (impl->fotogramaAbierto) EndXrFrame();
 					if (impl->sesionIniciada) { xrEndSession(impl->sesion); impl->sesionIniciada = false; }
 					mensaje = "Sesion VR detenida por el runtime (STOPPING).";
 					break;
 				case XR_SESSION_STATE_EXITING:
 				case XR_SESSION_STATE_LOSS_PENDING:
 					// Cuando el runtime pide terminar o se pierde la sesión, se cierra todo con seguridad.
-					Desactivar();
+					Deactivate();
 					mensaje = cambio->state == XR_SESSION_STATE_EXITING ? "El runtime cerro la sesion VR." : "Se perdio la sesion VR (el runtime o el casco se han desconectado).";
 					return;
 				default:
@@ -681,14 +681,14 @@ namespace vr
 			}
 			else if (evento.type == XR_TYPE_EVENT_DATA_INSTANCE_LOSS_PENDING)
 			{
-				Desactivar();
+				Deactivate();
 				mensaje = "El runtime OpenXR se ha cerrado.";
 				return;
 			}
 			evento = { XR_TYPE_EVENT_DATA_BUFFER };
 		}
 
-		if (Enfocada() && impl->actionSet != XR_NULL_HANDLE)
+		if (IsFocused() && impl->actionSet != XR_NULL_HANDLE)
 		{
 			XrActiveActionSet conjuntoActivo = { impl->actionSet, XR_NULL_PATH };
 			XrActionsSyncInfo syncInfo = { XR_TYPE_ACTIONS_SYNC_INFO };
@@ -737,9 +737,9 @@ namespace vr
 		}
 	}
 
-	FrameResult OpenXrManager::EmpezarFotograma()
+	FrameResult OpenXrManager::BeginXrFrame()
 	{
-		if (!SesionEnMarcha() || impl->fotogramaAbierto) return FrameResult::NoActivo;
+		if (!IsSessionRunning() || impl->fotogramaAbierto) return FrameResult::NoActivo;
 
 		XrFrameState estadoFotograma = { XR_TYPE_FRAME_STATE };
 		XrFrameWaitInfo espera = { XR_TYPE_FRAME_WAIT_INFO };
@@ -786,9 +786,9 @@ namespace vr
 		return FrameResult::Renderizar;
 	}
 
-	bool OpenXrManager::AdquirirOjo(int indice, VrEye& ojo)
+	bool OpenXrManager::AcquireEyeImage(int indice, VrEye& ojo)
 	{
-		if (!impl->fotogramaAbierto || !impl->vistasValidas || indice < 0 || indice >= NumeroDeOjos()) return false;
+		if (!impl->fotogramaAbierto || !impl->vistasValidas || indice < 0 || indice >= EyeCount()) return false;
 		CadenaOjo& o = impl->ojos[indice];
 		if (o.adquirida) return false;
 
@@ -822,7 +822,7 @@ namespace vr
 		if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
 		{
 			glBindFramebuffer(GL_FRAMEBUFFER, 0);
-			LiberarOjo(indice);
+			ReleaseEyeImage(indice);
 			return false;
 		}
 
@@ -838,9 +838,9 @@ namespace vr
 		return true;
 	}
 
-	void OpenXrManager::LiberarOjo(int indice)
+	void OpenXrManager::ReleaseEyeImage(int indice)
 	{
-		if (indice < 0 || indice >= NumeroDeOjos()) return;
+		if (indice < 0 || indice >= EyeCount()) return;
 		CadenaOjo& o = impl->ojos[indice];
 		if (!o.adquirida) return;
 		XrSwapchainImageReleaseInfo liberar = { XR_TYPE_SWAPCHAIN_IMAGE_RELEASE_INFO };
@@ -848,13 +848,13 @@ namespace vr
 		o.adquirida = false;
 	}
 
-	void OpenXrManager::TerminarFotograma()
+	void OpenXrManager::EndXrFrame()
 	{
 		if (!impl->fotogramaAbierto) return;
 		bool todosDibujados = impl->vistasValidas && !impl->ojos.empty();
-		for (int i = 0; i < NumeroDeOjos(); ++i)
+		for (int i = 0; i < EyeCount(); ++i)
 		{
-			LiberarOjo(i);   // por si el llamador olvidó liberar alguno
+			ReleaseEyeImage(i);   // por si el llamador olvidó liberar alguno
 			todosDibujados = todosDibujados && impl->ojos[i].dibujada;
 		}
 
@@ -888,7 +888,7 @@ namespace vr
 		if (XR_FAILED(r)) mensaje = Texto("xrEndFrame fallo", r);
 	}
 
-	bool OpenXrManager::PoseApuntadoMando(int mano, XrPose& poseOut) const
+	bool OpenXrManager::ControllerAimPose(int mano, XrPose& poseOut) const
 	{
 		if (mano < 0 || mano > 1 || !impl->poseMandoValida[mano]) return false;
 		poseOut = impl->poseMando[mano];
@@ -901,26 +901,26 @@ namespace vr
 
 	OpenXrManager::OpenXrManager() : impl(std::make_unique<Impl>()) {}
 	OpenXrManager::~OpenXrManager() = default;
-	bool OpenXrManager::EstaCompilado() { return false; }
-	bool OpenXrManager::TieneRecursos() const { return false; }
-	void OpenXrManager::ProcesarEventos() {}
-	void OpenXrManager::Desactivar() { if (estado != OpenXrState::NoCompilado) { estado = OpenXrState::Desactivado; mensaje = "OpenXR no activado."; } }
-	bool OpenXrManager::SesionEnMarcha() const { return false; }
-	bool OpenXrManager::Enfocada() const { return false; }
+	bool OpenXrManager::IsCompiledIn() { return false; }
+	bool OpenXrManager::HasResources() const { return false; }
+	void OpenXrManager::ProcessEvents() {}
+	void OpenXrManager::Deactivate() { if (estado != OpenXrState::NoCompilado) { estado = OpenXrState::Desactivado; mensaje = "OpenXR no activado."; } }
+	bool OpenXrManager::IsSessionRunning() const { return false; }
+	bool OpenXrManager::IsFocused() const { return false; }
 	const char* OpenXrManager::NombreEstadoSesion() const { return "sin sesion"; }
-	ReferenceSpaceKind OpenXrManager::Espacio() const { return ReferenceSpaceKind::Ninguno; }
-	int OpenXrManager::NumeroDeOjos() const { return 0; }
-	FrameResult OpenXrManager::EmpezarFotograma() { return FrameResult::NoActivo; }
-	bool OpenXrManager::AdquirirOjo(int, VrEye&) { return false; }
-	void OpenXrManager::LiberarOjo(int) {}
-	void OpenXrManager::TerminarFotograma() {}
+	ReferenceSpaceKind OpenXrManager::ReferenceSpaceHandle() const { return ReferenceSpaceKind::Ninguno; }
+	int OpenXrManager::EyeCount() const { return 0; }
+	FrameResult OpenXrManager::BeginXrFrame() { return FrameResult::NoActivo; }
+	bool OpenXrManager::AcquireEyeImage(int, VrEye&) { return false; }
+	void OpenXrManager::ReleaseEyeImage(int) {}
+	void OpenXrManager::EndXrFrame() {}
 	bool OpenXrManager::GatilloRecienPulsado() const { return false; }
-	bool OpenXrManager::GatilloRecienSoltado() const { return false; }
+	bool OpenXrManager::TriggerJustReleased() const { return false; }
 	bool OpenXrManager::GatilloPulsado() const { return false; }
-	bool OpenXrManager::PoseApuntadoMando(int, XrPose&) const { return false; }
-	bool OpenXrManager::GatilloIzquierdoRecienPulsado() const { return false; }
+	bool OpenXrManager::ControllerAimPose(int, XrPose&) const { return false; }
+	bool OpenXrManager::LeftTriggerJustPressed() const { return false; }
 
-	OpenXrState OpenXrManager::Activar(GLFWwindow*, int, int)
+	OpenXrState OpenXrManager::SetActive(GLFWwindow*, int, int)
 	{
 		estado = OpenXrState::NoCompilado;
 		mensaje = "Esta compilacion no incluye OpenXR (macOS, o falta la biblioteca). El juego sigue en modo pantalla.";

@@ -6,7 +6,7 @@
 
 namespace editor
 {
-	OrientedBox TransformarCaja(const glm::mat4& modelo, const glm::vec3& centroLocal, const glm::vec3& mitadLocal)
+	OrientedBox TransformBox(const glm::mat4& modelo, const glm::vec3& centroLocal, const glm::vec3& mitadLocal)
 	{
 		OrientedBox caja;
 		caja.centro = glm::vec3(modelo * glm::vec4(centroLocal, 1.0f));
@@ -22,7 +22,7 @@ namespace editor
 		return caja;
 	}
 
-	float PenetracionOBB(const OrientedBox& a, const OrientedBox& b, float toleranciaContacto)
+	float ObbPenetration(const OrientedBox& a, const OrientedBox& b, float toleranciaContacto)
 	{
 		if (!a.valida || !b.valida) return 0.0f;
 		const glm::vec3 delta = b.centro - a.centro;
@@ -52,7 +52,7 @@ namespace editor
 		return profundidadMinima;
 	}
 
-	PlacementResult ValidarColocacion(const std::vector<OrientedBox>& propuesta,
+	PlacementResult ValidatePlacement(const std::vector<OrientedBox>& propuesta,
 		const std::vector<OrientedBox>& anterior, const std::vector<PlacementObstacle>& obstaculos,
 		bool permitirArquitectura, float toleranciaContacto)
 	{
@@ -60,10 +60,10 @@ namespace editor
 			for (const PlacementObstacle& obstaculo : obstaculos)
 			{
 				if (!obstaculo.caja.valida || (permitirArquitectura && obstaculo.arquitectura)) continue;
-				const float nuevaPenetracion = PenetracionOBB(propuesta[indiceCaja], obstaculo.caja, toleranciaContacto);
+				const float nuevaPenetracion = ObbPenetration(propuesta[indiceCaja], obstaculo.caja, toleranciaContacto);
 				if (nuevaPenetracion <= 0.0f) continue;
 				const float penetracionAnterior = indiceCaja < anterior.size()
-					? PenetracionOBB(anterior[indiceCaja], obstaculo.caja, toleranciaContacto) : 0.0f;
+					? ObbPenetration(anterior[indiceCaja], obstaculo.caja, toleranciaContacto) : 0.0f;
 				if (penetracionAnterior > 0.0f && nuevaPenetracion <= penetracionAnterior + toleranciaContacto) continue;
 				return { false, obstaculo.nombre.empty() ? obstaculo.id : obstaculo.nombre + " (" + obstaculo.id + ")" };
 			}

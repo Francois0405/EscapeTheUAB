@@ -13,9 +13,9 @@
 namespace fisica
 {
 	// 'programaEjes' es el shader de eixos ya compilado; las matrices son las de la cámara.
-	void DibujarColisionadores(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
+	void DrawColliders(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
 		const std::vector<CollisionBox>& cajas);
 
 	// Libera los buffers de OpenGL (llamar con el contexto activo, antes de cerrar la ventana).
-	void LiberarDibujoColisionadores();
+	void ReleaseColliderDrawing();
 }

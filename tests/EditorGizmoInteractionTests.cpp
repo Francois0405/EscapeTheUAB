@@ -31,7 +31,7 @@ namespace
 		}
 		~VentanaImGuiSinVentana() { ImGui::DestroyContext(); }
 
-		void Iniciar(ImVec2 cursor, bool botonIzquierdo)
+		void BeginPlayback(ImVec2 cursor, bool botonIzquierdo)
 		{
 			ImGuiIO& io = ImGui::GetIO();
 			io.MousePos = cursor;
@@ -48,7 +48,7 @@ namespace
 	bool DibujarGizmoSiPermitido(editor::GizmoPostSelectionLock& bloqueo, glm::mat4& matriz,
 		const glm::mat4& vista, const glm::mat4& proyeccion)
 	{
-		if (!bloqueo.PermitirManipular(ImGui::GetIO().MouseDown[ImGuiMouseButton_Left])) return false;
+		if (!bloqueo.AllowManipulation(ImGui::GetIO().MouseDown[ImGuiMouseButton_Left])) return false;
 		return ImGuizmo::Manipulate(&vista[0][0], &proyeccion[0][0], ImGuizmo::TRANSLATE,
 			ImGuizmo::WORLD, &matriz[0][0], nullptr, nullptr);
 	}
@@ -66,20 +66,20 @@ int main()
 	GizmoPostSelectionLock bloqueo;
 	// El objeto recién seleccionado queda bajo el puntero. Se simula el clic y su
 	// continuación con un movimiento grande que, sin arbitraje, podría iniciar el gizmo.
-	bloqueo.Bloquear();
-	imgui.Iniciar(ImVec2(400.0f, 300.0f), true);
+	bloqueo.Lock();
+	imgui.BeginPlayback(ImVec2(400.0f, 300.0f), true);
 	const bool cambioAlSeleccionar = DibujarGizmoSiPermitido(bloqueo, objeto, vista, proyeccion);
 	imgui.Terminar();
-	imgui.Iniciar(ImVec2(610.0f, 70.0f), true);
+	imgui.BeginPlayback(ImVec2(610.0f, 70.0f), true);
 	const bool cambioAlArrastrarElClicDeSeleccion = DibujarGizmoSiPermitido(bloqueo, objeto, vista, proyeccion);
 	imgui.Terminar();
 	comprobar(!cambioAlSeleccionar && !cambioAlArrastrarElClicDeSeleccion && objeto == original,
 		"ImGuizmo no recibe ni modifica la matriz durante el clic de seleccion");
 
-	imgui.Iniciar(ImVec2(610.0f, 70.0f), false);
+	imgui.BeginPlayback(ImVec2(610.0f, 70.0f), false);
 	comprobar(!DibujarGizmoSiPermitido(bloqueo, objeto, vista, proyeccion), "el fotograma que suelta el clic sigue bloqueado");
 	imgui.Terminar();
-	comprobar(!bloqueo.Bloqueado(), "al soltar se rearma la siguiente interaccion");
+	comprobar(!bloqueo.IsLocked(), "al soltar se rearma la siguiente interaccion");
 
 	if (fallos == 0) std::cout << "EditorGizmoInteractionTests: todo correcto\n";
 	return fallos == 0 ? 0 : 1;

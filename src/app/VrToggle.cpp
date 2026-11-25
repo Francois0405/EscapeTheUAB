@@ -3,6 +3,6 @@
 
 void toggleOpenXr()
 {
-	if (openXrManager.TieneRecursos()) openXrManager.Desactivar();
-	else openXrManager.Activar(mainWindow, glMajorVersion, glMinorVersion);
+	if (openXrManager.HasResources()) openXrManager.Deactivate();
+	else openXrManager.SetActive(mainWindow, glMajorVersion, glMinorVersion);
 }

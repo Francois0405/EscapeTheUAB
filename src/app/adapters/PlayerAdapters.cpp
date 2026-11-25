@@ -46,22 +46,22 @@ bool movementKeyPressed(GLFWwindow* window)
 
 glm::vec3 feetPositionFromCamera()
 {
-	return glm::vec3(opvN.x, opvN.y, opvN.z - physicsWorld.AlturaOjosJugador());
+	return glm::vec3(opvN.x, opvN.y, opvN.z - physicsWorld.PlayerEyeHeight());
 }
 
 void gazeOriginAndDirection(glm::vec3& origen, glm::vec3& direccion)
 {
-	if (openXrManager.SesionEnMarcha())
+	if (openXrManager.IsSessionRunning())
 	{
 		vr::XrPose poseMando;
-		if (openXrManager.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
+		if (openXrManager.ControllerAimPose(1, poseMando)) // Solo mando derecho (1)
 		{
-			const glm::vec3 pies = physicsWorld.HayJugador() ? physicsWorld.PosicionPiesJugador() : feetPositionFromCamera();
+			const glm::vec3 pies = physicsWorld.HasPlayerBody() ? physicsWorld.PlayerFeetPosition() : feetPositionFromCamera();
 			const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-			const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-				openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo, physicsWorld.AlturaOjosJugador());
+			const vr::Anchor anclaje = vr::PlayerAnchor(pies, frenteFPS,
+				openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo, physicsWorld.PlayerEyeHeight());
 
-			const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMando, anclaje);
+			const glm::mat4 vistaMando = vr::VrEyeViewMatrix(poseMando, anclaje);
 			const glm::mat4 mundoMando = glm::inverse(vistaMando);
 
 			origen = glm::vec3(mundoMando[3]);

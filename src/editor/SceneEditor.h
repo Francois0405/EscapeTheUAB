@@ -20,7 +20,7 @@
 
 namespace editor
 {
-	enum class Herramienta { Mover, Rotar, Escalar };
+	enum class Herramienta { MoveView, Rotar, Escalar };
 
 	// Lo que el editor puede modificar. Los objetos OBJ (arquitectura y objetos) y las instancias GLB animadas (puertas)
 	// viven en listas distintas; el editor las presenta como una sola jerarquía.
@@ -40,58 +40,58 @@ namespace editor
 	class SceneEditor
 	{
 	public:
-		bool Activo() const { return activo; }
-		void Activar(bool activar);
+		bool IsEnabled() const { return activo; }
+		void SetActive(bool activar);
 
 		// Acciones que main.cpp debe ejecutar (guardar en disco, volver a PLAY, cerrar).
-		bool ConsumeEntradaPlay();
-		bool ConsumeGuardarRequest();
-		bool ConsumeCerrarConfirmado();
-		bool ConsumeCerrarTrasGuardar();
-		bool ConsumeReconstruirFisicaRequest() { const bool v = reconstruirFisicaSolicitada; reconstruirFisicaSolicitada = false; return v; }
+		bool ConsumePlayEntry();
+		bool ConsumeSaveRequest();
+		bool ConsumeCloseConfirmed();
+		bool ConsumeCloseAfterSave();
+		bool ConsumeRebuildPhysicsRequest() { const bool v = reconstruirFisicaSolicitada; reconstruirFisicaSolicitada = false; return v; }
 
-		void FijarCargadorModelos(CargadorModelo cargador) { cargadorModelos = std::move(cargador); }
-		void FijarCargadorTexturas(CargadorTextura cargador) { cargadorTexturas = std::move(cargador); }
-		void FijarCargadorPuertas(CargadorPuerta cargador) { cargadorPuertas = std::move(cargador); }
-		void FijarRaizModelos(const std::filesystem::path& raiz);
-		void FijarRaizEscena(const std::filesystem::path& raiz) { raizEscena = raiz; }
-		void FijarRaizAnimaciones(const std::filesystem::path& raiz) { raizAnimaciones = raiz; inventarioPuertasCargado = false; }
+		void SetModelLoader(CargadorModelo cargador) { cargadorModelos = std::move(cargador); }
+		void SetTextureLoader(CargadorTextura cargador) { cargadorTexturas = std::move(cargador); }
+		void SetDoorLoader(CargadorPuerta cargador) { cargadorPuertas = std::move(cargador); }
+		void SetModelsRoot(const std::filesystem::path& raiz);
+		void SetSceneRoot(const std::filesystem::path& raiz) { raizEscena = raiz; }
+		void SetAnimationsRoot(const std::filesystem::path& raiz) { raizAnimaciones = raiz; inventarioPuertasCargado = false; }
 		// Una escena nueva (cargada desde disco) borra historial y selección.
-		void NuevaEscena();
+		void NewScene();
 
-		void Atajo(int tecla, int accion, int modificadores, bool escribiendoTexto);
-		void Actualizar(GLFWwindow* ventana, float delta);
-		void DibujarInterfaz(EditorSceneContext contexto, int ancho, int alto);
+		void Shortcut(int tecla, int accion, int modificadores, bool escribiendoTexto);
+		void Advance(GLFWwindow* ventana, float delta);
+		void DrawEditorInterface(EditorSceneContext contexto, int ancho, int alto);
 		// Rueda del ratón: solo hace zoom si el cursor está sobre el viewport (ni sobre un panel ImGui, ni arrastrando un gizmo,
 		// ni navegando con otro botón).
-		void RuedaRaton(float cantidad);
+		void MouseWheelInput(float cantidad);
 		void Matrices(float aspecto, glm::mat4& vista, glm::mat4& proyeccion) const;
 
 		// Visibilidad TEMPORAL de la vista de edición (no toca la escena ni el JSON). Fuera de EDIT todo es visible.
-		bool ObjetoVisible(std::size_t indice) const;
-		bool MostrarAnimados() const;
-		bool MostrarColisionadores() const { return showColliders; }
+		bool IsObjectVisible(std::size_t indice) const;
+		bool ShowAnimated() const;
+		bool ShowCollidersEnabled() const { return showColliders; }
 
-		int Seleccionado() const { return seleccionado; }
-		void MarcarGuardado() { modificada = false; }
-		bool HayCambiosSinGuardar() const { return modificada; }
-		void InformarEstado(std::string estado, bool error = false) { mensajeEstado = std::move(estado); mensajeEsError = error; }
-		void SolicitarConfirmacionCierre() { confirmacionCierre = true; }
+		int IsSelected() const { return seleccionado; }
+		void MarkSaved() { modificada = false; }
+		bool HasUnsavedChanges() const { return modificada; }
+		void ReportStatus(std::string estado, bool error = false) { mensajeEstado = std::move(estado); mensajeEsError = error; }
+		void RequestCloseConfirmation() { confirmacionCierre = true; }
 
 		// --- Operaciones (públicas para poder probarlas sin ventana) ---
-		bool Deshacer(EditorSceneContext contexto);
-		bool Rehacer(EditorSceneContext contexto);
+		bool Undo(EditorSceneContext contexto);
+		bool Redo(EditorSceneContext contexto);
 		// Añade un OBJ ya cargado en la GPU. Devuelve el id de la instancia nueva ("" si falla).
-		std::string AgregarModelo(EditorSceneContext contexto, const std::string& clave, bool yArribaAZArriba, bool colisionador, bool dinamico);
-		bool DuplicarSeleccion(EditorSceneContext contexto);
-		bool EliminarSeleccion(EditorSceneContext contexto, bool cerrarHueco = true);
+		std::string AppendModel(EditorSceneContext contexto, const std::string& clave, bool yArribaAZArriba, bool colisionador, bool dinamico);
+		bool DuplicateSelection(EditorSceneContext contexto);
+		bool DeleteSelection(EditorSceneContext contexto, bool cerrarHueco = true);
 		const SceneHistory& Historial() const { return historial; }
-		void Seleccionar(int indice)
+		void SelectElement(int indice)
 		{
 			if (seleccionado != indice) { previsualizacionGizmoActiva = false; previsualizacionGizmoInvalida = false; idPrevisualizacionGizmo.clear(); }
-			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Bloquear();
+			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Lock();
 		}
-		EditorVisibility& Visibilidad() { return visibilidad; }
+		EditorVisibility& VisibilityState() { return visibilidad; }
 
 	private:
 		struct SelectableElement
@@ -101,47 +101,47 @@ namespace editor
 			LocalBox caja;
 		};
 
-		SceneState Capturar(const EditorSceneContext& contexto) const;
-		void Restaurar(EditorSceneContext contexto, SceneState estado);
-		void SincronizarGlb(const EditorSceneContext& contexto) const;
-		bool IndiceValido(const EditorSceneContext& contexto, int indice) const;
-		bool EsAnimado(const EditorSceneContext& contexto, int indice) const { return indice >= static_cast<int>(contexto.objetos.size()); }
-		std::string IdDe(const EditorSceneContext& contexto, int indice) const;
-		SelectableElement Elemento(const EditorSceneContext& contexto, int indice);
-		LocalBox CajaDeObjeto(const SceneObject& objeto);
-		LocalBox CajaDeAnimado(const EditorSceneContext& contexto, const SceneAnimatedObject& animado);
-		std::vector<OrientedBox> CajasDeObjeto(const SceneObject& objeto, const glm::mat4& matriz);
-		std::vector<OrientedBox> CajasDeAnimado(const EditorSceneContext& contexto, const SceneAnimatedObject& animado);
-		PlacementResult ValidarObjeto(const EditorSceneContext& contexto, const SceneObject& candidato, int indiceIgnorado,
+		SceneState CaptureHistory(const EditorSceneContext& contexto) const;
+		void RestorePose(EditorSceneContext contexto, SceneState estado);
+		void SyncGlb(const EditorSceneContext& contexto) const;
+		bool IsValidIndex(const EditorSceneContext& contexto, int indice) const;
+		bool IsAnimated(const EditorSceneContext& contexto, int indice) const { return indice >= static_cast<int>(contexto.objetos.size()); }
+		std::string IdOf(const EditorSceneContext& contexto, int indice) const;
+		SelectableElement ElementAt(const EditorSceneContext& contexto, int indice);
+		LocalBox BoxOfObject(const SceneObject& objeto);
+		LocalBox BoxOfAnimated(const EditorSceneContext& contexto, const SceneAnimatedObject& animado);
+		std::vector<OrientedBox> BoxesOfObject(const SceneObject& objeto, const glm::mat4& matriz);
+		std::vector<OrientedBox> BoxesOfAnimated(const EditorSceneContext& contexto, const SceneAnimatedObject& animado);
+		PlacementResult ValidateObject(const EditorSceneContext& contexto, const SceneObject& candidato, int indiceIgnorado,
 			const glm::mat4* matrizPropuesta = nullptr);
-		PlacementResult ValidarAnimado(const EditorSceneContext& contexto, const SceneAnimatedObject& candidato, int indiceIgnorado);
-		std::string IdUnico(const EditorSceneContext& contexto, const std::string& base) const;
-		float AlturaDelSuelo(const EditorSceneContext& contexto) const;
+		PlacementResult ValidateAnimated(const EditorSceneContext& contexto, const SceneAnimatedObject& candidato, int indiceIgnorado);
+		std::string UniqueId(const EditorSceneContext& contexto, const std::string& base) const;
+		float FloorHeight(const EditorSceneContext& contexto) const;
 
-		void ActualizarVisibilidad(const EditorSceneContext& contexto);
-		void AbrirTransaccionSiHaceFalta();
-		void CerrarTransaccionSiTermino(const EditorSceneContext& contexto);
-		void EnfocarSeleccion(const EditorSceneContext& contexto);
-		void DibujarBarra(EditorSceneContext contexto);
-		void DibujarJerarquia(EditorSceneContext contexto);
-		void DibujarInspector(EditorSceneContext contexto);
-		void DibujarAssetBrowser(EditorSceneContext contexto);
-		void DibujarGizmo(EditorSceneContext contexto, int ancho, int alto);
-		void FijarSeleccion(int indice)
+		void UpdateVisibility(const EditorSceneContext& contexto);
+		void OpenTransactionIfNeeded();
+		void CommitTransactionIfFinished(const EditorSceneContext& contexto);
+		void FocusSelection(const EditorSceneContext& contexto);
+		void DrawEditorToolbar(EditorSceneContext contexto);
+		void DrawHierarchy(EditorSceneContext contexto);
+		void DrawInspector(EditorSceneContext contexto);
+		void DrawAssetBrowser(EditorSceneContext contexto);
+		void DrawGizmo(EditorSceneContext contexto, int ancho, int alto);
+		void SetSelection(int indice)
 		{
 			if (seleccionado != indice) { previsualizacionGizmoActiva = false; previsualizacionGizmoInvalida = false; idPrevisualizacionGizmo.clear(); }
-			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Bloquear();
+			seleccionado = indice; seleccionCambiada = true; bloqueoGizmoTrasSeleccion.Lock();
 		}
-		void DibujarContornoSeleccion(EditorSceneContext contexto, int ancho, int alto);
-		void SeleccionarPorRaton(EditorSceneContext contexto, int ancho, int alto);
-		void ProcesarSolicitudes(EditorSceneContext contexto);
-		void AnadirDesdeAssetBrowser(EditorSceneContext contexto);
-		bool InstalarPuertaEnPared(EditorSceneContext contexto, int indicePuerta, int indicePared);
-		void CambiarTransformacion(SceneObject& objeto, const glm::mat4& matriz);
-		void MarcarModificada() { modificada = true; }
-		void DibujarOpcionesCamara();
-		void DibujarDepuracion();
-		void TerminarCaptura();
+		void DrawSelectionOutline(EditorSceneContext contexto, int ancho, int alto);
+		void SelectByMouse(EditorSceneContext contexto, int ancho, int alto);
+		void ProcessPendingRequests(EditorSceneContext contexto);
+		void AddFromAssetBrowser(EditorSceneContext contexto);
+		bool InstallDoorInWall(EditorSceneContext contexto, int indicePuerta, int indicePared);
+		void ChangeTransform(SceneObject& objeto, const glm::mat4& matriz);
+		void MarkModified() { modificada = true; }
+		void DrawCameraOptions();
+		void DrawDebugShapes();
+		void EndCapture();
 
 		bool activo = false;
 		bool salirAPlay = false;
@@ -166,10 +166,10 @@ namespace editor
 		bool seleccionCambiada = false;
 		bool mensajeEsError = false;
 		int seleccionado = -1;
-		Herramienta herramienta = Herramienta::Mover;
+		Herramienta herramienta = Herramienta::MoveView;
 
 		// --- Cámara estilo Unity y arbitraje de la entrada ---
-		enum class CameraMode { Ninguno, Mirar, Pan, Orbitar };
+		enum class CameraMode { Ninguno, LookAround, Pan, OrbitView };
 		CamaraEditor camara;
 		CameraOptions opciones;
 		CameraMode modoCamara = CameraMode::Ninguno;

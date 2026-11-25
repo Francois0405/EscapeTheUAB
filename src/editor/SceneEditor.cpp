@@ -41,7 +41,7 @@ namespace editor
 			if (estado.escala > 0.0f && std::abs(escala - estado.escala) > 0.001f)
 			{
 				const float factor = escala / estado.escala;
-				const interfaz::UiWindowRect ajustada = interfaz::EscalarRectanguloUI(
+				const interfaz::UiWindowRect ajustada = interfaz::ScaleUiRect(
 					{ posicionActual.x, posicionActual.y, tamanoActual.x, tamanoActual.y },
 					factor, displaySize.x, displaySize.y);
 				ImGui::SetWindowSize(ImVec2(ajustada.ancho, ajustada.alto), ImGuiCond_Always);
@@ -87,42 +87,42 @@ namespace editor
 
 	// ---- Peticiones hacia main.cpp ------------------------------------------------------------
 
-	bool SceneEditor::ConsumeEntradaPlay() { const bool v = salirAPlay; salirAPlay = false; return v; }
-	bool SceneEditor::ConsumeGuardarRequest() { const bool v = guardarSolicitado; guardarSolicitado = false; return v; }
-	bool SceneEditor::ConsumeCerrarConfirmado() { const bool v = cerrarConfirmado; cerrarConfirmado = false; return v; }
-	bool SceneEditor::ConsumeCerrarTrasGuardar() { const bool v = cerrarTrasGuardar; cerrarTrasGuardar = false; return v; }
+	bool SceneEditor::ConsumePlayEntry() { const bool v = salirAPlay; salirAPlay = false; return v; }
+	bool SceneEditor::ConsumeSaveRequest() { const bool v = guardarSolicitado; guardarSolicitado = false; return v; }
+	bool SceneEditor::ConsumeCloseConfirmed() { const bool v = cerrarConfirmado; cerrarConfirmado = false; return v; }
+	bool SceneEditor::ConsumeCloseAfterSave() { const bool v = cerrarTrasGuardar; cerrarTrasGuardar = false; return v; }
 
-	void SceneEditor::Activar(bool activar)
+	void SceneEditor::SetActive(bool activar)
 	{
 		if (activar == activo) return;
 		activo = activar;
-		if (!activo) { salirAPlay = true; TerminarCaptura(); modoCamara = CameraMode::Ninguno; }   // el historial se conserva
+		if (!activo) { salirAPlay = true; EndCapture(); modoCamara = CameraMode::Ninguno; }   // el historial se conserva
 	}
 
-	void SceneEditor::FijarRaizModelos(const std::filesystem::path& raiz)
+	void SceneEditor::SetModelsRoot(const std::filesystem::path& raiz)
 	{
 		raizModelos = raiz;
 		inventarioCargado = false;
 	}
 
-	void SceneEditor::NuevaEscena()
+	void SceneEditor::NewScene()
 	{
-		historial.Reiniciar();
+		historial.ResetState();
 		glbEliminados.clear();
 		reconstruirFisicaSolicitada = false;
 		hayRespaldo = false;
 		seleccionado = -1;
-		bloqueoGizmoTrasSeleccion.Reiniciar();
+		bloqueoGizmoTrasSeleccion.ResetState();
 		modificada = false;
 		cajasObj.clear();
 		cajasGlb.clear();
-		visibilidad.MostrarTodo();
+		visibilidad.ShowAll();
 		mensajeEstado.clear();
 	}
 
 	// ---- Entrada --------------------------------------------------------------------------------
 
-	void SceneEditor::Atajo(int tecla, int accion, int modificadores, bool escribiendoTexto)
+	void SceneEditor::Shortcut(int tecla, int accion, int modificadores, bool escribiendoTexto)
 	{
 		const bool control = (modificadores & GLFW_MOD_CONTROL) != 0;
 		const bool mayus = (modificadores & GLFW_MOD_SHIFT) != 0;
@@ -130,20 +130,20 @@ namespace editor
 			tecla == GLFW_KEY_F6 &&
 			!escribiendoTexto)
 		{
-			Activar(!activo);
+			SetActive(!activo);
 			return;
 		}
 		if (!activo) return;
 
 		// Flechas / RePag / AvPag: mover el objeto seleccionado (o la cámara si no hay selección). Admiten repetición del teclado.
-		ArrowKey flecha = ArrowKey::Arriba;
+		ArrowKey flecha = ArrowKey::UpVector;
 		bool esFlecha = true;
 		switch (tecla)
 		{
-		case GLFW_KEY_UP: flecha = ArrowKey::Arriba; break;
+		case GLFW_KEY_UP: flecha = ArrowKey::UpVector; break;
 		case GLFW_KEY_DOWN: flecha = ArrowKey::Abajo; break;
 		case GLFW_KEY_LEFT: flecha = ArrowKey::Izquierda; break;
-		case GLFW_KEY_RIGHT: flecha = ArrowKey::Derecha; break;
+		case GLFW_KEY_RIGHT: flecha = ArrowKey::RightVector; break;
 		case GLFW_KEY_PAGE_UP: flecha = ArrowKey::Subir; break;
 		case GLFW_KEY_PAGE_DOWN: flecha = ArrowKey::Bajar; break;
 		default: esFlecha = false; break;
@@ -172,7 +172,7 @@ namespace editor
 		}
 		switch (tecla)
 		{
-		case GLFW_KEY_1: herramienta = Herramienta::Mover; break;
+		case GLFW_KEY_1: herramienta = Herramienta::MoveView; break;
 		case GLFW_KEY_2: herramienta = Herramienta::Rotar; break;
 		case GLFW_KEY_3: herramienta = Herramienta::Escalar; break;
 		case GLFW_KEY_F: enfocarSolicitado = true; break;
@@ -181,7 +181,7 @@ namespace editor
 		}
 	}
 
-	void SceneEditor::TerminarCaptura()
+	void SceneEditor::EndCapture()
 	{
 		if (ventanaCaptura == nullptr) return;
 		glfwSetInputMode(ventanaCaptura, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
@@ -194,7 +194,7 @@ namespace editor
 	//   1. widget de ImGui en uso  2. arrastre de ImGuizmo  3. navegación explícita (botón derecho/central, Alt+izquierdo)
 	//   4. selección por clic  5. atajos de teclado.
 	// La navegación solo puede EMPEZAR con el cursor en el viewport y sin 1 ni 2; una vez empezada sigue hasta soltar el botón.
-	void SceneEditor::Actualizar(GLFWwindow* ventana, float delta)
+	void SceneEditor::Advance(GLFWwindow* ventana, float delta)
 	{
 		if (!activo || ventana == nullptr) return;
 		const ImGuiIO& io = ImGui::GetIO();
@@ -212,22 +212,22 @@ namespace editor
 		const bool alt = glfwGetKey(ventana, GLFW_KEY_LEFT_ALT) == GLFW_PRESS || glfwGetKey(ventana, GLFW_KEY_RIGHT_ALT) == GLFW_PRESS;
 		const bool ctrl = glfwGetKey(ventana, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS || glfwGetKey(ventana, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
 		const bool mayus = glfwGetKey(ventana, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS || glfwGetKey(ventana, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-		const bool ortografica = camara.Ortografica();
+		const bool ortografica = camara.IsOrthographic();
 
 		if (modoCamara == CameraMode::Ninguno)
 		{
 			if (entrada.viewportLibre)
 			{
-				if (derecho) modoCamara = ortografica ? CameraMode::Pan : CameraMode::Mirar;
+				if (derecho) modoCamara = ortografica ? CameraMode::Pan : CameraMode::LookAround;
 				else if (medio) modoCamara = CameraMode::Pan;
-				else if (izquierdo && alt) modoCamara = ortografica ? CameraMode::Pan : CameraMode::Orbitar;
+				else if (izquierdo && alt) modoCamara = ortografica ? CameraMode::Pan : CameraMode::OrbitView;
 			}
 			if (modoCamara != CameraMode::Ninguno)
 			{
-				pivoteOrbita = camara.Pivote();
+				pivoteOrbita = camara.PivotPoint();
 				reiniciarDelta = true;
 				dx = dy = 0.0f;
-				if (modoCamara == CameraMode::Mirar || modoCamara == CameraMode::Orbitar)
+				if (modoCamara == CameraMode::LookAround || modoCamara == CameraMode::OrbitView)
 				{	// cursor capturado: deltas ilimitados y sin salirse de la ventana
 					cursorGuardadoX = x;
 					cursorGuardadoY = y;
@@ -238,33 +238,33 @@ namespace editor
 		}
 		else
 		{
-			const bool sigue = (modoCamara == CameraMode::Mirar) ? derecho
-				: (modoCamara == CameraMode::Orbitar) ? izquierdo
+			const bool sigue = (modoCamara == CameraMode::LookAround) ? derecho
+				: (modoCamara == CameraMode::OrbitView) ? izquierdo
 				: (derecho || medio || (izquierdo && alt));
-			if (!sigue) { TerminarCaptura(); modoCamara = CameraMode::Ninguno; return; }
+			if (!sigue) { EndCapture(); modoCamara = CameraMode::Ninguno; return; }
 		}
 
 		switch (modoCamara)
 		{
-		case CameraMode::Mirar:
+		case CameraMode::LookAround:
 		{
-			camara.Mirar(dx, dy, opciones);
+			camara.LookAround(dx, dy, opciones);
 			if (!io.WantTextInput)
 			{
-				const float mult = MultiplicadorVelocidad(ctrl, mayus, opciones);   // Ctrl prevalece sobre Shift
+				const float mult = SpeedMultiplier(ctrl, mayus, opciones);   // Ctrl prevalece sobre Shift
 				const auto tecla = [ventana](int k) { return glfwGetKey(ventana, k) == GLFW_PRESS ? 1.0f : 0.0f; };
-				camara.Mover(tecla(GLFW_KEY_W) - tecla(GLFW_KEY_S), tecla(GLFW_KEY_D) - tecla(GLFW_KEY_A),
+				camara.MoveView(tecla(GLFW_KEY_W) - tecla(GLFW_KEY_S), tecla(GLFW_KEY_D) - tecla(GLFW_KEY_A),
 					tecla(GLFW_KEY_E) - tecla(GLFW_KEY_Q), delta, mult, opciones);
 			}
 			break;
 		}
-		case CameraMode::Orbitar: camara.Orbitar(pivoteOrbita, dx, dy, opciones); break;
+		case CameraMode::OrbitView: camara.OrbitView(pivoteOrbita, dx, dy, opciones); break;
 		case CameraMode::Pan: camara.Pan(dx, dy, io.DisplaySize.y, opciones); break;
 		default: break;
 		}
 	}
 
-	void SceneEditor::RuedaRaton(float cantidad)
+	void SceneEditor::MouseWheelInput(float cantidad)
 	{
 		if (!activo) return;
 		// La rueda es del panel ImGui si el cursor está encima (Hierarchy, Inspector, Asset Browser...) y no de la cámara.
@@ -279,16 +279,16 @@ namespace editor
 
 	// ---- Estado, historial -------------------------------------------------------------------
 
-	SceneState SceneEditor::Capturar(const EditorSceneContext& contexto) const
+	SceneState SceneEditor::CaptureHistory(const EditorSceneContext& contexto) const
 	{
 		return SceneState{ contexto.objetos, contexto.animados };
 	}
 
-	void SceneEditor::SincronizarGlb(const EditorSceneContext& contexto) const
+	void SceneEditor::SyncGlb(const EditorSceneContext& contexto) const
 	{
 		for (const SceneAnimatedObject& animado : contexto.animados)
 		{
-			if (glb::AnimatedObject* instancia = glb::BuscarObjeto(contexto.escenaGlb, animado.id))
+			if (glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, animado.id))
 			{
 				instancia->posicion = animado.posicion;
 				instancia->giroZGrados = animado.giroZGrados;
@@ -311,7 +311,7 @@ namespace editor
 		}
 	}
 
-	void SceneEditor::Restaurar(EditorSceneContext contexto, SceneState estado)
+	void SceneEditor::RestorePose(EditorSceneContext contexto, SceneState estado)
 	{
 		contexto.objetos = std::move(estado.objetos);
 		contexto.animados = std::move(estado.animados);
@@ -325,60 +325,60 @@ namespace editor
 		}
 		for (const SceneAnimatedObject& data : contexto.animados)
 		{
-			if (glb::BuscarObjeto(contexto.escenaGlb, data.id)) continue;
+			if (glb::FindAnimatedObject(contexto.escenaGlb, data.id)) continue;
 			auto cached = glbEliminados.find(data.id);
 			if (cached != glbEliminados.end()) contexto.escenaGlb.objetos.push_back(cached->second);
 		}
-		SincronizarGlb(contexto);   // vista y cajas se rehacen solas: en EDIT todo se dibuja desde estas listas
+		SyncGlb(contexto);   // vista y cajas se rehacen solas: en EDIT todo se dibuja desde estas listas
 		reconstruirFisicaSolicitada = true;
 		const int total = static_cast<int>(contexto.objetos.size() + contexto.animados.size());
-		if (seleccionado >= total) FijarSeleccion(total - 1);
+		if (seleccionado >= total) SetSelection(total - 1);
 		hayRespaldo = false;
-		MarcarModificada();
+		MarkModified();
 	}
 
-	bool SceneEditor::Deshacer(EditorSceneContext contexto)
+	bool SceneEditor::Undo(EditorSceneContext contexto)
 	{
-		SceneState actual = Capturar(contexto);
-		if (!historial.Deshacer(actual)) { InformarEstado("Nothing to undo"); return false; }
-		Restaurar(contexto, std::move(actual));
-		InformarEstado("Undo");
+		SceneState actual = CaptureHistory(contexto);
+		if (!historial.Undo(actual)) { ReportStatus("Nothing to undo"); return false; }
+		RestorePose(contexto, std::move(actual));
+		ReportStatus("Undo");
 		return true;
 	}
 
-	bool SceneEditor::Rehacer(EditorSceneContext contexto)
+	bool SceneEditor::Redo(EditorSceneContext contexto)
 	{
-		SceneState actual = Capturar(contexto);
-		if (!historial.Rehacer(actual)) { InformarEstado("Nothing to redo"); return false; }
-		Restaurar(contexto, std::move(actual));
-		InformarEstado("Redo");
+		SceneState actual = CaptureHistory(contexto);
+		if (!historial.Redo(actual)) { ReportStatus("Nothing to redo"); return false; }
+		RestorePose(contexto, std::move(actual));
+		ReportStatus("Redo");
 		return true;
 	}
 
-	void SceneEditor::AbrirTransaccionSiHaceFalta()
+	void SceneEditor::OpenTransactionIfNeeded()
 	{
-		if (!historial.TransaccionAbierta() && hayRespaldo) historial.IniciarTransaccion(respaldo);
+		if (!historial.IsTransactionOpen() && hayRespaldo) historial.BeginTransaction(respaldo);
 	}
 
-	void SceneEditor::CerrarTransaccionSiTermino(const EditorSceneContext& contexto)
+	void SceneEditor::CommitTransactionIfFinished(const EditorSceneContext& contexto)
 	{
-		if (historial.TransaccionAbierta() && !ImGuizmo::IsUsing() && !ImGui::IsAnyItemActive() && teclasFlechaPulsadas == 0)
-			historial.CerrarTransaccion(Capturar(contexto));
+		if (historial.IsTransactionOpen() && !ImGuizmo::IsUsing() && !ImGui::IsAnyItemActive() && teclasFlechaPulsadas == 0)
+			historial.CommitTransaction(CaptureHistory(contexto));
 	}
 
-	bool SceneEditor::IndiceValido(const EditorSceneContext& contexto, int indice) const
+	bool SceneEditor::IsValidIndex(const EditorSceneContext& contexto, int indice) const
 	{
 		return indice >= 0 && indice < static_cast<int>(contexto.objetos.size() + contexto.animados.size());
 	}
 
-	std::string SceneEditor::IdDe(const EditorSceneContext& contexto, int indice) const
+	std::string SceneEditor::IdOf(const EditorSceneContext& contexto, int indice) const
 	{
-		if (!IndiceValido(contexto, indice)) return {};
-		if (!EsAnimado(contexto, indice)) return contexto.objetos[static_cast<std::size_t>(indice)].id;
+		if (!IsValidIndex(contexto, indice)) return {};
+		if (!IsAnimated(contexto, indice)) return contexto.objetos[static_cast<std::size_t>(indice)].id;
 		return contexto.animados[static_cast<std::size_t>(indice) - contexto.objetos.size()].id;
 	}
 
-	std::string SceneEditor::IdUnico(const EditorSceneContext& contexto, const std::string& base) const
+	std::string SceneEditor::UniqueId(const EditorSceneContext& contexto, const std::string& base) const
 	{
 		auto existe = [&contexto](const std::string& id) {
 			return std::any_of(contexto.objetos.begin(), contexto.objetos.end(), [&id](const SceneObject& o) { return o.id == id; }) ||
@@ -391,12 +391,12 @@ namespace editor
 
 	// ---- Cajas y selección ------------------------------------------------------------------
 
-	LocalBox SceneEditor::CajaDeObjeto(const SceneObject& objeto)
+	LocalBox SceneEditor::BoxOfObject(const SceneObject& objeto)
 	{
 		auto it = cajasObj.find(objeto.modelo);
 		if (it == cajasObj.end())
 		{
-			LocalBox caja = LimitesDeOBJ(objeto.modelo);
+			LocalBox caja = ObjBounds(objeto.modelo);
 			it = cajasObj.emplace(objeto.modelo, caja).first;
 		}
 		LocalBox caja = it->second;
@@ -409,45 +409,45 @@ namespace editor
 				caja.maximo = objeto.fisica.desplazamiento + objeto.fisica.mitadTamano;
 			}
 		}
-		return ConMitadMinima(caja, 0.02f);
+		return WithMinimumHalfExtent(caja, 0.02f);
 	}
 
-	LocalBox SceneEditor::CajaDeAnimado(const EditorSceneContext& contexto, const SceneAnimatedObject& animado)
+	LocalBox SceneEditor::BoxOfAnimated(const EditorSceneContext& contexto, const SceneAnimatedObject& animado)
 	{
 		auto it = cajasGlb.find(animado.modelo);
 		if (it == cajasGlb.end())
 		{
 			LocalBox caja;
-			if (glb::AnimatedObject* instancia = glb::BuscarObjeto(contexto.escenaGlb, animado.id))
-				if (instancia->modelo != nullptr) caja = LimitesDeGLB(*instancia->modelo);
+			if (glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, animado.id))
+				if (instancia->modelo != nullptr) caja = GlbBounds(*instancia->modelo);
 			it = cajasGlb.emplace(animado.modelo, caja).first;
 		}
 		LocalBox caja = it->second;
 		if (!caja.valida) { caja.valida = true; caja.minimo = glm::vec3(-0.5f, -0.1f, 0.0f); caja.maximo = glm::vec3(0.5f, 0.1f, 2.1f); }
-		return ConMitadMinima(caja, 0.05f);   // una puerta es fina: se garantiza un grosor seleccionable
+		return WithMinimumHalfExtent(caja, 0.05f);   // una puerta es fina: se garantiza un grosor seleccionable
 	}
 
-	SceneEditor::SelectableElement SceneEditor::Elemento(const EditorSceneContext& contexto, int indice)
+	SceneEditor::SelectableElement SceneEditor::ElementAt(const EditorSceneContext& contexto, int indice)
 	{
 		SelectableElement e;
 		e.indice = indice;
-		if (!IndiceValido(contexto, indice)) return e;
-		if (!EsAnimado(contexto, indice))
+		if (!IsValidIndex(contexto, indice)) return e;
+		if (!IsAnimated(contexto, indice))
 		{
 			const SceneObject& objeto = contexto.objetos[static_cast<std::size_t>(indice)];
-			e.modelo = fisica::MatrizDeObjeto(objeto);
-			e.caja = CajaDeObjeto(objeto);
+			e.modelo = fisica::ObjectMatrix(objeto);
+			e.caja = BoxOfObject(objeto);
 		}
 		else
 		{
 			const SceneAnimatedObject& animado = contexto.animados[static_cast<std::size_t>(indice) - contexto.objetos.size()];
 			e.modelo = MatrizDeAnimado(animado);
-			e.caja = CajaDeAnimado(contexto, animado);
+			e.caja = BoxOfAnimated(contexto, animado);
 		}
 		return e;
 	}
 
-	std::vector<OrientedBox> SceneEditor::CajasDeObjeto(const SceneObject& objeto, const glm::mat4& matriz)
+	std::vector<OrientedBox> SceneEditor::BoxesOfObject(const SceneObject& objeto, const glm::mat4& matriz)
 	{
 		if (objeto.pared.presente && !objeto.pared.aperturas.empty())
 		{
@@ -456,29 +456,29 @@ namespace editor
 			glm::mat3 rotacion;
 			for (int eje = 0; eje < 3; ++eje) rotacion[eje] = glm::normalize(glm::vec3(matriz[eje]));
 			pose *= glm::mat4(rotacion);
-			const glm::vec3 mitadPared = glm::abs(escala) * (objeto.fisica.presente ? objeto.fisica.mitadTamano : CajaDeObjeto(objeto).MitadTamano());
+			const glm::vec3 mitadPared = glm::abs(escala) * (objeto.fisica.presente ? objeto.fisica.mitadTamano : BoxOfObject(objeto).HalfSize());
 			std::vector<SceneWallSection> secciones;
 			std::string error;
-			if (GenerarSeccionesPared(mitadPared, objeto.pared.aperturas, secciones, error))
+			if (GenerateWallSections(mitadPared, objeto.pared.aperturas, secciones, error))
 			{
 				std::vector<OrientedBox> cajas;
 				for (const auto& seccion : secciones)
-					cajas.push_back(TransformarCaja(pose, seccion.centroLocal, seccion.mitad));
+					cajas.push_back(TransformBox(pose, seccion.centroLocal, seccion.mitad));
 				return cajas;
 			}
 		}
 		if (objeto.fisica.presente)
 		{
 			const glm::mat4 collider = matriz * glm::translate(glm::mat4(1.0f), objeto.fisica.desplazamiento);
-			return { TransformarCaja(collider, glm::vec3(0.0f), objeto.fisica.mitadTamano) };
+			return { TransformBox(collider, glm::vec3(0.0f), objeto.fisica.mitadTamano) };
 		}
-		const LocalBox limites = CajaDeObjeto(objeto);
-		return { TransformarCaja(matriz, limites.Centro(), limites.MitadTamano()) };
+		const LocalBox limites = BoxOfObject(objeto);
+		return { TransformBox(matriz, limites.CenterPoint(), limites.HalfSize()) };
 	}
 
-	std::vector<OrientedBox> SceneEditor::CajasDeAnimado(const EditorSceneContext& contexto, const SceneAnimatedObject& animado)
+	std::vector<OrientedBox> SceneEditor::BoxesOfAnimated(const EditorSceneContext& contexto, const SceneAnimatedObject& animado)
 	{
-		const glb::AnimatedObject* instancia = glb::BuscarObjeto(contexto.escenaGlb, animado.id);
+		const glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, animado.id);
 		if (instancia != nullptr && instancia->modelo != nullptr && !animado.colisionadores.empty())
 		{
 			glm::mat4 base = glm::translate(glm::mat4(1.0f), animado.posicion);
@@ -487,36 +487,36 @@ namespace editor
 			std::vector<OrientedBox> cajas;
 			for (const SceneCollider& datos : animado.colisionadores)
 			{
-				const int nodo = glb::BuscarNodoPorNombre(*instancia->modelo, datos.nodo);
+				const int nodo = glb::FindNodeByName(*instancia->modelo, datos.nodo);
 				if (nodo < 0) continue;
-				const glm::mat4 mundoNodo = base * glb::MatrizYArribaAZArriba() *
-					glb::MatrizMundoDelNodo(*instancia->modelo, instancia->pose, nodo);
-				cajas.push_back(TransformarCaja(mundoNodo, datos.desplazamiento, datos.mitadTamano));
+				const glm::mat4 mundoNodo = base * glb::YUpToZUpMatrix() *
+					glb::NodeWorldMatrix(*instancia->modelo, instancia->pose, nodo);
+				cajas.push_back(TransformBox(mundoNodo, datos.desplazamiento, datos.mitadTamano));
 			}
 			if (!cajas.empty()) return cajas;
 		}
-		return { TransformarCaja(MatrizDeAnimado(animado), CajaDeAnimado(contexto, animado).Centro(),
-			CajaDeAnimado(contexto, animado).MitadTamano()) };
+		return { TransformBox(MatrizDeAnimado(animado), BoxOfAnimated(contexto, animado).CenterPoint(),
+			BoxOfAnimated(contexto, animado).HalfSize()) };
 	}
 
-	PlacementResult SceneEditor::ValidarObjeto(const EditorSceneContext& contexto, const SceneObject& candidato, int indiceIgnorado,
+	PlacementResult SceneEditor::ValidateObject(const EditorSceneContext& contexto, const SceneObject& candidato, int indiceIgnorado,
 		const glm::mat4* matrizPropuesta)
 	{
 		const SceneObject& actual = indiceIgnorado >= 0 && indiceIgnorado < static_cast<int>(contexto.objetos.size())
 			? contexto.objetos[static_cast<std::size_t>(indiceIgnorado)] : candidato;
-		const auto propuesta = CajasDeObjeto(candidato, matrizPropuesta != nullptr ? *matrizPropuesta : fisica::MatrizDeObjeto(candidato));
+		const auto propuesta = BoxesOfObject(candidato, matrizPropuesta != nullptr ? *matrizPropuesta : fisica::ObjectMatrix(candidato));
 		const auto anterior = indiceIgnorado >= 0 && indiceIgnorado < static_cast<int>(contexto.objetos.size())
-			? CajasDeObjeto(actual, fisica::MatrizDeObjeto(actual)) : std::vector<OrientedBox>{};
+			? BoxesOfObject(actual, fisica::ObjectMatrix(actual)) : std::vector<OrientedBox>{};
 		std::vector<PlacementObstacle> obstaculos;
 		constexpr float toleranciaContacto = 0.01f;
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 		{
 			if (static_cast<int>(i) == indiceIgnorado || contexto.objetos[i].id == candidato.id) continue;
 			const SceneObject& objeto = contexto.objetos[i];
-			const auto cajas = CajasDeObjeto(objeto, fisica::MatrizDeObjeto(objeto));
+			const auto cajas = BoxesOfObject(objeto, fisica::ObjectMatrix(objeto));
 			const glm::vec3 dimensiones = objeto.fisica.presente
 				? glm::abs(objeto.escala) * objeto.fisica.mitadTamano
-				: glm::abs(objeto.escala) * CajaDeObjeto(objeto).MitadTamano();
+				: glm::abs(objeto.escala) * BoxOfObject(objeto).HalfSize();
 			const float minimo = std::min({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float medio = dimensiones.x + dimensiones.y + dimensiones.z - minimo - std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float maximo = std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
@@ -531,22 +531,22 @@ namespace editor
 		for (const SceneAnimatedObject& animado : contexto.animados)
 		{
 			if (animado.id == candidato.id) continue;
-			for (const OrientedBox& caja : CajasDeAnimado(contexto, animado))
+			for (const OrientedBox& caja : BoxesOfAnimated(contexto, animado))
 				obstaculos.push_back({ caja, animado.id, "animated object", false });
 		}
-		return editor::ValidarColocacion(propuesta, anterior, obstaculos,
+		return editor::ValidatePlacement(propuesta, anterior, obstaculos,
 			candidato.permitirPenetracionArquitectura, toleranciaContacto);
 	}
 
-	PlacementResult SceneEditor::ValidarAnimado(const EditorSceneContext& contexto, const SceneAnimatedObject& candidato, int indiceIgnorado)
+	PlacementResult SceneEditor::ValidateAnimated(const EditorSceneContext& contexto, const SceneAnimatedObject& candidato, int indiceIgnorado)
 	{
 		const SceneAnimatedObject& actual = indiceIgnorado >= static_cast<int>(contexto.objetos.size()) &&
 			indiceIgnorado < static_cast<int>(contexto.objetos.size() + contexto.animados.size())
 			? contexto.animados[static_cast<std::size_t>(indiceIgnorado) - contexto.objetos.size()] : candidato;
-		const auto propuesta = CajasDeAnimado(contexto, candidato);
+		const auto propuesta = BoxesOfAnimated(contexto, candidato);
 		const auto anterior = indiceIgnorado >= static_cast<int>(contexto.objetos.size()) &&
 			indiceIgnorado < static_cast<int>(contexto.objetos.size() + contexto.animados.size())
-			? CajasDeAnimado(contexto, actual) : std::vector<OrientedBox>{};
+			? BoxesOfAnimated(contexto, actual) : std::vector<OrientedBox>{};
 		std::vector<PlacementObstacle> obstaculos;
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 		{
@@ -564,17 +564,17 @@ namespace editor
 					apertura->base = candidato.posicion.z - (objeto.posicion.z - mitad.z);
 					std::vector<SceneWallSection> secciones;
 					std::string error;
-					if (!GenerarSeccionesPared(mitad, objeto.pared.aperturas, secciones, error))
+					if (!GenerateWallSections(mitad, objeto.pared.aperturas, secciones, error))
 						return { false, "wall opening: " + error };
 					const float normalOffset = glm::length(candidato.posicion - objeto.posicion - ejeU * apertura->centerU - glm::vec3(0, 0, candidato.posicion.z - objeto.posicion.z));
 					if (normalOffset > mitad.y + 0.15f || apertura->base < -0.01f)
 						return { false, "door must remain aligned with its associated wall" };
 				}
 			}
-			const auto cajas = CajasDeObjeto(objeto, fisica::MatrizDeObjeto(objeto));
+			const auto cajas = BoxesOfObject(objeto, fisica::ObjectMatrix(objeto));
 			const glm::vec3 dimensiones = objeto.fisica.presente
 				? glm::abs(objeto.escala) * objeto.fisica.mitadTamano
-				: glm::abs(objeto.escala) * CajaDeObjeto(objeto).MitadTamano();
+				: glm::abs(objeto.escala) * BoxOfObject(objeto).HalfSize();
 			const float minimo = std::min({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float medio = dimensiones.x + dimensiones.y + dimensiones.z - minimo - std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
 			const float maximo = std::max({ dimensiones.x, dimensiones.y, dimensiones.z });
@@ -586,14 +586,14 @@ namespace editor
 		{
 			const SceneAnimatedObject& otro = contexto.animados[i];
 			if (static_cast<int>(contexto.objetos.size() + i) == indiceIgnorado || otro.id == candidato.id) continue;
-			for (const OrientedBox& caja : CajasDeAnimado(contexto, otro))
+			for (const OrientedBox& caja : BoxesOfAnimated(contexto, otro))
 				obstaculos.push_back({ caja, otro.id, "animated object", false });
 		}
-		return editor::ValidarColocacion(propuesta, anterior, obstaculos,
+		return editor::ValidatePlacement(propuesta, anterior, obstaculos,
 			candidato.permitirPenetracionArquitectura, 0.01f);
 	}
 
-	void SceneEditor::SeleccionarPorRaton(EditorSceneContext contexto, int ancho, int alto)
+	void SceneEditor::SelectByMouse(EditorSceneContext contexto, int ancho, int alto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
 		// Prioridad 4: solo un clic simple en el viewport (no sobre un panel, ni arrastrando el gizmo, ni navegando con Alt/botones).
@@ -603,27 +603,27 @@ namespace editor
 
 		glm::mat4 vista, proyeccion;
 		Matrices(static_cast<float>(ancho) / static_cast<float>(alto), vista, proyeccion);
-		const Rayo rayo = RayoDesdePantalla(vista, proyeccion, glm::vec2(io.MousePos.x, io.MousePos.y),
+		const Rayo rayo = RayFromScreen(vista, proyeccion, glm::vec2(io.MousePos.x, io.MousePos.y),
 			glm::vec4(0.0f, 0.0f, static_cast<float>(ancho), static_cast<float>(alto)));
 
 		std::vector<SelectionCandidate> candidatos;
 		const int total = static_cast<int>(contexto.objetos.size() + contexto.animados.size());
 		for (int i = 0; i < total; ++i)
 		{
-			if (!EsAnimado(contexto, i))
+			if (!IsAnimated(contexto, i))
 			{
-				if (!ObjetoVisible(static_cast<std::size_t>(i))) continue;   // lo oculto nunca bloquea la selección
+				if (!IsObjectVisible(static_cast<std::size_t>(i))) continue;   // lo oculto nunca bloquea la selección
 			}
-			else if (!visibilidad.AnimadoVisible(IdDe(contexto, i))) continue;
-			const SelectableElement e = Elemento(contexto, i);
+			else if (!visibilidad.AnimatedVisible(IdOf(contexto, i))) continue;
+			const SelectableElement e = ElementAt(contexto, i);
 			candidatos.push_back({ e.indice, e.modelo, e.caja });
 		}
-		FijarSeleccion(ElegirMasCercano(rayo, candidatos));
+		SetSelection(PickNearest(rayo, candidatos));
 	}
 
-	void SceneEditor::ActualizarVisibilidad(const EditorSceneContext& contexto)
+	void SceneEditor::UpdateVisibility(const EditorSceneContext& contexto)
 	{
-		clases = ClasificarElementos(contexto.objetos);
+		clases = ClassifyElements(contexto.objetos);
 		visibles.assign(contexto.objetos.size(), 1);
 		const bool superior = camara.vista == Vista::Superior;
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
@@ -633,28 +633,28 @@ namespace editor
 				[this](const SceneAnimatedObject& a) { return a.id == visibilidad.idAislado; });
 	}
 
-	bool SceneEditor::ObjetoVisible(std::size_t indice) const
+	bool SceneEditor::IsObjectVisible(std::size_t indice) const
 	{
 		return !activo || indice >= visibles.size() || visibles[indice] != 0;
 	}
 
-	bool SceneEditor::MostrarAnimados() const
+	bool SceneEditor::ShowAnimated() const
 	{
 		return !activo || !visibilidad.aislar || aisladoEsAnimado;
 	}
 
-	void SceneEditor::EnfocarSeleccion(const EditorSceneContext& contexto)
+	void SceneEditor::FocusSelection(const EditorSceneContext& contexto)
 	{
-		if (!IndiceValido(contexto, seleccionado)) return;
-		const SelectableElement e = Elemento(contexto, seleccionado);
-		const LocalBox mundo = CajaEnMundo(e.modelo, e.caja);
+		if (!IsValidIndex(contexto, seleccionado)) return;
+		const SelectableElement e = ElementAt(contexto, seleccionado);
+		const LocalBox mundo = BoxInWorld(e.modelo, e.caja);
 		if (!mundo.valida) return;
-		camara.Enfocar(mundo.Centro(), glm::length(mundo.MitadTamano()));
+		camara.FocusOn(mundo.CenterPoint(), glm::length(mundo.HalfSize()));
 	}
 
-	float SceneEditor::AlturaDelSuelo(const EditorSceneContext& contexto) const
+	float SceneEditor::FloorHeight(const EditorSceneContext& contexto) const
 	{
-		const std::vector<ElementClass> c = ClasificarElementos(contexto.objetos);
+		const std::vector<ElementClass> c = ClassifyElements(contexto.objetos);
 		float techoDelSuelo = std::numeric_limits<float>::lowest();
 		for (std::size_t i = 0; i < contexto.objetos.size(); ++i)
 		{
@@ -668,24 +668,24 @@ namespace editor
 
 	// ---- Operaciones ---------------------------------------------------------------------------
 
-	std::string SceneEditor::AgregarModelo(EditorSceneContext contexto, const std::string& clave, bool yArribaAZArriba,
+	std::string SceneEditor::AppendModel(EditorSceneContext contexto, const std::string& clave, bool yArribaAZArriba,
 		bool colisionador, bool dinamico)
 	{
 		if (clave.empty()) return {};
 
 		SceneObject objeto;   // todo explícito: una escala sin inicializar (0) deja el modelo invisible y el JSON inválido
-		objeto.id = IdUnico(contexto, "obj_" + std::filesystem::path(clave).stem().string());
+		objeto.id = UniqueId(contexto, "obj_" + std::filesystem::path(clave).stem().string());
 		objeto.categoria = "objects";
 		objeto.modelo = clave;
 		objeto.posicion = glm::vec3(0.0f);
 		objeto.rotacion = yArribaAZArriba ? glm::vec3(90.0f, 0.0f, 0.0f) : glm::vec3(0.0f);
 		objeto.escala = glm::vec3(1.0f);
 
-		LocalBox caja = CajaDeObjeto(objeto);
-		const LocalBox mundo = CajaEnMundo(fisica::MatrizDeObjeto(objeto), caja);
-		const float suelo = AlturaDelSuelo(contexto);
-		const glm::vec3 centro = mundo.Centro();
-		const glm::vec3 objetivo = camara.Pivote();
+		LocalBox caja = BoxOfObject(objeto);
+		const LocalBox mundo = BoxInWorld(fisica::ObjectMatrix(objeto), caja);
+		const float suelo = FloorHeight(contexto);
+		const glm::vec3 centro = mundo.CenterPoint();
+		const glm::vec3 objetivo = camara.PivotPoint();
 		objeto.posicion.x = objetivo.x - centro.x;
 		objeto.posicion.y = objetivo.y - centro.y;
 		// Apoyado sobre el suelo si la sala lo tiene; si no, centrado en el punto que mira la cámara.
@@ -701,48 +701,48 @@ namespace editor
 			{
 				objeto.fisica.presente = true;
 				objeto.fisica.tipo = dinamico ? fisica::BodyType::Dinamico : fisica::BodyType::Estatico;
-				objeto.fisica.mitadTamano = caja.MitadTamano();
-				objeto.fisica.desplazamiento = caja.Centro();
+				objeto.fisica.mitadTamano = caja.HalfSize();
+				objeto.fisica.desplazamiento = caja.CenterPoint();
 				objeto.fisica.masa = dinamico ? 5.0f : 0.0f;
 			}
 		}
-		const PlacementResult resultado = ValidarObjeto(contexto, objeto, -1);
+		const PlacementResult resultado = ValidateObject(contexto, objeto, -1);
 		if (!resultado.valida)
 		{
 			mensajeColocacion = "Placement blocked by " + resultado.bloqueador;
 			mensajeEsError = true;
-			InformarEstado(mensajeColocacion, true);
+			ReportStatus(mensajeColocacion, true);
 			return {};
 		}
 		mensajeColocacion.clear();
-		historial.Registrar(Capturar(contexto));
+		historial.RegisterElement(CaptureHistory(contexto));
 		const std::string id = objeto.id;
 		contexto.objetos.push_back(std::move(objeto));
-		FijarSeleccion(static_cast<int>(contexto.objetos.size()) - 1);
+		SetSelection(static_cast<int>(contexto.objetos.size()) - 1);
 		hayRespaldo = false;
-		MarcarModificada();
-		InformarEstado("Added " + id + aviso);
+		MarkModified();
+		ReportStatus("Added " + id + aviso);
 		return id;
 	}
 
-	bool SceneEditor::DuplicarSeleccion(EditorSceneContext contexto)
+	bool SceneEditor::DuplicateSelection(EditorSceneContext contexto)
 	{
-		if (!IndiceValido(contexto, seleccionado)) return false;
-		if (EsAnimado(contexto, seleccionado))
+		if (!IsValidIndex(contexto, seleccionado)) return false;
+		if (IsAnimated(contexto, seleccionado))
 		{
 			SceneAnimatedObject copia = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
 			if (copia.paredId.empty() || copia.aperturaId.empty())
-			{ InformarEstado("Install this door in a parametric wall before duplicating it.", true); return false; }
+			{ ReportStatus("Install this door in a parametric wall before duplicating it.", true); return false; }
 			const int paredIndex = static_cast<int>(std::distance(contexto.objetos.begin(), std::find_if(contexto.objetos.begin(), contexto.objetos.end(),
 				[&](const SceneObject& item) { return item.id == copia.paredId && item.pared.presente; })));
 			if (paredIndex < 0 || paredIndex >= static_cast<int>(contexto.objetos.size()))
-			{ InformarEstado("The associated wall no longer exists.", true); return false; }
+			{ ReportStatus("The associated wall no longer exists.", true); return false; }
 			SceneObject& pared = contexto.objetos[static_cast<std::size_t>(paredIndex)];
 			auto apertura = std::find_if(pared.pared.aperturas.begin(), pared.pared.aperturas.end(),
 				[&](const SceneWallOpening& a) { return a.id == copia.aperturaId; });
 			if (apertura == pared.pared.aperturas.end())
-			{ InformarEstado("The door opening association is missing.", true); return false; }
-			copia.id = IdUnico(contexto, copia.id + "_copy");
+			{ ReportStatus("The door opening association is missing.", true); return false; }
+			copia.id = UniqueId(contexto, copia.id + "_copy");
 			copia.aperturaId = copia.id;
 			SceneWallOpening nuevoVano = *apertura;
 			nuevoVano.id = copia.id;
@@ -753,16 +753,16 @@ namespace editor
 			std::vector<SceneWallOpening> vanos = pared.pared.aperturas;
 			vanos.push_back(nuevoVano);
 			std::string errorVano;
-			if (!GenerarSeccionesPared(glm::abs(pared.escala) * pared.fisica.mitadTamano, vanos, secciones, errorVano))
-			{ InformarEstado("Door duplicate blocked: " + errorVano, true); return false; }
+			if (!GenerateWallSections(glm::abs(pared.escala) * pared.fisica.mitadTamano, vanos, secciones, errorVano))
+			{ ReportStatus("Door duplicate blocked: " + errorVano, true); return false; }
 			const float angulo = glm::radians(pared.rotacion.z);
 			const glm::vec3 ejeU(std::cos(angulo), std::sin(angulo), 0.0f);
 			copia.posicion += ejeU * desplazamientoU;
 			copia.paredId = pared.id;
-			const SceneState estadoAnterior = Capturar(contexto);
+			const SceneState estadoAnterior = CaptureHistory(contexto);
 			pared.pared.aperturas.push_back(nuevoVano);
 			contexto.animados.push_back(copia);
-			if (const glb::AnimatedObject* original = glb::BuscarObjeto(contexto.escenaGlb,
+			if (const glb::AnimatedObject* original = glb::FindAnimatedObject(contexto.escenaGlb,
 				contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()].id))
 			{
 				glb::AnimatedObject clon = *original;
@@ -770,7 +770,7 @@ namespace editor
 				clon.posicion = copia.posicion;
 				clon.giroZGrados = copia.giroZGrados;
 				clon.escala = copia.escala;
-				clon.pose = glb::CrearPoseDeReposo(*clon.modelo);
+				clon.pose = glb::CreateRestPose(*clon.modelo);
 				clon.estado = glb::DoorState::Cerrada;
 				clon.reproductor = {};
 				glbEliminados[copia.id] = clon; // permite que Redo reconstruya la instancia sin recargar el modelo compartido
@@ -780,50 +780,50 @@ namespace editor
 			{
 				contexto.animados.pop_back();
 				pared.pared.aperturas.pop_back();
-				InformarEstado("The shared GLB model is not loaded.", true); return false;
+				ReportStatus("The shared GLB model is not loaded.", true); return false;
 			}
 			const int nuevoIndice = static_cast<int>(contexto.objetos.size() + contexto.animados.size() - 1);
-			const auto validacion = ValidarAnimado(contexto, contexto.animados.back(), nuevoIndice);
+			const auto validacion = ValidateAnimated(contexto, contexto.animados.back(), nuevoIndice);
 			if (!validacion.valida)
 			{
 				contexto.animados.pop_back();
 				contexto.escenaGlb.objetos.pop_back();
 				pared.pared.aperturas.pop_back();
-				InformarEstado("Door duplicate blocked by " + validacion.bloqueador, true); return false;
+				ReportStatus("Door duplicate blocked by " + validacion.bloqueador, true); return false;
 			}
-			historial.Registrar(estadoAnterior);
+			historial.RegisterElement(estadoAnterior);
 			reconstruirFisicaSolicitada = true;
-			FijarSeleccion(nuevoIndice); hayRespaldo = false; MarcarModificada();
-			InformarEstado("Door duplicated with a separate wall opening.");
+			SetSelection(nuevoIndice); hayRespaldo = false; MarkModified();
+			ReportStatus("Door duplicated with a separate wall opening.");
 			return true;
 		}
 		SceneObject copia = contexto.objetos[static_cast<std::size_t>(seleccionado)];
-		copia.id = IdUnico(contexto, copia.id + "_copy");
+		copia.id = UniqueId(contexto, copia.id + "_copy");
 		copia.categoria = "objects";
 		copia.posicion.x += 0.5f;
-		const PlacementResult resultado = ValidarObjeto(contexto, copia, -1);
+		const PlacementResult resultado = ValidateObject(contexto, copia, -1);
 		if (!resultado.valida)
 		{
 			mensajeColocacion = "Duplicate blocked by " + resultado.bloqueador;
-			InformarEstado(mensajeColocacion, true);
+			ReportStatus(mensajeColocacion, true);
 			return false;
 		}
 		mensajeColocacion.clear();
-		historial.Registrar(Capturar(contexto));
+		historial.RegisterElement(CaptureHistory(contexto));
 		contexto.objetos.push_back(std::move(copia));
-		FijarSeleccion(static_cast<int>(contexto.objetos.size()) - 1);
+		SetSelection(static_cast<int>(contexto.objetos.size()) - 1);
 		hayRespaldo = false;
-		MarcarModificada();
-		InformarEstado("Duplicated");
+		MarkModified();
+		ReportStatus("Duplicated");
 		return true;
 	}
 
-	bool SceneEditor::EliminarSeleccion(EditorSceneContext contexto, bool cerrarHueco)
+	bool SceneEditor::DeleteSelection(EditorSceneContext contexto, bool cerrarHueco)
 	{
-		if (!IndiceValido(contexto, seleccionado)) return false;
-		historial.Registrar(Capturar(contexto));
+		if (!IsValidIndex(contexto, seleccionado)) return false;
+		historial.RegisterElement(CaptureHistory(contexto));
 		std::string id;
-		if (EsAnimado(contexto, seleccionado))
+		if (IsAnimated(contexto, seleccionado))
 		{
 			const std::size_t index = static_cast<std::size_t>(seleccionado) - contexto.objetos.size();
 			const SceneAnimatedObject& datos = contexto.animados[index];
@@ -843,7 +843,7 @@ namespace editor
 					}
 				}
 			}
-			if (glb::AnimatedObject* instancia = glb::BuscarObjeto(contexto.escenaGlb, id))
+			if (glb::AnimatedObject* instancia = glb::FindAnimatedObject(contexto.escenaGlb, id))
 			{
 				glbEliminados[id] = *instancia;
 				auto& instancias = contexto.escenaGlb.objetos;
@@ -859,21 +859,21 @@ namespace editor
 			contexto.objetos.erase(contexto.objetos.begin() + seleccionado);
 		}
 		const int total = static_cast<int>(contexto.objetos.size() + contexto.animados.size());
-		FijarSeleccion(total == 0 ? -1 : std::min(seleccionado, total - 1));
+		SetSelection(total == 0 ? -1 : std::min(seleccionado, total - 1));
 		hayRespaldo = false;
-		MarcarModificada();
-		InformarEstado(std::string("Deleted ") + id + (cerrarHueco ? " and closed its wall opening" : "; wall opening kept") + " (Ctrl+Z to restore)");
+		MarkModified();
+		ReportStatus(std::string("Deleted ") + id + (cerrarHueco ? " and closed its wall opening" : "; wall opening kept") + " (Ctrl+Z to restore)");
 		return true;
 	}
 
-	bool SceneEditor::InstalarPuertaEnPared(EditorSceneContext contexto, int indicePuerta, int indicePared)
+	bool SceneEditor::InstallDoorInWall(EditorSceneContext contexto, int indicePuerta, int indicePared)
 	{
 		if (indicePuerta < 0 || indicePuerta >= static_cast<int>(contexto.animados.size()) ||
 			indicePared < 0 || indicePared >= static_cast<int>(contexto.objetos.size())) return false;
 		SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(indicePuerta)];
 		SceneObject& paredNueva = contexto.objetos[static_cast<std::size_t>(indicePared)];
 		if (!paredNueva.pared.presente || (paredNueva.fisica.presente && paredNueva.fisica.tipo != fisica::BodyType::Estatico))
-		{ InformarEstado("Select a parametric wall with static collision first.", true); return false; }
+		{ ReportStatus("Select a parametric wall with static collision first.", true); return false; }
 		float mitadAncho = 0.0f, alturaMarco = 0.0f;
 		for (const SceneCollider& c : puerta.colisionadores)
 			if (c.nodo == "DoorFrame")
@@ -882,7 +882,7 @@ namespace editor
 				alturaMarco = std::max(alturaMarco, c.desplazamiento.y + c.mitadTamano.y);
 			}
 		if (!(mitadAncho > 0.0f && alturaMarco > 0.0f))
-		{ InformarEstado("DoorFrame colliders are required to derive the opening dimensions.", true); return false; }
+		{ ReportStatus("DoorFrame colliders are required to derive the opening dimensions.", true); return false; }
 		const float a = glm::radians(paredNueva.rotacion.z);
 		const glm::vec3 ejeU(std::cos(a), std::sin(a), 0.0f);
 		const glm::vec3 delta = puerta.posicion - paredNueva.posicion;
@@ -904,10 +904,10 @@ namespace editor
 			if (ap.idPuerta != puerta.id) propuestaAperturas.push_back(ap);
 		propuestaAperturas.push_back(nueva);
 		std::string error;
-		if (!GenerarSeccionesPared(halfWall, propuestaAperturas, secciones, error))
-		{ InformarEstado("Door opening rejected: " + error, true); return false; }
+		if (!GenerateWallSections(halfWall, propuestaAperturas, secciones, error))
+		{ ReportStatus("Door opening rejected: " + error, true); return false; }
 
-		const SceneState anterior = Capturar(contexto);
+		const SceneState anterior = CaptureHistory(contexto);
 		const SceneAnimatedObject puertaAnterior = puerta;
 		const int paredAnteriorIndex = puerta.paredId.empty() ? -1 : static_cast<int>(std::distance(contexto.objetos.begin(),
 			std::find_if(contexto.objetos.begin(), contexto.objetos.end(), [&](const SceneObject& p) { return p.id == puerta.paredId; })));
@@ -927,98 +927,98 @@ namespace editor
 		puerta.posicion = paredNueva.posicion + ejeU * nueva.centerU + glm::vec3(0.0f, 0.0f,
 			paredNueva.posicion.z - halfWall.z - puerta.posicion.z);
 		puerta.giroZGrados = paredNueva.rotacion.z;
-		const auto resultado = ValidarAnimado(contexto, puerta, static_cast<int>(contexto.objetos.size()) + indicePuerta);
+		const auto resultado = ValidateAnimated(contexto, puerta, static_cast<int>(contexto.objetos.size()) + indicePuerta);
 		if (!resultado.valida)
 		{
 			paredNueva = paredNuevaAnterior;
 			if (paredAnteriorIndex >= 0 && paredAnteriorIndex < static_cast<int>(contexto.objetos.size()) && paredAnteriorIndex != indicePared)
 				contexto.objetos[static_cast<std::size_t>(paredAnteriorIndex)] = paredAnterior;
 			puerta = puertaAnterior;
-			InformarEstado("Door installation blocked by " + resultado.bloqueador, true);
+			ReportStatus("Door installation blocked by " + resultado.bloqueador, true);
 			return false;
 		}
-		historial.Registrar(anterior);
-		SincronizarGlb(contexto);
+		historial.RegisterElement(anterior);
+		SyncGlb(contexto);
 		reconstruirFisicaSolicitada = true;
-		MarcarModificada(); mensajeColocacion.clear();
-		InformarEstado("Door installed; wall opening and static colliders updated.");
+		MarkModified(); mensajeColocacion.clear();
+		ReportStatus("Door installed; wall opening and static colliders updated.");
 		return true;
 	}
 
-	void SceneEditor::ProcesarSolicitudes(EditorSceneContext contexto)
+	void SceneEditor::ProcessPendingRequests(EditorSceneContext contexto)
 	{
 		// Flechas: mueven el objeto seleccionado (herramienta Mover) o, sin selección, la cámara. Una pulsación mantenida
 		// (con la repetición del teclado) forma UNA operación de historial: se cierra al soltar todas las flechas.
 		for (const ArrowPress& pulsacion : flechasPendientes)
 		{
-			if (!IndiceValido(contexto, seleccionado))
+			if (!IsValidIndex(contexto, seleccionado))
 			{
 				bool snap = false;
-				const float paso = LongitudPasoFlecha(pulsacion.ctrl, pulsacion.shift, opciones, snap) * 5.0f;
-				camara.posicion += DireccionFlecha(pulsacion.flecha, camara) * paso;
+				const float paso = ArrowStepLength(pulsacion.ctrl, pulsacion.shift, opciones, snap) * 5.0f;
+				camara.posicion += ArrowDirection(pulsacion.flecha, camara) * paso;
 				continue;
 			}
-			if (herramienta != Herramienta::Mover) continue;
-			if (!EsAnimado(contexto, seleccionado))
+			if (herramienta != Herramienta::MoveView) continue;
+			if (!IsAnimated(contexto, seleccionado))
 			{
 				SceneObject& objeto = contexto.objetos[static_cast<std::size_t>(seleccionado)];
 				SceneObject candidato = objeto;
-				candidato.posicion = AplicarFlecha(objeto.posicion, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
-				const PlacementResult resultado = ValidarObjeto(contexto, candidato, seleccionado);
+				candidato.posicion = ApplyArrowKey(objeto.posicion, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
+				const PlacementResult resultado = ValidateObject(contexto, candidato, seleccionado);
 				if (!resultado.valida)
 				{
 					mensajeColocacion = "Movement blocked by " + resultado.bloqueador;
-					InformarEstado(mensajeColocacion, true);
+					ReportStatus(mensajeColocacion, true);
 					continue;
 				}
 				if (candidato.posicion == objeto.posicion) continue;
-				AbrirTransaccionSiHaceFalta();
+				OpenTransactionIfNeeded();
 				objeto.posicion = candidato.posicion;
 			}
 			else
 			{
 				SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
 				SceneAnimatedObject candidato = puerta;
-				candidato.posicion = AplicarFlecha(puerta.posicion, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
-				const PlacementResult resultado = ValidarAnimado(contexto, candidato, seleccionado);
+				candidato.posicion = ApplyArrowKey(puerta.posicion, pulsacion.flecha, camara, pulsacion.ctrl, pulsacion.shift, opciones);
+				const PlacementResult resultado = ValidateAnimated(contexto, candidato, seleccionado);
 				if (!resultado.valida)
 				{
 					mensajeColocacion = "Movement blocked by " + resultado.bloqueador;
-					InformarEstado(mensajeColocacion, true);
+					ReportStatus(mensajeColocacion, true);
 					continue;
 				}
 				if (candidato.posicion == puerta.posicion) continue;
-				AbrirTransaccionSiHaceFalta();
+				OpenTransactionIfNeeded();
 				puerta.posicion = candidato.posicion;
-				SincronizarGlb(contexto);
+				SyncGlb(contexto);
 			}
 			mensajeColocacion.clear();
-			MarcarModificada();
+			MarkModified();
 		}
 		flechasPendientes.clear();
-		if (deshacerSolicitado) { deshacerSolicitado = false; Deshacer(contexto); }
-		if (rehacerSolicitado) { rehacerSolicitado = false; Rehacer(contexto); }
-		if (duplicarSolicitado) { duplicarSolicitado = false; DuplicarSeleccion(contexto); }
-		if (eliminarSolicitado) { eliminarSolicitado = false; EliminarSeleccion(contexto, true); }
-		if (eliminarConservarHuecoSolicitado) { eliminarConservarHuecoSolicitado = false; EliminarSeleccion(contexto, false); }
-		if (anadirSolicitado) { anadirSolicitado = false; AnadirDesdeAssetBrowser(contexto); }
-		if (enfocarSolicitado) { enfocarSolicitado = false; EnfocarSeleccion(contexto); }
+		if (deshacerSolicitado) { deshacerSolicitado = false; Undo(contexto); }
+		if (rehacerSolicitado) { rehacerSolicitado = false; Redo(contexto); }
+		if (duplicarSolicitado) { duplicarSolicitado = false; DuplicateSelection(contexto); }
+		if (eliminarSolicitado) { eliminarSolicitado = false; DeleteSelection(contexto, true); }
+		if (eliminarConservarHuecoSolicitado) { eliminarConservarHuecoSolicitado = false; DeleteSelection(contexto, false); }
+		if (anadirSolicitado) { anadirSolicitado = false; AddFromAssetBrowser(contexto); }
+		if (enfocarSolicitado) { enfocarSolicitado = false; FocusSelection(contexto); }
 	}
 
-	void SceneEditor::AnadirDesdeAssetBrowser(EditorSceneContext contexto)
+	void SceneEditor::AddFromAssetBrowser(EditorSceneContext contexto)
 	{
 		if (assetEsPuerta)
 		{
 			if (puertaSeleccionada.empty() || !cargadorPuertas)
-			{ InformarEstado("No GLB door loader is registered.", true); return; }
+			{ ReportStatus("No GLB door loader is registered.", true); return; }
 			std::error_code ec;
 			const auto absoluta = std::filesystem::absolute(raizAnimaciones / puertaSeleccionada, ec).lexically_normal();
-			if (ec) { InformarEstado("Could not resolve the selected GLB path.", true); return; }
+			if (ec) { ReportStatus("Could not resolve the selected GLB path.", true); return; }
 			SceneAnimatedObject nuevo;
-			nuevo.id = IdUnico(contexto, absoluta.stem().string());
-			nuevo.posicion = camara.Pivote();
+			nuevo.id = UniqueId(contexto, absoluta.stem().string());
+			nuevo.posicion = camara.PivotPoint();
 			const auto relativa = absoluta.lexically_relative(raizEscena);
-			if (relativa.empty() || relativa.is_absolute()) { InformarEstado("Could not create a portable GLB path relative to the scene.", true); return; }
+			if (relativa.empty() || relativa.is_absolute()) { ReportStatus("Could not create a portable GLB path relative to the scene.", true); return; }
 			nuevo.modelo = relativa.generic_string();
 			for (const SceneAnimatedObject& existente : contexto.animados)
 			{
@@ -1026,38 +1026,38 @@ namespace editor
 				const auto existenteAbs = std::filesystem::absolute(raizEscena / existente.modelo, rutaError).lexically_normal();
 				if (!rutaError && existenteAbs == absoluta) { nuevo.colisionadores = existente.colisionadores; nuevo.escala = existente.escala; break; }
 			}
-			if (nuevo.colisionadores.empty()) { InformarEstado("This GLB has no door collider template in the loaded scene.", true); return; }
-			const SceneState anterior = Capturar(contexto);
+			if (nuevo.colisionadores.empty()) { ReportStatus("This GLB has no door collider template in the loaded scene.", true); return; }
+			const SceneState anterior = CaptureHistory(contexto);
 			std::string error;
 			if (!cargadorPuertas(absoluta, nuevo, contexto, error))
-			{ InformarEstado("Door asset error: " + error, true); return; }
-			historial.Registrar(anterior);
+			{ ReportStatus("Door asset error: " + error, true); return; }
+			historial.RegisterElement(anterior);
 			contexto.animados.push_back(nuevo);
 			reconstruirFisicaSolicitada = true;
-			FijarSeleccion(static_cast<int>(contexto.objetos.size() + contexto.animados.size() - 1));
-			hayRespaldo = false; MarcarModificada();
-			InformarEstado("Door instance added. Select a parametric wall and install the opening in Inspector.");
+			SetSelection(static_cast<int>(contexto.objetos.size() + contexto.animados.size() - 1));
+			hayRespaldo = false; MarkModified();
+			ReportStatus("Door instance added. Select a parametric wall and install the opening in Inspector.");
 			return;
 		}
-		if (assetSeleccionado.empty()) { InformarEstado("Select a model in the Asset Browser first", true); return; }
-		if (!cargadorModelos) { InformarEstado("Asset error: no model loader is registered", true); return; }
+		if (assetSeleccionado.empty()) { ReportStatus("Select a model in the Asset Browser first", true); return; }
+		if (!cargadorModelos) { ReportStatus("Asset error: no model loader is registered", true); return; }
 		std::error_code ec;
 		const std::filesystem::path absoluta = std::filesystem::absolute(raizModelos / assetSeleccionado, ec).lexically_normal();
-		if (ec) { InformarEstado("Asset error: could not resolve " + assetSeleccionado, true); return; }
+		if (ec) { ReportStatus("Asset error: could not resolve " + assetSeleccionado, true); return; }
 		std::string clave, error;
 		if (!cargadorModelos(absoluta, clave, error))
 		{
-			InformarEstado("Asset error: " + (error.empty() ? std::string("could not load model") : error), true);
+			ReportStatus("Asset error: " + (error.empty() ? std::string("could not load model") : error), true);
 			return;
 		}
-		AgregarModelo(contexto, clave, assetYArriba, assetColisionador, assetDinamico);
+		AppendModel(contexto, clave, assetYArriba, assetColisionador, assetDinamico);
 	}
 
-	void SceneEditor::CambiarTransformacion(SceneObject& objeto, const glm::mat4& matriz)
+	void SceneEditor::ChangeTransform(SceneObject& objeto, const glm::mat4& matriz)
 	{
 		if (!MatrizGizmoValida(matriz))
 		{
-			InformarEstado("Gizmo transform rejected: non-finite or non-affine matrix", true);
+			ReportStatus("Gizmo transform rejected: non-finite or non-affine matrix", true);
 			return;
 		}
 		const glm::vec3 posicion(matriz[3]);
@@ -1090,12 +1090,12 @@ namespace editor
 		objeto.posicion = posicion;
 		objeto.rotacion = nuevaRotacion;
 		objeto.escala = nuevaEscala;
-		MarcarModificada();
+		MarkModified();
 	}
 
 	// ---- Interfaz ------------------------------------------------------------------------------------
 
-	void SceneEditor::DibujarBarra(EditorSceneContext contexto)
+	void SceneEditor::DrawEditorToolbar(EditorSceneContext contexto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
 		if (!activo)
@@ -1107,11 +1107,11 @@ namespace editor
 			ImGuiWindowFlags_HorizontalScrollbar);
 		if (ImGui::Button(modificada ? "Save*" : "Save")) guardarSolicitado = true;
 		ImGui::SameLine();
-		ImGui::BeginDisabled(!historial.PuedeDeshacer());
+		ImGui::BeginDisabled(!historial.CanUndo());
 		if (ImGui::Button("Undo")) deshacerSolicitado = true;
 		ImGui::EndDisabled();
 		ImGui::SameLine();
-		ImGui::BeginDisabled(!historial.PuedeRehacer());
+		ImGui::BeginDisabled(!historial.CanRedo());
 		if (ImGui::Button("Redo")) rehacerSolicitado = true;
 		ImGui::EndDisabled();
 		ImGui::SameLine();
@@ -1121,7 +1121,7 @@ namespace editor
 			if (ImGui::Button(texto)) herramienta = h;
 			if (actual) ImGui::PopStyleColor();
 		};
-		herramientaBoton("Move [1]", Herramienta::Mover); ImGui::SameLine();
+		herramientaBoton("Move [1]", Herramienta::MoveView); ImGui::SameLine();
 		herramientaBoton("Rotate [2]", Herramienta::Rotar); ImGui::SameLine();
 		herramientaBoton("Scale [3]", Herramienta::Escalar);
 		ImGui::SameLine(); ImGui::Checkbox("Local", &local);
@@ -1129,11 +1129,11 @@ namespace editor
 		ImGui::SameLine(); ImGui::Checkbox("Boxes", &showColliders);
 		ImGui::SameLine();
 		if (ImGui::Button(camara.vista == Vista::Perspectiva ? "Top view" : "Perspective"))
-			camara.CambiarVista(camara.vista == Vista::Perspectiva ? Vista::Superior : Vista::Perspectiva);
+			camara.ChangeView(camara.vista == Vista::Perspectiva ? Vista::Superior : Vista::Perspectiva);
 		ImGui::SameLine();
-		if (ImGui::Button("Front")) camara.CambiarVista(Vista::Frontal);
+		if (ImGui::Button("Front")) camara.ChangeView(Vista::Frontal);
 		ImGui::SameLine();
-		if (ImGui::Button("Right")) camara.CambiarVista(Vista::Derecha);
+		if (ImGui::Button("Right")) camara.ChangeView(Vista::RightVector);
 		ImGui::SameLine();
 		ImGui::Checkbox("Camera", &mostrarOpcionesCamara);
 		ImGui::SameLine();
@@ -1151,7 +1151,7 @@ namespace editor
 		(void)contexto;
 	}
 
-	void SceneEditor::DibujarJerarquia(EditorSceneContext contexto)
+	void SceneEditor::DrawHierarchy(EditorSceneContext contexto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
 		const float escalaUI = io.FontGlobalScale;
@@ -1169,13 +1169,13 @@ namespace editor
 				ImGui::Checkbox("Hide ceiling", &visibilidad.ocultarTecho);
 				ImGui::Checkbox("Hide walls", &visibilidad.ocultarParedes);
 				ImGui::Checkbox("Auto-hide ceiling in top view", &visibilidad.autoOcultarTechoEnVistaSuperior);
-				if (ImGui::Button("Show all")) visibilidad.MostrarTodo();
+				if (ImGui::Button("Show all")) visibilidad.ShowAll();
 				ImGui::SameLine();
 				if (!visibilidad.aislar)
 				{
-					ImGui::BeginDisabled(!IndiceValido(contexto, seleccionado));
+					ImGui::BeginDisabled(!IsValidIndex(contexto, seleccionado));
 					if (ImGui::Button("Isolate selected"))
-					{ visibilidad.aislar = true; visibilidad.idAislado = IdDe(contexto, seleccionado); }
+					{ visibilidad.aislar = true; visibilidad.idAislado = IdOf(contexto, seleccionado); }
 					ImGui::EndDisabled();
 				}
 				else if (ImGui::Button("End isolation")) { visibilidad.aislar = false; visibilidad.idAislado.clear(); }
@@ -1187,8 +1187,8 @@ namespace editor
 				const int total = static_cast<int>(contexto.objetos.size() + contexto.animados.size());
 				for (int i = 0; i < total; ++i)
 				{
-					const bool animado = EsAnimado(contexto, i);
-					const std::string id = IdDe(contexto, i);
+					const bool animado = IsAnimated(contexto, i);
+					const std::string id = IdOf(contexto, i);
 					ImGui::PushID(i);
 					if (!animado)
 					{	// casilla de visibilidad por elemento
@@ -1207,7 +1207,7 @@ namespace editor
 						etiqueta += std::string("  [") + NombreClase(clases[static_cast<std::size_t>(i)]) + "]";
 					if (ImGui::Selectable(etiqueta.c_str(), seleccionado == i, ImGuiSelectableFlags_AllowDoubleClick))
 					{
-						FijarSeleccion(i);
+						SetSelection(i);
 						if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left)) enfocarSolicitado = true;
 					}
 					if (seleccionado == i && seleccionCambiada) { ImGui::SetScrollHereY(0.5f); }
@@ -1220,7 +1220,7 @@ namespace editor
 		ImGui::End();
 	}
 
-	void SceneEditor::DibujarInspector(EditorSceneContext contexto)
+	void SceneEditor::DrawInspector(EditorSceneContext contexto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
 		const float escalaUI = io.FontGlobalScale;
@@ -1236,9 +1236,9 @@ namespace editor
 		{
 			if (!mensajeColocacion.empty())
 				ImGui::TextColored(ImVec4(1.0f, 0.28f, 0.22f, 1.0f), "%s", mensajeColocacion.c_str());
-			if (!IndiceValido(contexto, seleccionado))
+			if (!IsValidIndex(contexto, seleccionado))
 				ImGui::TextUnformatted("Select an object in Hierarchy or click it in the viewport");
-			else if (!EsAnimado(contexto, seleccionado))
+			else if (!IsAnimated(contexto, seleccionado))
 			{
 				SceneObject& objeto = contexto.objetos[static_cast<std::size_t>(seleccionado)];
 				ImGui::Text("ID: %s", objeto.id.c_str());
@@ -1251,28 +1251,28 @@ namespace editor
 				{
 					SceneObject candidato = objeto;
 					candidato.posicion = solicitada;
-					const PlacementResult resultado = VectorFinito(solicitada) ? ValidarObjeto(contexto, candidato, seleccionado) :
+					const PlacementResult resultado = VectorFinito(solicitada) ? ValidateObject(contexto, candidato, seleccionado) :
 						PlacementResult{ false, "non-finite position" };
 					if (resultado.valida)
 					{
-						if (solicitada != objeto.posicion) { AbrirTransaccionSiHaceFalta(); objeto.posicion = solicitada; MarcarModificada(); }
+						if (solicitada != objeto.posicion) { OpenTransactionIfNeeded(); objeto.posicion = solicitada; MarkModified(); }
 						mensajeColocacion.clear();
 					}
-					else { mensajeColocacion = "Position blocked by " + resultado.bloqueador; InformarEstado(mensajeColocacion, true); }
+					else { mensajeColocacion = "Position blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
 				}
 			glm::vec3 rotacionSolicitada = objeto.rotacion;
 			if (ImGui::InputFloat3("Rotation", &rotacionSolicitada.x, "%.2f"))
 			{
 				SceneObject candidato = objeto;
 				candidato.rotacion = rotacionSolicitada;
-				const PlacementResult resultado = VectorFinito(rotacionSolicitada) ? ValidarObjeto(contexto, candidato, seleccionado) :
+				const PlacementResult resultado = VectorFinito(rotacionSolicitada) ? ValidateObject(contexto, candidato, seleccionado) :
 					PlacementResult{ false, "non-finite rotation" };
 				if (resultado.valida)
 				{
-					if (rotacionSolicitada != objeto.rotacion) { AbrirTransaccionSiHaceFalta(); objeto.rotacion = rotacionSolicitada; MarcarModificada(); }
+					if (rotacionSolicitada != objeto.rotacion) { OpenTransactionIfNeeded(); objeto.rotacion = rotacionSolicitada; MarkModified(); }
 					mensajeColocacion.clear();
 				}
-				else { mensajeColocacion = "Rotation blocked by " + resultado.bloqueador; InformarEstado(mensajeColocacion, true); }
+				else { mensajeColocacion = "Rotation blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
 			}
 			glm::vec3 escalaSolicitada = objeto.escala;
 			if (ImGui::InputFloat3("Scale", &escalaSolicitada.x, "%.3f"))
@@ -1283,20 +1283,20 @@ namespace editor
 						escalaSolicitada[eje] = std::copysign(MinimoEscala, escalaSolicitada[eje] == 0.0f ? 1.0f : escalaSolicitada[eje]);
 				SceneObject candidato = objeto;
 				candidato.escala = escalaSolicitada;
-				const PlacementResult resultado = ValidarObjeto(contexto, candidato, seleccionado);
+				const PlacementResult resultado = ValidateObject(contexto, candidato, seleccionado);
 				if (resultado.valida)
 				{
-					if (escalaSolicitada != objeto.escala) { AbrirTransaccionSiHaceFalta(); objeto.escala = escalaSolicitada; MarcarModificada(); }
+					if (escalaSolicitada != objeto.escala) { OpenTransactionIfNeeded(); objeto.escala = escalaSolicitada; MarkModified(); }
 					mensajeColocacion.clear();
 				}
-				else { mensajeColocacion = "Scale blocked by " + resultado.bloqueador; InformarEstado(mensajeColocacion, true); }
+				else { mensajeColocacion = "Scale blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
 			}
 			bool permitirArquitectura = objeto.permitirPenetracionArquitectura;
 			if (ImGui::Checkbox("Allow architecture penetration (unsafe)", &permitirArquitectura))
 			{
-				AbrirTransaccionSiHaceFalta();
+				OpenTransactionIfNeeded();
 				objeto.permitirPenetracionArquitectura = permitirArquitectura;
-				MarcarModificada();
+				MarkModified();
 			}
 			ImGui::TextDisabled("Opt-in exception: ignores static architecture only.");
 				ImGui::Separator();
@@ -1304,9 +1304,9 @@ namespace editor
 				bool usaMaterial = objeto.material.presente;
 				if (ImGui::Checkbox("Override material", &usaMaterial))
 				{
-					AbrirTransaccionSiHaceFalta();
+					OpenTransactionIfNeeded();
 					objeto.material.presente = usaMaterial;
-					MarcarModificada();
+					MarkModified();
 				}
 				if (objeto.material.presente)
 				{
@@ -1315,13 +1315,13 @@ namespace editor
 					if (ImGui::InputText("Texture (relative to scene)", texturaMaterial, sizeof(texturaMaterial)))
 					{
 						objeto.material.textura = texturaMaterial;
-						AbrirTransaccionSiHaceFalta(); MarcarModificada();
+						OpenTransactionIfNeeded(); MarkModified();
 					}
 					if (ImGui::Button("Elegir textura")) ImGui::OpenPopup("Selector de textura");
 					ImGui::SameLine();
 					if (ImGui::Button("Restaurar material original"))
 					{
-						AbrirTransaccionSiHaceFalta(); objeto.material = SceneMaterial{}; MarcarModificada();
+						OpenTransactionIfNeeded(); objeto.material = SceneMaterial{}; MarkModified();
 					}
 					if (ImGui::BeginPopup("Selector de textura"))
 					{
@@ -1353,7 +1353,7 @@ namespace editor
 							const std::string label = std::string(categorias[cat]) + " / " + it->path().filename().string();
 							if (ImGui::Selectable(label.c_str(), objeto.material.textura == ruta))
 							{
-								AbrirTransaccionSiHaceFalta(); objeto.material.textura = ruta; MarcarModificada();
+								OpenTransactionIfNeeded(); objeto.material.textura = ruta; MarkModified();
 								ImGui::CloseCurrentPopup();
 							}
 							if (objeto.material.textura == ruta && cargadorTexturas)
@@ -1369,18 +1369,18 @@ namespace editor
 					{
 						objeto.material.tileSize.x = std::clamp(objeto.material.tileSize.x, 0.1f, 20.0f);
 						objeto.material.tileSize.y = std::clamp(objeto.material.tileSize.y, 0.1f, 20.0f);
-						AbrirTransaccionSiHaceFalta(); MarcarModificada();
+						OpenTransactionIfNeeded(); MarkModified();
 					}
 					if (ImGui::SliderFloat("Roughness", &objeto.material.roughness, 0.0f, 1.0f, "%.2f"))
-					{ AbrirTransaccionSiHaceFalta(); MarcarModificada(); }
+					{ OpenTransactionIfNeeded(); MarkModified(); }
 					if (ImGui::SliderFloat("World dirt", &objeto.material.dirtStrength, 0.0f, 0.5f, "%.2f"))
-					{ AbrirTransaccionSiHaceFalta(); MarcarModificada(); }
+					{ OpenTransactionIfNeeded(); MarkModified(); }
 					if (objeto.material.dirtStrength > 0.0f)
 					{
 						if (ImGui::SliderFloat("Dirt scale (cells/m)", &objeto.material.dirtScale, 0.05f, 4.0f, "%.2f"))
-						{ AbrirTransaccionSiHaceFalta(); MarcarModificada(); }
+						{ OpenTransactionIfNeeded(); MarkModified(); }
 						if (ImGui::InputFloat("Dirt seed", &objeto.material.dirtSeed, 1.0f, 10.0f, "%.0f"))
-						{ AbrirTransaccionSiHaceFalta(); MarcarModificada(); }
+						{ OpenTransactionIfNeeded(); MarkModified(); }
 					}
 				}
 				ImGui::Separator();
@@ -1392,7 +1392,7 @@ namespace editor
 				const char* tipos[] = { "None", "Static box", "Dynamic box", "Bouncy sphere" };
 				if (ImGui::Combo("Collider", &tipo, tipos, 4) && tipo != tipoAnterior)
 				{
-					historial.Registrar(Capturar(contexto));
+					historial.RegisterElement(CaptureHistory(contexto));
 					hayRespaldo = false;
 					objeto.fisica.presente = tipo != 0;
 					if (tipo != 0)
@@ -1400,16 +1400,16 @@ namespace editor
 						objeto.fisica.forma = tipo == 3 ? fisica::BodyShape::Esfera : fisica::BodyShape::Caja;
 						if (tipoAnterior == 0)
 						{	// medidas iniciales a partir de los límites del modelo
-							const LocalBox caja = CajaDeObjeto(objeto);
-							objeto.fisica.mitadTamano = caja.MitadTamano();
-							objeto.fisica.desplazamiento = caja.Centro();
+							const LocalBox caja = BoxOfObject(objeto);
+							objeto.fisica.mitadTamano = caja.HalfSize();
+							objeto.fisica.desplazamiento = caja.CenterPoint();
 						}
 						objeto.fisica.tipo = tipo == 3 ? fisica::BodyType::Rebotador :
 							(tipo == 2 ? fisica::BodyType::Dinamico : fisica::BodyType::Estatico);
 						if ((tipo == 2 || tipo == 3) && objeto.fisica.masa <= 0.0f)
 							objeto.fisica.masa = 0.25f;
 					}
-					MarcarModificada();
+					MarkModified();
 				}
 				if (objeto.fisica.presente)
 				{
@@ -1417,15 +1417,15 @@ namespace editor
 					{
 						for (int eje = 0; eje < 3; ++eje)
 							objeto.fisica.mitadTamano[eje] = std::max(0.005f, std::isfinite(objeto.fisica.mitadTamano[eje]) ? objeto.fisica.mitadTamano[eje] : 0.5f);
-						AbrirTransaccionSiHaceFalta(); MarcarModificada();
+						OpenTransactionIfNeeded(); MarkModified();
 					}
 					if (ImGui::InputFloat3("Offset", &objeto.fisica.desplazamiento.x, "%.3f"))
-					{ AbrirTransaccionSiHaceFalta(); MarcarModificada(); }
-					if (fisica::EsCuerpoDinamico(objeto.fisica.tipo) &&
+					{ OpenTransactionIfNeeded(); MarkModified(); }
+					if (fisica::IsDynamicBody(objeto.fisica.tipo) &&
 						ImGui::InputFloat("Mass (kg)", &objeto.fisica.masa, 0.5f, 5.0f, "%.2f"))
 					{
 						if (!(objeto.fisica.masa > 0.0f)) objeto.fisica.masa = 0.1f;
-						AbrirTransaccionSiHaceFalta(); MarcarModificada();
+						OpenTransactionIfNeeded(); MarkModified();
 					}
 					ImGui::TextDisabled("Colliders are rebuilt when you press Play.");
 				}
@@ -1458,7 +1458,7 @@ namespace editor
 					ImGui::EndCombo();
 				}
 				if (ImGui::Button(animado.paredId.empty() ? "Install on wall" : "Move opening to wall"))
-					InstalarPuertaEnPared(contexto, seleccionado - static_cast<int>(contexto.objetos.size()), paredDestinoPuerta);
+					InstallDoorInWall(contexto, seleccionado - static_cast<int>(contexto.objetos.size()), paredDestinoPuerta);
 				ImGui::TextDisabled("Opening dimensions are derived from DoorFrame collider bounds.");
 				ImGui::Separator();
 				ImGui::TextUnformatted("Transform (instance only)");
@@ -1467,49 +1467,49 @@ namespace editor
 				{
 					SceneAnimatedObject candidato = animado;
 					candidato.posicion = posicionSolicitada;
-					const PlacementResult resultado = VectorFinito(posicionSolicitada) ? ValidarAnimado(contexto, candidato, seleccionado) :
+					const PlacementResult resultado = VectorFinito(posicionSolicitada) ? ValidateAnimated(contexto, candidato, seleccionado) :
 						PlacementResult{ false, "non-finite position" };
 					if (resultado.valida)
 					{
-						if (posicionSolicitada != animado.posicion) { AbrirTransaccionSiHaceFalta(); animado.posicion = posicionSolicitada; MarcarModificada(); SincronizarGlb(contexto); }
+						if (posicionSolicitada != animado.posicion) { OpenTransactionIfNeeded(); animado.posicion = posicionSolicitada; MarkModified(); SyncGlb(contexto); }
 						mensajeColocacion.clear();
 					}
-					else { mensajeColocacion = "Door position blocked by " + resultado.bloqueador; InformarEstado(mensajeColocacion, true); }
+					else { mensajeColocacion = "Door position blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
 				}
 				float giro = animado.giroZGrados;
 				if (ImGui::InputFloat("Rotation Z", &giro, 1.0f, 15.0f, "%.2f") && std::isfinite(giro))
 				{
 					SceneAnimatedObject candidato = animado;
 					candidato.giroZGrados = giro;
-					const PlacementResult resultado = ValidarAnimado(contexto, candidato, seleccionado);
+					const PlacementResult resultado = ValidateAnimated(contexto, candidato, seleccionado);
 					if (resultado.valida)
 					{
-						if (giro != animado.giroZGrados) { AbrirTransaccionSiHaceFalta(); animado.giroZGrados = giro; MarcarModificada(); SincronizarGlb(contexto); }
+						if (giro != animado.giroZGrados) { OpenTransactionIfNeeded(); animado.giroZGrados = giro; MarkModified(); SyncGlb(contexto); }
 						mensajeColocacion.clear();
 					}
-					else { mensajeColocacion = "Door rotation blocked by " + resultado.bloqueador; InformarEstado(mensajeColocacion, true); }
+					else { mensajeColocacion = "Door rotation blocked by " + resultado.bloqueador; ReportStatus(mensajeColocacion, true); }
 				}
 				bool permitirArquitectura = animado.permitirPenetracionArquitectura;
 				if (ImGui::Checkbox("Allow architecture penetration (unsafe)", &permitirArquitectura))
 				{
-					AbrirTransaccionSiHaceFalta();
+					OpenTransactionIfNeeded();
 					animado.permitirPenetracionArquitectura = permitirArquitectura;
-					MarcarModificada();
+					MarkModified();
 				}
 				ImGui::TextDisabled("Opt-in exception: ignores static architecture only.");
 				ImGui::Text("Scale: %.3f (uniform, not editable here)", animado.escala);
 				ImGui::TextWrapped("The animation, nodes and colliders are preserved; colliders follow the new placement when you press Play.");
 			}
-			if (IndiceValido(contexto, seleccionado))
+			if (IsValidIndex(contexto, seleccionado))
 			{
 				ImGui::Separator();
 				if (ImGui::Button("Focus")) enfocarSolicitado = true;
 				ImGui::SameLine();
-				ImGui::BeginDisabled(EsAnimado(contexto, seleccionado));
+				ImGui::BeginDisabled(IsAnimated(contexto, seleccionado));
 				if (ImGui::Button("Duplicate")) duplicarSolicitado = true;
 				ImGui::EndDisabled();
 				ImGui::SameLine();
-				if (EsAnimado(contexto, seleccionado))
+				if (IsAnimated(contexto, seleccionado))
 				{
 					const SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
 					if (!puerta.aperturaId.empty())
@@ -1525,7 +1525,7 @@ namespace editor
 		ImGui::End();
 	}
 
-	void SceneEditor::DibujarAssetBrowser(EditorSceneContext contexto)
+	void SceneEditor::DrawAssetBrowser(EditorSceneContext contexto)
 	{
 		const ImGuiIO& io = ImGui::GetIO();
 		const float escalaUI = io.FontGlobalScale;
@@ -1642,11 +1642,11 @@ namespace editor
 		(void)contexto;
 	}
 
-	void SceneEditor::DibujarGizmo(EditorSceneContext contexto, int ancho, int alto)
+	void SceneEditor::DrawGizmo(EditorSceneContext contexto, int ancho, int alto)
 	{
-		if (!IndiceValido(contexto, seleccionado) || ancho <= 0 || alto <= 0) return;
+		if (!IsValidIndex(contexto, seleccionado) || ancho <= 0 || alto <= 0) return;
 		const ImGuiIO& io = ImGui::GetIO();
-		if (!bloqueoGizmoTrasSeleccion.PermitirManipular(io.MouseDown[ImGuiMouseButton_Left]))
+		if (!bloqueoGizmoTrasSeleccion.AllowManipulation(io.MouseDown[ImGuiMouseButton_Left]))
 		{
 			// El clic completo que selecciona un elemento no puede iniciar el gizmo.
 			gizmoEnUso = false;
@@ -1655,15 +1655,15 @@ namespace editor
 		}
 		ImGuizmo::SetDrawlist(ImGui::GetBackgroundDrawList());   // por encima de los paneles: el gizmo no se esconde detrás
 		ImGuizmo::SetRect(0.0f, 0.0f, static_cast<float>(ancho), static_cast<float>(alto));
-		ImGuizmo::SetOrthographic(camara.Ortografica());
+		ImGuizmo::SetOrthographic(camara.IsOrthographic());
 		glm::mat4 vista, proyeccion;
 		Matrices(static_cast<float>(ancho) / static_cast<float>(alto), vista, proyeccion);
 
-		const bool animado = EsAnimado(contexto, seleccionado);
-		const std::string idSeleccionado = IdDe(contexto, seleccionado);
+		const bool animado = IsAnimated(contexto, seleccionado);
+		const std::string idSeleccionado = IdOf(contexto, seleccionado);
 		const bool reutilizarPrevisualizacion = previsualizacionGizmoActiva &&
 			idPrevisualizacionGizmo == idSeleccionado && io.MouseDown[ImGuiMouseButton_Left];
-		glm::mat4 matriz = reutilizarPrevisualizacion ? matrizPrevisualizacionGizmo : Elemento(contexto, seleccionado).modelo;
+		glm::mat4 matriz = reutilizarPrevisualizacion ? matrizPrevisualizacionGizmo : ElementAt(contexto, seleccionado).modelo;
 		ImGuizmo::OPERATION operacion = ImGuizmo::TRANSLATE;
 		if (herramienta == Herramienta::Rotar) operacion = animado ? ImGuizmo::ROTATE_Z : ImGuizmo::ROTATE;
 		if (herramienta == Herramienta::Escalar)
@@ -1676,7 +1676,7 @@ namespace editor
 		// Si el cursor esta sobre un panel, ImGuizmo ya ignora el clic (IsHoveringWindow).
 		const bool escalaDePuerta = animado && herramienta == Herramienta::Escalar;
 		ImGuizmo::PushID(idSeleccionado.c_str());
-		ImGuizmo::Enable(GizmoHabilitado(ImGuizmo::IsUsing(), modoCamara != CameraMode::Ninguno, entrada.altPulsado, escalaDePuerta));
+		ImGuizmo::Enable(IsGizmoEnabled(ImGuizmo::IsUsing(), modoCamara != CameraMode::Ninguno, entrada.altPulsado, escalaDePuerta));
 		float paso[3] = { 0.5f, 0.5f, 0.5f };
 		if (herramienta == Herramienta::Rotar) paso[0] = paso[1] = paso[2] = 15.0f;
 		if (herramienta == Herramienta::Escalar) paso[0] = paso[1] = paso[2] = 0.1f;
@@ -1699,12 +1699,12 @@ namespace editor
 			return;
 		}
 
-		const glm::mat4 matrizAceptada = Elemento(contexto, seleccionado).modelo;
-		ConservarAlturaEnTop(matriz, matrizAceptada, camara.vista == Vista::Superior, herramienta == Herramienta::Mover);
+		const glm::mat4 matrizAceptada = ElementAt(contexto, seleccionado).modelo;
+		KeepHeightInTopView(matriz, matrizAceptada, camara.vista == Vista::Superior, herramienta == Herramienta::MoveView);
 		PlacementResult resultado;
 		if (!MatrizGizmoValida(matriz)) resultado = { false, "invalid transform matrix" };
 		else if (!animado)
-			resultado = ValidarObjeto(contexto, contexto.objetos[static_cast<std::size_t>(seleccionado)], seleccionado, &matriz);
+			resultado = ValidateObject(contexto, contexto.objetos[static_cast<std::size_t>(seleccionado)], seleccionado, &matriz);
 		else
 		{
 			SceneAnimatedObject candidato = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
@@ -1713,7 +1713,7 @@ namespace editor
 			giro += 360.0f * std::round((candidato.giroZGrados - giro) / 360.0f);
 			candidato.giroZGrados = giro;
 			resultado = VectorFinito(candidato.posicion) && std::isfinite(giro)
-				? ValidarAnimado(contexto, candidato, seleccionado) : PlacementResult{ false, "invalid door transform" };
+				? ValidateAnimated(contexto, candidato, seleccionado) : PlacementResult{ false, "invalid door transform" };
 		}
 
 		previsualizacionGizmoActiva = gizmoEnUso;
@@ -1723,7 +1723,7 @@ namespace editor
 		if (!resultado.valida)
 		{
 			mensajeColocacion = "Placement blocked by " + resultado.bloqueador;
-			InformarEstado(mensajeColocacion, true);
+			ReportStatus(mensajeColocacion, true);
 			if (depurarEntrada)
 				std::fprintf(stderr, "[EditorGizmo] rejected id=%s view=%d using=%d blocker=%s before=(%.3f,%.3f,%.3f) candidate=(%.3f,%.3f,%.3f)\n",
 					idSeleccionado.c_str(), static_cast<int>(camara.vista), gizmoEnUso ? 1 : 0, resultado.bloqueador.c_str(),
@@ -1735,9 +1735,9 @@ namespace editor
 			std::fprintf(stderr, "[EditorGizmo] accepted id=%s view=%d using=%d before=(%.3f,%.3f,%.3f) after=(%.3f,%.3f,%.3f)\n",
 				idSeleccionado.c_str(), static_cast<int>(camara.vista), gizmoEnUso ? 1 : 0,
 				matrizAceptada[3].x, matrizAceptada[3].y, matrizAceptada[3].z, matriz[3].x, matriz[3].y, matriz[3].z);
-		AbrirTransaccionSiHaceFalta();
+		OpenTransactionIfNeeded();
 		if (!animado)
-			CambiarTransformacion(contexto.objetos[static_cast<std::size_t>(seleccionado)], matriz);
+			ChangeTransform(contexto.objetos[static_cast<std::size_t>(seleccionado)], matriz);
 		else
 		{
 			SceneAnimatedObject& puerta = contexto.animados[static_cast<std::size_t>(seleccionado) - contexto.objetos.size()];
@@ -1748,8 +1748,8 @@ namespace editor
 			{
 				puerta.posicion = posicion;
 				puerta.giroZGrados = giro;
-				SincronizarGlb(contexto);
-				MarcarModificada();
+				SyncGlb(contexto);
+				MarkModified();
 			}
 		}
 		if (!gizmoEnUso)
@@ -1759,14 +1759,14 @@ namespace editor
 		}
 	}
 
-	void SceneEditor::DibujarContornoSeleccion(EditorSceneContext contexto, int ancho, int alto)
+	void SceneEditor::DrawSelectionOutline(EditorSceneContext contexto, int ancho, int alto)
 	{
-		if (!IndiceValido(contexto, seleccionado) || ancho <= 0 || alto <= 0) return;
+		if (!IsValidIndex(contexto, seleccionado) || ancho <= 0 || alto <= 0) return;
 		glm::mat4 vista, proyeccion;
 		Matrices(static_cast<float>(ancho) / static_cast<float>(alto), vista, proyeccion);
-		const SelectableElement e = Elemento(contexto, seleccionado);
+		const SelectableElement e = ElementAt(contexto, seleccionado);
 		const bool dibujarCandidato = previsualizacionGizmoActiva && previsualizacionGizmoInvalida &&
-			idPrevisualizacionGizmo == IdDe(contexto, seleccionado);
+			idPrevisualizacionGizmo == IdOf(contexto, seleccionado);
 		const glm::mat4 transformacion = proyeccion * vista * (dibujarCandidato ? matrizPrevisualizacionGizmo : e.modelo);
 		glm::vec2 pantalla[8];
 		bool delante[8];
@@ -1792,7 +1792,7 @@ namespace editor
 			if (delante[i]) lista->AddCircleFilled(ImVec2(pantalla[i].x, pantalla[i].y), 3.0f, color);
 	}
 
-	void SceneEditor::DibujarOpcionesCamara()
+	void SceneEditor::DrawCameraOptions()
 	{
 		if (!mostrarOpcionesCamara) return;
 		if (ImGui::Begin("Editor Camera", &mostrarOpcionesCamara, ImGuiWindowFlags_AlwaysAutoResize))
@@ -1815,7 +1815,7 @@ namespace editor
 	}
 
 	// Instrumentación temporal del gizmo: ventana opcional y, con ESCAPETHEUAB_EDITOR_DEBUG=1, una línea por cambio en consola.
-	void SceneEditor::DibujarDepuracion()
+	void SceneEditor::DrawDebugShapes()
 	{
 		if (!depurarEntrada) return;
 		const ImGuiIO& io = ImGui::GetIO();
@@ -1846,7 +1846,7 @@ namespace editor
 		ImGui::End();
 	}
 
-	void SceneEditor::DibujarInterfaz(EditorSceneContext contexto, int ancho, int alto)
+	void SceneEditor::DrawEditorInterface(EditorSceneContext contexto, int ancho, int alto)
 	{
 		ImGuizmo::BeginFrame();
 		if (!depuracionIniciada)
@@ -1864,17 +1864,17 @@ namespace editor
 			entrada.gizmoUsando = ImGuizmo::IsUsing();
 			entrada.popup = ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
 			entrada.altPulsado = ImGui::GetIO().KeyAlt;
-			entrada.viewportLibre = ViewportLibre(entrada.sobrePanel, entrada.imguiActivo, entrada.gizmoUsando, entrada.popup);
-			haySeleccionValida = IndiceValido(contexto, seleccionado);
+			entrada.viewportLibre = FreeViewport(entrada.sobrePanel, entrada.imguiActivo, entrada.gizmoUsando, entrada.popup);
+			haySeleccionValida = IsValidIndex(contexto, seleccionado);
 			// Estado de reposo: si no hay arrastre ni campo en edición, así estaba la escena antes de cualquier cambio.
-			if (!historial.TransaccionAbierta() && !ImGuizmo::IsUsing() && !ImGui::IsAnyItemActive())
+			if (!historial.IsTransactionOpen() && !ImGuizmo::IsUsing() && !ImGui::IsAnyItemActive())
 			{
-				respaldo = Capturar(contexto);
+				respaldo = CaptureHistory(contexto);
 				hayRespaldo = true;
 			}
-			ActualizarVisibilidad(contexto);
+			UpdateVisibility(contexto);
 		}
-		DibujarBarra(contexto);
+		DrawEditorToolbar(contexto);
 
 		if (confirmacionCierre) ImGui::OpenPopup("Unsaved scene changes");
 		if (ImGui::BeginPopupModal("Unsaved scene changes", nullptr, ImGuiWindowFlags_AlwaysAutoResize))
@@ -1889,15 +1889,15 @@ namespace editor
 		}
 		if (!activo) return;
 
-		DibujarJerarquia(contexto);
-		DibujarInspector(contexto);
-		DibujarAssetBrowser(contexto);
-		DibujarOpcionesCamara();
-		SeleccionarPorRaton(contexto, ancho, alto);
-		DibujarGizmo(contexto, ancho, alto);
-		DibujarContornoSeleccion(contexto, ancho, alto);
-		DibujarDepuracion();
-		CerrarTransaccionSiTermino(contexto);
-		ProcesarSolicitudes(contexto);
+		DrawHierarchy(contexto);
+		DrawInspector(contexto);
+		DrawAssetBrowser(contexto);
+		DrawCameraOptions();
+		SelectByMouse(contexto, ancho, alto);
+		DrawGizmo(contexto, ancho, alto);
+		DrawSelectionOutline(contexto, ancho, alto);
+		DrawDebugShapes();
+		CommitTransactionIfFinished(contexto);
+		ProcessPendingRequests(contexto);
 	}
 }

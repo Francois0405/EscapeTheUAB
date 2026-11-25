@@ -22,7 +22,7 @@
 
 namespace netgame
 {
-	enum class NetworkPhase { Offline, Arrancando, Activa, Error };
+	enum class NetworkPhase { Offline, Arrancando, IsActive, Error };
 
 	struct Diagnostico
 	{
@@ -52,62 +52,62 @@ namespace netgame
 
 		// Offline: devuelve true sin hacer nada. 'puertas' debe sobrevivir a la sesion (o llamar a Detener antes).
 		// 'posObjetoCompartido' solo lo usa el host: donde nace el objeto de prueba.
-		bool Iniciar(const NetworkConfig& cfg, const std::string& escenaId, ISceneDoors* puertas, const glm::vec3& posObjetoCompartido);
-		void Detener();
-		void PuertasCambiadas();   // tras recargar la escena: reconstruye la tabla de IDs
+		bool BeginPlayback(const NetworkConfig& cfg, const std::string& escenaId, ISceneDoors* puertas, const glm::vec3& posObjetoCompartido);
+		void StopSessionGame();
+		void ChangedDoors();   // tras recargar la escena: reconstruye la tabla de IDs
 
 		// Una vez por fotograma. 'poseLocal' = pose del jugador local (nullptr si no hay): solo se LEE.
-		void Actualizar(double ahora, const net::PoseEntry* poseLocal);
+		void Advance(double ahora, const net::PoseEntry* poseLocal);
 		// Registro de estado de escena: se llama al iniciar red y al confirmar una edicion del host.
-		bool FijarEstadoEscena(const std::vector<SceneObjectState>& estado, bool difundir);
-		void TomarEstadosEscena(std::vector<SceneObjectState>& salida);
-		void EnviarEstadosFisicos(const std::vector<net::DynamicStateEntry>& estados);
+		bool SetSceneState(const std::vector<SceneObjectState>& estado, bool difundir);
+		void TakeSceneStates(std::vector<SceneObjectState>& salida);
+		void SendPhysicsStates(const std::vector<net::DynamicStateEntry>& estados);
 		std::map<uint32_t, net::DynamicStateEntry> EstadosFisicosRemotos() const;
-		void TomarEstadosFisicosFiables(std::vector<net::DynamicStateEntry>& salida);
-		bool PublicarEstadoFisicoFinal(const net::DynamicStateEntry& estado, net::PeerId soloPara = net::kUnassignedPeerId);
-		void TomarSolicitudesFisicas(std::vector<DynamicObjectRequest>& salida);
-		bool SolicitarAgarreDinamico(uint32_t id, const glm::vec3& origen, const glm::vec3& direccion);
-		bool SolicitarSoltarDinamico(uint32_t id, const glm::vec3& velocidad);
-		void FijarPropietarioDinamico(uint32_t id, net::PeerId propietario);
-		net::PeerId PropietarioDinamico(uint32_t id) const;
+		void TakeReliablePhysicsStates(std::vector<net::DynamicStateEntry>& salida);
+		bool PublishFinalPhysicsState(const net::DynamicStateEntry& estado, net::PeerId soloPara = net::kUnassignedPeerId);
+		void TakePhysicsRequests(std::vector<DynamicObjectRequest>& salida);
+		bool RequestDynamicGrab(uint32_t id, const glm::vec3& origen, const glm::vec3& direccion);
+		bool RequestDynamicRelease(uint32_t id, const glm::vec3& velocidad);
+		void SetDynamicOwner(uint32_t id, net::PeerId propietario);
+		net::PeerId DynamicOwner(uint32_t id) const;
 		std::map<uint32_t, net::PeerId> PropietariosDinamicos() const { return propietariosDinamicos_; }
-		uint32_t ObjetoDinamicoDePeer(net::PeerId peer) const;
-		bool PoseDePeer(net::PeerId peer, net::PoseEntry& salida) const;
+		uint32_t DynamicObjectOfPeer(net::PeerId peer) const;
+		bool PoseOfPeer(net::PeerId peer, net::PoseEntry& salida) const;
 
-		bool Activa() const { return fase_ == NetworkPhase::Activa; }
-		bool Conectando() const { return fase_ == NetworkPhase::Arrancando; }
-		bool EnRed() const { return fase_ == NetworkPhase::Activa || fase_ == NetworkPhase::Arrancando; }
-		bool EsHost() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Host; }
-		bool EsCliente() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Client; }
-		net::PeerId PeerLocal() const { return servicio_ ? servicio_->LocalPeer() : net::kUnassignedPeerId; }
-		Diagnostico ObtenerDiagnostico() const;
-		static bool EnetDisponible();   // construye (sin inicializar) un transporte ENet de prueba
+		bool IsActive() const { return fase_ == NetworkPhase::IsActive; }
+		bool IsConnecting() const { return fase_ == NetworkPhase::Arrancando; }
+		bool IsOnline() const { return fase_ == NetworkPhase::IsActive || fase_ == NetworkPhase::Arrancando; }
+		bool IsHosting() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Host; }
+		bool IsClient() const { return fase_ != NetworkPhase::Offline && cfg_.rol == net::Role::Client; }
+		net::PeerId LocalPeerId() const { return servicio_ ? servicio_->LocalPeer() : net::kUnassignedPeerId; }
+		Diagnostico GetDiagnosticInfo() const;
+		static bool IsEnetAvailable();   // construye (sin inicializar) un transporte ENet de prueba
 
 		// ---- puertas ----
 		// true = la red se ocupa (cliente: solicitud enviada al host, NO se toca la puerta localmente);
 		// false = el llamante debe alternarla (offline o host; el host la difunde solo).
-		bool InterceptarPuerta(size_t indicePuerta);
+		bool InterceptDoor(size_t indicePuerta);
 
 		// ---- objeto compartido de prueba ----
 		const SharedObjectView& Objeto() const { return vista_; }
-		glm::vec3 PosicionVisualObjeto() const;
-		bool SoyDuenoDelObjeto() const { return vista_.conocido && vista_.dueno != kSinDueno && vista_.dueno == PeerLocal(); }
+		glm::vec3 ObjectVisualPosition() const;
+		bool OwnsObject() const { return vista_.conocido && vista_.dueno != kSinDueno && vista_.dueno == LocalPeerId(); }
 		// Pide/suelta el objeto si el rayo lo apunta al alcance (o si ya es mio, lo suelta). true si lo gestiono.
-		bool AlternarObjeto(const glm::vec3& origen, const glm::vec3& direccion, double ahora);
-		void ActualizarAcarreo(const glm::vec3& origen, const glm::vec3& direccion, double ahora);
+		bool ToggleAnimatedObject(const glm::vec3& origen, const glm::vec3& direccion, double ahora);
+		void UpdateCarry(const glm::vec3& origen, const glm::vec3& direccion, double ahora);
 
 		// ---- jugadores remotos (ya interpolados; NUNCA incluye al jugador local) ----
-		std::vector<net::PoseEntry> RemotosParaDibujar(double ahora) const;
+		std::vector<net::PoseEntry> RemotePlayersToDraw(double ahora) const;
 
 	private:
-		void Procesar(const net::NetEvent& e, double ahora, const std::map<net::PeerId, net::PoseEntry>& poses);
-		void ProcesarHost(const net::NetEvent& e, double ahora, const std::map<net::PeerId, net::PoseEntry>& poses);
-		void ProcesarCliente(const net::NetEvent& e);
-		void DifundirHost(double ahora);
-		void ReiniciarEstadoRemoto();
-		void Fallar(const std::string& msg);
-		bool Encolar(const OutputEvent& e, net::PeerId soloPara = net::kUnassignedPeerId);
-		bool Cabeza(net::PeerId p, const std::map<net::PeerId, net::PoseEntry>& poses, glm::vec3& out) const;
+		void ProcessRequests(const net::NetEvent& e, double ahora, const std::map<net::PeerId, net::PoseEntry>& poses);
+		void ProcessHost(const net::NetEvent& e, double ahora, const std::map<net::PeerId, net::PoseEntry>& poses);
+		void ProcessClient(const net::NetEvent& e);
+		void BroadcastFromHost(double ahora);
+		void ResetRemoteState();
+		void FailSession(const std::string& msg);
+		bool Enqueue(const OutputEvent& e, net::PeerId soloPara = net::kUnassignedPeerId);
+		bool HeadPose(net::PeerId p, const std::map<net::PeerId, net::PoseEntry>& poses, glm::vec3& out) const;
 
 		Fabrica fabrica_;
 		NetworkConfig cfg_;

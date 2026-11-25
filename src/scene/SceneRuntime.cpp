@@ -25,8 +25,8 @@ namespace scene::runtime
 
 	void ReleaseAnimatedObjects(const SceneRuntimeContext& context)
 	{
-		if (context.animatedObjectsOnGpu) glb::LiberarEscenaAnimadaDeGPU(context.animatedObjects);
-		glb::VaciarEscenaAnimada(context.animatedObjects);
+		if (context.animatedObjectsOnGpu) glb::ReleaseAnimatedSceneFromGpu(context.animatedObjects);
+		glb::ClearAnimatedScene(context.animatedObjects);
 		context.animatedObjectsOnGpu = false;
 	}
 
@@ -35,13 +35,13 @@ namespace scene::runtime
 		// 1) Leer y validar el JSON (si falla, no se ha tocado nada).
 		SceneData datos;
 		std::string error;
-		if (!CargarDatosEscenaJSON(ruta, datos, error))
+		if (!LoadSceneDataJson(ruta, datos, error))
 		{
 			std::cerr << "No se cargo la escena: " << error << '\n';
 			return false;
 		}
 		editor::SceneSerializer nuevoSerializador;
-		if (!nuevoSerializador.Cargar(ruta, error))
+		if (!nuevoSerializador.LoadScene(ruta, error))
 		{
 			std::cerr << "No se pudo preparar la persistencia de la escena: " << error << '\n';
 			return false;
@@ -85,7 +85,7 @@ namespace scene::runtime
 
 		// 3) Objetos animados GLB de la lista "animated", también temporales.
 		glb::AnimatedScene nuevosAnimados;
-		if (!fisica::CargarObjetosAnimadosDeEscena(datos.animados, std::filesystem::absolute(ruta.parent_path()),
+		if (!fisica::LoadSceneAnimatedObjects(datos.animados, std::filesystem::absolute(ruta.parent_path()),
 			nuevosAnimados, error))
 		{
 			std::cerr << "No se cargo la escena: " << error << '\n';
@@ -98,13 +98,13 @@ namespace scene::runtime
 
 		// 4) Cuerpos físicos NUEVOS (los de la habitación anterior siguen en el mundo hasta el final).
 		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
-		if (!nuevaFisica->Crear(objetosValidos, nuevosAnimados, datos.animados, error))
+		if (!nuevaFisica->CreatePlayback(objetosValidos, nuevosAnimados, datos.animados, error))
 		{
 			std::cerr << "No se cargo la escena (fisicas): " << error << '\n';
 			liberarModelosTemporales();
 			return false;
 		}
-		if ((objetosValidos.empty() && datos.animados.empty()) || nuevaFisica->NumeroDeCuerpos() == 0)
+		if ((objetosValidos.empty() && datos.animados.empty()) || nuevaFisica->BodyCount() == 0)
 		{
 			std::cerr << "La escena no contiene geometria/colliders fisicos cargables; se cancela el arranque." << std::endl;
 			liberarModelosTemporales();
@@ -112,17 +112,17 @@ namespace scene::runtime
 		}
 
 		// 5) Todo ha ido bien: AHORA se sustituye la habitación anterior.
-		context.physicsScene->Vaciar();                // retira sus colisiones del mundo
+		context.physicsScene->Empty();                // retira sus colisiones del mundo
 		context.physicsScene = std::move(nuevaFisica);
 		ReleaseMaterialTextures(context);
 		for (auto& entrada : context.objModels) entrada.second->netejaTextures_OBJ();
 		context.objModels = std::move(nuevosModelos);
 		context.sceneObjects = std::move(objetosValidos);
-		context.hiritiAnimation.Reiniciar();
+		context.hiritiAnimation.ResetState();
 		context.phongOccludersDirty = true;
 		ReleaseAnimatedObjects(context);               // libera de la GPU los GLB anteriores
 		context.animatedObjects = std::move(nuevosAnimados);
-		glb::SubirEscenaAnimadaAGPU(context.animatedObjects);  // el contexto OpenGL ya existe en este punto
+		glb::UploadAnimatedSceneToGpu(context.animatedObjects);  // el contexto OpenGL ya existe en este punto
 		context.animatedObjectsOnGpu = true;
 		context.activeSceneName = std::move(datos.nombre);
 		context.animatedData = std::move(datos.animados);
@@ -136,26 +136,26 @@ namespace scene::runtime
 		if (!context.activeSpawn.presente)
 		{
 			context.activeSpawn.presente = true; // escenas antiguas conservan la vista existente como fallback
-			context.activeSpawn.pies = context.physicsWorld.HayJugador()
-				? context.physicsWorld.PosicionPiesJugador() : context.cameraFeetPosition();
+			context.activeSpawn.pies = context.physicsWorld.HasPlayerBody()
+				? context.physicsWorld.PlayerFeetPosition() : context.cameraFeetPosition();
 			const glm::vec3 mirada = context.viewForward();
 			context.activeSpawn.direccion = glm::length(mirada) > 1e-4f ? glm::normalize(mirada) : glm::vec3(1, 0, 0);
 		}
-		context.hasValidGeometry = context.physicsScene->NumeroDeCuerpos() > 0;
+		context.hasValidGeometry = context.physicsScene->BodyCount() > 0;
 		context.fixCameraAtSpawn(context.activeSpawn);
-		if (context.physicsWorld.HayJugador() && !context.createPhysicsPlayer())
+		if (context.physicsWorld.HasPlayerBody() && !context.createPhysicsPlayer())
 		{
-			context.physicsWorld.EliminarJugador();
+			context.physicsWorld.RemovePlayerBody();
 			context.hasValidGeometry = false;
 			return false;
 		}
-		context.sceneEditor.NuevaEscena();
+		context.sceneEditor.NewScene();
 		{
 			std::error_code rutaModelos;
 			const auto raiz = std::filesystem::absolute(ruta.parent_path() / ".." / "models", rutaModelos).lexically_normal();
-			if (!rutaModelos && std::filesystem::is_directory(raiz)) context.sceneEditor.FijarRaizModelos(raiz);
-			context.sceneEditor.FijarRaizEscena(std::filesystem::absolute(ruta.parent_path(), rutaModelos).lexically_normal());
-			context.sceneEditor.FijarRaizAnimaciones(std::filesystem::absolute(ruta.parent_path() / ".." / "animations", rutaModelos).lexically_normal());
+			if (!rutaModelos && std::filesystem::is_directory(raiz)) context.sceneEditor.SetModelsRoot(raiz);
+			context.sceneEditor.SetSceneRoot(std::filesystem::absolute(ruta.parent_path(), rutaModelos).lexically_normal());
+			context.sceneEditor.SetAnimationsRoot(std::filesystem::absolute(ruta.parent_path() / ".." / "animations", rutaModelos).lexically_normal());
 		}
 		context.objectType = OBJOBJ;
 		context.textureEnabled = true;
@@ -167,7 +167,7 @@ namespace scene::runtime
 		const auto rutaEscenaAbsoluta = std::filesystem::absolute(ruta, rutaEscenaError).lexically_normal();
 		std::cout << "Escena cargada desde " << (rutaEscenaError ? ruta.string() : rutaEscenaAbsoluta.string()) << ": "
 			<< context.activeSceneName << " (" << context.sceneObjects.size() << " instancias, " << context.animatedObjects.objetos.size()
-			<< " animadas, " << context.physicsScene->NumeroDeCuerpos() << " cuerpos fisicos)." << std::endl;
+			<< " animadas, " << context.physicsScene->BodyCount() << " cuerpos fisicos)." << std::endl;
 		if (context.networkActive())
 		{
 			std::cerr << "Red: la escena ha cambiado; se detiene la sesion (host y clientes deben usar la misma escena)." << std::endl;
@@ -179,8 +179,8 @@ namespace scene::runtime
 	bool RebuildPhysicsAfterEdit(const SceneRuntimeContext& context, std::string& error, bool autoridadFisica)
 	{
 		auto nuevaFisica = std::make_unique<fisica::PhysicsScene>(context.physicsWorld);
-		if (!nuevaFisica->Crear(context.sceneObjects, context.animatedObjects, context.animatedData, error, autoridadFisica)) return false;
-		context.physicsScene->Vaciar();
+		if (!nuevaFisica->CreatePlayback(context.sceneObjects, context.animatedObjects, context.animatedData, error, autoridadFisica)) return false;
+		context.physicsScene->Empty();
 		context.physicsScene = std::move(nuevaFisica);
 		return true;
 	}

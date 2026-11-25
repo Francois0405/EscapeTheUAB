@@ -24,7 +24,7 @@ void OnMouseButton(GLFWwindow* window, int button, int action, int mods)
 	ImGuiIO& io = ImGui::GetIO();
 
 	// (2) ONLY forward mouse data to your underlying app/game.
-	if (sceneEditor.Activo()) return;
+	if (sceneEditor.IsEnabled()) return;
 	if (fpsModeActive()) return;
 
 	if (!io.WantCaptureMouse) { //<Tractament mouse de l'aplicació>}
@@ -374,9 +374,9 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 {
 // TODO: Agregue aquí su código de controlador de mensajes o llame al valor predeterminado
-	if (sceneEditor.Activo())
+	if (sceneEditor.IsEnabled())
 	{	// la rueda es de la camara solo sobre el viewport; sobre un panel ImGui desplaza el panel
-		sceneEditor.RuedaRaton(static_cast<float>(yoffset));
+		sceneEditor.MouseWheelInput(static_cast<float>(yoffset));
 		return;
 	}
 	double modul = 0;
@@ -387,7 +387,7 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 	ImGuiIO& io = ImGui::GetIO();
 
 // (2) ONLY forward mouse data to your underlying app/game.
-	if (sceneEditor.Activo() || fpsModeActive()) return;
+	if (sceneEditor.IsEnabled() || fpsModeActive()) return;
 	if (!io.WantCaptureMouse) { // <Tractament mouse de l'aplicació>}
 		// Funció de zoom quan està activada la funció pan o les T. Geomètriques
 		if ((zzoom || zzoomO) || (transX) || (transY) || (transZ))

@@ -33,7 +33,7 @@ void DrawStaminaBar(const HudContext& context)
 	const float ancho = std::min(260.0f * escala, io.DisplaySize.x * 0.4f), alto = 8.0f * escala;
 	const float x0 = (io.DisplaySize.x - ancho) * 0.5f, y0 = io.DisplaySize.y - 48.0f * escala;
 	const float a = staminaBar.visible;
-	const bool agotada = playerMovement.Agotada();
+	const bool agotada = playerMovement.IsExhausted();
 	const ImU32 fondo = IM_COL32(10, 10, 10, static_cast<int>(150 * a));
 	const ImU32 relleno = agotada ? IM_COL32(200, 60, 50, static_cast<int>(230 * a))
 		: IM_COL32(220, 220, 205, static_cast<int>(210 * a));
@@ -43,7 +43,7 @@ void DrawStaminaBar(const HudContext& context)
 	if (context.showStaminaPercent)
 	{
 		char texto[16];
-		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(playerMovement.FraccionEstamina() * 100.0f + 0.5f));
+		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(playerMovement.StaminaFraction() * 100.0f + 0.5f));
 		dl->AddText(ImVec2(x0 + ancho + 8 * escala, y0 - 4 * escala), IM_COL32(230, 230, 220, static_cast<int>(200 * a)), texto);
 	}
 }
@@ -71,7 +71,7 @@ void DrawInteractionHud(const HudContext& context)
 
 	if (io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
 		return;
-	if (context.physicsScene->HayAgarre())
+	if (context.physicsScene->HasGrab())
 	{
 		const ImVec2 pos(io.DisplaySize.x * 0.5f + 16.0f * escala, io.DisplaySize.y * 0.5f + 31.0f * escala);
 		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), "Mantener E carga el lanzamiento; soltar E lanza");
@@ -105,7 +105,7 @@ float UpdateUiScale(GLFWwindow* ventana)
 	glfwGetWindowContentScale(ventana, &escalaDpiX, &escalaDpiY);
 
 	// Media geométrica: combina densidad y espacio lógico sin duplicar el factor de framebuffer.
-	uiScale = interfaz::CalcularEscalaUI(
+	uiScale = interfaz::ComputeUiScale(
 		static_cast<float>(anchoLogico), static_cast<float>(altoLogico), escalaDpiX, escalaDpiY);
 
 	// ImGui GLFW conserva DisplaySize en unidades lógicas y calcula DisplayFramebufferScale

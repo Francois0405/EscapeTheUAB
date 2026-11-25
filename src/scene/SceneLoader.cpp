@@ -13,7 +13,7 @@
 
 using nlohmann::json;
 
-bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneWallOpening>& aperturas,
+bool GenerateWallSections(const glm::vec3& mitadPared, const std::vector<SceneWallOpening>& aperturas,
     std::vector<SceneWallSection>& secciones, std::string& error)
 {
     std::vector<SceneWallSection> resultado;
@@ -195,7 +195,7 @@ namespace
         { error = ctx + " de tipo bouncy requiere shape \"sphere\"."; return false; }
         if (!leerCaja(datos, fisica.mitadTamano, fisica.desplazamiento, ctx, error)) return false;
 
-        if (fisica::EsCuerpoDinamico(fisica.tipo))
+        if (fisica::IsDynamicBody(fisica.tipo))
         {
             if (!datos.contains("mass"))
             {
@@ -418,17 +418,17 @@ namespace
     }
 }
 
-bool CargarEscenaJSON(const std::filesystem::path& ruta,
+bool LoadSceneJson(const std::filesystem::path& ruta,
     std::vector<SceneObject>& objetos, std::string& error, std::string& nombre)
 {
     SceneData datos;
-    if (!CargarDatosEscenaJSON(ruta, datos, error)) return false;
+    if (!LoadSceneDataJson(ruta, datos, error)) return false;
     objetos = std::move(datos.objetos);
     nombre = std::move(datos.nombre);
     return true;
 }
 
-bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, SceneData& datosSalida, std::string& error)
+bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datosSalida, std::string& error)
 {
     try
     {
@@ -600,7 +600,7 @@ bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, SceneData& datosSa
                         objeto.pared.aperturas.push_back(std::move(ap));
                     }
                     std::vector<SceneWallSection> comprobacion;
-                    if (!GenerarSeccionesPared(glm::abs(objeto.escala) * objeto.fisica.mitadTamano, objeto.pared.aperturas, comprobacion, error))
+                    if (!GenerateWallSections(glm::abs(objeto.escala) * objeto.fisica.mitadTamano, objeto.pared.aperturas, comprobacion, error))
                     { error = contexto + ".wall: " + error; return false; }
                     if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Estatico ||
                         objeto.fisica.mitadTamano != glm::vec3(1.0f) ||

@@ -22,7 +22,7 @@ void updatePhoneFlashlight(const glm::mat4& matrizMovilMundo)
 {
 	constexpr int idx = 3;
 	auto& luz = llumGL[idx];
-	if (!phoneFlashlightEnabled || !showPhone || !fpsModeActive() || sceneEditor.Activo())
+	if (!phoneFlashlightEnabled || !showPhone || !fpsModeActive() || sceneEditor.IsEnabled())
 	{ luz.encesa = false; return; }
 
 	// Phone.obj coloca el conjunto cámara/flash trasero en el saliente superior de la cara +Y.
@@ -50,27 +50,27 @@ void updatePhoneFlashlight(const glm::mat4& matrizMovilMundo)
 
 bool leftControllerWorldMatrix(glm::mat4& matrizMundo)
 {
-	if (!openXrManager.SesionEnMarcha()) return false;
+	if (!openXrManager.IsSessionRunning()) return false;
 
 	vr::XrPose poseMandoIzq;
-	if (!openXrManager.PoseApuntadoMando(0, poseMandoIzq)) return false;
+	if (!openXrManager.ControllerAimPose(0, poseMandoIzq)) return false;
 
-	const glm::vec3 pies = physicsWorld.HayJugador() ? physicsWorld.PosicionPiesJugador() : feetPositionFromCamera();
+	const glm::vec3 pies = physicsWorld.HasPlayerBody() ? physicsWorld.PlayerFeetPosition() : feetPositionFromCamera();
 	const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-	const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-		openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo, physicsWorld.AlturaOjosJugador());
+	const vr::Anchor anclaje = vr::PlayerAnchor(pies, frenteFPS,
+		openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo, physicsWorld.PlayerEyeHeight());
 
-	const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMandoIzq, anclaje);
+	const glm::mat4 vistaMando = vr::VrEyeViewMatrix(poseMandoIzq, anclaje);
 	matrizMundo = glm::inverse(vistaMando);
 	return true;
 }
 
 void drawVrControllerRay()
 {
-	if (!openXrManager.SesionEnMarcha() || eixos_programID == 0) return;
+	if (!openXrManager.IsSessionRunning() || eixos_programID == 0) return;
 
 	vr::XrPose poseMando;
-	if (!openXrManager.PoseApuntadoMando(1, poseMando)) return; // Solo mando derecho (1)
+	if (!openXrManager.ControllerAimPose(1, poseMando)) return; // Solo mando derecho (1)
 
 	glm::vec3 origen, direccion;
 	gazeOriginAndDirection(origen, direccion);
@@ -82,7 +82,7 @@ void drawVrControllerRay()
 
 	// Color RGBA: verde si estás agarrando o apuntando a algo interactuable; cian por defecto
 	const InteractionTarget objetivo = findCurrentInteractionTarget();
-	const bool resaltado = physicsScene->HayAgarre() || objetivo.accion != InteractionAction::Ninguna;
+	const bool resaltado = physicsScene->HasGrab() || objetivo.accion != InteractionAction::Ninguna;
 	const float r = resaltado ? 0.1f : 0.0f;
 	const float g = resaltado ? 1.0f : 0.85f;
 	const float b = resaltado ? 0.2f : 1.0f;

@@ -42,17 +42,17 @@ namespace netgame
 
 		std::filesystem::path ResolverArchivo(const std::filesystem::path& archivo)
 		{
-			return archivo.empty() ? RutaPreferenciasRed() : archivo;
+			return archivo.empty() ? NetworkPreferencesPath() : archivo;
 		}
 	}
 
-	std::filesystem::path RutaPreferenciasRed()
+	std::filesystem::path NetworkPreferencesPath()
 	{
 		const std::filesystem::path directorio = DirectorioConfig();
 		return directorio.empty() ? std::filesystem::path{} : directorio / "multijugador.ini";
 	}
 
-	bool CargarUltimoEndpoint(LastEndpoint& endpoint, const std::filesystem::path& archivo)
+	bool LoadLastEndpoint(LastEndpoint& endpoint, const std::filesystem::path& archivo)
 	{
 		const auto ruta = ResolverArchivo(archivo);
 		if (ruta.empty()) return false;
@@ -75,7 +75,7 @@ namespace netgame
 		return true;
 	}
 
-	bool GuardarUltimoEndpoint(const LastEndpoint& endpoint, std::string& error, const std::filesystem::path& archivo)
+	bool SaveLastEndpoint(const LastEndpoint& endpoint, std::string& error, const std::filesystem::path& archivo)
 	{
 		const auto ruta = ResolverArchivo(archivo);
 		if (ruta.empty()) { error = "No se encontro una carpeta de configuracion del usuario."; return false; }

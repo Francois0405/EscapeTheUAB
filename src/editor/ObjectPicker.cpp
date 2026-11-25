@@ -5,7 +5,7 @@
 
 namespace editor
 {
-	Rayo RayoDesdePantalla(const glm::mat4& vista, const glm::mat4& proyeccion, const glm::vec2& cursor,
+	Rayo RayFromScreen(const glm::mat4& vista, const glm::mat4& proyeccion, const glm::vec2& cursor,
 		const glm::vec4& rectangulo)
 	{
 		Rayo rayo;
@@ -25,7 +25,7 @@ namespace editor
 		return rayo;
 	}
 
-	int ElegirMasCercano(const Rayo& rayo, const std::vector<SelectionCandidate>& candidatos, float* distancia)
+	int PickNearest(const Rayo& rayo, const std::vector<SelectionCandidate>& candidatos, float* distancia)
 	{
 		if (!rayo.valido) return -1;
 		int elegido = -1;
@@ -35,8 +35,8 @@ namespace editor
 		{
 			if (!candidato.caja.valida) continue;
 			float t = 0.0f;
-			if (!InterseccionRayoCaja(rayo.origen, rayo.direccion, candidato.modelo, candidato.caja, t)) continue;
-			const float volumen = std::abs(glm::determinant(glm::mat3(candidato.modelo))) * candidato.caja.Volumen();
+			if (!RayBoxIntersection(rayo.origen, rayo.direccion, candidato.modelo, candidato.caja, t)) continue;
+			const float volumen = std::abs(glm::determinant(glm::mat3(candidato.modelo))) * candidato.caja.VolumeValue();
 			const bool masCerca = t < mejorT - 0.02f;
 			const bool empate = std::abs(t - mejorT) <= 0.02f && volumen < mejorVolumen;
 			if (elegido < 0 || masCerca || empate)

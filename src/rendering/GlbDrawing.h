@@ -15,22 +15,22 @@
 namespace glb
 {
 	// Copia las mallas a la tarjeta gráfica. Necesita un contexto OpenGL activo.
-	void SubirModeloAGPU(GlbModel& modelo);
+	void UploadModelToGpu(GlbModel& modelo);
 
 	// Libera lo que reservó SubirModeloAGPU. Llamar antes de cerrar la ventana.
-	void LiberarModeloDeGPU(GlbModel& modelo);
+	void ReleaseModelFromGpu(GlbModel& modelo);
 
 	// Dibuja el modelo con una pose dada.
 	//   programa    : shader ya activo (glUseProgram) con la cámara ya enviada.
 	//   matrizBase  : dónde se coloca el modelo en el mundo del juego (ya en Z arriba).
-	void DibujarModeloGLB(const GlbModel& modelo, const GlbPose& pose, unsigned int programa, const glm::mat4& matrizBase,
+	void DrawGlbModel(const GlbModel& modelo, const GlbPose& pose, unsigned int programa, const glm::mat4& matrizBase,
 		const glm::mat4& viewProjection, bool aplicarCulling = true);
 
 	// Lo mismo para toda la lista de objetos animados: sube cada modelo una sola vez,
 	// y dibuja cada instancia con su propia pose y su propia colocación.
-	void SubirEscenaAnimadaAGPU(AnimatedScene& escena);
-	void LiberarEscenaAnimadaDeGPU(AnimatedScene& escena);
-	void DibujarObjetosAnimados(const AnimatedScene& escena, unsigned int programa,
+	void UploadAnimatedSceneToGpu(AnimatedScene& escena);
+	void ReleaseAnimatedSceneFromGpu(AnimatedScene& escena);
+	void DrawAnimatedObjects(const AnimatedScene& escena, unsigned int programa,
 		const glm::mat4& viewProjection, bool aplicarCulling = true);
 }
 

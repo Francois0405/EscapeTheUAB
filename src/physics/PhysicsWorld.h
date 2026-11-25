@@ -39,7 +39,7 @@ namespace fisica
 	//                empuja a los dinámicos pero nada le empuja a él.
 	enum class BodyType { Estatico, Dinamico, Cinematico, Rebotador };
 
-	constexpr bool EsCuerpoDinamico(BodyType tipo)
+	constexpr bool IsDynamicBody(BodyType tipo)
 	{
 		return tipo == BodyType::Dinamico || tipo == BodyType::Rebotador;
 	}
@@ -93,57 +93,57 @@ namespace fisica
 		// Avanza la simulación 'deltaSegundos' de tiempo real. Acumula el tiempo y ejecuta
 		// 0, 1 o varios pasos fijos. Con pausa activa no simula ni acumula nada.
 		// Devuelve cuántos pasos fijos se han ejecutado.
-		int Actualizar(float deltaSegundos);
+		int Advance(float deltaSegundos);
 
-		void FijarPausa(bool pausado) { pausa = pausado; }
-		bool EstaEnPausa() const { return pausa; }
+		void SetPaused(bool pausado) { pausa = pausado; }
+		bool IsPaused() const { return pausa; }
 
 		// Gravedad actual (por defecto (0, 0, -9.81)).
-		glm::vec3 Gravedad() const;
+		glm::vec3 GravityValue() const;
 
 		// Crea una caja de cualquier tipo. 'rotacion' es la orientación del mundo y
 		// 'mitadTamano' las medias dimensiones FINALES (ya escaladas). La masa solo importa
 		// en los dinámicos. Devuelve CuerpoInvalido si los datos no son válidos.
-		IdCuerpo CrearCaja(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
+		IdCuerpo CreateBox(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
 			const glm::vec3& mitadTamano, float masaKg);
-		IdCuerpo CrearEsfera(BodyType tipo, const glm::vec3& centro, float radio, float masaKg);
-		bool AplicarImpulso(IdCuerpo id, const glm::vec3& impulso);
-		bool AplicarAceleracionHorizontal(IdCuerpo id, const glm::vec3& aceleracion, float deltaSegundos);
-		bool TeletransportarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro);
-		bool PuedeColocarCuerpoDinamico(IdCuerpo id, const glm::vec3& centro) const;
+		IdCuerpo CreateSphere(BodyType tipo, const glm::vec3& centro, float radio, float masaKg);
+		bool ApplyImpulseToBody(IdCuerpo id, const glm::vec3& impulso);
+		bool ApplyHorizontalAcceleration(IdCuerpo id, const glm::vec3& aceleracion, float deltaSegundos);
+		bool TeleportDynamicBody(IdCuerpo id, const glm::vec3& centro);
+		bool CanPlaceDynamicBody(IdCuerpo id, const glm::vec3& centro) const;
 
 		// Mueve un cuerpo cinemático a una pose nueva (llamar antes de Actualizar).
-		void MoverCinematico(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion);
+		void MoveKinematic(IdCuerpo id, const glm::vec3& centro, const glm::quat& rotacion);
 
 		// Quita del mundo un cuerpo concreto y libera su memoria (no hace nada si no existe).
-		void EliminarCuerpo(IdCuerpo id);
+		void RemoveBody(IdCuerpo id);
 
 		// Crea una caja estática (masa 0). 'mitadTamano' son las MEDIAS dimensiones
 		// (como en test.obj, que mide ±1 antes de escalarse).
-		IdCuerpo CrearCajaEstatica(const glm::vec3& centro, const glm::vec3& mitadTamano);
+		IdCuerpo CreateStaticBox(const glm::vec3& centro, const glm::vec3& mitadTamano);
 
 		// Crea una caja dinámica con masa en kg.
-		IdCuerpo CrearCajaDinamica(const glm::vec3& centro, const glm::vec3& mitadTamano, float masaKg);
+		IdCuerpo CreateDynamicBox(const glm::vec3& centro, const glm::vec3& mitadTamano, float masaKg);
 
 		// Pose actual de un cuerpo (identidad si el id no es válido).
-		BodyPose PoseDe(IdCuerpo id) const;
+		BodyPose PoseOf(IdCuerpo id) const;
 
 		// Velocidad lineal actual (m/s). Útil para saber si un cuerpo ya está en reposo.
-		glm::vec3 VelocidadDe(IdCuerpo id) const;
+		glm::vec3 VelocityOf(IdCuerpo id) const;
 		// True si el cuerpo tiene al menos un punto de contacto activo con otro cuerpo.
-		bool HayContacto(IdCuerpo id) const;
-		glm::vec3 VelocidadAngularDe(IdCuerpo id) const;
+		bool HasContact(IdCuerpo id) const;
+		glm::vec3 AngularVelocityOf(IdCuerpo id) const;
 
 		// True si Bullet ha "dormido" el cuerpo porque lleva un rato quieto.
-		bool EstaDormido(IdCuerpo id) const;
-		bool EstaActivo(IdCuerpo id) const;
+		bool IsAsleep(IdCuerpo id) const;
+		bool IsBodyActive(IdCuerpo id) const;
 		// Actualiza un cuerpo cinemático ya existente, sin reconstruir forma ni cuerpo.
-		bool FijarPoseCinematica(IdCuerpo id, const glm::vec3& posicion, const glm::quat& rotacion);
+		bool SetKinematicPose(IdCuerpo id, const glm::vec3& posicion, const glm::quat& rotacion);
 
 		// Elimina todos los cuerpos pero conserva el mundo (se usa al reiniciar la demo).
-		void EliminarTodosLosCuerpos();
+		void RemoveAllBodies();
 
-		int NumeroDeCuerpos() const;   // cuerpos rígidos (el jugador no cuenta)
+		int BodyCount() const;   // cuerpos rígidos (el jugador no cuenta)
 
 		// --- Jugador (Fase 3) --------------------------------------------------------------
 		// El jugador es UN cuerpo "de personaje" de Bullet (btKinematicCharacterController):
@@ -153,35 +153,35 @@ namespace fisica
 		// POSICIÓN: nunca gira ni toca la orientación de la cabeza (importante para VR).
 
 		// Crea la cápsula con los pies en 'posicionPies'. Falso si ya existía.
-		bool CrearJugador(const glm::vec3& posicionPies);
+		bool CreatePlayerBody(const glm::vec3& posicionPies);
 		// Comprueba suelo cercano y espacio libre para la cápsula del jugador. Si el
 		// pavimento difiere unos centímetros, devuelve los pies ajustados a su superficie.
-		bool ValidarSpawnJugador(const glm::vec3& posicionPies, glm::vec3& piesAjustados, glm::vec3& normalSuelo,
+		bool ValidatePlayerSpawn(const glm::vec3& posicionPies, glm::vec3& piesAjustados, glm::vec3& normalSuelo,
 			std::string& error) const;
-		void EliminarJugador();
-		bool HayJugador() const;
+		void RemovePlayerBody();
+		bool HasPlayerBody() const;
 
 		// Velocidad HORIZONTAL deseada en m/s (el mundo, ejes X e Y). La Z no se pide: la
 		// pone la gravedad. Se mantiene hasta que se vuelva a llamar; (0,0,0) = quieto.
-		void FijarVelocidadJugador(const glm::vec3& metrosPorSegundo);
+		void SetPlayerVelocity(const glm::vec3& metrosPorSegundo);
 
 		// Avanza gradualmente hacia la altura objetivo manteniendo los pies en su sitio.
 		// Devuelve false si un obstáculo impide seguir incorporándose.
-		bool ActualizarJugadorAgachado(bool agachado, float deltaSegundos);
-		bool JugadorAgachado() const { return alturaJugador < PlayerDimensions::Altura - 0.001f; }
+		bool UpdatePlayerCrouch(bool agachado, float deltaSegundos);
+		bool IsPlayerCrouched() const { return alturaJugador < PlayerDimensions::Altura - 0.001f; }
 		// 0 = de pie ... 1 = agachado del todo (altura ya suavizada). Para velocidad y balanceo de la cámara.
-		float FraccionAgachado() const
+		float CrouchFraction() const
 		{
 			return (PlayerDimensions::Altura - alturaJugador) / (PlayerDimensions::Altura - PlayerDimensions::AlturaAgachado);
 		}
-		float AlturaJugador() const { return alturaJugador; }
-		float AlturaOjosJugador() const;
+		float PlayerHeight() const { return alturaJugador; }
+		float PlayerEyeHeight() const;
 
 		// Coloca al jugador sin pasar por las paredes (cambio de habitación, depuración).
-		void TeletransportarJugador(const glm::vec3& posicionPies);
+		void TeleportPlayer(const glm::vec3& posicionPies);
 
-		glm::vec3 PosicionPiesJugador() const;
-		bool JugadorEnSuelo() const;
+		glm::vec3 PlayerFeetPosition() const;
+		bool IsPlayerGrounded() const;
 
 		// --- Agarrar un objeto (Fase 4a) --------------------------------------------------
 		// "Agarrar" NO teletransporta el objeto: sigue siendo el MISMO cuerpo dinámico de Bullet, pero
@@ -192,35 +192,35 @@ namespace fisica
 
 		// Primer cuerpo (estático, cinemático o dinámico; el jugador no) que toca el rayo dentro de
 		// 'alcance' metros, o CuerpoInvalido. Sirve para saber qué se está mirando.
-		IdCuerpo CuerpoAlFinalDelRayo(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
+		IdCuerpo BodyAtRayEnd(const glm::vec3& origen, const glm::vec3& direccion, float alcance,
 			float* distanciaImpacto = nullptr) const;
-		float DistanciaObstaculoEnRayo(const glm::vec3& origen, const glm::vec3& direccion,
+		float ObstacleDistanceOnRay(const glm::vec3& origen, const glm::vec3& direccion,
 			float alcance, IdCuerpo ignorar = CuerpoInvalido) const;
 
-		bool EsDinamico(IdCuerpo id) const;
+		bool IsDynamic(IdCuerpo id) const;
 		// Empieza a sujetar un cuerpo dinámico (suelta el anterior). Falso si no se puede.
-		bool SujetarCuerpo(IdCuerpo id);
-		void SoltarCuerpoSujeto();
+		bool HoldBody(IdCuerpo id);
+		void ReleaseHeldBody();
 		// Suelta el cuerpo sujeto conservando la velocidad inicial indicada.
-		bool LanzarCuerpoSujeto(const glm::vec3& velocidad);
-		bool SujetarCuerpoAutoritativo(IdCuerpo id);
-		void FijarDestinoDeSujecion(IdCuerpo id, const glm::vec3& destino);
-		bool SoltarCuerpoAutoritativo(IdCuerpo id, const glm::vec3& velocidad = glm::vec3(0.0f));
-		bool EstaSujeto(IdCuerpo id) const;
-		IdCuerpo CuerpoSujeto() const;
+		bool ThrowHeldBody(const glm::vec3& velocidad);
+		bool HoldBodyAuthoritative(IdCuerpo id);
+		void SetHoldDestination(IdCuerpo id, const glm::vec3& destino);
+		bool ReleaseAuthoritativeBody(IdCuerpo id, const glm::vec3& velocidad = glm::vec3(0.0f));
+		bool IsHeld(IdCuerpo id) const;
+		IdCuerpo HeldBody() const;
 		// Punto del mundo hacia el que se lleva el cuerpo sujeto (se puede cambiar cada fotograma).
-		void FijarDestinoDeSujecion(const glm::vec3& destino);
-		glm::vec3 DestinoDeSujecion() const;
+		void SetHoldDestination(const glm::vec3& destino);
+		glm::vec3 HoldDestination() const;
 
 		// Todas las cajas existentes, con su pose actual (para el modo "Mostrar colisionadores").
-		std::vector<CollisionBox> CajasDeColision() const;
+		std::vector<CollisionBox> CollisionBoxes() const;
 		// Pasos fijos ejecutados desde que se creó el mundo (para tests y depuración).
 		long long PasosTotales() const { return pasosTotales; }
 
 	private:
-		void ImpulsarCuerpoSujeto();   // un "tirón" de la mano antes de cada paso fijo
-		void EmpujarRebotadores();
-		IdCuerpo CrearForma(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
+		void PushHeldBody();   // un "tirón" de la mano antes de cada paso fijo
+		void PushBouncers();
+		IdCuerpo CreateShape(BodyType tipo, const glm::vec3& centro, const glm::quat& rotacion,
 			const glm::vec3& mitadTamano, float masaKg, BodyShape forma);
 
 		// El "pimpl" evita incluir las cabeceras de Bullet en todo el proyecto.
@@ -236,7 +236,7 @@ namespace fisica
 
 	// Las 12 aristas de una caja como 24 puntos del mundo (pares inicio-fin), para dibujarla
 	// con GL_LINES. Aplica la orientación de la caja: no es un cubo alineado con los ejes.
-	std::vector<glm::vec3> AristasDeCaja(const CollisionBox& caja);
+	std::vector<glm::vec3> BoxEdges(const CollisionBox& caja);
 
 	// -------------------------------------------------------------------------
 	// Demostración de la Fase 1: un suelo estático y un cubo dinámico que cae.
@@ -253,7 +253,7 @@ namespace fisica
 		// La demo NO tiene mundo propio: usa el mundo único del juego y solo es dueña de
 		// su suelo y su cubo (los quita con Detener(), sin tocar los cuerpos de la habitación).
 		explicit FallingCubeDemo(PhysicsWorld& mundoCompartido) : mundo(mundoCompartido) {}
-		~FallingCubeDemo() { Detener(); }
+		~FallingCubeDemo() { StopSessionGame(); }
 		FallingCubeDemo(const FallingCubeDemo&) = delete;
 		FallingCubeDemo& operator=(const FallingCubeDemo&) = delete;
 
@@ -264,17 +264,17 @@ namespace fisica
 		static constexpr float AlturaInicialCentro = 1.20f;        // desde donde se suelta
 
 		// (Re)crea suelo y cubo en su posición inicial y vuelve a empezar.
-		void Iniciar();
+		void BeginPlayback();
 		// Quita suelo y cubo (la demo deja de existir y de dibujarse).
-		void Detener();
-		bool EstaActiva() const { return activa; }
+		void StopSessionGame();
+		bool IsRunningNow() const { return activa; }
 
-		BodyPose PoseCubo() const { return mundo.PoseDe(cubo); }
-		glm::vec3 VelocidadCubo() const { return mundo.VelocidadDe(cubo); }
-		bool CuboEnReposo() const { return mundo.EstaDormido(cubo); }
-		glm::vec3 MitadTamanoCubo() const { return glm::vec3(MitadCubo); }
+		BodyPose CubePose() const { return mundo.PoseOf(cubo); }
+		glm::vec3 CubeVelocity() const { return mundo.VelocityOf(cubo); }
+		bool CubeAtRest() const { return mundo.IsAsleep(cubo); }
+		glm::vec3 CubeHalfSize() const { return glm::vec3(MitadCubo); }
 
-		PhysicsWorld& Mundo() { return mundo; }
+		PhysicsWorld& WorldHandle() { return mundo; }
 
 	private:
 		PhysicsWorld& mundo;

@@ -14,10 +14,10 @@ namespace netgame::session
 	inline bool RemoteGrabRayMatchesPose(const glm::vec3& origin, const glm::vec3& direction,
 		const net::PoseEntry& pose)
 	{
-		const glm::vec3 hand = PosDe(pose.rightHand);
-		const glm::vec3 head = PosDe(pose.head);
+		const glm::vec3 hand = PositionOfPose(pose.rightHand);
+		const glm::vec3 head = PositionOfPose(pose.head);
 		const bool originValid = glm::distance(origin, hand) <= 0.85f || glm::distance(origin, head) <= 0.85f;
-		const glm::vec3 forward = RotDe(pose.rightHand) * glm::vec3(0, 1, 0);
+		const glm::vec3 forward = RotationOfPose(pose.rightHand) * glm::vec3(0, 1, 0);
 		const float alignment = glm::dot(glm::normalize(forward), direction);
 		return originValid && std::isfinite(alignment) && alignment >= 0.60f;
 	}
@@ -25,7 +25,7 @@ namespace netgame::session
 	// En escritorio el rayo sale de la cabeza; en VR, del mando.
 	inline bool GrabAnchorsToHead(const glm::vec3& origin, const net::PoseEntry& pose)
 	{
-		return glm::distance(origin, PosDe(pose.head)) <= glm::distance(origin, PosDe(pose.rightHand));
+		return glm::distance(origin, PositionOfPose(pose.head)) <= glm::distance(origin, PositionOfPose(pose.rightHand));
 	}
 
 	// Carga [0,1] equivalente a la velocidad con la que un peer ha soltado un objeto.

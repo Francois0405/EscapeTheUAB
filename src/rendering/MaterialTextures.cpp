@@ -3,7 +3,7 @@
 
 GLuint materialTexture(const SceneMaterial& material)
 {
-	if (!material.presente || material.textura.empty() || !sceneSerializer.Cargado()) return 0;
+	if (!material.presente || material.textura.empty() || !sceneSerializer.IsLoaded()) return 0;
 	std::error_code ec;
 	const auto absoluta = std::filesystem::absolute(sceneSerializer.Ruta().parent_path() / material.textura, ec).lexically_normal();
 	if (ec) return 0;

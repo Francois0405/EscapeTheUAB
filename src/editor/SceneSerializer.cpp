@@ -106,10 +106,10 @@ namespace editor
 		}
 	}
 
-	bool SceneSerializer::Cargar(const std::filesystem::path& rutaEntrada, std::string& error)
+	bool SceneSerializer::LoadScene(const std::filesystem::path& rutaEntrada, std::string& error)
 	{
 		SceneData validacion;
-		if (!CargarDatosEscenaJSON(rutaEntrada, validacion, error)) return false;
+		if (!LoadSceneDataJson(rutaEntrada, validacion, error)) return false;
 		std::ifstream archivo(rutaEntrada, std::ios::binary);
 		if (!archivo)
 		{
@@ -137,13 +137,13 @@ namespace editor
 		return true;
 	}
 
-	bool SceneSerializer::Guardar(const std::vector<SceneObject>& objetos, std::string& error)
+	bool SceneSerializer::SaveScene(const std::vector<SceneObject>& objetos, std::string& error)
 	{
 		llamadaSinListaAnimados = true;
-		return Guardar(objetos, {}, error);
+		return SaveScene(objetos, {}, error);
 	}
 
-	bool SceneSerializer::Guardar(const std::vector<SceneObject>& objetos, const std::vector<SceneAnimatedObject>& animados,
+	bool SceneSerializer::SaveScene(const std::vector<SceneObject>& objetos, const std::vector<SceneAnimatedObject>& animados,
 		std::string& error)
 	{
 		const bool preservarAnimated = llamadaSinListaAnimados;
@@ -348,7 +348,7 @@ namespace editor
 						{"offset", VectorJSON(objeto.fisica.desplazamiento)}
 					};
 					if (objeto.fisica.forma == fisica::BodyShape::Esfera) fisica["shape"] = "sphere";
-					if (fisica::EsCuerpoDinamico(objeto.fisica.tipo)) fisica["mass"] = objeto.fisica.masa;
+					if (fisica::IsDynamicBody(objeto.fisica.tipo)) fisica["mass"] = objeto.fisica.masa;
 					nueva["physics"] = std::move(fisica);
 				}
 				documento["objects"].push_back(std::move(nueva));
@@ -385,7 +385,7 @@ namespace editor
 		}
 
 		SceneData comprobacion;
-		if (!CargarDatosEscenaJSON(temporal, comprobacion, error))
+		if (!LoadSceneDataJson(temporal, comprobacion, error))
 		{
 			std::error_code ec;
 			std::filesystem::remove(temporal, ec);

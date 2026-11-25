@@ -23,16 +23,16 @@ namespace editor
 		std::vector<SceneAnimatedObject> animados;
 	};
 
-	inline bool Iguales(const ScenePhysics& a, const ScenePhysics& b)
+	inline bool AreEqual(const ScenePhysics& a, const ScenePhysics& b)
 	{
 		return a.presente == b.presente && a.tipo == b.tipo && a.forma == b.forma && a.mitadTamano == b.mitadTamano &&
 			a.desplazamiento == b.desplazamiento && a.masa == b.masa;
 	}
 
-	inline bool Iguales(const SceneObject& a, const SceneObject& b)
+	inline bool AreEqual(const SceneObject& a, const SceneObject& b)
 	{
 		return a.id == b.id && a.categoria == b.categoria && a.modelo == b.modelo && a.posicion == b.posicion &&
-			a.rotacion == b.rotacion && a.escala == b.escala && Iguales(a.fisica, b.fisica) &&
+			a.rotacion == b.rotacion && a.escala == b.escala && AreEqual(a.fisica, b.fisica) &&
 			a.luz.presente == b.luz.presente && a.luz.encendida == b.luz.encendida &&
 			a.luz.desplazamiento == b.luz.desplazamiento && a.luz.color == b.luz.color &&
 			a.luz.intensidad == b.luz.intensidad && a.luz.areaSize == b.luz.areaSize &&
@@ -43,7 +43,7 @@ namespace editor
 			a.permitirPenetracionArquitectura == b.permitirPenetracionArquitectura;
 	}
 
-	inline bool Iguales(const SceneAnimatedObject& a, const SceneAnimatedObject& b)
+	inline bool AreEqual(const SceneAnimatedObject& a, const SceneAnimatedObject& b)
 	{
 		if (a.id != b.id || a.modelo != b.modelo || a.posicion != b.posicion || a.giroZGrados != b.giroZGrados ||
 			a.escala != b.escala || a.animation != b.animation ||
@@ -58,11 +58,11 @@ namespace editor
 		return true;
 	}
 
-	inline bool Iguales(const SceneState& a, const SceneState& b)
+	inline bool AreEqual(const SceneState& a, const SceneState& b)
 	{
 		if (a.objetos.size() != b.objetos.size() || a.animados.size() != b.animados.size()) return false;
-		for (std::size_t i = 0; i < a.objetos.size(); ++i) if (!Iguales(a.objetos[i], b.objetos[i])) return false;
-		for (std::size_t i = 0; i < a.animados.size(); ++i) if (!Iguales(a.animados[i], b.animados[i])) return false;
+		for (std::size_t i = 0; i < a.objetos.size(); ++i) if (!AreEqual(a.objetos[i], b.objetos[i])) return false;
+		for (std::size_t i = 0; i < a.animados.size(); ++i) if (!AreEqual(a.animados[i], b.animados[i])) return false;
 		return true;
 	}
 
@@ -71,7 +71,7 @@ namespace editor
 	public:
 		static constexpr std::size_t LimiteOperaciones = 200;
 
-		void Reiniciar()
+		void ResetState()
 		{
 			deshacer.clear();
 			rehacer.clear();
@@ -80,7 +80,7 @@ namespace editor
 
 		// Operación puntual (añadir, eliminar, duplicar...): 'antes' es el estado ANTERIOR al cambio.
 		// Cualquier operación nueva descarta la rama de rehacer, que ya no corresponde a la historia actual.
-		void Registrar(SceneState antes)
+		void RegisterElement(SceneState antes)
 		{
 			deshacer.push_back(std::move(antes));
 			if (deshacer.size() > LimiteOperaciones) deshacer.erase(deshacer.begin());
@@ -88,32 +88,32 @@ namespace editor
 		}
 
 		// Arrastre o edición continua: se llama UNA vez al empezar (con el estado sin modificar).
-		void IniciarTransaccion(const SceneState& antes)
+		void BeginTransaction(const SceneState& antes)
 		{
 			if (transaccionAbierta) return;
 			inicioTransaccion = antes;
 			transaccionAbierta = true;
 		}
 
-		bool TransaccionAbierta() const { return transaccionAbierta; }
+		bool IsTransactionOpen() const { return transaccionAbierta; }
 
 		// Al terminar: registra UNA operación si el estado cambió de verdad. Devuelve si registró algo.
-		bool CerrarTransaccion(const SceneState& despues)
+		bool CommitTransaction(const SceneState& despues)
 		{
 			if (!transaccionAbierta) return false;
 			transaccionAbierta = false;
-			if (Iguales(inicioTransaccion, despues)) return false;
-			Registrar(std::move(inicioTransaccion));
+			if (AreEqual(inicioTransaccion, despues)) return false;
+			RegisterElement(std::move(inicioTransaccion));
 			return true;
 		}
 
-		bool PuedeDeshacer() const { return !deshacer.empty(); }
-		bool PuedeRehacer() const { return !rehacer.empty(); }
-		std::size_t OperacionesParaDeshacer() const { return deshacer.size(); }
-		std::size_t OperacionesParaRehacer() const { return rehacer.size(); }
+		bool CanUndo() const { return !deshacer.empty(); }
+		bool CanRedo() const { return !rehacer.empty(); }
+		std::size_t UndoOperations() const { return deshacer.size(); }
+		std::size_t RedoOperations() const { return rehacer.size(); }
 
 		// 'actual' es el estado visible ahora; se sustituye por el anterior y el actual pasa a la pila de rehacer.
-		bool Deshacer(SceneState& actual)
+		bool Undo(SceneState& actual)
 		{
 			transaccionAbierta = false;
 			if (deshacer.empty()) return false;
@@ -123,7 +123,7 @@ namespace editor
 			return true;
 		}
 
-		bool Rehacer(SceneState& actual)
+		bool Redo(SceneState& actual)
 		{
 			transaccionAbierta = false;
 			if (rehacer.empty()) return false;

@@ -42,7 +42,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	if (key == GLFW_KEY_E && action == GLFW_RELEASE && throwChargeActive)
 	{
 		if (fpsInputActive() && !io.WantTextInput && !io.WantCaptureKeyboard &&
-			!io.WantCaptureMouse && !openXrManager.SesionEnMarcha())
+			!io.WantCaptureMouse && !openXrManager.IsSessionRunning())
 			throwHeldObject();
 		else
 			cancelThrowChargeInput();
@@ -56,19 +56,19 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		!io.WantTextInput &&
 		currentGameState != ESTADO_MENU_PRINCIPAL)
 	{
-		if (networkGame.EnRed() && networkGame.EsCliente())
+		if (networkGame.IsOnline() && networkGame.IsClient())
 		{
-			sceneEditor.InformarEstado("Solo el host puede editar la escena compartida.", true);
+			sceneEditor.ReportStatus("Solo el host puede editar la escena compartida.", true);
 			return;
 		}
-		sceneEditor.Atajo(key, action, mods, false);
+		sceneEditor.Shortcut(key, action, mods, false);
 		syncFpsCursor(window);
 		return;
 	}
 
-	if (sceneEditor.Activo())
+	if (sceneEditor.IsEnabled())
 	{
-		sceneEditor.Atajo(key, action, mods, io.WantTextInput);
+		sceneEditor.Shortcut(key, action, mods, io.WantTextInput);
 		syncFpsCursor(window);
 		return;
 	}
@@ -129,9 +129,9 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	// Mantener E carga el lanzamiento; soltarla lanza el objeto sujeto.
 	if (key == GLFW_KEY_E && action == GLFW_PRESS)
 	{
-		const bool gateJuego = glb::PuedeInteractuar(fpsPaused, windowFocused, io.WantTextInput);
+		const bool gateJuego = glb::CanInteract(fpsPaused, windowFocused, io.WantTextInput);
 		const bool gateInterfaz = !showDebugPanels && !io.WantCaptureKeyboard &&
-			!io.WantCaptureMouse && !openXrManager.SesionEnMarcha();
+			!io.WantCaptureMouse && !openXrManager.IsSessionRunning();
 		if (grabTraceEnabled())
 		{
 			const InteractionTarget& objetivo = currentInteractionTarget;
@@ -142,17 +142,17 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 			glm::vec3 origenRayo(0.0f), direccionRayo(0.0f);
 			gazeOriginAndDirection(origenRayo, direccionRayo);
 			float distanciaRayo = std::numeric_limits<float>::infinity();
-			const fisica::IdCuerpo cuerpoRayo = physicsWorld.CuerpoAlFinalDelRayo(
+			const fisica::IdCuerpo cuerpoRayo = physicsWorld.BodyAtRayEnd(
 				origenRayo, direccionRayo,
 				std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION), &distanciaRayo);
 			const int indiceCuerpoDinamico = cuerpoRayo == fisica::CuerpoInvalido
-				? -1 : physicsScene->ObjetoDinamicoDeCuerpo(cuerpoRayo);
+				? -1 : physicsScene->DynamicObjectOfBody(cuerpoRayo);
 			const int indiceCuerpoAnimado = cuerpoRayo == fisica::CuerpoInvalido
-				? -1 : physicsScene->ObjetoAnimadoDeCuerpo(cuerpoRayo);
+				? -1 : physicsScene->AnimatedObjectOfBody(cuerpoRayo);
 			std::string idCuerpoRayo = "none";
 			if (indiceCuerpoDinamico >= 0 && indiceCuerpoDinamico < static_cast<int>(sceneObjects.size()))
 				idCuerpoRayo = sceneObjects[indiceCuerpoDinamico].id;
-			const char* rol = networkGame.EsHost() ? "host" : networkGame.EsCliente() ? "client" : "offline";
+			const char* rol = networkGame.IsHosting() ? "host" : networkGame.IsClient() ? "client" : "offline";
 			std::ostringstream registro;
 			registro << "[grab] input key=E role=" << rol
 				<< " game=" << (currentGameState == ESTADO_JUGANDO)
@@ -161,7 +161,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 				<< " text=" << io.WantTextInput << " captureKeyboard=" << io.WantCaptureKeyboard
 				<< " captureMouse=" << io.WantCaptureMouse
 				<< " debugPanels=" << showDebugPanels
-				<< " xr=" << openXrManager.SesionEnMarcha()
+				<< " xr=" << openXrManager.IsSessionRunning()
 				<< " holding=" << playerHoldsObject()
 				<< " action=" << static_cast<int>(objetivo.accion)
 				<< " dynamicIndex=" << objetivo.indiceDinamico
@@ -205,7 +205,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		// EntornVGI: Si tecla pulsada és ESCAPE, tancar finestres i aplicació.
 		if (mods == 0 && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		{
-			if (sceneEditor.HayCambiosSinGuardar()) sceneEditor.SolicitarConfirmacionCierre();
+			if (sceneEditor.HasUnsavedChanges()) sceneEditor.RequestCloseConfirmation();
 			else glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 		else if (mods == 0 && key == GLFW_KEY_PRINT_SCREEN && action == GLFW_PRESS) statusB = !statusB;

@@ -74,7 +74,7 @@ struct SceneWallSection
 
 // Particiona una caja de pared en paños laterales, dinteles y posibles zócalos.
 // Rechaza aperturas solapadas, demasiado próximas a extremos o fuera de altura.
-bool GenerarSeccionesPared(const glm::vec3& mitadPared, const std::vector<SceneWallOpening>& aperturas,
+bool GenerateWallSections(const glm::vec3& mitadPared, const std::vector<SceneWallOpening>& aperturas,
     std::vector<SceneWallSection>& secciones, std::string& error);
 
 struct SceneObject
@@ -144,10 +144,10 @@ struct SceneData
 
 // Lee la escena completa. Es estricto: si hay un error devuelve false, deja 'datos' como estaba
 // y 'error' explica qué campo falla.
-bool CargarDatosEscenaJSON(const std::filesystem::path& ruta, SceneData& datos, std::string& error);
+bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datos, std::string& error);
 
 // Versión antigua (solo objetos OBJ): sigue funcionando igual. Valida también los objetos animados.
-bool CargarEscenaJSON(
+bool LoadSceneJson(
     const std::filesystem::path& ruta,
     std::vector<SceneObject>& objetos,
     std::string& error,

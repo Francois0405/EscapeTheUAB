@@ -67,12 +67,12 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	{
 		fps::MovementParameters& pm = playerMovement.parametros;
 		fps::BobParameters& pb = cameraBob.parametros;
-		ImGui::Text("Estamina: %.1f / %.1f%s", playerMovement.Estamina(), pm.estaminaMaxima,
-			playerMovement.Agotada() ? "  (AGOTADA)" : (playerMovement.Sprintando() ? "  (corriendo)" : ""));
-		ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", playerMovement.Velocidad(),
-			physicsWorld.FraccionAgachado() * 100.0f, physicsWorld.JugadorEnSuelo() ? "si" : "no");
+		ImGui::Text("Estamina: %.1f / %.1f%s", playerMovement.StaminaValue(), pm.estaminaMaxima,
+			playerMovement.IsExhausted() ? "  (AGOTADA)" : (playerMovement.IsSprinting() ? "  (corriendo)" : ""));
+		ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", playerMovement.VelocityValue(),
+			physicsWorld.CrouchFraction() * 100.0f, physicsWorld.IsPlayerGrounded() ? "si" : "no");
 		ImGui::Checkbox("Porcentaje junto a la barra", &showStaminaPercent);
-		if (ImGui::Button("Rellenar estamina")) playerMovement.Reiniciar();
+		if (ImGui::Button("Rellenar estamina")) playerMovement.ResetState();
 		ImGui::Checkbox("Mostrar FPS en esquina superior derecha", &showFpsCounter);
 		ImGui::Checkbox("Renderizado optimizado (frustum culling)", &optimizedRendering);
 		ImGui::Checkbox("Instrumentacion de render", &renderMetrics::enabled);
@@ -107,7 +107,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		ImGui::SliderFloat("Zancada caminar (m)", &pb.zancadaCaminar, 0.5f, 3.0f, "%.2f");
 		ImGui::SliderFloat("Zancada correr (m)", &pb.zancadaCorrer, 0.5f, 4.0f, "%.2f");
 		ImGui::SliderFloat("Amortiguacion al parar", &pb.salida, 1.0f, 20.0f, "%.1f");
-		ImGui::Text("fase: %.2f rad | peso: %.2f", cameraBob.Fase(), cameraBob.Peso());
+		ImGui::Text("fase: %.2f rad | peso: %.2f", cameraBob.CurrentPhase(), cameraBob.WeightValue());
 	}
 	ImGui::End();
 
@@ -129,23 +129,23 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	ImGui::SliderFloat("Distancia de parada Hiriti (m)", &hiritiFollowStopDistance, 1.0f, 3.0f);
 	ImGui::SliderFloat("Velocidad maxima Hiriti (m/s)", &hiritiFollowMaxSpeed, 0.5f, 4.0f);
 	ImGui::TextUnformatted("azul: estatico  verde: dinamico  naranja: cinematico");
-	ImGui::Text("cuerpos en el mundo: %d (habitacion: %d, dinamicos: %d)", physicsWorld.NumeroDeCuerpos(),
-		physicsScene->NumeroDeCuerpos(), physicsScene->NumeroDeDinamicos());
+	ImGui::Text("cuerpos en el mundo: %d (habitacion: %d, dinamicos: %d)", physicsWorld.BodyCount(),
+		physicsScene->BodyCount(), physicsScene->DynamicCount());
 	ImGui::Text("pasos fisicos: %lld", physicsWorld.PasosTotales());
 	ImGui::Checkbox("Vista estereoscopica de prueba (F2) - NO es VR real", &stereoTestMode);
 	ImGui::Separator();
-	ImGui::Text("OpenXR (VR real, F3): %s", vr::NombreDelEstado(openXrManager.Estado()));
-	if (!vr::OpenXrManager::EstaCompilado())
+	ImGui::Text("OpenXR (VR real, F3): %s", vr::NombreDelEstado(openXrManager.CurrentState()));
+	if (!vr::OpenXrManager::IsCompiledIn())
 		ImGui::TextUnformatted("No incluido en esta compilacion (macOS u OpenXR no instalado).");
-	else if (ImGui::Button(openXrManager.TieneRecursos() ? "Desactivar OpenXR" : "Activar OpenXR"))
+	else if (ImGui::Button(openXrManager.HasResources() ? "Desactivar OpenXR" : "Activar OpenXR"))
 		context.toggleOpenXR();
 	ImGui::TextWrapped("%s", openXrManager.Mensaje().c_str());
-	if (openXrManager.TieneRecursos())
+	if (openXrManager.HasResources())
 	{
 		ImGui::Text("Sesion: %s%s | espacio: %s | ojos: %d", openXrManager.NombreEstadoSesion(),
-			openXrManager.SesionEnMarcha() ? " (en marcha)" : "",
-			openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo ? "STAGE" : (openXrManager.Espacio() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
-			openXrManager.NumeroDeOjos());
+			openXrManager.IsSessionRunning() ? " (en marcha)" : "",
+			openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo ? "STAGE" : (openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
+			openXrManager.EyeCount());
 	}
 	if (!openXrManager.Diagnostico().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
 	{
@@ -154,15 +154,15 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	}
 	ImGui::Separator();
 	bool estadoAgarreMostrado = false;
-	const int agarradoLocal = physicsScene->ObjetoAgarrado();
+	const int agarradoLocal = physicsScene->GrabbedObject();
 	if (agarradoLocal >= 0 && agarradoLocal < static_cast<int>(sceneObjects.size()))
 	{
 		ImGui::Text("en tu mano: %s", sceneObjects[agarradoLocal].id.c_str());
 		estadoAgarreMostrado = true;
 	}
-	else if (networkGame.EsCliente())
+	else if (networkGame.IsClient())
 	{
-		const uint32_t idPropio = networkGame.ObjetoDinamicoDePeer(networkGame.PeerLocal());
+		const uint32_t idPropio = networkGame.DynamicObjectOfPeer(networkGame.LocalPeerId());
 		const auto propio = std::find_if(sceneObjects.begin(), sceneObjects.end(), [idPropio](const SceneObject& objeto)
 			{ return idPropio != 0 && netgame::HashId(objeto.id) == idPropio; });
 		if (propio != sceneObjects.end())
@@ -171,7 +171,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 			estadoAgarreMostrado = true;
 		}
 	}
-	if (!estadoAgarreMostrado && networkGame.EsHost())
+	if (!estadoAgarreMostrado && networkGame.IsHosting())
 	{
 		for (const auto& par : networkGame.PropietariosDinamicos())
 			if (par.second != netgame::kSinDueno && par.second != net::kHostPeerId)
@@ -187,30 +187,30 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	}
 	if (!estadoAgarreMostrado)
 		ImGui::TextUnformatted("mano vacia (E sobre un objeto dinamico para agarrarlo)");
-	if (physicsWorld.HayJugador())
+	if (physicsWorld.HasPlayerBody())
 	{
-		const glm::vec3 pies = physicsWorld.PosicionPiesJugador();
+		const glm::vec3 pies = physicsWorld.PlayerFeetPosition();
 		ImGui::Text("jugador (pies): (%.2f, %.2f, %.2f) m  %s", pies.x, pies.y, pies.z,
-			physicsWorld.JugadorEnSuelo() ? "en el suelo" : "en el aire");
+			physicsWorld.IsPlayerGrounded() ? "en el suelo" : "en el aire");
 	}
 	ImGui::Separator();
 	ImGui::TextUnformatted("Demo: cubo que cae (independiente de la habitacion)");
-	if (!fallingCubeDemo.EstaActiva())
+	if (!fallingCubeDemo.IsRunningNow())
 	{
-		if (ImGui::Button("Activar demo cubo")) fallingCubeDemo.Iniciar();
+		if (ImGui::Button("Activar demo cubo")) fallingCubeDemo.BeginPlayback();
 	}
 	else
 	{
-		if (ImGui::Button("Reiniciar demo")) fallingCubeDemo.Iniciar();
+		if (ImGui::Button("Reiniciar demo")) fallingCubeDemo.BeginPlayback();
 		ImGui::SameLine();
-		if (ImGui::Button("Quitar demo")) fallingCubeDemo.Detener();
-		const fisica::BodyPose pose = fallingCubeDemo.PoseCubo();
-		const glm::vec3 velocidad = fallingCubeDemo.VelocidadCubo();
-		const glm::vec3 gravedad = physicsWorld.Gravedad();
+		if (ImGui::Button("Quitar demo")) fallingCubeDemo.StopSessionGame();
+		const fisica::BodyPose pose = fallingCubeDemo.CubePose();
+		const glm::vec3 velocidad = fallingCubeDemo.CubeVelocity();
+		const glm::vec3 gravedad = physicsWorld.GravityValue();
 		ImGui::Text("gravedad: (%.2f, %.2f, %.2f) m/s2", gravedad.x, gravedad.y, gravedad.z);
 		ImGui::Text("cubo pos: (%.3f, %.3f, %.3f) m", pose.posicion.x, pose.posicion.y, pose.posicion.z);
 		ImGui::Text("cubo vel: (%.3f, %.3f, %.3f) m/s", velocidad.x, velocidad.y, velocidad.z);
-		ImGui::Text("estado: %s", fallingCubeDemo.CuboEnReposo() ? "en reposo (dormido)" : "en movimiento");
+		ImGui::Text("estado: %s", fallingCubeDemo.CubeAtRest() ? "en reposo (dormido)" : "en movimiento");
 	}
 	ImGui::End();
 
@@ -221,9 +221,9 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	for (glb::AnimatedObject& objeto : animatedObjects.objetos)
 	{
 		ImGui::PushID(objeto.id.c_str());   // cada fila necesita un ID distinto para sus botones
-		if (ImGui::Button("Abrir")) glb::IniciarAnimacion(objeto);     // depuración: reinicia la apertura
+		if (ImGui::Button("Abrir")) glb::BeginAnimation(objeto);     // depuración: reinicia la apertura
 		ImGui::SameLine();
-		if (ImGui::Button("Alternar") && !networkGame.EsCliente()) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
+		if (ImGui::Button("Alternar") && !networkGame.IsClient()) glb::ToggleDoor(objeto);   // igual que pulsar E junto a la puerta
 		ImGui::SameLine();
 		ImGui::Text("%s  %s  %.2f / %.2f s", objeto.id.c_str(), glb::NombreDelEstado(objeto.estado),
 			objeto.reproductor.tiempo, objeto.reproductor.duracion);

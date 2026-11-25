@@ -31,7 +31,7 @@ namespace glb
 	//   Abierta  --E-->  Cerrando  --(llega al principio)--> Cerrada
 	// Si se pulsa E mientras se mueve, el sentido se invierte desde donde esté:
 	//   Abriendo --E--> Cerrando      Cerrando --E--> Abriendo
-	enum class DoorState { Cerrada, Abriendo, Abierta, Cerrando };
+	enum class DoorState { Cerrada, Abriendo, IsOpen, Cerrando };
 
 	// Una puerta (o cajón...) concreta dentro de la habitación.
 	struct AnimatedObject
@@ -58,26 +58,26 @@ namespace glb
 
 	// Añade una instancia. Carga el .glb solo si todavía no estaba cargado.
 	// Devuelve false (y no cambia nada) si el archivo falla o el id ya existe.
-	bool AnadirObjeto(AnimatedScene& escena, const std::string& id, const std::string& rutaGlb,
+	bool AddAnimatedObject(AnimatedScene& escena, const std::string& id, const std::string& rutaGlb,
 		const glm::vec3& posicion, float giroZGrados, std::string& error);
 
 	// Elige qué animación del archivo reproduce la instancia, por su nombre ("" = la primera).
 	// Devuelve false (y no cambia nada) si el archivo no tiene una animación con ese nombre.
-	bool SeleccionarAnimacion(AnimatedObject& objeto, const std::string& nombre, std::string& error);
+	bool SelectAnimation(AnimatedObject& objeto, const std::string& nombre, std::string& error);
 
 	// Busca una instancia por su id. Devuelve nullptr si no existe.
-	AnimatedObject* BuscarObjeto(AnimatedScene& escena, const std::string& id);
+	AnimatedObject* FindAnimatedObject(AnimatedScene& escena, const std::string& id);
 
 	// Dónde está colocado el modelo en el mundo (ya en Z arriba). El cambio de ejes de glTF
 	// lo añade el dibujo.
-	glm::mat4 MatrizBaseDelObjeto(const AnimatedObject& objeto);
+	glm::mat4 ObjectBaseMatrix(const AnimatedObject& objeto);
 
 	// Herramienta de depuración: vuelve a empezar la apertura desde la puerta cerrada.
-	void IniciarAnimacion(AnimatedObject& objeto);
+	void BeginAnimation(AnimatedObject& objeto);
 
 	// Lo que hace la tecla E sobre UNA puerta: abre si está cerrada, cierra si está abierta
 	// e invierte el sentido si se está moviendo (sin saltos: continúa desde el instante actual).
-	void AlternarPuerta(AnimatedObject& objeto);
+	void ToggleDoor(AnimatedObject& objeto);
 
 	// Nombre del estado para mostrarlo en la interfaz de depuración.
 	const char* NombreDelEstado(DoorState estado);
@@ -93,27 +93,27 @@ namespace glb
 	constexpr float COSENO_MINIMO_INTERACCION = 0.7f;
 
 	// Punto de la puerta en el mundo del juego (Z arriba): su centro, que no cambia al abrirse.
-	glm::vec3 PuntoDeInteraccion(const AnimatedObject& objeto);
+	glm::vec3 InteractionPoint(const AnimatedObject& objeto);
 
 	// Devuelve la puerta con la que se puede interactuar, o nullptr si no hay ninguna.
 	// Candidatas: a menos de 'radio' metros y delante (dentro del cono de 'cosenoMinimo').
 	// Si hay varias, gana la que está más centrada en la dirección de mirada.
-	AnimatedObject* BuscarObjetoInteractuable(AnimatedScene& escena, const glm::vec3& origen,
+	AnimatedObject* FindInteractableObject(AnimatedScene& escena, const glm::vec3& origen,
 		const glm::vec3& direccion, float radio = RADIO_INTERACCION, float cosenoMinimo = COSENO_MINIMO_INTERACCION);
 
 	// Busca la puerta y, si hay una, la alterna (abrir/cerrar). Devuelve la puerta usada o nullptr.
-	AnimatedObject* InteractuarConObjeto(AnimatedScene& escena, const glm::vec3& origen, const glm::vec3& direccion);
+	AnimatedObject* InteractWithObject(AnimatedScene& escena, const glm::vec3& origen, const glm::vec3& direccion);
 
 	// ¿Debe tenerse en cuenta la tecla E ahora? No si el juego está en pausa, la ventana no
 	// tiene el foco o se está escribiendo en un cuadro de texto de ImGui.
-	bool PuedeInteractuar(bool juegoPausado, bool windowFocused, bool escribiendoEnInterfaz);
+	bool CanInteract(bool juegoPausado, bool windowFocused, bool escribiendoEnInterfaz);
 
 	// Avanza el reloj de todas las instancias y coloca cada una en su pose.
 	// 'delta' es el tiempo transcurrido; pasa 0 para pausar.
-	void ActualizarObjetos(AnimatedScene& escena, float deltaSegundos);
+	void UpdateAnimatedObjects(AnimatedScene& escena, float deltaSegundos);
 
 	// Elimina todo (los modelos y las instancias).
-	void VaciarEscenaAnimada(AnimatedScene& escena);
+	void ClearAnimatedScene(AnimatedScene& escena);
 }
 
 #endif

@@ -22,18 +22,18 @@ namespace netgame
 		}
 	}
 
-	void DibujarAvataresRemotos(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
+	void DrawRemoteAvatars(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
 		const std::vector<net::PoseEntry>& remotos, bool dibujarObjeto, const glm::vec3& posObjeto, bool objetoMio, bool objetoOcupado)
 	{
 		if (programaEjes == 0 || (remotos.empty() && !dibujarObjeto)) return;
 		static const glm::vec4 colores[] = { {0.2f, 1.0f, 0.9f, 1}, {1.0f, 0.6f, 0.1f, 1}, {1.0f, 0.3f, 0.8f, 1}, {0.7f, 1.0f, 0.2f, 1} };
 		std::vector<float> v;
-		for (const net::PoseEntry& p : remotos) ConstruirAvatar(v, p, colores[p.peer % 4]);
+		for (const net::PoseEntry& p : remotos) BuildAvatar(v, p, colores[p.peer % 4]);
 		if (dibujarObjeto)
 		{
 			const glm::vec4 c = objetoMio ? glm::vec4(0.3f, 1.0f, 0.3f, 1) : (objetoOcupado ? glm::vec4(1.0f, 0.4f, 0.2f, 1) : glm::vec4(1.0f, 1.0f, 0.2f, 1));
-			AnadirCajaLineas(v, posObjeto, glm::quat(1, 0, 0, 0), glm::vec3(0.15f), c);
-			AnadirCajaLineas(v, posObjeto, glm::quat(1, 0, 0, 0), glm::vec3(0.075f), c);
+			AppendBoxLines(v, posObjeto, glm::quat(1, 0, 0, 0), glm::vec3(0.15f), c);
+			AppendBoxLines(v, posObjeto, glm::quat(1, 0, 0, 0), glm::vec3(0.075f), c);
 		}
 		if (v.empty()) return;
 
@@ -48,7 +48,7 @@ namespace netgame
 		glBindVertexArray(0);
 	}
 
-	void LiberarDibujoAvatares()
+	void ReleaseAvatarDrawing()
 	{
 		if (vbo != 0) glDeleteBuffers(1, &vbo);
 		if (vao != 0) glDeleteVertexArrays(1, &vao);

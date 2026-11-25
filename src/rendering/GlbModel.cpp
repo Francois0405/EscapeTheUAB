@@ -313,7 +313,7 @@ namespace glb
 	// Carga
 	// ----------------------------------------------------------------------
 
-	bool CargarModeloGLB(const std::filesystem::path& ruta, GlbModel& modelo, std::string& error)
+	bool LoadGlbModel(const std::filesystem::path& ruta, GlbModel& modelo, std::string& error)
 	{
 		const std::string rutaTexto = ruta.string();
 		cgltf_options opciones = {};
@@ -348,7 +348,7 @@ namespace glb
 	// Jerarquía y matrices
 	// ----------------------------------------------------------------------
 
-	glm::mat4 MatrizLocal(const LocalTransform& transformacion)
+	glm::mat4 LocalMatrix(const LocalTransform& transformacion)
 	{
 		glm::mat4 matriz(1.0f);
 		matriz = glm::translate(matriz, transformacion.posicion);   // 3. mover
@@ -357,7 +357,7 @@ namespace glb
 		return matriz;
 	}
 
-	glm::mat4 MatrizMundoDelNodo(const GlbModel& modelo, const GlbPose& pose, int indiceNodo)
+	glm::mat4 NodeWorldMatrix(const GlbModel& modelo, const GlbPose& pose, int indiceNodo)
 	{
 		glm::mat4 mundo(1.0f);
 		size_t pasos = 0;
@@ -365,27 +365,27 @@ namespace glb
 		// El límite de pasos evita un bucle infinito si un archivo corrupto tuviera un ciclo.
 		while (indiceNodo >= 0 && pasos++ <= modelo.nodos.size())
 		{
-			mundo = MatrizLocal(pose.nodos[indiceNodo]) * mundo;
+			mundo = LocalMatrix(pose.nodos[indiceNodo]) * mundo;
 			indiceNodo = modelo.nodos[indiceNodo].padre;
 		}
 		return mundo;
 	}
 
-	int BuscarNodoPorNombre(const GlbModel& modelo, const std::string& nombre)
+	int FindNodeByName(const GlbModel& modelo, const std::string& nombre)
 	{
 		for (size_t i = 0; i < modelo.nodos.size(); ++i)
 			if (modelo.nodos[i].nombre == nombre) return static_cast<int>(i);
 		return -1;
 	}
 
-	glm::vec3 CalcularCentroDelModelo(const GlbModel& modelo, const GlbPose& pose)
+	glm::vec3 ComputeModelCenter(const GlbModel& modelo, const GlbPose& pose)
 	{
 		glm::vec3 minimo(1.0e30f);
 		glm::vec3 maximo(-1.0e30f);
 		for (size_t i = 0; i < modelo.nodos.size(); ++i)
 		{
 			if (modelo.nodos[i].indiceMalla < 0) continue;
-			const glm::mat4 mundo = MatrizMundoDelNodo(modelo, pose, static_cast<int>(i));
+			const glm::mat4 mundo = NodeWorldMatrix(modelo, pose, static_cast<int>(i));
 			for (const GlbPrimitive& primitiva : modelo.mallas[modelo.nodos[i].indiceMalla].primitivas)
 				for (const glm::vec3& vertice : primitiva.posiciones)
 				{
@@ -398,7 +398,7 @@ namespace glb
 		return 0.5f * (minimo + maximo);
 	}
 
-	glm::mat4 MatrizYArribaAZArriba()
+	glm::mat4 YUpToZUpMatrix()
 	{
 		return glm::rotate(glm::mat4(1.0f), glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
 	}
@@ -407,32 +407,32 @@ namespace glb
 	// Animación
 	// ----------------------------------------------------------------------
 
-	GlbPose CrearPoseDeReposo(const GlbModel& modelo)
+	GlbPose CreateRestPose(const GlbModel& modelo)
 	{
 		GlbPose pose;
-		RestaurarPoseDeReposo(modelo, pose);
+		RestoreRestPose(modelo, pose);
 		return pose;
 	}
 
-	void RestaurarPoseDeReposo(const GlbModel& modelo, GlbPose& pose)
+	void RestoreRestPose(const GlbModel& modelo, GlbPose& pose)
 	{
 		pose.nodos.resize(modelo.nodos.size());
 		for (size_t i = 0; i < modelo.nodos.size(); ++i) pose.nodos[i] = modelo.nodos[i].reposo;
 	}
 
-	void AplicarAnimacion(GlbPose& pose, const GlbAnimation& animation, float tiempo)
+	void ApplyAnimation(GlbPose& pose, const GlbAnimation& animation, float tiempo)
 	{
 		for (const AnimationChannel& canal : animation.canales)
 		{
 			if (canal.indiceNodo < 0 || canal.indiceNodo >= static_cast<int>(pose.nodos.size())) continue;
 
-			const glm::vec4 valor = ValorDelCanalEnTiempo(canal, tiempo);
+			const glm::vec4 valor = ChannelValueAtTime(canal, tiempo);
 			LocalTransform& nodo = pose.nodos[canal.indiceNodo];
 			switch (canal.propiedad)
 			{
 			case AnimatedProperty::Posicion: nodo.posicion = glm::vec3(valor); break;
 			case AnimatedProperty::Escala:   nodo.escala = glm::vec3(valor); break;
-			case AnimatedProperty::Rotacion: nodo.rotacion = CuaternionDesdeVec4(valor); break;
+			case AnimatedProperty::Rotacion: nodo.rotacion = QuaternionFromVec4(valor); break;
 			}
 		}
 	}

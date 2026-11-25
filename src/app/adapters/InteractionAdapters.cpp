@@ -12,8 +12,8 @@ const game::interaction::InteractionContext& interactionBindings()
 		sceneObjects, physicsScene, physicsWorld, networkGame, animatedObjects, networkDoors,
 		currentInteractionTarget, throwChargeActive, throwChargeTime, showDebugPanels,
 		[] { return fpsInputActive(); },
-		[] { return sceneEditor.Activo(); },
-		[] { return openXrManager.SesionEnMarcha(); },
+		[] { return sceneEditor.IsEnabled(); },
+		[] { return openXrManager.IsSessionRunning(); },
 		[](glm::vec3& origen, glm::vec3& direccion) { gazeOriginAndDirection(origen, direccion); },
 		[] { return glfwGetTime(); },
 		[](const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
@@ -21,11 +21,11 @@ const game::interaction::InteractionContext& interactionBindings()
 			{ traceGrab(evento, id, peer, propietario, posicion, punto, detalle); },
 		[]
 		{
-			hiritiAnimator.DescubrirPorInteraccion();
-			if (hiritiAnimator.MarcarAgarrado())
+			hiritiAnimator.DiscoverByInteraction();
+			if (hiritiAnimator.MarkGrabbed())
 				playHiritiSoundCue("assets/audio/hirity/story/lohashechobien.ogg");
 		},
-		[](float carga) { hiritiAnimator.MarcarLanzadoPorJugador(carga); }
+		[](float carga) { hiritiAnimator.MarkThrownByPlayer(carga); }
 	};
 	return contexto;
 }

@@ -53,7 +53,7 @@ namespace gameplay::player
 
 	void fixCameraAtSpawn(PlayerContext& context, const SceneSpawn& spawn)
 	{
-		const float eyeHeight = context.physics.HayJugador() ? context.physics.AlturaOjosJugador() : fisica::PlayerDimensions::AlturaOjos;
+		const float eyeHeight = context.physics.HasPlayerBody() ? context.physics.PlayerEyeHeight() : fisica::PlayerDimensions::AlturaOjos;
 		const glm::vec3 eyes = spawn.pies + glm::vec3(0.0f, 0.0f, eyeHeight);
 		const glm::vec3 direction = glm::normalize(spawn.direccion);
 		context.cameraOrigin.x = eyes.x; context.cameraOrigin.y = eyes.y; context.cameraOrigin.z = eyes.z;
@@ -65,36 +65,36 @@ namespace gameplay::player
 
 	bool createPhysicsPlayer(PlayerContext& context)
 	{
-		if (!context.sceneHasValidGeometry || !context.scenePhysics || context.scenePhysics->NumeroDeCuerpos() == 0)
+		if (!context.sceneHasValidGeometry || !context.scenePhysics || context.scenePhysics->BodyCount() == 0)
 		{
 			std::cerr << "No se puede iniciar: la escena no tiene geometria fisica valida." << std::endl;
 			return false;
 		}
 		glm::vec3 feet, groundNormal;
 		std::string error;
-		if (!context.physics.ValidarSpawnJugador(context.activeSpawn.pies, feet, groundNormal, error))
+		if (!context.physics.ValidatePlayerSpawn(context.activeSpawn.pies, feet, groundNormal, error))
 		{
 			std::cerr << "Spawn invalido para la escena '" << context.activeSceneName << "': " << error << std::endl;
 			return false;
 		}
 		context.activeSpawn.pies = feet;
-		if (context.physics.HayJugador())
+		if (context.physics.HasPlayerBody())
 		{
-			if (!context.physics.ActualizarJugadorAgachado(false, 1.0f))
+			if (!context.physics.UpdatePlayerCrouch(false, 1.0f))
 			{
 				std::cerr << "No se puede reiniciar el spawn: hay un obstaculo sobre la capsula." << std::endl;
 				return false;
 			}
-			context.physics.TeletransportarJugador(feet);
+			context.physics.TeleportPlayer(feet);
 		}
-		else if (!context.physics.CrearJugador(feet))
+		else if (!context.physics.CreatePlayerBody(feet))
 		{
 			std::cerr << "No se pudo crear la capsula Bullet del jugador." << std::endl;
 			return false;
 		}
 		fixCameraAtSpawn(context, context.activeSpawn);
 		std::cout << "Spawn validado: pies (" << feet.x << ", " << feet.y << ", " << feet.z
-			<< "), ojos Z=" << feet.z + context.physics.AlturaOjosJugador() << ", normal suelo ("
+			<< "), ojos Z=" << feet.z + context.physics.PlayerEyeHeight() << ", normal suelo ("
 			<< groundNormal.x << ", " << groundNormal.y << ", " << groundNormal.z << ")." << std::endl;
 		return true;
 	}
@@ -118,20 +118,20 @@ namespace gameplay::player
 
 		const double distance = sqrt(moveX * moveX + moveY * moveY);
 		if (distance == 0.0) return;
-		context.physics.FijarVelocidadJugador(glm::vec3(moveX / distance * speed,
+		context.physics.SetPlayerVelocity(glm::vec3(moveX / distance * speed,
 			moveY / distance * speed, 0.0));
 	}
 
 	void synchronizePlayerAndCamera(PlayerContext& context)
 	{
-		if (!context.physics.HayJugador()) return;
+		if (!context.physics.HasPlayerBody()) return;
 		if (!isFpsMode(context))
 		{
-			context.physics.FijarVelocidadJugador(glm::vec3(0.0f));
+			context.physics.SetPlayerVelocity(glm::vec3(0.0f));
 			return;
 		}
-		const glm::vec3 feet = context.physics.PosicionPiesJugador();
-		const double eyeX = feet.x, eyeY = feet.y, eyeZ = feet.z + context.physics.AlturaOjosJugador();
+		const glm::vec3 feet = context.physics.PlayerFeetPosition();
+		const double eyeX = feet.x, eyeY = feet.y, eyeZ = feet.z + context.physics.PlayerEyeHeight();
 		const double moveX = eyeX - context.cameraOrigin.x, moveY = eyeY - context.cameraOrigin.y, moveZ = eyeZ - context.cameraOrigin.z;
 		context.cameraOrigin.x += moveX; context.cameraOrigin.y += moveY; context.cameraOrigin.z += moveZ;
 		context.lookAt[0] += moveX; context.lookAt[1] += moveY; context.lookAt[2] += moveZ;
@@ -156,25 +156,25 @@ namespace gameplay::player
 
 	void updateVisualBob(PlayerContext& context, float deltaTime)
 	{
-		const glm::vec3 feet = context.physics.HayJugador() ? context.physics.PosicionPiesJugador() : glm::vec3(0.0f);
+		const glm::vec3 feet = context.physics.HasPlayerBody() ? context.physics.PlayerFeetPosition() : glm::vec3(0.0f);
 		float distance = 0.0f;
 		if (context.hasPreviousFeet)
 			distance = glm::length(glm::vec2(feet.x - context.previousFeet.x, feet.y - context.previousFeet.y));
 		context.previousFeet = feet;
-		context.hasPreviousFeet = context.physics.HayJugador();
+		context.hasPreviousFeet = context.physics.HasPlayerBody();
 		if (distance > 1.0f) distance = 0.0f;
 
-		const float crouchFraction = context.physics.FraccionAgachado();
-		context.cameraBob.Actualizar(deltaTime, distance, context.physics.JugadorEnSuelo(), context.fpsInputActive() && context.physics.HayJugador(),
-			context.movement.Velocidad(), context.movement.parametros, crouchFraction);
-		context.walkWeight = context.cameraBob.Peso() * context.cameraBob.FactorDeAmplitud();
-		context.walkPhase = context.cameraBob.Fase();
+		const float crouchFraction = context.physics.CrouchFraction();
+		context.cameraBob.Advance(deltaTime, distance, context.physics.IsPlayerGrounded(), context.fpsInputActive() && context.physics.HasPlayerBody(),
+			context.movement.VelocityValue(), context.movement.parametros, crouchFraction);
+		context.walkWeight = context.cameraBob.WeightValue() * context.cameraBob.AmplitudeFactor();
+		context.walkPhase = context.cameraBob.CurrentPhase();
 	}
 
 	glm::dvec3 visualCameraDisplacement(const PlayerContext& context)
 	{
-		if (!isFpsMode(context) || !context.physics.HayJugador()) return glm::dvec3(0.0);
-		const fps::VisualOffset displacement = context.cameraBob.Desplazamiento();
+		if (!isFpsMode(context) || !context.physics.HasPlayerBody()) return glm::dvec3(0.0);
+		const fps::VisualOffset displacement = context.cameraBob.Offset();
 		const double dx = context.lookAt[0] - context.cameraOrigin.x, dy = context.lookAt[1] - context.cameraOrigin.y;
 		const double length = std::sqrt(dx * dx + dy * dy);
 		glm::dvec3 result(0.0, 0.0, displacement.vertical);

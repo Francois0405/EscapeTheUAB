@@ -60,8 +60,8 @@ RuntimeRenderer& runtimeRenderer()
 		.dibuixa_Escena = [] { dibuixa_Escena(); },
 		.Barra_Estat = [] { Barra_Estat(); },
 		.cameraVisualOffset = [] { return cameraVisualOffset(); },
-		.piesJugador = [] { return physicsWorld.HayJugador() ? physicsWorld.PosicionPiesJugador() : feetPositionFromCamera(); },
-		.alturaOjosJugador = [] { return physicsWorld.AlturaOjosJugador(); }
+		.piesJugador = [] { return physicsWorld.HasPlayerBody() ? physicsWorld.PlayerFeetPosition() : feetPositionFromCamera(); },
+		.alturaOjosJugador = [] { return physicsWorld.PlayerEyeHeight(); }
 	};
 	return renderizador;
 }

@@ -35,7 +35,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	glUniform3f(glcache::UniformLocation(ctx.shader_programID, "uIndirectSkyColor"),
 		ctx.sceneSkyBounceColor.r, ctx.sceneSkyBounceColor.g, ctx.sceneSkyBounceColor.b);
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), 1.0f);
-	const bool renderizarMovil = ctx.fpsModeActive() && !ctx.sceneEditor.Activo()
+	const bool renderizarMovil = ctx.fpsModeActive() && !ctx.sceneEditor.IsEnabled()
 		&& ctx.showPhone && ctx.phoneOBJ != nullptr;
 	glm::mat4 matrizMovilMundo(1.0f);
 	if (renderizarMovil)
@@ -64,7 +64,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 
 	// Dibuix SkyBox Cúbic.
 	// El Skybox se muestra en PLAY, pero no en EDIT.
-	if (ctx.SkyBoxCube && !ctx.sceneEditor.Activo())
+	if (ctx.SkyBoxCube && !ctx.sceneEditor.IsEnabled())
 	{
 		dibuixa_Skybox(
 			ctx.skC_programID,
@@ -83,7 +83,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 		for (std::size_t i = 0; i < ctx.sceneObjects.size(); ++i)
 		{
 			const SceneObject& obj = ctx.sceneObjects[i];
-			if (!ctx.sceneEditor.ObjetoVisible(i)) continue;   // visibilidad TEMPORAL de la vista de edicion
+			if (!ctx.sceneEditor.IsObjectVisible(i)) continue;   // visibilidad TEMPORAL de la vista de edicion
 			auto it = ctx.roomModels.find(obj.modelo);
 
 			if (it == ctx.roomModels.end())
@@ -96,7 +96,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			{
 				std::vector<SceneWallSection> secciones;
 				std::string errorPared;
-				if (GenerarSeccionesPared(glm::abs(obj.escala), obj.pared.aperturas, secciones, errorPared))
+				if (GenerateWallSections(glm::abs(obj.escala), obj.pared.aperturas, secciones, errorPared))
 				{
 					const glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(obj.rotacion.z), glm::vec3(0, 0, 1));
 					for (const auto& seccion : secciones)
@@ -108,8 +108,8 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 				}
 				else std::cerr << "Pared paramétrica '" << obj.id << "' inválida: " << errorPared << '\n';
 			}
-			if (matrices.empty()) matrices.push_back(ctx.sceneEditor.Activo()
-				? fisica::MatrizDeObjeto(obj) : ctx.physicsScene->MatrizVisualDe(static_cast<int>(i), obj));
+			if (matrices.empty()) matrices.push_back(ctx.sceneEditor.IsEnabled()
+				? fisica::ObjectMatrix(obj) : ctx.physicsScene->VisualMatrixOf(static_cast<int>(i), obj));
 			if (ctx.optimizedRendering)
 			{
 				Vector3D minimo{}, maximo{};
@@ -119,7 +119,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 					const glm::mat4 vp = ctx.ProjectionMatrix * ctx.ViewMatrix;
 					matrices.erase(std::remove_if(matrices.begin(), matrices.end(), [&](const glm::mat4& m)
 					{
-						const bool fuera = CajaFueraDeFrustum(vp, m, lo, hi);
+						const bool fuera = BoxOutsideFrustum(vp, m, lo, hi);
 						if (renderMetrics::enabled) { if (fuera) ++renderMetrics::descartados; else ++renderMetrics::visibles; }
 						return fuera;
 					}), matrices.end());
@@ -178,22 +178,22 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			false, ctx.texturesID, ctx.textura_map, ctx.tFlag_invert_Y,
 			ctx.npts_T, ctx.PC_t, ctx.pas_CS, ctx.sw_Punts_Control, ctx.dibuixa_TriedreFrenet,
 			modelo.second.get(),
-			animation::MatrizPuertaConBisagra(ctx.demoDoorHalfSize, ctx.demoDoorHinge, ctx.demoDoorAngle)
+			animation::HingedDoorMatrix(ctx.demoDoorHalfSize, ctx.demoDoorHinge, ctx.demoDoorAngle)
 		);
 		break;
 	}
 
 	// DEMO FÍSICA: dibuja el cubo con la pose que calcula Bullet (reutiliza test.obj, de ±1 m).
-	if (ctx.fallingCubeDemo.EstaActiva())
+	if (ctx.fallingCubeDemo.IsRunningNow())
 	{
 		for (const auto& modelo : ctx.roomModels)
 		{
 			if (!modelo.first.ends_with("test.obj")) continue;
-			const fisica::BodyPose pose = ctx.fallingCubeDemo.PoseCubo();
+			const fisica::BodyPose pose = ctx.fallingCubeDemo.CubePose();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
 			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
 				* glm::mat4_cast(pose.rotacion)
-				* glm::scale(glm::mat4(1.0f), ctx.fallingCubeDemo.MitadTamanoCubo());
+				* glm::scale(glm::mat4(1.0f), ctx.fallingCubeDemo.CubeHalfSize());
 			dibuixa_EscenaGL(
 				ctx.shader_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid,
 				OBJOBJ, ctx.col_obj, ctx.sw_material,
@@ -206,10 +206,10 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	}
 
 	// Objetos animados GLB (puertas...): mismo shader y cámara que el resto de la escena.
-	if (ctx.animatedObjectsReady && ctx.sceneEditor.MostrarAnimados())
+	if (ctx.animatedObjectsReady && ctx.sceneEditor.ShowAnimated())
 	{
 		glUseProgram(ctx.shader_programID);
-		glb::DibujarObjetosAnimados(ctx.animatedObjects, ctx.shader_programID,
+		glb::DrawAnimatedObjects(ctx.animatedObjects, ctx.shader_programID,
 			ctx.ProjectionMatrix * ctx.ViewMatrix, ctx.optimizedRendering);
 	}
 
@@ -230,13 +230,13 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	}
 
 	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
-	if (ctx.sceneEditor.Activo() && ctx.sceneEditor.MostrarColisionadores())
+	if (ctx.sceneEditor.IsEnabled() && ctx.sceneEditor.ShowCollidersEnabled())
 	{
 		std::vector<fisica::CollisionBox> cajasEditor;
 		for (std::size_t indiceObjeto = 0; indiceObjeto < ctx.sceneObjects.size(); ++indiceObjeto)
 		{
 			const SceneObject& objeto = ctx.sceneObjects[indiceObjeto];
-			if (!objeto.fisica.presente || !ctx.sceneEditor.ObjetoVisible(indiceObjeto)) continue;
+			if (!objeto.fisica.presente || !ctx.sceneEditor.IsObjectVisible(indiceObjeto)) continue;
 			glm::mat4 giro(1.0f);
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
@@ -248,17 +248,17 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			caja.mitadTamano = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
 			cajasEditor.push_back(caja);
 		}
-		fisica::DibujarColisionadores(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, cajasEditor);
+		fisica::DrawColliders(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, cajasEditor);
 	}
-	else if (ctx.showColliders && !ctx.sceneEditor.Activo())
-		fisica::DibujarColisionadores(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, ctx.physicsWorld.CajasDeColision());
+	else if (ctx.showColliders && !ctx.sceneEditor.IsEnabled())
+		fisica::DrawColliders(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, ctx.physicsWorld.CollisionBoxes());
 
 	// Multijugador: jugadores remotos (el local NUNCA se dibuja) y objeto compartido de prueba.
-	if (ctx.networkGame.Activa() && !ctx.sceneEditor.Activo())
+	if (ctx.networkGame.IsActive() && !ctx.sceneEditor.IsEnabled())
 	{
-		netgame::DibujarAvataresRemotos(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix,
-			ctx.networkGame.RemotosParaDibujar(glfwGetTime()),
-			ctx.networkGame.Objeto().conocido, ctx.networkGame.PosicionVisualObjeto(), ctx.networkGame.SoyDuenoDelObjeto(),
+		netgame::DrawRemoteAvatars(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix,
+			ctx.networkGame.RemotePlayersToDraw(glfwGetTime()),
+			ctx.networkGame.Objeto().conocido, ctx.networkGame.ObjectVisualPosition(), ctx.networkGame.OwnsObject(),
 			ctx.networkGame.Objeto().dueno != netgame::kSinDueno);
 	}
 

@@ -78,10 +78,10 @@ struct RuntimeRenderer
 
 	void OnSize(GLFWwindow* window, int width, int height);
 	void OnFramebufferSize(GLFWwindow* window, int width, int height);
-	void dibujarEscenaEstereo(int anchoVentana, int altoVentana);
+	void drawStereoScene(int anchoVentana, int altoVentana);
 	bool drawVrScene();
 	void OnPaint(GLFWwindow* window);
 
 private:
-	void copiarOjoAVentana(const vr::VrEye& ojo);
+	void copyEyeToWindow(const vr::VrEye& ojo);
 };

@@ -22,7 +22,7 @@ namespace game
 		static constexpr float CooldownReaparicion = 30.0f;
 		static constexpr float DistanciaParaReaparecer = 10.0f;
 
-		bool ActualizarTemporizadorReaparicion(bool estaLejos, bool interaccionJugador, float delta)
+		bool UpdateRespawnTimer(bool estaLejos, bool interaccionJugador, float delta)
 		{
 			if (std::isfinite(delta) && delta > 0.0f)
 				m_tiempoDesdeReaparicion += delta;
@@ -30,15 +30,15 @@ namespace game
 				m_tiempoDesdeReaparicion >= CooldownReaparicion;
 		}
 
-		void RegistrarReaparicion()
+		void RegisterRespawn()
 		{
 			m_tiempoDesdeReaparicion = 0.0f;
 		}
 
-		bool SeguimientoSuspendido() const { return m_seguimientoSuspendido; }
-		float TiempoDesdeReaparicion() const { return m_tiempoDesdeReaparicion; }
+		bool IsFollowSuspended() const { return m_seguimientoSuspendido; }
+		float TimeSinceRespawn() const { return m_tiempoDesdeReaparicion; }
 
-		static glm::vec3 CalcularDireccionSeguimiento(const glm::vec3& posicionHiriti,
+		static glm::vec3 ComputeFollowDirection(const glm::vec3& posicionHiriti,
 			const glm::vec3& posicionJugador, const std::array<float, 5>& distanciasObstaculos)
 		{
 			const glm::vec2 haciaJugador(posicionJugador.x - posicionHiriti.x,
@@ -73,10 +73,10 @@ namespace game
 			return glm::vec3(mejorDireccion.x, mejorDireccion.y, 0.0f);
 		}
 
-		bool Actualizar(bool puedeDescubrir, const glm::vec3& origen,
+		bool Advance(bool puedeDescubrir, const glm::vec3& origen,
 			const glm::vec3& direccion, const glm::vec3& centro, float radio)
 		{
-			if (!m_descubierto && puedeDescubrir && EstaMirando(origen, direccion, centro, radio))
+			if (!m_descubierto && puedeDescubrir && IsLookingAt(origen, direccion, centro, radio))
 			{
 				m_descubierto = true;
 				m_esperandoAgarrame = true;
@@ -86,7 +86,7 @@ namespace game
 			return false;
 		}
 
-		bool ActualizarAgarrame(float delta)
+		bool UpdateGrabMe(float delta)
 		{
 			if (!m_esperandoAgarrame || !std::isfinite(delta) || delta <= 0.0f) return false;
 
@@ -97,7 +97,7 @@ namespace game
 			return true;
 		}
 
-		bool MarcarAgarrado()
+		bool MarkGrabbed()
 		{
 			if (!m_descubierto || m_agarrado) return false;
 			m_agarrado = true;
@@ -107,7 +107,7 @@ namespace game
 
 		// Un agarre físico validado por el host también cuenta como descubrimiento, incluso si
 		// la detección visual local y la hitbox no coinciden exactamente entre dos réplicas.
-		bool DescubrirPorInteraccion()
+		bool DiscoverByInteraction()
 		{
 			if (m_descubierto) return false;
 			m_descubierto = true;
@@ -116,14 +116,14 @@ namespace game
 			return true;
 		}
 
-		void MarcarLanzadoPorJugador(float potencia)
+		void MarkThrownByPlayer(float potencia)
 		{
 			m_sonidoDanioPendiente = std::isfinite(potencia) && potencia > PotenciaMinimaSonidoDanio;
 			m_seguimientoSuspendido = true;
 			m_tiempoEstable = 0.0f;
 		}
 
-		int ActualizarContacto(bool hayContacto)
+		int UpdateContact(bool hayContacto)
 		{
 			const bool nuevoImpacto = m_sonidoDanioPendiente && hayContacto && !m_habiaContacto;
 			m_habiaContacto = hayContacto;
@@ -135,7 +135,7 @@ namespace game
 			return variante;
 		}
 
-		bool ActualizarSuspensionSeguimiento(bool jugadorManipula, const glm::vec3& velocidad, float delta)
+		bool UpdateFollowSuspension(bool jugadorManipula, const glm::vec3& velocidad, float delta)
 		{
 			if (jugadorManipula)
 			{
@@ -163,7 +163,7 @@ namespace game
 			return false;
 		}
 
-		static glm::vec3 CalcularAceleracionSeguimiento(const glm::vec3& posicionHiriti,
+		static glm::vec3 ComputeFollowAcceleration(const glm::vec3& posicionHiriti,
 			const glm::vec3& posicionJugador, const glm::vec3& velocidad,
 			const glm::vec3& direccionSeguimiento, float distanciaParada,
 			float velocidadMaxima, float aceleracionMaxima)
@@ -194,7 +194,7 @@ namespace game
 			return glm::vec3(aceleracion.x, aceleracion.y, 0.0f);
 		}
 
-		void Reiniciar()
+		void ResetState()
 		{
 			m_descubierto = false;
 			m_esperandoAgarrame = false;
@@ -209,7 +209,7 @@ namespace game
 		}
 
 	private:
-		static bool EstaMirando(const glm::vec3& origen, const glm::vec3& direccion,
+		static bool IsLookingAt(const glm::vec3& origen, const glm::vec3& direccion,
 			const glm::vec3& centro, float radio)
 		{
 			const float longitudDireccion = glm::length(direccion);

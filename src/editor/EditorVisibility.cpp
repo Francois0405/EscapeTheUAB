@@ -5,7 +5,7 @@
 
 namespace editor
 {
-	std::vector<ElementClass> ClasificarElementos(const std::vector<SceneObject>& objetos)
+	std::vector<ElementClass> ClassifyElements(const std::vector<SceneObject>& objetos)
 	{
 		std::vector<ElementClass> clases(objetos.size(), ElementClass::Objeto);
 

@@ -21,18 +21,18 @@ int main()
 	check(!ec, "create isolated preferences directory");
 	std::string error;
 	const netgame::LastEndpoint saved{ "100.87.12.34", 7777 };
-	check(netgame::GuardarUltimoEndpoint(saved, error, file), "save Tailscale IPv4 and port");
+	check(netgame::SaveLastEndpoint(saved, error, file), "save Tailscale IPv4 and port");
 	netgame::LastEndpoint loaded;
-	check(netgame::CargarUltimoEndpoint(loaded, file) && loaded.host == saved.host && loaded.puerto == saved.puerto,
+	check(netgame::LoadLastEndpoint(loaded, file) && loaded.host == saved.host && loaded.puerto == saved.puerto,
 		"load saved endpoint");
-	check(netgame::GuardarUltimoEndpoint({ "100.87.12.34", 45678 }, error, file), "save custom port");
-	check(netgame::CargarUltimoEndpoint(loaded, file) && loaded.puerto == 45678, "reload custom port");
-	check(!netgame::GuardarUltimoEndpoint({ "100.87.12.34\n127.0.0.1", 7777 }, error, file), "reject multiline host");
+	check(netgame::SaveLastEndpoint({ "100.87.12.34", 45678 }, error, file), "save custom port");
+	check(netgame::LoadLastEndpoint(loaded, file) && loaded.puerto == 45678, "reload custom port");
+	check(!netgame::SaveLastEndpoint({ "100.87.12.34\n127.0.0.1", 7777 }, error, file), "reject multiline host");
 	{
 		std::ofstream malformed(file, std::ios::binary | std::ios::trunc);
 		malformed << "1\n100.87.12.34\n70000\n";
 	}
-	check(!netgame::CargarUltimoEndpoint(loaded, file), "reject out-of-range persisted port");
+	check(!netgame::LoadLastEndpoint(loaded, file), "reject out-of-range persisted port");
 	fs::remove(file, ec);
 	fs::remove(dir, ec);
 	return failures == 0 ? 0 : 1;

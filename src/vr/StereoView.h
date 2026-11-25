@@ -24,7 +24,7 @@ namespace stereo
 	// Matriz de vista de un ojo a partir de la vista CENTRAL (la de la cámara FPS).
 	// Se desplaza el MUNDO en el espacio de la cámara: para el ojo izquierdo el mundo se mueve hacia
 	// la derecha (+X de cámara), es decir, el ojo queda a la izquierda del centro. La orientación no cambia.
-	inline glm::mat4 VistaDeOjo(const glm::mat4& vistaCentral, Ojo ojo, float mitadSeparacion = MitadSeparacionOjos)
+	inline glm::mat4 EyeViewMatrix(const glm::mat4& vistaCentral, Ojo ojo, float mitadSeparacion = MitadSeparacionOjos)
 	{
 		const float desplazamiento = (ojo == Ojo::Izquierdo) ? mitadSeparacion : -mitadSeparacion;
 		return glm::translate(glm::mat4(1.0f), glm::vec3(desplazamiento, 0.0f, 0.0f)) * vistaCentral;
@@ -32,7 +32,7 @@ namespace stereo
 
 	// Rectángulo de pantalla de cada ojo: mitad izquierda / mitad derecha.
 	struct Rectangulo { int x, ancho; };
-	inline Rectangulo MitadDePantalla(Ojo ojo, int anchoTotal)
+	inline Rectangulo ScreenHalf(Ojo ojo, int anchoTotal)
 	{
 		return { ojo == Ojo::Izquierdo ? 0 : anchoTotal / 2, anchoTotal / 2 };
 	}

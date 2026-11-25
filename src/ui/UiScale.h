@@ -13,7 +13,7 @@ namespace interfaz
 		float alto = 0.0f;
 	};
 
-	inline float CalcularEscalaUI(float anchoLogico, float altoLogico,
+	inline float ComputeUiScale(float anchoLogico, float altoLogico,
 		float escalaDpiX, float escalaDpiY)
 	{
 		constexpr float anchoReferencia = 1280.0f;
@@ -27,7 +27,7 @@ namespace interfaz
 		return std::clamp(std::sqrt(resolucionLogica * dpi), 0.75f, 1.75f);
 	}
 
-	inline UiWindowRect EscalarRectanguloUI(const UiWindowRect& actual,
+	inline UiWindowRect ScaleUiRect(const UiWindowRect& actual,
 		float factor, float anchoDisplay, float altoDisplay)
 	{
 		const float ancho = std::clamp(actual.ancho * factor, 0.0f, anchoDisplay);

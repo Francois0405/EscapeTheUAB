@@ -49,7 +49,7 @@ namespace vr
 
 	// 'adelante' = dirección de la cámara FPS (puede tener componente vertical; se ignora). Si es casi vertical
 	// o nula, se usa +Y para no producir una base degenerada.
-	inline glm::vec3 AdelanteHorizontal(const glm::vec3& direccion)
+	inline glm::vec3 HorizontalForward(const glm::vec3& direccion)
 	{
 		glm::vec3 plano(direccion.x, direccion.y, 0.0f);
 		const float largo = glm::length(plano);
@@ -59,19 +59,19 @@ namespace vr
 
 	// Anclaje a partir del jugador. 'pies' = posición de sus pies; 'espacioSuelo' = true si el espacio de
 	// referencia es STAGE (el origen está en el suelo), false si es LOCAL (el origen está a la altura de los ojos).
-	inline Anchor AnclajeDelJugador(const glm::vec3& pies, const glm::vec3& direccionCamara, bool espacioSuelo,
+	inline Anchor PlayerAnchor(const glm::vec3& pies, const glm::vec3& direccionCamara, bool espacioSuelo,
 		float alturaOjos, float escala = 1.0f)
 	{
 		Anchor a;
 		a.origen = espacioSuelo ? pies : pies + glm::vec3(0.0f, 0.0f, alturaOjos);
-		a.adelante = AdelanteHorizontal(direccionCamara);
+		a.adelante = HorizontalForward(direccionCamara);
 		a.escala = escala;
 		return a;
 	}
 
 	// Columnas: ejes X,Y,Z de OpenXR expresados en el motor:  X_xr = derecha, Y_xr = arriba (Z), Z_xr = -adelante.
 	// Es una rotación propia (determinante +1).
-	inline glm::mat3 BaseMotorDesdeXR(const glm::vec3& adelanteUnitario)
+	inline glm::mat3 EngineBasisFromXr(const glm::vec3& adelanteUnitario)
 	{
 		const glm::vec3 arriba(0.0f, 0.0f, 1.0f);
 		const glm::vec3 derecha = glm::cross(adelanteUnitario, arriba);
@@ -79,9 +79,9 @@ namespace vr
 	}
 
 	// Pose del ojo en el MUNDO del motor (matriz modelo de la cámara: sus ejes locales son los de OpenXR).
-	inline glm::mat4 MundoDeOjo(const XrPose& pose, const Anchor& anclaje)
+	inline glm::mat4 EyeWorld(const XrPose& pose, const Anchor& anclaje)
 	{
-		const glm::mat3 base = BaseMotorDesdeXR(anclaje.adelante);
+		const glm::mat3 base = EngineBasisFromXr(anclaje.adelante);
 		const glm::mat3 rotacion = base * glm::mat3_cast(glm::normalize(pose.orientacion));
 		const glm::vec3 posicion = anclaje.origen + base * (pose.posicion * anclaje.escala);
 		glm::mat4 m(rotacion);
@@ -90,19 +90,19 @@ namespace vr
 	}
 
 	// Matriz de vista (mundo -> ojo) lista para el shader (viewMatrix).
-	inline glm::mat4 VistaDeOjoVR(const XrPose& pose, const Anchor& anclaje)
+	inline glm::mat4 VrEyeViewMatrix(const XrPose& pose, const Anchor& anclaje)
 	{
-		return glm::inverse(MundoDeOjo(pose, anclaje));
+		return glm::inverse(EyeWorld(pose, anclaje));
 	}
 
 	// Posición del ojo en el motor (para iluminación especular, depuración...).
-	inline glm::vec3 PosicionDeOjo(const XrPose& pose, const Anchor& anclaje)
+	inline glm::vec3 EyePosition(const XrPose& pose, const Anchor& anclaje)
 	{
-		return glm::vec3(MundoDeOjo(pose, anclaje)[3]);
+		return glm::vec3(EyeWorld(pose, anclaje)[3]);
 	}
 
 	// Proyección en perspectiva (profundidad OpenGL -1..1) con el campo de visión, posiblemente asimétrico, de OpenXR.
-	inline glm::mat4 ProyeccionDesdeCampo(const FieldOfView& fov, float cerca, float lejos)
+	inline glm::mat4 ProjectionFromFov(const FieldOfView& fov, float cerca, float lejos)
 	{
 		const float tanI = std::tan(fov.izquierda), tanD = std::tan(fov.derecha);
 		const float tanA = std::tan(fov.arriba), tanB = std::tan(fov.abajo);

@@ -84,14 +84,14 @@ namespace glb
 		}
 	}
 
-	void SubirModeloAGPU(GlbModel& modelo)
+	void UploadModelToGpu(GlbModel& modelo)
 	{
 		for (GlbMesh& malla : modelo.mallas)
 			for (GlbPrimitive& primitiva : malla.primitivas)
 				if (primitiva.vao == 0) SubirPrimitiva(primitiva);
 	}
 
-	void LiberarModeloDeGPU(GlbModel& modelo)
+	void ReleaseModelFromGpu(GlbModel& modelo)
 	{
 		for (GlbMesh& malla : modelo.mallas)
 			for (GlbPrimitive& primitiva : malla.primitivas)
@@ -104,21 +104,21 @@ namespace glb
 			}
 	}
 
-	void DibujarModeloGLB(const GlbModel& modelo, const GlbPose& pose, unsigned int programa, const glm::mat4& matrizBase,
+	void DrawGlbModel(const GlbModel& modelo, const GlbPose& pose, unsigned int programa, const glm::mat4& matrizBase,
 		const glm::mat4& viewProjection, bool aplicarCulling)
 	{
 		// Matriz final de cada nodo (se lee de derecha a izquierda):
 		//   1. mundo del nodo : su posición dentro de la jerarquía del archivo (Y arriba)
 		//   2. Y-arriba -> Z-arriba : cambio de ejes de glTF a nuestro juego
 		//   3. matrizBase     : dónde colocamos el modelo en la habitación
-		const glm::mat4 cambioDeEjes = matrizBase * MatrizYArribaAZArriba();
+		const glm::mat4 cambioDeEjes = matrizBase * YUpToZUpMatrix();
 
 		for (size_t i = 0; i < modelo.nodos.size(); ++i)
 		{
 			const int indiceMalla = modelo.nodos[i].indiceMalla;
 			if (indiceMalla < 0) continue;
 
-			const glm::mat4 matriz = cambioDeEjes * MatrizMundoDelNodo(modelo, pose, static_cast<int>(i));
+			const glm::mat4 matriz = cambioDeEjes * NodeWorldMatrix(modelo, pose, static_cast<int>(i));
 			bool nodoVisible = !aplicarCulling;
 			if (aplicarCulling)
 			{
@@ -129,7 +129,7 @@ namespace glb
 				{
 					if (!primitiva.tieneBounds) continue;
 					tieneBounds = true;
-					if (!CajaFueraDeFrustum(viewProjection, matriz, primitiva.boundsMin, primitiva.boundsMax))
+					if (!BoxOutsideFrustum(viewProjection, matriz, primitiva.boundsMin, primitiva.boundsMax))
 					{ nodoVisible = true; break; }
 				}
 				if (!tieneBounds) nodoVisible = true;
@@ -149,20 +149,20 @@ namespace glb
 		glBindVertexArray(0);
 	}
 
-	void SubirEscenaAnimadaAGPU(AnimatedScene& escena)
+	void UploadAnimatedSceneToGpu(AnimatedScene& escena)
 	{
-		for (auto& entrada : escena.modelos) SubirModeloAGPU(entrada.second);   // un modelo = una subida, aunque tenga varias instancias
+		for (auto& entrada : escena.modelos) UploadModelToGpu(entrada.second);   // un modelo = una subida, aunque tenga varias instancias
 	}
 
-	void LiberarEscenaAnimadaDeGPU(AnimatedScene& escena)
+	void ReleaseAnimatedSceneFromGpu(AnimatedScene& escena)
 	{
-		for (auto& entrada : escena.modelos) LiberarModeloDeGPU(entrada.second);
+		for (auto& entrada : escena.modelos) ReleaseModelFromGpu(entrada.second);
 	}
 
-	void DibujarObjetosAnimados(const AnimatedScene& escena, unsigned int programa,
+	void DrawAnimatedObjects(const AnimatedScene& escena, unsigned int programa,
 		const glm::mat4& viewProjection, bool aplicarCulling)
 	{
 		for (const AnimatedObject& objeto : escena.objetos)
-			DibujarModeloGLB(*objeto.modelo, objeto.pose, programa, MatrizBaseDelObjeto(objeto), viewProjection, aplicarCulling);
+			DrawGlbModel(*objeto.modelo, objeto.pose, programa, ObjectBaseMatrix(objeto), viewProjection, aplicarCulling);
 	}
 }

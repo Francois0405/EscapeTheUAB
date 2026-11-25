@@ -65,7 +65,7 @@ namespace glb
 		bool reproduciendo = false;
 
 		// Empieza desde el principio y hacia delante.
-		void Iniciar(float duracionSegundos)
+		void BeginPlayback(float duracionSegundos)
 		{
 			tiempo = 0.0f;
 			duracion = duracionSegundos;
@@ -75,14 +75,14 @@ namespace glb
 
 		// Continúa DESDE EL INSTANTE ACTUAL en el sentido indicado (+1 o -1).
 		// Si se llama a mitad de una reproducción, invierte el movimiento sin saltos.
-		void Reproducir(float nuevoSentido)
+		void PlayAnimation(float nuevoSentido)
 		{
 			sentido = (nuevoSentido >= 0.0f) ? 1.0f : -1.0f;
 			reproduciendo = true;
 		}
 
 		// Se llama una vez por fotograma con el tiempo transcurrido desde el anterior.
-		void Actualizar(float deltaSegundos)
+		void Advance(float deltaSegundos)
 		{
 			if (!reproduciendo) return;
 			tiempo += deltaSegundos * sentido;
@@ -101,14 +101,14 @@ namespace glb
 	};
 
 	// Convierte el (x, y, z, w) del archivo en un glm::quat (que pide w, x, y, z).
-	inline glm::quat CuaternionDesdeVec4(const glm::vec4& v)
+	inline glm::quat QuaternionFromVec4(const glm::vec4& v)
 	{
 		return glm::quat(v.w, v.x, v.y, v.z);
 	}
 
 	// Busca el keyframe anterior al instante dado.
 	// Devuelve i tal que tiempos[i] <= tiempo < tiempos[i+1]. Se asume i+1 válido.
-	inline size_t BuscarKeyframeAnterior(const std::vector<float>& tiempos, float tiempo)
+	inline size_t FindPreviousKeyframe(const std::vector<float>& tiempos, float tiempo)
 	{
 		size_t i = 0;
 		while (i + 2 < tiempos.size() && tiempos[i + 1] <= tiempo) ++i;
@@ -116,11 +116,11 @@ namespace glb
 	}
 
 	// Mezcla dos valores de un canal: slerp para rotaciones, mix para lo demás.
-	inline glm::vec4 MezclarValores(AnimatedProperty propiedad, const glm::vec4& a, const glm::vec4& b, float fraccion)
+	inline glm::vec4 BlendValues(AnimatedProperty propiedad, const glm::vec4& a, const glm::vec4& b, float fraccion)
 	{
 		if (propiedad == AnimatedProperty::Rotacion)
 		{
-			const glm::quat q = glm::slerp(CuaternionDesdeVec4(a), CuaternionDesdeVec4(b), fraccion);
+			const glm::quat q = glm::slerp(QuaternionFromVec4(a), QuaternionFromVec4(b), fraccion);
 			return glm::vec4(q.x, q.y, q.z, q.w);
 		}
 		return glm::mix(a, b, fraccion);
@@ -129,13 +129,13 @@ namespace glb
 	// Valor de un canal en un instante.
 	//  - Antes del primer keyframe o después del último: se queda con el extremo.
 	//  - Entre dos keyframes: interpola (o mantiene, si el canal es de tipo escalón).
-	inline glm::vec4 ValorDelCanalEnTiempo(const AnimationChannel& canal, float tiempo)
+	inline glm::vec4 ChannelValueAtTime(const AnimationChannel& canal, float tiempo)
 	{
 		if (canal.valores.empty()) return glm::vec4(0.0f);
 		if (tiempo <= canal.tiempos.front()) return canal.valores.front();
 		if (tiempo >= canal.tiempos.back()) return canal.valores.back();
 
-		const size_t anterior = BuscarKeyframeAnterior(canal.tiempos, tiempo);
+		const size_t anterior = FindPreviousKeyframe(canal.tiempos, tiempo);
 		const size_t siguiente = anterior + 1;
 		if (canal.interpolacion == InterpolationMode::Escalon) return canal.valores[anterior];
 
@@ -143,7 +143,7 @@ namespace glb
 		const float duracionTramo = canal.tiempos[siguiente] - canal.tiempos[anterior];
 		if (duracionTramo <= 0.0f) return canal.valores[siguiente];   // keyframes repetidos: evita dividir por cero
 		const float fraccion = (tiempo - canal.tiempos[anterior]) / duracionTramo;
-		return MezclarValores(canal.propiedad, canal.valores[anterior], canal.valores[siguiente], fraccion);
+		return BlendValues(canal.propiedad, canal.valores[anterior], canal.valores[siguiente], fraccion);
 	}
 }
 

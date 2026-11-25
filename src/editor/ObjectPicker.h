@@ -23,7 +23,7 @@ namespace editor
 
 	// Rayo que atraviesa el píxel 'cursor' del rectángulo del viewport {x, y, ancho, alto} (coordenadas de ventana,
 	// Y hacia abajo). Sirve para proyección en perspectiva y ortográfica (cerca/lejos del frustum).
-	Rayo RayoDesdePantalla(const glm::mat4& vista, const glm::mat4& proyeccion, const glm::vec2& cursor,
+	Rayo RayFromScreen(const glm::mat4& vista, const glm::mat4& proyeccion, const glm::vec2& cursor,
 		const glm::vec4& rectangulo);
 
 	// Un elemento seleccionable: 'modelo' lleva la caja local al mundo (posición, giro y escala del objeto).
@@ -36,5 +36,5 @@ namespace editor
 
 	// Devuelve el 'indice' del candidato más cercano al origen del rayo, o -1. Si dos están a menos de 2 cm entre sí
 	// gana el de menor volumen (un objeto sobre una mesa se elige antes que la mesa).
-	int ElegirMasCercano(const Rayo& rayo, const std::vector<SelectionCandidate>& candidatos, float* distancia = nullptr);
+	int PickNearest(const Rayo& rayo, const std::vector<SelectionCandidate>& candidatos, float* distancia = nullptr);
 }

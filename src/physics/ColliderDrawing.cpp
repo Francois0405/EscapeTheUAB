@@ -40,7 +40,7 @@ namespace fisica
 		}
 	}
 
-	void DibujarColisionadores(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
+	void DrawColliders(unsigned int programaEjes, const glm::mat4& proyeccion, const glm::mat4& vista,
 		const std::vector<CollisionBox>& cajas)
 	{
 		if (cajas.empty() || programaEjes == 0) return;
@@ -50,7 +50,7 @@ namespace fisica
 		for (const CollisionBox& caja : cajas)
 		{
 			const glm::vec4 color = ColorDe(caja);
-			for (const glm::vec3& punto : AristasDeCaja(caja))
+			for (const glm::vec3& punto : BoxEdges(caja))
 				vertices.insert(vertices.end(), { punto.x, punto.y, punto.z, color.r, color.g, color.b, color.a });
 		}
 
@@ -70,7 +70,7 @@ namespace fisica
 		glBindVertexArray(0);
 	}
 
-	void LiberarDibujoColisionadores()
+	void ReleaseColliderDrawing()
 	{
 		if (vbo != 0) glDeleteBuffers(1, &vbo);
 		if (vao != 0) glDeleteVertexArrays(1, &vao);

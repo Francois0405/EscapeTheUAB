@@ -37,7 +37,7 @@ void RuntimeRenderer::OnFramebufferSize(GLFWwindow* window, int width, int heigh
 // Vista estereoscópica de PRUEBA (F2): dibuja la escena dos veces, una en cada mitad de la pantalla.
 // Reutiliza Vista_Navega del profesor para la vista CENTRAL (limpia los buffers, iluminación, culling,
 // profundidad, pan) y solo desplaza esa matriz para cada ojo. No toca la física ni la posición del jugador.
-void RuntimeRenderer::dibujarEscenaEstereo(int anchoVentana, int altoVentana)
+void RuntimeRenderer::drawStereoScene(int anchoVentana, int altoVentana)
 {
 	GLdouble arriba[3] = { 0.0, 0.0, 1.0 };   // Z es "arriba" en este juego
 	const glm::dvec3 balanceo = cameraVisualOffset();
@@ -50,10 +50,10 @@ void RuntimeRenderer::dibujarEscenaEstereo(int anchoVentana, int altoVentana)
 
 	for (const stereo::Ojo ojo : { stereo::Ojo::Izquierdo, stereo::Ojo::Derecho })
 	{
-		const stereo::Rectangulo mitad = stereo::MitadDePantalla(ojo, anchoVentana);
+		const stereo::Rectangulo mitad = stereo::ScreenHalf(ojo, anchoVentana);
 		// Cada mitad tiene SU relación de aspecto (la mitad de ancho): Projeccio_Perspectiva fija el viewport y la proyección.
 		ProjectionMatrix = Projeccio_Perspectiva(shader_programID, mitad.x, 0, mitad.ancho, altoVentana, OPV.R);
-		ViewMatrix = stereo::VistaDeOjo(vistaCentral, ojo);
+		ViewMatrix = stereo::EyeViewMatrix(vistaCentral, ojo);
 
 		Iluminacio(
 			shader_programID,
@@ -84,7 +84,7 @@ void RuntimeRenderer::dibujarEscenaEstereo(int anchoVentana, int altoVentana)
 // el anclaje (pies o ojos del jugador + su orientación FPS) se recalcula cada fotograma.
 // ---------------------------------------------------------------------------------------------
 // Copia el ojo a la ventana (espejo de escritorio) conservando su proporción. Debe hacerse ANTES de liberar la imagen.
-void RuntimeRenderer::copiarOjoAVentana(const vr::VrEye& ojo)
+void RuntimeRenderer::copyEyeToWindow(const vr::VrEye& ojo)
 {
 	if (w <= 0 || h <= 0 || ojo.ancho <= 0 || ojo.alto <= 0) return;
 	const float escala = std::min(static_cast<float>(w) / ojo.ancho, static_cast<float>(h) / ojo.alto);
@@ -102,7 +102,7 @@ void RuntimeRenderer::copiarOjoAVentana(const vr::VrEye& ojo)
 // hay que dibujar la escena de escritorio con normalidad (VR sin sesión en marcha, visor sin mostrar, etc.).
 bool RuntimeRenderer::drawVrScene()
 {
-	const vr::FrameResult resultado = openXrManager.EmpezarFotograma();
+	const vr::FrameResult resultado = openXrManager.BeginXrFrame();
 	if (resultado == vr::FrameResult::NoActivo) return false;
 
 	bool dibujado = false;
@@ -110,21 +110,21 @@ bool RuntimeRenderer::drawVrScene()
 	{
 		const glm::vec3 pies = piesJugador();
 		const glm::vec3 haciaDondeMira(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
-		const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, haciaDondeMira,
-			openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo, alturaOjosJugador());
+		const vr::Anchor anclaje = vr::PlayerAnchor(pies, haciaDondeMira,
+			openXrManager.ReferenceSpaceHandle() == vr::ReferenceSpaceKind::Suelo, alturaOjosJugador());
 
 		glDisable(GL_SCISSOR_TEST);
 		glm::vec3 sumaOjos(0.0f); int ojosCabeza = 0; vr::XrPose primerOjo;
-		for (int i = 0; i < openXrManager.NumeroDeOjos(); ++i)
+		for (int i = 0; i < openXrManager.EyeCount(); ++i)
 		{
 			vr::VrEye ojo;
-			if (!openXrManager.AdquirirOjo(i, ojo)) continue;   // el fotograma se enviará vacío; AdquirirOjo no deja nada a medias
+			if (!openXrManager.AcquireEyeImage(i, ojo)) continue;   // el fotograma se enviará vacío; AdquirirOjo no deja nada a medias
 			if (ojosCabeza++ == 0) primerOjo = ojo.pose;       // para la red: pose real de la cabeza (media de los ojos)
 			sumaOjos += ojo.pose.posicion;
 
 			glViewport(0, 0, ojo.ancho, ojo.alto);
-			ProjectionMatrix = vr::ProyeccionDesdeCampo(ojo.fov, vrPlanoCercano, vrPlanoLejano);
-			ViewMatrix = vr::VistaDeOjoVR(ojo.pose, anclaje);
+			ProjectionMatrix = vr::ProjectionFromFov(ojo.fov, vrPlanoCercano, vrPlanoLejano);
+			ViewMatrix = vr::VrEyeViewMatrix(ojo.pose, anclaje);
 
 			glUseProgram(shader_programID);
 			glUniformMatrix4fv(glcache::UniformLocation(shader_programID, "projectionMatrix"), 1, GL_FALSE, &ProjectionMatrix[0][0]);
@@ -138,8 +138,8 @@ bool RuntimeRenderer::drawVrScene()
 			configura_Escena();
 			dibuixa_Escena();
 
-			if (i == 0) copiarOjoAVentana(ojo);   // espejo en el monitor: ojo izquierdo
-			openXrManager.LiberarOjo(i);
+			if (i == 0) copyEyeToWindow(ojo);   // espejo en el monitor: ojo izquierdo
+			openXrManager.ReleaseEyeImage(i);
 			dibujado = true;
 		}
 		if (ojosCabeza > 0)
@@ -151,7 +151,7 @@ bool RuntimeRenderer::drawVrScene()
 		glBindFramebuffer(GL_FRAMEBUFFER, 0);
 		glViewport(0, 0, w, h);
 	}
-	openXrManager.TerminarFotograma();
+	openXrManager.EndXrFrame();
 	return dibujado;
 }
 
@@ -160,7 +160,7 @@ void RuntimeRenderer::OnPaint(GLFWwindow* window)
 	if (w <= 0 || h <= 0) return;
 	GLdouble vpv[3] = { 0.0, 0.0, 1.0 };
 
-	if (sceneEditor.Activo())
+	if (sceneEditor.IsEnabled())
 	{
 		glDisable(GL_SCISSOR_TEST);
 		glViewport(0, 0, w, h);
@@ -289,7 +289,7 @@ void RuntimeRenderer::OnPaint(GLFWwindow* window)
 		// del profesor (esférica, geode) se dibujan siempre como antes.
 		if (stereoTestMode && camera == CAM_NAVEGA)
 		{
-			dibujarEscenaEstereo(w, h);
+			drawStereoScene(w, h);
 			break;
 		}
 

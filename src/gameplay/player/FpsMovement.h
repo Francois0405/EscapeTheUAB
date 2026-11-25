@@ -18,17 +18,17 @@ namespace fps
 {
 	// Un fotograma muy largo (arrastrar la ventana, un parón) no debe disparar la simulación.
 	constexpr float DeltaMaximo = 0.05f;
-	inline float LimitarDelta(float delta) { return std::clamp(delta, 0.0f, DeltaMaximo); }
+	inline float ClampDelta(float delta) { return std::clamp(delta, 0.0f, DeltaMaximo); }
 
 	// Aproximación exponencial hacia un objetivo, independiente de los FPS: tras t segundos queda
 	// exp(-tasa*t) de la distancia, se ejecute en un paso o en muchos.
-	inline float Acercar(float actual, float objetivo, float tasaPorSegundo, float delta)
+	inline float DollyIn(float actual, float objetivo, float tasaPorSegundo, float delta)
 	{
 		return actual + (objetivo - actual) * (1.0f - std::exp(-tasaPorSegundo * (std::max)(delta, 0.0f)));
 	}
 
 	// 0 -> 1 con arranque y llegada suaves (derivada 0 en los extremos).
-	inline float SuavizadoHermite(float t)
+	inline float HermiteSmoothing(float t)
 	{
 		t = std::clamp(t, 0.0f, 1.0f);
 		return t * t * (3.0f - 2.0f * t);
@@ -68,9 +68,9 @@ namespace fps
 		MovementParameters parametros;
 
 		// Avanza el estado un fotograma. Devuelve la velocidad (m/s) con la que mover al jugador si hay teclas.
-		float Actualizar(float deltaSinLimitar, const MovementInput& entrada)
+		float Advance(float deltaSinLimitar, const MovementInput& entrada)
 		{
-			const float delta = LimitarDelta(deltaSinLimitar);
+			const float delta = ClampDelta(deltaSinLimitar);
 			if (!entrada.activo)
 			{	// Pausa o entrada bloqueada: el mundo del jugador se congela (ni consume, ni recupera, ni acelera).
 				sprintando = false;
@@ -102,18 +102,18 @@ namespace fps
 			const float agachado = std::clamp(entrada.fraccionAgachado, 0.0f, 1.0f);
 			const float objetivo = sprintando ? p.velocidadSprint
 				: p.velocidadCaminar + (p.velocidadAgachado - p.velocidadCaminar) * agachado;
-			velocidadActual = Acercar(velocidadActual, objetivo, p.suavizadoVelocidad, delta);
+			velocidadActual = DollyIn(velocidadActual, objetivo, p.suavizadoVelocidad, delta);
 			return velocidadActual;
 		}
 
-		float Velocidad() const { return velocidadActual; }
-		bool Sprintando() const { return sprintando; }
-		bool Agotada() const { return agotada; }
-		float Estamina() const { return estamina; }
-		float FraccionEstamina() const { return parametros.estaminaMaxima > 0.0f ? estamina / parametros.estaminaMaxima : 0.0f; }
-		float TiempoSinSprint() const { return tiempoSinSprint; }
+		float VelocityValue() const { return velocidadActual; }
+		bool IsSprinting() const { return sprintando; }
+		bool IsExhausted() const { return agotada; }
+		float StaminaValue() const { return estamina; }
+		float StaminaFraction() const { return parametros.estaminaMaxima > 0.0f ? estamina / parametros.estaminaMaxima : 0.0f; }
+		float TimeWithoutSprint() const { return tiempoSinSprint; }
 
-		void Reiniciar()
+		void ResetState()
 		{
 			estamina = parametros.estaminaMaxima;
 			velocidadActual = parametros.velocidadCaminar;
@@ -159,10 +159,10 @@ namespace fps
 
 		// 'distanciaHorizontal': metros REALES recorridos por la cápsula en este fotograma (no la velocidad pedida:
 		// si se choca con una pared, la cámara no se balancea). 'velocidadObjetivo' = MovimientoJugador::Velocidad().
-		void Actualizar(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo,
+		void Advance(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo,
 			float velocidadObjetivo, const MovementParameters& mov, float fraccionAgachado)
 		{
-			const float delta = LimitarDelta(deltaSinLimitar);
+			const float delta = ClampDelta(deltaSinLimitar);
 			if (!activo || delta <= 0.0f) return;   // en pausa se queda como está
 
 			const BobParameters& p = parametros;
@@ -177,14 +177,14 @@ namespace fps
 			if (andando) fase += 6.28318530718f * distanciaHorizontal / (std::max)(zancada, 0.1f);
 			if (fase > 6.28318530718f * 1000.0f) fase = std::fmod(fase, 6.28318530718f);   // sin perder precisión
 
-			peso = Acercar(peso, andando ? 1.0f : 0.0f, andando ? p.entrada : p.salida, delta);
+			peso = DollyIn(peso, andando ? 1.0f : 0.0f, andando ? p.entrada : p.salida, delta);
 
 			const float amplitudDePie = p.amplitudCaminar + (p.amplitudCorrer - p.amplitudCaminar) * correr;
 			amplitud = (amplitudDePie + (p.amplitudAgachado - amplitudDePie) * agachado) * p.multiplicador;
 		}
 
 		// Dos pasos por ciclo en vertical (cada pie) y uno en lateral (de un lado a otro).
-		VisualOffset Desplazamiento() const
+		VisualOffset Offset() const
 		{
 			VisualOffset d;
 			d.vertical = std::sin(2.0f * fase) * amplitud * peso;
@@ -192,15 +192,15 @@ namespace fps
 			return d;
 		}
 
-		float Fase() const { return fase; }                 // radianes (un ciclo = 2*pi)
-		float Peso() const { return peso; }                 // 0 parado ... 1 andando
+		float CurrentPhase() const { return fase; }                 // radianes (un ciclo = 2*pi)
+		float WeightValue() const { return peso; }                 // 0 parado ... 1 andando
 		// Relación con la amplitud de caminar de pie: 1 al caminar, ~2,3 al correr, ~0,5 agachado. Para el móvil.
-		float FactorDeAmplitud() const
+		float AmplitudeFactor() const
 		{
 			const float base = parametros.amplitudCaminar * parametros.multiplicador;
 			return base > 1e-6f ? amplitud / base : 0.0f;
 		}
-		void Reiniciar() { fase = 0.0f; peso = 0.0f; amplitud = 0.0f; }
+		void ResetState() { fase = 0.0f; peso = 0.0f; amplitud = 0.0f; }
 
 	private:
 		float fase = 0.0f;
@@ -235,9 +235,9 @@ namespace fps
 
 		// Devuelve true en el fotograma exacto en que toca reproducir un paso.
 		// 'distanciaHorizontal' es la misma distancia real de la cápsula que usa BalanceoCamara.
-		bool Actualizar(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo, StepState estado)
+		bool Advance(float deltaSinLimitar, float distanciaHorizontal, bool enSuelo, bool activo, StepState estado)
 		{
-			const float delta = LimitarDelta(deltaSinLimitar);
+			const float delta = ClampDelta(deltaSinLimitar);
 
 			// Sin pasos en menús/pausa, en el aire o en reposo
 			if (!activo || !enSuelo || estado == StepState::Reposo || delta <= 0.0f)
@@ -268,7 +268,7 @@ namespace fps
 			return false;
 		}
 
-		void Reiniciar()
+		void ResetState()
 		{
 			distanciaAcumulada = 0.0f;
 		}
@@ -286,12 +286,12 @@ namespace fps
 		float visible = 0.0f;   // opacidad 0..1
 		float mostrada = 1.0f;  // fracción mostrada 0..1
 
-		void Actualizar(float deltaSinLimitar, float fraccionReal, bool sprintando)
+		void Advance(float deltaSinLimitar, float fraccionReal, bool sprintando)
 		{
-			const float delta = LimitarDelta(deltaSinLimitar);
-			mostrada = Acercar(mostrada, fraccionReal, 10.0f, delta);
+			const float delta = ClampDelta(deltaSinLimitar);
+			mostrada = DollyIn(mostrada, fraccionReal, 10.0f, delta);
 			const bool hayQueMostrar = sprintando || fraccionReal < 0.999f;
-			visible = Acercar(visible, hayQueMostrar ? 1.0f : 0.0f, hayQueMostrar ? 12.0f : 3.0f, delta);
+			visible = DollyIn(visible, hayQueMostrar ? 1.0f : 0.0f, hayQueMostrar ? 12.0f : 3.0f, delta);
 		}
 	};
 }

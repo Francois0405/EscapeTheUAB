@@ -31,7 +31,7 @@ namespace animation
 
 	// Devuelve el ángulo que corresponde a un instante, interpolando entre keyframes.
 	// Los keyframes deben estar ordenados por tiempo (de menor a mayor).
-	inline float AnguloEnTiempo(const std::vector<AngleKeyframe>& keyframes, float tiempo)
+	inline float AngleAtTime(const std::vector<AngleKeyframe>& keyframes, float tiempo)
 	{
 		if (keyframes.empty()) return 0.0f;
 
@@ -60,7 +60,7 @@ namespace animation
 		float duracion = 0.0f;         // segundos totales de la animación
 		bool reproduciendo = false;
 
-		void Iniciar(float duracionSegundos)
+		void BeginPlayback(float duracionSegundos)
 		{
 			tiempo = 0.0f;
 			duracion = duracionSegundos;
@@ -68,7 +68,7 @@ namespace animation
 		}
 
 		// Se llama una vez por fotograma con el tiempo que ha pasado desde el anterior.
-		void Actualizar(float deltaSegundos)
+		void Advance(float deltaSegundos)
 		{
 			if (!reproduciendo) return;
 			tiempo += deltaSegundos;
@@ -96,7 +96,7 @@ namespace animation
 	//   2. desplazarlo para que la BISAGRA quede en el origen (0,0,0)
 	//   3. girar: como la bisagra está en el origen, gira alrededor de ella.
 	//   4. llevar la bisagra a su sitio en el mundo.
-	inline glm::mat4 MatrizPuertaConBisagra(
+	inline glm::mat4 HingedDoorMatrix(
 		const glm::vec3& mitadTamano,
 		const glm::vec3& posicionBisagra,
 		float anguloGrados)

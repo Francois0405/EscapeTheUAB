@@ -19,10 +19,10 @@ void OnWindowFocus(GLFWwindow* window, int focused)
 
 void OnWindowCloseRequest(GLFWwindow* window)
 {
-	if (sceneEditor.HayCambiosSinGuardar())
+	if (sceneEditor.HasUnsavedChanges())
 	{
 		glfwSetWindowShouldClose(window, GLFW_FALSE);
-		sceneEditor.SolicitarConfirmacionCierre();
+		sceneEditor.RequestCloseConfirmation();
 	}
 }
 

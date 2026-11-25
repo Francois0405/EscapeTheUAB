@@ -31,14 +31,14 @@ namespace editor
 	};
 
 	// Transforma una caja local respetando el giro y la escala de una instancia.
-	OrientedBox TransformarCaja(const glm::mat4& modelo, const glm::vec3& centroLocal, const glm::vec3& mitadLocal);
+	OrientedBox TransformBox(const glm::mat4& modelo, const glm::vec3& centroLocal, const glm::vec3& mitadLocal);
 
 	// Devuelve la profundidad mínima SAT en metros; cero significa separación o contacto permitido.
-	float PenetracionOBB(const OrientedBox& a, const OrientedBox& b, float toleranciaContacto = 0.01f);
+	float ObbPenetration(const OrientedBox& a, const OrientedBox& b, float toleranciaContacto = 0.01f);
 
 	// Las penetraciones preexistentes se pueden reducir sin bloquear la edición de escenas antiguas.
 	// La excepción omite únicamente obstáculos marcados como arquitectura y solo es opt-in.
-	PlacementResult ValidarColocacion(const std::vector<OrientedBox>& propuesta,
+	PlacementResult ValidatePlacement(const std::vector<OrientedBox>& propuesta,
 		const std::vector<OrientedBox>& anterior, const std::vector<PlacementObstacle>& obstaculos,
 		bool permitirArquitectura, float toleranciaContacto = 0.01f);
 }

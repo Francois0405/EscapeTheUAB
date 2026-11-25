@@ -15,8 +15,8 @@ const netgame::session::SessionContext& sessionBindings()
 		openXrManager, lastVrHead, hasVrHead,
 		[] { return glm::vec3(static_cast<float>(opvN.x), static_cast<float>(opvN.y), static_cast<float>(opvN.z)); },
 		[] { return glm::vec3(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z)); },
-		[] { return physicsWorld.HayJugador() ? physicsWorld.PosicionPiesJugador() : feetPositionFromCamera(); },
-		[] { return sceneSerializer.Cargado() ? sceneSerializer.Ruta().stem().string() : std::string(); },
+		[] { return physicsWorld.HasPlayerBody() ? physicsWorld.PlayerFeetPosition() : feetPositionFromCamera(); },
+		[] { return sceneSerializer.IsLoaded() ? sceneSerializer.Ruta().stem().string() : std::string(); },
 		[](std::string& error, bool autoridadFisica) { return rebuildPhysicsAfterEditing(error, autoridadFisica); },
 		[] { return fpsInputActive(); },
 		[](glm::vec3& origen, glm::vec3& direccion) { gazeOriginAndDirection(origen, direccion); },
@@ -26,11 +26,11 @@ const netgame::session::SessionContext& sessionBindings()
 			{ traceGrab(evento, id, peer, propietario, posicion, punto, detalle); },
 		[]
 		{
-			hiritiAnimator.DescubrirPorInteraccion();
-			if (hiritiAnimator.MarcarAgarrado())
+			hiritiAnimator.DiscoverByInteraction();
+			if (hiritiAnimator.MarkGrabbed())
 				playHiritiSoundCue("assets/audio/hirity/story/lohashechobien.ogg");
 		},
-		[](float carga) { hiritiAnimator.MarcarLanzadoPorJugador(carga); }
+		[](float carga) { hiritiAnimator.MarkThrownByPlayer(carga); }
 	};
 	return contexto;
 }

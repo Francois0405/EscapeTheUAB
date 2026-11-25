@@ -32,7 +32,7 @@ namespace editor
 		};
 	}
 
-	LocalBox LimitesDeOBJ(const std::filesystem::path& ruta)
+	LocalBox ObjBounds(const std::filesystem::path& ruta)
 	{
 		std::ifstream archivo(ruta);
 		if (!archivo) return {};
@@ -48,16 +48,16 @@ namespace editor
 		return acumulador.Caja();
 	}
 
-	LocalBox LimitesDeGLB(const glb::GlbModel& modelo)
+	LocalBox GlbBounds(const glb::GlbModel& modelo)
 	{
-		const glb::GlbPose pose = glb::CrearPoseDeReposo(modelo);
-		const glm::mat4 aZArriba = glb::MatrizYArribaAZArriba();
+		const glb::GlbPose pose = glb::CreateRestPose(modelo);
+		const glm::mat4 aZArriba = glb::YUpToZUpMatrix();
 		Acumulador acumulador;
 		for (int i = 0; i < static_cast<int>(modelo.nodos.size()); ++i)
 		{
 			const int indiceMalla = modelo.nodos[static_cast<std::size_t>(i)].indiceMalla;
 			if (indiceMalla < 0 || indiceMalla >= static_cast<int>(modelo.mallas.size())) continue;
-			const glm::mat4 aMundo = aZArriba * glb::MatrizMundoDelNodo(modelo, pose, i);
+			const glm::mat4 aMundo = aZArriba * glb::NodeWorldMatrix(modelo, pose, i);
 			for (const glb::GlbPrimitive& primitiva : modelo.mallas[static_cast<std::size_t>(indiceMalla)].primitivas)
 				for (const glm::vec3& posicion : primitiva.posiciones)
 					acumulador.Anadir(glm::vec3(aMundo * glm::vec4(posicion, 1.0f)));
@@ -65,17 +65,17 @@ namespace editor
 		return acumulador.Caja();
 	}
 
-	LocalBox ConMitadMinima(LocalBox caja, float mitadMinima)
+	LocalBox WithMinimumHalfExtent(LocalBox caja, float mitadMinima)
 	{
 		if (!caja.valida) return caja;
-		const glm::vec3 centro = caja.Centro();
-		glm::vec3 mitad = glm::max(caja.MitadTamano(), glm::vec3(mitadMinima));
+		const glm::vec3 centro = caja.CenterPoint();
+		glm::vec3 mitad = glm::max(caja.HalfSize(), glm::vec3(mitadMinima));
 		caja.minimo = centro - mitad;
 		caja.maximo = centro + mitad;
 		return caja;
 	}
 
-	LocalBox CajaEnMundo(const glm::mat4& modelo, const LocalBox& caja)
+	LocalBox BoxInWorld(const glm::mat4& modelo, const LocalBox& caja)
 	{
 		Acumulador acumulador;
 		for (int esquina = 0; esquina < 8; ++esquina)
@@ -88,7 +88,7 @@ namespace editor
 		return acumulador.Caja();
 	}
 
-	bool InterseccionRayoCaja(const glm::vec3& origen, const glm::vec3& direccion, const glm::mat4& modelo,
+	bool RayBoxIntersection(const glm::vec3& origen, const glm::vec3& direccion, const glm::mat4& modelo,
 		const LocalBox& caja, float& distancia)
 	{
 		if (std::abs(glm::determinant(glm::mat3(modelo))) < 1.0e-12f) return false;

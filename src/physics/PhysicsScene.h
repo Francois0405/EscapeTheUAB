@@ -32,12 +32,12 @@ namespace fisica
 {
 	// Matriz de colocación de un objeto OBJ: trasladar * Rz * Ry * Rx * escalar.
 	// (Es la misma que usa el dibujo de main.cpp.)
-	glm::mat4 MatrizDeObjeto(const SceneObject& objeto);
+	glm::mat4 ObjectMatrix(const SceneObject& objeto);
 
 	// Crea las instancias GLB que pide el JSON. Los modelos se cargan una sola vez por
 	// archivo, aunque haya varias puertas, y cada instancia tiene su estado propio.
 	// Si algo falla devuelve false; el llamador debe descartar 'destino'.
-	bool CargarObjetosAnimadosDeEscena(const std::vector<SceneAnimatedObject>& animados,
+	bool LoadSceneAnimatedObjects(const std::vector<SceneAnimatedObject>& animados,
 		const std::filesystem::path& carpetaDelJson, glb::AnimatedScene& destino, std::string& error);
 
 	class PhysicsScene
@@ -51,7 +51,7 @@ namespace fisica
 			bool activo = false, agarrado = false;
 		};
 		explicit PhysicsScene(PhysicsWorld& mundoCompartido) : mundo(mundoCompartido) {}
-		~PhysicsScene() { Vaciar(); }
+		~PhysicsScene() { Empty(); }
 		PhysicsScene(const PhysicsScene&) = delete;
 		PhysicsScene& operator=(const PhysicsScene&) = delete;
 
@@ -59,29 +59,29 @@ namespace fisica
 		// animados. Es ATÓMICO: si algo falla no queda ningún cuerpo a medias y los cuerpos que
 		// ya existían (escena anterior) no se tocan. Para cambiar de habitación: crear la nueva
 		// en otra EscenaFisica o llamar a Vaciar() antes.
-		bool Crear(const std::vector<SceneObject>& objetos, const glb::AnimatedScene& animados,
+		bool CreatePlayback(const std::vector<SceneObject>& objetos, const glb::AnimatedScene& animados,
 			const std::vector<SceneAnimatedObject>& datosAnimados, std::string& error, bool autoridadFisica = true);
-		bool ImpulsarObjetoDinamico(int indiceObjeto, const glm::vec3& impulso);
-		bool PosicionObjetoDinamico(int indiceObjeto, glm::vec3& posicion) const;
-		bool VelocidadObjetoDinamico(int indiceObjeto, glm::vec3& velocidad) const;
-		bool AplicarAceleracionHorizontalObjetoDinamico(int indiceObjeto, const glm::vec3& aceleracion,
+		bool PushDynamicObject(int indiceObjeto, const glm::vec3& impulso);
+		bool DynamicObjectPosition(int indiceObjeto, glm::vec3& posicion) const;
+		bool DynamicObjectVelocity(int indiceObjeto, glm::vec3& velocidad) const;
+		bool ApplyDynamicObjectHorizontalAcceleration(int indiceObjeto, const glm::vec3& aceleracion,
 			float deltaSegundos);
-		bool TeletransportarObjetoDinamico(int indiceObjeto, const glm::vec3& centro);
-		bool PuedeColocarObjetoDinamico(int indiceObjeto, const glm::vec3& centro) const;
-		float DistanciaObstaculoEnRayoObjetoDinamico(int indiceObjeto, const glm::vec3& origen,
+		bool TeleportDynamicObject(int indiceObjeto, const glm::vec3& centro);
+		bool CanPlaceDynamicObject(int indiceObjeto, const glm::vec3& centro) const;
+		float DynamicObjectObstacleDistanceOnRay(int indiceObjeto, const glm::vec3& origen,
 			const glm::vec3& direccion, float alcance) const;
-		bool HayContactoObjetoDinamico(int indiceObjeto) const;
+		bool HasDynamicObjectContact(int indiceObjeto) const;
 
 		// Retira del mundo todos los cuerpos de esta escena (y solo los suyos).
-		void Vaciar();
+		void Empty();
 
 		// Coloca los cuerpos cinemáticos donde está AHORA su nodo animado.
 		// Llamar cada fotograma DESPUÉS de animar y ANTES de MundoFisico::Actualizar.
-		void SincronizarCinematicos(const glb::AnimatedScene& animados);
+		void SyncKinematics(const glb::AnimatedScene& animados);
 
 		// Matriz para dibujar el objeto 'indice' de la lista pasada a Crear().
 		// Estáticos y objetos sin físicas: la de la escena. Dinámicos: la que calcula Bullet.
-		glm::mat4 MatrizVisualDe(int indice, const SceneObject& objeto) const;
+		glm::mat4 VisualMatrixOf(int indice, const SceneObject& objeto) const;
 
 		// --- Agarrar objetos (acción genérica "interactuar con lo que miro") ------------------------
 		// Solo recibe un ORIGEN y una DIRECCIÓN del mundo: en PC son los ojos y la mirada; en VR serán
@@ -92,31 +92,31 @@ namespace fisica
 		static constexpr float AlcanceDeAgarre = 2.0f;       // m: hasta dónde llega el rayo
 		static constexpr float DistanciaDeLaMano = 1.2f;     // m: a qué distancia delante queda el objeto
 		static constexpr float SoltarSiSeAleja = 2.0f;       // m: si queda atascado más lejos de la mano, se suelta
-		static glm::vec3 DestinoDeAgarre(const glm::vec3& origen, const glm::vec3& direccion);
+		static glm::vec3 GrabDestination(const glm::vec3& origen, const glm::vec3& direccion);
 
 		// Agarra el objeto dinámico que se mira. Devuelve su índice en la lista de la escena (-1 si no hay).
-		int IntentarAgarrar(const glm::vec3& origen, const glm::vec3& direccion);
+		int TryGrab(const glm::vec3& origen, const glm::vec3& direccion);
 		// Devuelve el objeto dinámico o animado asociado a un cuerpo físico, o -1 si no corresponde.
-		int ObjetoDinamicoDeCuerpo(IdCuerpo cuerpo) const;
-		int ObjetoAnimadoDeCuerpo(IdCuerpo cuerpo) const;
+		int DynamicObjectOfBody(IdCuerpo cuerpo) const;
+		int AnimatedObjectOfBody(IdCuerpo cuerpo) const;
 		// Sujeta el cuerpo dinámico previamente seleccionado por el raycast.
-		bool SujetarObjetoDinamico(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion);
+		bool HoldDynamicObject(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion);
 		// Coloca la "mano" para este fotograma y suelta el objeto si se ha quedado atascado lejos.
-		void ActualizarAgarre(const glm::vec3& origen, const glm::vec3& direccion);
-		void SoltarAgarre();
-		bool LanzarAgarre(const glm::vec3& velocidad);
-		bool HayAgarre() const;
+		void UpdateGrab(const glm::vec3& origen, const glm::vec3& direccion);
+		void ReleaseGrab();
+		bool ThrowGrab(const glm::vec3& velocidad);
+		bool HasGrab() const;
 		// Índice (en la lista de la escena) del objeto que se sujeta, o -1.
-		int ObjetoAgarrado() const;
-		bool SujetarDinamicoRemoto(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion);
-		void ActualizarAgarreRemoto(int indiceObjeto, const glm::vec3& destino);
-		bool SoltarDinamicoRemoto(int indiceObjeto, const glm::vec3& velocidad);
-		bool ObjetoDinamicoSujeto(int indiceObjeto) const;
-		bool AplicarEstadoReplicado(const DynamicState& estado);
-		void CapturarEstadosDinamicos(std::vector<DynamicState>& salida) const;
+		int GrabbedObject() const;
+		bool HoldRemoteDynamic(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion);
+		void UpdateRemoteGrab(int indiceObjeto, const glm::vec3& destino);
+		bool ReleaseRemoteDynamic(int indiceObjeto, const glm::vec3& velocidad);
+		bool HeldDynamicObject(int indiceObjeto) const;
+		bool ApplyReplicatedState(const DynamicState& estado);
+		void CaptureDynamicStates(std::vector<DynamicState>& salida) const;
 
-		int NumeroDeCuerpos() const { return static_cast<int>(todos.size()); }
-		int NumeroDeDinamicos() const { return static_cast<int>(dinamicos.size()); }
+		int BodyCount() const { return static_cast<int>(todos.size()); }
+		int DynamicCount() const { return static_cast<int>(dinamicos.size()); }
 
 	private:
 		// Un objeto OBJ dinámico: hay que copiar su pose de Bullet al dibujo.
@@ -140,7 +140,7 @@ namespace fisica
 			glm::vec3 desplazamiento{ 0.0f };
 		};
 		
-		void ColocarCaja(const Colision& caja, const glb::AnimatedObject& objeto, glm::vec3& centro,
+		void PlaceBox(const Colision& caja, const glb::AnimatedObject& objeto, glm::vec3& centro,
 			glm::quat& rotacion, glm::vec3& mitad) const;
 
 		PhysicsWorld& mundo;

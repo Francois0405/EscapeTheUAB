@@ -25,7 +25,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 	auto& networkGame = context.session;
 	auto& pendingNetworkConfig = context.pendingConfig;
 	using netgame::NetworkPhase;
-	const netgame::Diagnostico d = networkGame.ObtenerDiagnostico();
+	const netgame::Diagnostico d = networkGame.GetDiagnosticInfo();
 	ImGui::SetNextWindowPos(ImVec2(12.0f * uiScale, 12.0f * uiScale), ImGuiCond_FirstUseEver);
 	ImGui::SetNextWindowSize(ImVec2(360.0f * uiScale, 0.0f), ImGuiCond_FirstUseEver);
 	ImGui::Begin("Multijugador", &context.panelVisible);
@@ -43,7 +43,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 	{
 		modo = pendingNetworkConfig.rol == net::Role::Host ? 1 : (pendingNetworkConfig.rol == net::Role::Client ? 2 : 0);
 		netgame::LastEndpoint ultimo;
-		const bool hayUltimo = netgame::CargarUltimoEndpoint(ultimo);
+		const bool hayUltimo = netgame::LoadLastEndpoint(ultimo);
 		const std::string& hostInicial = pendingNetworkConfig.rol == net::Role::Client ? pendingNetworkConfig.host : (hayUltimo ? ultimo.host : pendingNetworkConfig.host);
 		std::snprintf(ip, sizeof ip, "%s", hostInicial.c_str());
 		std::snprintf(nombre, sizeof nombre, "%s", pendingNetworkConfig.nombre.c_str());
@@ -61,7 +61,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 			ImGui::InputInt("Puerto", &puerto);
 			ImGui::InputText("Nombre", nombre, sizeof nombre);
 			static int enet = -1;
-			if (enet < 0) enet = netgame::NetworkGame::EnetDisponible() ? 1 : 0;   // solo al elegir red; no inicializa ENet
+			if (enet < 0) enet = netgame::NetworkGame::IsEnetAvailable() ? 1 : 0;   // solo al elegir red; no inicializa ENet
 			if (!enet) ImGui::TextColored(ImVec4(1.0f, 0.6f, 0.2f, 1.0f), "ENet no incluido en esta compilacion.");
 			if (!errorEntrada.empty()) ImGui::TextColored(ImVec4(1.0f, 0.45f, 0.35f, 1.0f), "%s", errorEntrada.c_str());
 			if (ImGui::Button("Iniciar"))
@@ -73,7 +73,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 					if (cfg.rol == net::Role::Client)
 					{
 						std::string errorGuardado;
-						if (!netgame::GuardarUltimoEndpoint({ cfg.host, cfg.puerto }, errorGuardado))
+						if (!netgame::SaveLastEndpoint({ cfg.host, cfg.puerto }, errorGuardado))
 							errorEntrada = "No se guardo la ultima direccion: " + errorGuardado;
 					}
 					pendingNetworkConfig = cfg; context.startNetwork(cfg);
@@ -82,7 +82,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 		}
 	}
 	else if (ImGui::Button(d.fase == NetworkPhase::Arrancando ? "Cancelar" : "Desconectar")) context.stopNetwork();
-	if (d.fase == NetworkPhase::Activa)
+	if (d.fase == NetworkPhase::IsActive)
 	{
 		ImGui::Separator();
 		ImGui::Text("Escena: %s | peer local: %u", d.escena.c_str(), static_cast<unsigned>(d.peerLocal));
@@ -91,7 +91,7 @@ void DrawMultiplayerPanel(const MultiplayerContext& context, float uiScale)
 		const auto& obj = networkGame.Objeto();
 		if (obj.conocido)
 			ImGui::Text("Objeto compartido: %s", obj.dueno == netgame::kSinDueno ? "libre"
-				: (networkGame.SoyDuenoDelObjeto() ? "lo tengo yo" : "en manos de otro jugador"));
+				: (networkGame.OwnsObject() ? "lo tengo yo" : "en manos de otro jugador"));
 		ImGui::TextUnformatted("E / gatillo apuntando al cubo amarillo: coger o soltar.");
 	}
 	ImGui::End();
@@ -127,8 +127,8 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 		if (physicsScene)
 		{
 			std::vector<fisica::PhysicsScene::DynamicState> cuerpos;
-			physicsScene->CapturarEstadosDinamicos(cuerpos);
-			const auto remotos = networkGame.EsCliente()
+			physicsScene->CaptureDynamicStates(cuerpos);
+			const auto remotos = networkGame.IsClient()
 				? networkGame.EstadosFisicosRemotos() : std::map<uint32_t, net::DynamicStateEntry>{};
 			for (const auto& cuerpo : cuerpos)
 			{
@@ -137,22 +137,22 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 				Fila fila;
 				fila.id = objeto.id;
 				fila.idRed = netgame::HashId(objeto.id);
-				fila.propietario = networkGame.Activa()
-					? networkGame.PropietarioDinamico(fila.idRed) : netgame::kSinDueno;
+				fila.propietario = networkGame.IsActive()
+					? networkGame.DynamicOwner(fila.idRed) : netgame::kSinDueno;
 				fila.aplicado = cuerpo.pose;
 				fila.activo = cuerpo.activo;
 				fila.sujeto = cuerpo.agarrado || fila.propietario != netgame::kSinDueno;
 				fila.hiriti = objeto.id == "hiriti";
 				if (fila.hiriti)
-					fila.estadoSeguimiento = HiritiFollowStatus(networkGame.EsCliente(), context.hiritiFollowEnabled,
-						context.hiriti.SeguimientoSuspendido());
-				if (networkGame.EsCliente())
+					fila.estadoSeguimiento = HiritiFollowStatus(networkGame.IsClient(), context.hiritiFollowEnabled,
+						context.hiriti.IsFollowSuspended());
+				if (networkGame.IsClient())
 				{
 					const auto remoto = remotos.find(fila.idRed);
-					if (remoto != remotos.end() && netgame::EstadoFisicoValido(remoto->second))
+					if (remoto != remotos.end() && netgame::IsValidPhysicsState(remoto->second))
 					{
-						fila.autoritativo.posicion = netgame::PosDe(remoto->second.transform);
-						fila.autoritativo.rotacion = netgame::RotDe(remoto->second.transform);
+						fila.autoritativo.posicion = netgame::PositionOfPose(remoto->second.transform);
+						fila.autoritativo.rotacion = netgame::RotationOfPose(remoto->second.transform);
 						fila.tieneAutoritativo = true;
 					}
 				}
@@ -169,12 +169,12 @@ void DrawDynamicObjectsPanel(const DynamicObjectsContext& context)
 
 	ImGui::Begin("Objetos dinamicos | F4");
 	ImGui::Text("Modo: %s | maximo 8 | refresco 500 ms",
-		networkGame.EsHost() ? "host" : networkGame.EsCliente() ? "client" : "offline");
+		networkGame.IsHosting() ? "host" : networkGame.IsClient() ? "client" : "offline");
 	if (filas.empty()) ImGui::TextUnformatted("Sin objetos dinamicos en la escena.");
 	for (const Fila& fila : filas)
 	{
-		const char* rol = networkGame.EsHost() ? "host" : networkGame.EsCliente() ? "client" : "offline";
-		const char* cuerpo = networkGame.EsCliente() ? "replica cinematica" : "body dinamico";
+		const char* rol = networkGame.IsHosting() ? "host" : networkGame.IsClient() ? "client" : "offline";
+		const char* cuerpo = networkGame.IsClient() ? "replica cinematica" : "body dinamico";
 		if (fila.propietario == netgame::kSinDueno)
 			ImGui::Text("%s  id=%08x  owner=libre  %s/%s  %s%s", fila.id.c_str(), fila.idRed,
 				rol, cuerpo, fila.sujeto ? "SUJETO" : (fila.activo ? "activo" : "reposo"),

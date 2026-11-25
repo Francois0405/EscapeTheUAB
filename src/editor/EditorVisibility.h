@@ -20,7 +20,7 @@ namespace editor
 	enum class ElementClass { Objeto, Suelo, Techo, Pared, Arquitectura };
 
 	// Una clase por objeto, en el mismo orden que 'objetos'.
-	std::vector<ElementClass> ClasificarElementos(const std::vector<SceneObject>& objetos);
+	std::vector<ElementClass> ClassifyElements(const std::vector<SceneObject>& objetos);
 
 	struct EditorVisibility
 	{
@@ -31,7 +31,7 @@ namespace editor
 		std::string idAislado;
 		std::unordered_set<std::string> ocultos;     // elementos ocultos uno a uno (por id)
 
-		void MostrarTodo()
+		void ShowAll()
 		{
 			ocultarTecho = ocultarParedes = aislar = false;
 			idAislado.clear();
@@ -48,6 +48,6 @@ namespace editor
 		}
 
 		// Las puertas GLB solo se ocultan al aislar otro elemento.
-		bool AnimadoVisible(const std::string& id) const { return !aislar || id == idAislado; }
+		bool AnimatedVisible(const std::string& id) const { return !aislar || id == idAislado; }
 	};
 }

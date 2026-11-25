@@ -42,10 +42,10 @@ namespace netgame::timeline
 	inline void StoreRemotePhysicsSample(RemotePhysicsBuffers& buffers,
 		const net::DynamicStateEntry& state, double now)
 	{
-		if (!EstadoFisicoValido(state)) return;
+		if (!IsValidPhysicsState(state)) return;
 		auto& buffer = buffers[state.objectId];
 		if (!buffer.empty() && !net::SeqNewer(state.tick, buffer.back().state.tick)) return;
-		const double sampleTime = buffer.empty() ? now : TiempoSnapshotSiguiente(
+		const double sampleTime = buffer.empty() ? now : NextSnapshotTime(
 			buffer.back().time, buffer.back().state.tick, state.tick);
 		buffer.push_back({ sampleTime, state });
 		while (buffer.size() > 8) buffer.pop_front();
@@ -65,9 +65,9 @@ namespace netgame::timeline
 				const auto& first = buffer[i - 1]; const auto& second = buffer[i];
 				const float t = second.time > first.time ? std::clamp(
 					static_cast<float>((targetTime - first.time) / (second.time - first.time)), 0.0f, 1.0f) : 1.0f;
-				const glm::vec3 p = glm::mix(PosDe(first.state.transform), PosDe(second.state.transform), t);
-				const glm::quat q = glm::slerp(RotDe(first.state.transform), RotDe(second.state.transform), t);
-				result.transform = ATransform(p, q);
+				const glm::vec3 p = glm::mix(PositionOfPose(first.state.transform), PositionOfPose(second.state.transform), t);
+				const glm::quat q = glm::slerp(RotationOfPose(first.state.transform), RotationOfPose(second.state.transform), t);
+				result.transform = ToTransform(p, q);
 				return result;
 			}
 		}
@@ -81,7 +81,7 @@ namespace netgame::timeline
 		auto existing = buffers.find(state.objectId);
 		const bool hasSample = existing != buffers.end() && !existing->second.empty();
 		const uint32_t currentTick = hasSample ? existing->second.back().state.tick : 0;
-		if (EstadoFisicoMasNuevo(state.tick, hasSample, currentTick))
+		if (IsNewerPhysicsState(state.tick, hasSample, currentTick))
 		{
 			buffers.erase(state.objectId);
 			StoreRemotePhysicsSample(buffers, state, now);

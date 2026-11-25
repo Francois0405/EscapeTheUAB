@@ -89,40 +89,40 @@ namespace glb
 	};
 
 	// Carga un .glb. Si hay cualquier error devuelve false y deja 'modelo' como estaba.
-	bool CargarModeloGLB(const std::filesystem::path& ruta, GlbModel& modelo, std::string& error);
+	bool LoadGlbModel(const std::filesystem::path& ruta, GlbModel& modelo, std::string& error);
 
 	// --- Jerarquía y matrices ---------------------------------------------------
 
 	// Matriz local de un nodo: primero escala, luego rotación y por último posición.
-	glm::mat4 MatrizLocal(const LocalTransform& transformacion);
+	glm::mat4 LocalMatrix(const LocalTransform& transformacion);
 
 	// Matriz de mundo de un nodo con una pose dada: sube por los padres multiplicando
 	// sus matrices locales.
-	glm::mat4 MatrizMundoDelNodo(const GlbModel& modelo, const GlbPose& pose, int indiceNodo);
+	glm::mat4 NodeWorldMatrix(const GlbModel& modelo, const GlbPose& pose, int indiceNodo);
 
 	// Devuelve el índice del nodo con ese nombre, o -1 si no existe.
-	int BuscarNodoPorNombre(const GlbModel& modelo, const std::string& nombre);
+	int FindNodeByName(const GlbModel& modelo, const std::string& nombre);
 
 	// Centro de la caja que envuelve todas las mallas con una pose dada (en el espacio del
 	// glTF, Y arriba). Sirve como "punto de la puerta" para saber si el jugador la mira.
-	glm::vec3 CalcularCentroDelModelo(const GlbModel& modelo, const GlbPose& pose);
+	glm::vec3 ComputeModelCenter(const GlbModel& modelo, const GlbPose& pose);
 
 	// glTF usa Y hacia arriba; nuestro juego usa Z hacia arriba (igual que Blender).
 	// Esta matriz (un giro de +90 grados en X) convierte (X, Y, Z) en (X, -Z, Y).
 	// Se aplica UNA vez al dibujar, no a cada nodo.
-	glm::mat4 MatrizYArribaAZArriba();
+	glm::mat4 YUpToZUpMatrix();
 
 	// --- Animación --------------------------------------------------------------
 
 	// Crea una pose nueva con los nodos tal y como están guardados en el archivo.
-	GlbPose CrearPoseDeReposo(const GlbModel& modelo);
+	GlbPose CreateRestPose(const GlbModel& modelo);
 
 	// Devuelve todos los nodos de la pose a lo que dice el archivo.
-	void RestaurarPoseDeReposo(const GlbModel& modelo, GlbPose& pose);
+	void RestoreRestPose(const GlbModel& modelo, GlbPose& pose);
 
 	// Coloca la pose en el instante 'tiempo' de la animación. Solo cambia las propiedades
 	// que la animación controla; el resto queda como estaba. No toca el modelo.
-	void AplicarAnimacion(GlbPose& pose, const GlbAnimation& animation, float tiempo);
+	void ApplyAnimation(GlbPose& pose, const GlbAnimation& animation, float tiempo);
 }
 
 #endif

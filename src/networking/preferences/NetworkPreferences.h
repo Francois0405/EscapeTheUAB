@@ -12,7 +12,7 @@ namespace netgame
 		uint16_t puerto = 7777;
 	};
 
-	std::filesystem::path RutaPreferenciasRed();
-	bool CargarUltimoEndpoint(LastEndpoint& endpoint, const std::filesystem::path& archivo = {});
-	bool GuardarUltimoEndpoint(const LastEndpoint& endpoint, std::string& error, const std::filesystem::path& archivo = {});
+	std::filesystem::path NetworkPreferencesPath();
+	bool LoadLastEndpoint(LastEndpoint& endpoint, const std::filesystem::path& archivo = {});
+	bool SaveLastEndpoint(const LastEndpoint& endpoint, std::string& error, const std::filesystem::path& archivo = {});
 }

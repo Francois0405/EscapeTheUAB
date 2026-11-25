@@ -113,7 +113,7 @@ void draw_Menu_ImGui()
 	const auto fpsMode = [] { return fpsModeActive(); };
 	const runtimeui::FrameContext contexto{
 		// HUD
-		{ fpsMode, [] { return fpsInputActive(); }, [] { return sceneEditor.Activo(); },
+		{ fpsMode, [] { return fpsInputActive(); }, [] { return sceneEditor.IsEnabled(); },
 			staminaBar, playerMovement, showStaminaPercent,
 			throwChargeActive, throwChargeTime, kMaxThrowChargeDuration, physicsScene,
 			[]() -> const char* { return currentInteractionTarget.accion == InteractionAction::Ninguna
@@ -137,7 +137,7 @@ void draw_Menu_ImGui()
 		(c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5),
 		showDebugPanels, showFpsCounter,
 		drawLegacyImGuiWindows,
-		[](int ancho, int alto) { sceneEditor.DibujarInterfaz(editor::EditorSceneContext{ sceneObjects, sceneAnimatedData, animatedObjects }, ancho, alto); }
+		[](int ancho, int alto) { sceneEditor.DrawEditorInterface(editor::EditorSceneContext{ sceneObjects, sceneAnimatedData, animatedObjects }, ancho, alto); }
 	};
 	runtimeui::DrawRuntimeUiFrame(contexto);
 }

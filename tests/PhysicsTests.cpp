@@ -76,14 +76,14 @@ namespace
 	{
 		PhysicsWorld mundo;
 		FallingCubeDemo demo{ mundo };
-		void Actualizar(float dt, bool pausado) { mundo.FijarPausa(pausado); mundo.Actualizar(dt); }
-		BodyPose PoseCubo() const { return demo.PoseCubo(); }
+		void Advance(float dt, bool pausado) { mundo.SetPaused(pausado); mundo.Advance(dt); }
+		BodyPose CubePose() const { return demo.CubePose(); }
 	};
 
 	void PruebaGravedad()
 	{
 		PhysicsWorld mundo;
-		const glm::vec3 g = mundo.Gravedad();
+		const glm::vec3 g = mundo.GravityValue();
 		comprobar(casi(g.x, 0.0f, 1e-6f) && casi(g.y, 0.0f, 1e-6f) && casi(g.z, -9.81f, 1e-5f),
 			"la gravedad es (0, 0, -9.81): Z es el eje vertical");
 	}
@@ -91,106 +91,106 @@ namespace
 	void PruebaAceleracionHorizontal()
 	{
 		PhysicsWorld mundo;
-		const IdCuerpo esfera = mundo.CrearEsfera(BodyType::Dinamico, glm::vec3(0.0f, 0.0f, 2.0f), 0.25f, 1.0f);
+		const IdCuerpo esfera = mundo.CreateSphere(BodyType::Dinamico, glm::vec3(0.0f, 0.0f, 2.0f), 0.25f, 1.0f);
 		comprobar(esfera != CuerpoInvalido, "se crea la esfera dinamica para probar aceleracion");
 		if (esfera == CuerpoInvalido) return;
 
-		comprobar(mundo.AplicarAceleracionHorizontal(esfera, glm::vec3(1.0f, 0.0f, 0.0f), 0.1f),
+		comprobar(mundo.ApplyHorizontalAcceleration(esfera, glm::vec3(1.0f, 0.0f, 0.0f), 0.1f),
 			"la aceleracion horizontal se aplica al rigid body dinamico");
-		mundo.Actualizar(0.1f);
-		const glm::vec3 velocidad = mundo.VelocidadDe(esfera);
+		mundo.Advance(0.1f);
+		const glm::vec3 velocidad = mundo.VelocityOf(esfera);
 		comprobar(velocidad.x > 0.05f && velocidad.z < 0.0f,
 			"la aceleracion mueve la esfera horizontalmente y conserva la gravedad vertical");
 
-		const IdCuerpo obstaculo = mundo.CrearCajaEstatica(
+		const IdCuerpo obstaculo = mundo.CreateStaticBox(
 			glm::vec3(2.0f, 0.0f, 2.0f), glm::vec3(0.25f));
 		comprobar(obstaculo != CuerpoInvalido, "se crea un obstaculo estatico para el raycast");
-		const float distanciaObstaculo = mundo.DistanciaObstaculoEnRayo(
+		const float distanciaObstaculo = mundo.ObstacleDistanceOnRay(
 			glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(1.0f, 0.0f, 0.0f), 3.0f, esfera);
 		comprobar(distanciaObstaculo > 1.0f && distanciaObstaculo < 2.0f,
 			"el raycast de navegacion detecta hitboxes e ignora el cuerpo de Hiriti");
-		const float caminoLibre = mundo.DistanciaObstaculoEnRayo(
+		const float caminoLibre = mundo.ObstacleDistanceOnRay(
 			glm::vec3(0.0f, 0.0f, 2.0f), glm::vec3(0.0f, 1.0f, 0.0f), 3.0f, esfera);
 		comprobar(casi(caminoLibre, 3.0f, 1.0e-5f),
 			"el raycast devuelve el alcance completo cuando no hay hitboxes en la ruta");
-		comprobar(!mundo.PuedeColocarCuerpoDinamico(esfera, glm::vec3(2.0f, 0.0f, 2.0f)) &&
-			mundo.PuedeColocarCuerpoDinamico(esfera, glm::vec3(0.0f, 2.0f, 2.0f)),
+		comprobar(!mundo.CanPlaceDynamicBody(esfera, glm::vec3(2.0f, 0.0f, 2.0f)) &&
+			mundo.CanPlaceDynamicBody(esfera, glm::vec3(0.0f, 2.0f, 2.0f)),
 			"la reaparicion comprueba solapamientos con hitboxes existentes");
-		comprobar(mundo.TeletransportarCuerpoDinamico(esfera, glm::vec3(0.0f, 2.0f, 2.0f)) &&
-			casi(mundo.PoseDe(esfera).posicion.y, 2.0f, 1.0e-5f) &&
-			glm::length(mundo.VelocidadDe(esfera)) < 1.0e-5f,
+		comprobar(mundo.TeleportDynamicBody(esfera, glm::vec3(0.0f, 2.0f, 2.0f)) &&
+			casi(mundo.PoseOf(esfera).posicion.y, 2.0f, 1.0e-5f) &&
+			glm::length(mundo.VelocityOf(esfera)) < 1.0e-5f,
 			"la reaparicion actualiza Bullet y limpia la velocidad previa");
 	}
 
 	void PruebaCaidaLibre()
 	{
 		PhysicsWorld mundo;
-		const IdCuerpo cubo = mundo.CrearCajaDinamica(glm::vec3(1.0f, 2.0f, 100.0f), glm::vec3(0.25f), 1.0f);
+		const IdCuerpo cubo = mundo.CreateDynamicBox(glm::vec3(1.0f, 2.0f, 100.0f), glm::vec3(0.25f), 1.0f);
 
-		Simular(1.0f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		Simular(1.0f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Advance(dt); });
 
-		const BodyPose pose = mundo.PoseDe(cubo);
+		const BodyPose pose = mundo.PoseOf(cubo);
 		// Teoría: z = 100 - 1/2 g t^2 = 95.095 m tras 1 s (Bullet integra con Euler semi-implícito, ~0.08 m menos).
 		comprobar(casi(pose.posicion.z, 95.095f, 0.15f), "tras 1 s de caída libre el cubo ha bajado ~4.9 m");
 		comprobar(casi(pose.posicion.x, 1.0f, 1e-4f) && casi(pose.posicion.y, 2.0f, 1e-4f),
 			"la gravedad no desplaza el cubo en X ni en Y");
-		comprobar(casi(mundo.VelocidadDe(cubo).z, -9.81f, 0.05f), "tras 1 s la velocidad vertical es ~-9.81 m/s");
+		comprobar(casi(mundo.VelocityOf(cubo).z, -9.81f, 0.05f), "tras 1 s la velocidad vertical es ~-9.81 m/s");
 	}
 
 	void PruebaPasoFijo()
 	{
 		PhysicsWorld mundo;
-		comprobar(mundo.Actualizar(0.005f) == 0, "un fotograma más corto que el paso fijo no simula nada");
-		comprobar(mundo.Actualizar(0.005f) == 0, "...ni el segundo (acumulado 0.010 s)");
-		comprobar(mundo.Actualizar(0.0075f) == 1, "al acumular más de 1/60 s se ejecuta exactamente un paso");
-		comprobar(mundo.Actualizar(0.034f) == 2, "un fotograma de 34 ms ejecuta dos pasos de 1/60 s");
-		comprobar(mundo.Actualizar(0.0f) == 0 && mundo.Actualizar(-1.0f) == 0, "un delta cero o negativo se ignora");
+		comprobar(mundo.Advance(0.005f) == 0, "un fotograma más corto que el paso fijo no simula nada");
+		comprobar(mundo.Advance(0.005f) == 0, "...ni el segundo (acumulado 0.010 s)");
+		comprobar(mundo.Advance(0.0075f) == 1, "al acumular más de 1/60 s se ejecuta exactamente un paso");
+		comprobar(mundo.Advance(0.034f) == 2, "un fotograma de 34 ms ejecuta dos pasos de 1/60 s");
+		comprobar(mundo.Advance(0.0f) == 0 && mundo.Advance(-1.0f) == 0, "un delta cero o negativo se ignora");
 
 		PhysicsWorld congelado;
-		const int pasos = congelado.Actualizar(10.0f);
+		const int pasos = congelado.Advance(10.0f);
 		comprobar(pasos == PhysicsWorld::PasosMaximosPorFotograma, "un fotograma de 10 s se recorta al máximo de pasos");
-		comprobar(congelado.Actualizar(0.0f) == 0, "tras un tiempo enorme no queda tiempo pendiente acumulado");
+		comprobar(congelado.Advance(0.0f) == 0, "tras un tiempo enorme no queda tiempo pendiente acumulado");
 	}
 
 	void PruebaIndependenciaDeLosFps()
 	{
 		Escenario a, b;
-		a.demo.Iniciar();
-		b.demo.Iniciar();
-		Simular(3.0f, 1.0f / 30.0f, [&](float dt) { a.Actualizar(dt, false); });
-		Simular(3.0f, 1.0f / 144.0f, [&](float dt) { b.Actualizar(dt, false); });
-		comprobar(casi(a.PoseCubo().posicion.z, b.PoseCubo().posicion.z, 0.02f),
+		a.demo.BeginPlayback();
+		b.demo.BeginPlayback();
+		Simular(3.0f, 1.0f / 30.0f, [&](float dt) { a.Advance(dt, false); });
+		Simular(3.0f, 1.0f / 144.0f, [&](float dt) { b.Advance(dt, false); });
+		comprobar(casi(a.CubePose().posicion.z, b.CubePose().posicion.z, 0.02f),
 			"30 FPS y 144 FPS dan el mismo resultado final");
 	}
 
 	void PruebaPausa()
 	{
 		PhysicsWorld mundo;
-		const IdCuerpo cubo = mundo.CrearCajaDinamica(glm::vec3(0.0f, 0.0f, 50.0f), glm::vec3(0.25f), 1.0f);
+		const IdCuerpo cubo = mundo.CreateDynamicBox(glm::vec3(0.0f, 0.0f, 50.0f), glm::vec3(0.25f), 1.0f);
 
-		Simular(0.5f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
-		const float alturaAntes = mundo.PoseDe(cubo).posicion.z;
+		Simular(0.5f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Advance(dt); });
+		const float alturaAntes = mundo.PoseOf(cubo).posicion.z;
 		const long long pasosAntes = mundo.PasosTotales();
 
-		mundo.FijarPausa(true);
-		comprobar(mundo.EstaEnPausa(), "la pausa queda activada");
-		comprobar(mundo.Actualizar(1.0f) == 0, "en pausa no se ejecuta ningún paso");
-		Simular(2.0f, 0.016f, [&](float dt) { mundo.Actualizar(dt); });
-		comprobar(mundo.PoseDe(cubo).posicion.z == alturaAntes, "en pausa el cubo no se mueve");
+		mundo.SetPaused(true);
+		comprobar(mundo.IsPaused(), "la pausa queda activada");
+		comprobar(mundo.Advance(1.0f) == 0, "en pausa no se ejecuta ningún paso");
+		Simular(2.0f, 0.016f, [&](float dt) { mundo.Advance(dt); });
+		comprobar(mundo.PoseOf(cubo).posicion.z == alturaAntes, "en pausa el cubo no se mueve");
 		comprobar(mundo.PasosTotales() == pasosAntes, "en pausa el contador de pasos no cambia");
 
-		mundo.FijarPausa(false);
-		comprobar(mundo.Actualizar(PhysicsWorld::PasoFijo) == 1,
+		mundo.SetPaused(false);
+		comprobar(mundo.Advance(PhysicsWorld::PasoFijo) == 1,
 			"al reanudar solo cuenta el tiempo nuevo (el de la pausa se descartó)");
-		comprobar(mundo.PoseDe(cubo).posicion.z < alturaAntes, "al reanudar el cubo vuelve a caer");
+		comprobar(mundo.PoseOf(cubo).posicion.z < alturaAntes, "al reanudar el cubo vuelve a caer");
 	}
 
 	void PruebaSuelo()
 	{
 		Escenario escenario;
 		FallingCubeDemo& demo = escenario.demo;
-		demo.Iniciar();
-		const float alturaInicial = demo.PoseCubo().posicion.z;
+		demo.BeginPlayback();
+		const float alturaInicial = demo.CubePose().posicion.z;
 		const float alturaReposo = FallingCubeDemo::AlturaSuperiorSuelo + FallingCubeDemo::MitadCubo;   // -1.45
 
 		comprobar(casi(alturaInicial, FallingCubeDemo::AlturaInicialCentro, 1e-5f), "el cubo empieza a la altura inicial");
@@ -199,10 +199,10 @@ namespace
 		float alturaTras03s = 0.0f;
 		float tiempo = 0.0f;
 		Simular(6.0f, PhysicsWorld::PasoFijo, [&](float dt) {
-			escenario.Actualizar(dt, false);
+			escenario.Advance(dt, false);
 			tiempo += dt;
-			alturaMinima = std::min(alturaMinima, demo.PoseCubo().posicion.z);
-			if (alturaTras03s == 0.0f && tiempo >= 0.3f) alturaTras03s = demo.PoseCubo().posicion.z;
+			alturaMinima = std::min(alturaMinima, demo.CubePose().posicion.z);
+			if (alturaTras03s == 0.0f && tiempo >= 0.3f) alturaTras03s = demo.CubePose().posicion.z;
 		});
 
 		comprobar(alturaTras03s < alturaInicial - 0.3f, "a los 0.3 s el cubo ya ha caído");
@@ -210,45 +210,45 @@ namespace
 		// penetración momentánea (~5 cm medidos) y lo empuja fuera. Atravesar de verdad sería
 		// hundirse más de la mitad del cubo.
 		comprobar(alturaMinima > alturaReposo - 0.10f, "el cubo nunca atraviesa el suelo (solo penetración momentánea < 10 cm)");
-		const BodyPose pose = demo.PoseCubo();
+		const BodyPose pose = demo.CubePose();
 		comprobar(casi(pose.posicion.z, alturaReposo, 0.02f), "el cubo se apoya sobre el suelo (centro a 0.25 m de él)");
-		comprobar(glm::length(demo.VelocidadCubo()) < 0.01f, "el cubo termina quieto");
-		comprobar(demo.CuboEnReposo(), "Bullet duerme el cubo cuando lleva un rato quieto");
+		comprobar(glm::length(demo.CubeVelocity()) < 0.01f, "el cubo termina quieto");
+		comprobar(demo.CubeAtRest(), "Bullet duerme el cubo cuando lleva un rato quieto");
 		comprobar(casi(pose.posicion.x, 6.0f, 0.01f) && casi(pose.posicion.y, -1.0f, 0.01f),
 			"caer plano no desplaza el cubo en horizontal");
 
 		// Reiniciar vuelve a empezar desde arriba.
-		demo.Iniciar();
-		comprobar(casi(demo.PoseCubo().posicion.z, alturaInicial, 1e-5f), "Iniciar() reinicia la demo");
-		comprobar(escenario.mundo.NumeroDeCuerpos() == 2, "tras reiniciar solo hay suelo y cubo (no se acumulan)");
+		demo.BeginPlayback();
+		comprobar(casi(demo.CubePose().posicion.z, alturaInicial, 1e-5f), "Iniciar() reinicia la demo");
+		comprobar(escenario.mundo.BodyCount() == 2, "tras reiniciar solo hay suelo y cubo (no se acumulan)");
 
-		demo.Detener();
-		comprobar(!demo.EstaActiva() && escenario.mundo.NumeroDeCuerpos() == 0, "Detener() elimina los cuerpos");
+		demo.StopSessionGame();
+		comprobar(!demo.IsRunningNow() && escenario.mundo.BodyCount() == 0, "Detener() elimina los cuerpos");
 	}
 
 	void PruebaMasaInvalida()
 	{
 		PhysicsWorld mundo;
-		comprobar(mundo.CrearCajaDinamica(glm::vec3(0.0f), glm::vec3(1.0f), 0.0f) == CuerpoInvalido,
+		comprobar(mundo.CreateDynamicBox(glm::vec3(0.0f), glm::vec3(1.0f), 0.0f) == CuerpoInvalido,
 			"un cuerpo dinámico con masa 0 se rechaza");
-		comprobar(mundo.PoseDe(CuerpoInvalido).posicion == glm::vec3(0.0f), "pedir la pose de un id inválido no falla");
+		comprobar(mundo.PoseOf(CuerpoInvalido).posicion == glm::vec3(0.0f), "pedir la pose de un id inválido no falla");
 	}
 
 	void PruebaLanzamientoDeObjetoAgarrado()
 	{
 		PhysicsWorld mundo;
-		const IdCuerpo cubo = mundo.CrearCajaDinamica(glm::vec3(0.0f), glm::vec3(0.2f), 1.0f);
-		comprobar(mundo.SujetarCuerpo(cubo), "se puede sujetar el objeto antes de lanzarlo");
-		comprobar(mundo.LanzarCuerpoSujeto(glm::vec3(8.0f, 0.0f, 3.0f)),
+		const IdCuerpo cubo = mundo.CreateDynamicBox(glm::vec3(0.0f), glm::vec3(0.2f), 1.0f);
+		comprobar(mundo.HoldBody(cubo), "se puede sujetar el objeto antes de lanzarlo");
+		comprobar(mundo.ThrowHeldBody(glm::vec3(8.0f, 0.0f, 3.0f)),
 			"lanzar devuelve verdadero cuando habia un objeto sujeto");
-		comprobar(mundo.CuerpoSujeto() == CuerpoInvalido, "lanzar libera la sujecion");
-		const glm::vec3 velocidad = mundo.VelocidadDe(cubo);
+		comprobar(mundo.HeldBody() == CuerpoInvalido, "lanzar libera la sujecion");
+		const glm::vec3 velocidad = mundo.VelocityOf(cubo);
 		comprobar(casi(velocidad.x, 8.0f, 1e-4f) && casi(velocidad.y, 0.0f, 1e-4f) &&
 			casi(velocidad.z, 3.0f, 1e-4f), "el objeto conserva la velocidad del lanzamiento");
 
-		mundo.Actualizar(PhysicsWorld::PasoFijo);
-		comprobar(mundo.VelocidadDe(cubo).z < 3.0f, "el objeto lanzado vuelve a recibir gravedad");
-		comprobar(!mundo.LanzarCuerpoSujeto(glm::vec3(1.0f, 0.0f, 0.0f)),
+		mundo.Advance(PhysicsWorld::PasoFijo);
+		comprobar(mundo.VelocityOf(cubo).z < 3.0f, "el objeto lanzado vuelve a recibir gravedad");
+		comprobar(!mundo.ThrowHeldBody(glm::vec3(1.0f, 0.0f, 0.0f)),
 			"lanzar sin objeto sujeto informa que no hubo lanzamiento");
 	}
 	// ======================================================================
@@ -271,15 +271,15 @@ namespace
 		return o;
 	}
 
-	bool Crear(PhysicsScene& escena, const std::vector<SceneObject>& objetos, std::string& error)
+	bool CreatePlayback(PhysicsScene& escena, const std::vector<SceneObject>& objetos, std::string& error)
 	{
 		const glb::AnimatedScene sinAnimados;
-		return escena.Crear(objetos, sinAnimados, {}, error);
+		return escena.CreatePlayback(objetos, sinAnimados, {}, error);
 	}
 
 	void Avanzar(PhysicsWorld& mundo, float segundos)
 	{
-		Simular(segundos, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
+		Simular(segundos, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Advance(dt); });
 	}
 
 	// Rotación de un cuerpo aplicada a un vector (para comprobar orientaciones).
@@ -296,9 +296,9 @@ namespace
 		//   offset escalado = (2,0,0) -> girado 90 grados en Z = (0,2,0) -> centro = (3,0,1)
 		//   mitad final = (1, 0.5, 0.5); el eje largo (X del modelo) queda a lo largo de Y.
 		std::string error;
-		comprobar(Crear(escena, { ObjetoCaja("t", { 3, -2, 1 }, { 0, 0, 90 }, { 2, 1, 1 }, BodyType::Estatico,
+		comprobar(CreatePlayback(escena, { ObjetoCaja("t", { 3, -2, 1 }, { 0, 0, 90 }, { 2, 1, 1 }, BodyType::Estatico,
 			{ 0.5f, 0.5f, 0.5f }, { 1, 0, 0 }, 0.0f) }, error), "crear colisionador transformado");
-		const auto cajas = mundo.CajasDeColision();
+		const auto cajas = mundo.CollisionBoxes();
 		comprobar(cajas.size() == 1, "se crea exactamente un cuerpo");
 		if (cajas.size() != 1) return;
 		comprobar(Cerca(cajas[0].pose.posicion, { 3, 0, 1 }), "centro: posicion + R * (escala * offset)");
@@ -307,7 +307,7 @@ namespace
 
 		// Las esquinas reales de la caja: x en [2.5, 3.5], y en [-1, 1] (largo a lo largo de Y), z en [0.5, 1.5].
 		float minimo[3] = { 1e9f, 1e9f, 1e9f }, maximo[3] = { -1e9f, -1e9f, -1e9f };
-		for (const glm::vec3& p : AristasDeCaja(cajas[0]))
+		for (const glm::vec3& p : BoxEdges(cajas[0]))
 			for (int e = 0; e < 3; ++e) { minimo[e] = std::min(minimo[e], p[e]); maximo[e] = std::max(maximo[e], p[e]); }
 		comprobar(casi(minimo[0], 2.5f, 1e-3f) && casi(maximo[0], 3.5f, 1e-3f) && casi(minimo[1], -1.0f, 1e-3f) &&
 			casi(maximo[1], 1.0f, 1e-3f) && casi(minimo[2], 0.5f, 1e-3f) && casi(maximo[2], 1.5f, 1e-3f),
@@ -315,10 +315,10 @@ namespace
 
 		// Escala negativa (modelo espejado): el centro la respeta y la mitad sigue positiva.
 		PhysicsScene espejo(mundo);
-		comprobar(Crear(espejo, { ObjetoCaja("e", { 0, 0, 0 }, { 0, 0, 0 }, { -2, 1, 1 }, BodyType::Estatico,
+		comprobar(CreatePlayback(espejo, { ObjetoCaja("e", { 0, 0, 0 }, { 0, 0, 0 }, { -2, 1, 1 }, BodyType::Estatico,
 			{ 1, 1, 1 }, { 1, 0, 0 }, 0.0f) }, error), "crear con escala negativa");
 		bool encontrada = false;
-		for (const CollisionBox& c : mundo.CajasDeColision())
+		for (const CollisionBox& c : mundo.CollisionBoxes())
 			if (Cerca(c.pose.posicion, { -2, 0, 0 }) && Cerca(c.mitadTamano, { 2, 1, 1 })) encontrada = true;
 		comprobar(encontrada, "escala negativa: centro espejado y mitad positiva");
 	}
@@ -328,10 +328,10 @@ namespace
 		PhysicsWorld mundo;
 		PhysicsScene escena(mundo);
 		std::string error;
-		comprobar(Crear(escena, { ObjetoCaja("flota", { 1, 2, 5 }, { 0, 0, 0 }, { 1, 1, 1 }, BodyType::Estatico,
+		comprobar(CreatePlayback(escena, { ObjetoCaja("flota", { 1, 2, 5 }, { 0, 0, 0 }, { 1, 1, 1 }, BodyType::Estatico,
 			{ 0.5f, 0.5f, 0.5f }, { 0, 0, 0 }, 0.0f) }, error), "crear estatico en el aire");
 		Avanzar(mundo, 3.0f);
-		comprobar(Cerca(mundo.CajasDeColision()[0].pose.posicion, { 1, 2, 5 }, 1e-6f), "un cuerpo estatico no cae");
+		comprobar(Cerca(mundo.CollisionBoxes()[0].pose.posicion, { 1, 2, 5 }, 1e-6f), "un cuerpo estatico no cae");
 	}
 
 	void PruebaReconstruccionCambioEstaticoDinamico()
@@ -341,26 +341,26 @@ namespace
 		SceneObject objeto = ObjetoCaja("replicable", { 0, 0, 3 }, { 0, 0, 0 }, { 1, 1, 1 },
 			BodyType::Estatico, { 0.5f, 0.5f, 0.5f }, { 0, 0, 0 }, 0.0f);
 		auto actual = std::make_unique<PhysicsScene>(mundo);
-		comprobar(Crear(*actual, { objeto }, error), "crear la caja estática original");
-		comprobar(actual->NumeroDeCuerpos() == 1 && actual->NumeroDeDinamicos() == 0, "estado inicial con un cuerpo estático");
+		comprobar(CreatePlayback(*actual, { objeto }, error), "crear la caja estática original");
+		comprobar(actual->BodyCount() == 1 && actual->DynamicCount() == 0, "estado inicial con un cuerpo estático");
 
 		objeto.fisica.tipo = BodyType::Dinamico; objeto.fisica.masa = 2.0f;
 		auto dinamica = std::make_unique<PhysicsScene>(mundo);
-		comprobar(Crear(*dinamica, { objeto }, error), "construir la versión dinámica antes de retirar la anterior");
-		actual->Vaciar(); actual = std::move(dinamica);
-		comprobar(mundo.NumeroDeCuerpos() == 1 && actual->NumeroDeCuerpos() == 1 && actual->NumeroDeDinamicos() == 1,
+		comprobar(CreatePlayback(*dinamica, { objeto }, error), "construir la versión dinámica antes de retirar la anterior");
+		actual->Empty(); actual = std::move(dinamica);
+		comprobar(mundo.BodyCount() == 1 && actual->BodyCount() == 1 && actual->DynamicCount() == 1,
 			"estático a dinámico deja un solo cuerpo registrado");
-		const auto dinamicos = mundo.CajasDeColision();
+		const auto dinamicos = mundo.CollisionBoxes();
 		comprobar(dinamicos.size() == 1 && dinamicos[0].tipo == BodyType::Dinamico,
 			"Bullet contiene el tipo dinámico solicitado");
 
 		objeto.fisica.tipo = BodyType::Estatico; objeto.fisica.masa = 0.0f;
 		auto estatica = std::make_unique<PhysicsScene>(mundo);
-		comprobar(Crear(*estatica, { objeto }, error), "construir la versión estática antes de retirar la anterior");
-		actual->Vaciar(); actual = std::move(estatica);
-		comprobar(mundo.NumeroDeCuerpos() == 1 && actual->NumeroDeCuerpos() == 1 && actual->NumeroDeDinamicos() == 0,
+		comprobar(CreatePlayback(*estatica, { objeto }, error), "construir la versión estática antes de retirar la anterior");
+		actual->Empty(); actual = std::move(estatica);
+		comprobar(mundo.BodyCount() == 1 && actual->BodyCount() == 1 && actual->DynamicCount() == 0,
 			"dinámico a estático deja un solo cuerpo registrado");
-		const auto estaticos = mundo.CajasDeColision();
+		const auto estaticos = mundo.CollisionBoxes();
 		comprobar(estaticos.size() == 1 && estaticos[0].tipo == BodyType::Estatico,
 			"Bullet contiene el tipo estático solicitado");
 	}
@@ -368,19 +368,19 @@ namespace
 	void PruebaSujecionesMultiplesYReplicaCinematica()
 	{
 		PhysicsWorld mundo;
-		const auto cuerpoA = mundo.CrearCaja(BodyType::Dinamico, { 0, 0, 3 }, glm::quat(1, 0, 0, 0), { 0.2f, 0.2f, 0.2f }, 1.0f);
-		const auto cuerpoB = mundo.CrearCaja(BodyType::Dinamico, { 1, 0, 3 }, glm::quat(1, 0, 0, 0), { 0.2f, 0.2f, 0.2f }, 1.0f);
-		comprobar(mundo.SujetarCuerpoAutoritativo(cuerpoA) && mundo.SujetarCuerpoAutoritativo(cuerpoB),
+		const auto cuerpoA = mundo.CreateBox(BodyType::Dinamico, { 0, 0, 3 }, glm::quat(1, 0, 0, 0), { 0.2f, 0.2f, 0.2f }, 1.0f);
+		const auto cuerpoB = mundo.CreateBox(BodyType::Dinamico, { 1, 0, 3 }, glm::quat(1, 0, 0, 0), { 0.2f, 0.2f, 0.2f }, 1.0f);
+		comprobar(mundo.HoldBodyAuthoritative(cuerpoA) && mundo.HoldBodyAuthoritative(cuerpoB),
 			"Bullet permite sujetar dos objetos a propietarios distintos");
-		mundo.FijarDestinoDeSujecion(cuerpoA, { 0, 1, 3 });
-		mundo.FijarDestinoDeSujecion(cuerpoB, { 1, 1, 3 });
+		mundo.SetHoldDestination(cuerpoA, { 0, 1, 3 });
+		mundo.SetHoldDestination(cuerpoB, { 1, 1, 3 });
 		Avanzar(mundo, 0.25f);
-		comprobar(mundo.EstaSujeto(cuerpoA) && mundo.EstaSujeto(cuerpoB) &&
-			mundo.PoseDe(cuerpoA).posicion.y > 0.5f && mundo.PoseDe(cuerpoB).posicion.y > 0.5f,
+		comprobar(mundo.IsHeld(cuerpoA) && mundo.IsHeld(cuerpoB) &&
+			mundo.PoseOf(cuerpoA).posicion.y > 0.5f && mundo.PoseOf(cuerpoB).posicion.y > 0.5f,
 			"cada sujecion aplica su propio destino durante los pasos Bullet");
-		comprobar(mundo.SoltarCuerpoAutoritativo(cuerpoA, { 0, 0, 4 }) && !mundo.EstaSujeto(cuerpoA) && mundo.EstaSujeto(cuerpoB),
+		comprobar(mundo.ReleaseAuthoritativeBody(cuerpoA, { 0, 0, 4 }) && !mundo.IsHeld(cuerpoA) && mundo.IsHeld(cuerpoB),
 			"soltar un objeto no libera el objeto del otro jugador");
-		comprobar(Cerca(mundo.VelocidadDe(cuerpoA), { 0, 0, 4 }), "la velocidad de lanzamiento se aplica al cuerpo autoritativo");
+		comprobar(Cerca(mundo.VelocityOf(cuerpoA), { 0, 0, 4 }), "la velocidad de lanzamiento se aplica al cuerpo autoritativo");
 
 		for (const BodyType tipo : { BodyType::Dinamico, BodyType::Rebotador })
 		{
@@ -390,22 +390,22 @@ namespace
 				{ 0.25f, 0.25f, 0.25f }, { 0, 0, 0 }, tipo == BodyType::Rebotador ? 0.25f : 1.0f);
 			PhysicsScene escena(cliente);
 			std::string error;
-			comprobar(escena.Crear({ objeto }, {}, {}, error, false),
+			comprobar(escena.CreatePlayback({ objeto }, {}, {}, error, false),
 				"la réplica cliente crea dynamic y Rebotador como cinemáticos");
-			auto cuerpos = cliente.CajasDeColision();
+			auto cuerpos = cliente.CollisionBoxes();
 			comprobar(cuerpos.size() == 1 && cuerpos[0].tipo == BodyType::Cinematico,
 				"el cliente no ejecuta una segunda simulacion del objeto con autoridad");
 			PhysicsScene::DynamicState estado;
 			estado.indiceObjeto = 0; estado.pose.posicion = { 3, 2, 4 }; estado.pose.rotacion = glm::quat(1, 0, 0, 0);
-			comprobar(escena.AplicarEstadoReplicado(estado),
+			comprobar(escena.ApplyReplicatedState(estado),
 				"snapshot acepta la réplica cinemática de dynamic y Rebotador");
-			const auto pose = cliente.CajasDeColision()[0].pose;
+			const auto pose = cliente.CollisionBoxes()[0].pose;
 			comprobar(Cerca(pose.posicion, { 3, 2, 4 }), "pose replicada actualiza el AABB de Bullet");
-			comprobar(Cerca(glm::vec3(escena.MatrizVisualDe(0, objeto)[3]), { 3, 2, 4 }),
+			comprobar(Cerca(glm::vec3(escena.VisualMatrixOf(0, objeto)[3]), { 3, 2, 4 }),
 				"la representacion visual toma la misma pose del cuerpo replicado");
-			const IdCuerpo cuerpoMirado = cliente.CuerpoAlFinalDelRayo({ 3, 0, 4 }, { 0, 1, 0 }, 3.0f);
-			comprobar(escena.ObjetoDinamicoDeCuerpo(cuerpoMirado) == 0 &&
-				cliente.CajasDeColision()[static_cast<std::size_t>(cuerpoMirado)].tipo == BodyType::Cinematico,
+			const IdCuerpo cuerpoMirado = cliente.BodyAtRayEnd({ 3, 0, 4 }, { 0, 1, 0 }, 3.0f);
+			comprobar(escena.DynamicObjectOfBody(cuerpoMirado) == 0 &&
+				cliente.CollisionBoxes()[static_cast<std::size_t>(cuerpoMirado)].tipo == BodyType::Cinematico,
 				"el raycast del cliente selecciona su réplica cinemática de objeto dynamic o Rebotador");
 		}
 	}
@@ -423,44 +423,44 @@ namespace
 		const SceneObject caja = ObjetoCaja("caja", { 5, 0, 1 }, { 0, 0, 30 }, { 0.25f, 0.25f, 0.25f }, BodyType::Dinamico,
 			{ 1, 1, 1 }, { 0, 0, 1 }, 2.0f);
 		const std::vector<SceneObject> objetos = { suelo, caja };
-		comprobar(Crear(escena, objetos, error), "crear suelo y caja");
-		comprobar(escena.NumeroDeCuerpos() == 2 && escena.NumeroDeDinamicos() == 1, "dos cuerpos, uno dinamico");
-		comprobar(!escena.HayContactoObjetoDinamico(1), "la caja no tiene contacto antes de caer");
+		comprobar(CreatePlayback(escena, objetos, error), "crear suelo y caja");
+		comprobar(escena.BodyCount() == 2 && escena.DynamicCount() == 1, "dos cuerpos, uno dinamico");
+		comprobar(!escena.HasDynamicObjectContact(1), "la caja no tiene contacto antes de caer");
 
-		const glm::mat4 antes = escena.MatrizVisualDe(1, caja);
+		const glm::mat4 antes = escena.VisualMatrixOf(1, caja);
 		comprobar(Cerca(glm::vec3(antes[3]), caja.posicion), "al empezar, el dibujo coincide con la posicion del JSON");
 
 		Avanzar(mundo, 0.3f);
-		comprobar(escena.MatrizVisualDe(1, caja)[3].z < 1.0f - 0.2f, "a los 0.3 s la caja ya ha caido");
+		comprobar(escena.VisualMatrixOf(1, caja)[3].z < 1.0f - 0.2f, "a los 0.3 s la caja ya ha caido");
 		Avanzar(mundo, 5.0f);
-		comprobar(escena.HayContactoObjetoDinamico(1), "se detecta el contacto de la caja con el suelo");
+		comprobar(escena.HasDynamicObjectContact(1), "se detecta el contacto de la caja con el suelo");
 
 		// En reposo: el centro de la caja esta a 0.25 m sobre el suelo y el ORIGEN del modelo (su base) toca el suelo.
-		const glm::mat4 despues = escena.MatrizVisualDe(1, caja);
+		const glm::mat4 despues = escena.VisualMatrixOf(1, caja);
 		comprobar(casi(despues[3].z, -1.7f, 0.02f), "el origen del modelo (su base) queda sobre el suelo");
 		comprobar(casi(despues[3].x, 5.0f, 0.02f) && casi(despues[3].y, 0.0f, 0.02f), "cae en vertical, sin deriva horizontal");
 		// Conserva el giro de 30 grados en Z: la columna X del dibujo apunta a (cos30, sin30, 0) y mide 0.25 (escala).
 		comprobar(Cerca(glm::vec3(despues[0]), glm::vec3(0.25f * std::cos(glm::radians(30.0f)), 0.25f * std::sin(glm::radians(30.0f)), 0.0f), 0.02f),
 			"la caja conserva su giro y su escala al caer");
-		comprobar(mundo.CajasDeColision().size() == 2, "no se han duplicado cuerpos");
-		for (const CollisionBox& c : mundo.CajasDeColision())
-			if (c.tipo == BodyType::Dinamico) comprobar(glm::length(mundo.VelocidadDe(0)) < 1.0f, "(sanidad) velocidades finitas");
+		comprobar(mundo.CollisionBoxes().size() == 2, "no se han duplicado cuerpos");
+		for (const CollisionBox& c : mundo.CollisionBoxes())
+			if (c.tipo == BodyType::Dinamico) comprobar(glm::length(mundo.VelocityOf(0)) < 1.0f, "(sanidad) velocidades finitas");
 		// Un objeto sin fisica se dibuja con la matriz de la escena.
 		SceneObject sinFisica{};
 		sinFisica.posicion = { 1, 2, 3 }; sinFisica.escala = { 1, 1, 1 };
-		comprobar(Cerca(glm::vec3(escena.MatrizVisualDe(-1, sinFisica)[3]), { 1, 2, 3 }), "un objeto sin fisica conserva su matriz");
+		comprobar(Cerca(glm::vec3(escena.VisualMatrixOf(-1, sinFisica)[3]), { 1, 2, 3 }), "un objeto sin fisica conserva su matriz");
 
 		// Pausa y reinicio con una escena real: en pausa nada se mueve.
 		PhysicsScene otra(mundo);
 		const SceneObject volando = ObjetoCaja("v", { 0, 20, 50 }, { 0, 0, 0 }, { 1, 1, 1 }, BodyType::Dinamico, { 0.5f, 0.5f, 0.5f }, { 0, 0, 0 }, 1.0f);
-		comprobar(Crear(otra, { volando }, error), "crear caja para la prueba de pausa");
-		mundo.FijarPausa(true);
-		const glm::mat4 enPausa = otra.MatrizVisualDe(0, volando);
-		Simular(1.0f, 0.016f, [&](float dt) { mundo.Actualizar(dt); });
-		comprobar(otra.MatrizVisualDe(0, volando)[3] == enPausa[3], "con la pausa, el cuerpo de la escena no se mueve");
-		mundo.FijarPausa(false);
+		comprobar(CreatePlayback(otra, { volando }, error), "crear caja para la prueba de pausa");
+		mundo.SetPaused(true);
+		const glm::mat4 enPausa = otra.VisualMatrixOf(0, volando);
+		Simular(1.0f, 0.016f, [&](float dt) { mundo.Advance(dt); });
+		comprobar(otra.VisualMatrixOf(0, volando)[3] == enPausa[3], "con la pausa, el cuerpo de la escena no se mueve");
+		mundo.SetPaused(false);
 		Avanzar(mundo, 0.2f);
-		comprobar(otra.MatrizVisualDe(0, volando)[3].z < enPausa[3].z, "al reanudar vuelve a caer");
+		comprobar(otra.VisualMatrixOf(0, volando)[3].z < enPausa[3].z, "al reanudar vuelve a caer");
 	}
 
 	std::string RutaDeEscena(const char* nombre)
@@ -480,9 +480,9 @@ namespace
 		EscenaMontada(PhysicsWorld& mundo, const std::string& ruta)
 		{
 			fisica = std::make_unique<PhysicsScene>(mundo);
-			if (!CargarDatosEscenaJSON(ruta, datos, error)) return;
-			if (!CargarObjetosAnimadosDeEscena(datos.animados, fs::path(ruta).parent_path(), animados, error)) return;
-			ok = fisica->Crear(datos.objetos, animados, datos.animados, error);
+			if (!LoadSceneDataJson(ruta, datos, error)) return;
+			if (!LoadSceneAnimatedObjects(datos.animados, fs::path(ruta).parent_path(), animados, error)) return;
+			ok = fisica->CreatePlayback(datos.objetos, animados, datos.animados, error);
 		}
 	};
 
@@ -500,16 +500,16 @@ namespace
 		comprobar(&anim.objetos[0].pose != &anim.objetos[1].pose, "cada instancia tiene su pose");
 
 		// Cuerpos: 12 objetos OBJ con fisica + (3 marco + 1 hoja) * 2 puertas = 20.
-		comprobar(habitacion.fisica->NumeroDeCuerpos() == 20 && mundo.NumeroDeCuerpos() == 20, "20 cuerpos: 12 OBJ + 8 de puertas");
+		comprobar(habitacion.fisica->BodyCount() == 20 && mundo.BodyCount() == 20, "20 cuerpos: 12 OBJ + 8 de puertas");
 
 		const auto cajasCinematicas = [&]() {
 			std::vector<CollisionBox> v;
-			for (const CollisionBox& c : mundo.CajasDeColision()) if (c.tipo == BodyType::Cinematico) v.push_back(c);
+			for (const CollisionBox& c : mundo.CollisionBoxes()) if (c.tipo == BodyType::Cinematico) v.push_back(c);
 			return v;
 		};
 		const auto posicionesEstaticas = [&]() {
 			std::vector<glm::vec3> v;
-			for (const CollisionBox& c : mundo.CajasDeColision()) if (c.tipo == BodyType::Estatico) v.push_back(c.pose.posicion);
+			for (const CollisionBox& c : mundo.CollisionBoxes()) if (c.tipo == BodyType::Estatico) v.push_back(c.pose.posicion);
 			return v;
 		};
 		const std::vector<CollisionBox> hojasCerradas = cajasCinematicas();
@@ -518,10 +518,10 @@ namespace
 		const glm::vec3 ojosFrentePuerta(4.5f, 3.0f, -0.65f);
 		const glm::vec3 miradaPuerta(1.0f, 0.0f, 0.0f);
 		float distanciaPuerta = 0.0f;
-		const IdCuerpo impactoPuerta = mundo.CuerpoAlFinalDelRayo(
+		const IdCuerpo impactoPuerta = mundo.BodyAtRayEnd(
 			ojosFrentePuerta, miradaPuerta, glb::RADIO_INTERACCION, &distanciaPuerta);
-		comprobar(habitacion.fisica->ObjetoAnimadoDeCuerpo(impactoPuerta) == 1 &&
-			glb::BuscarObjetoInteractuable(anim, ojosFrentePuerta, miradaPuerta) == &anim.objetos[1],
+		comprobar(habitacion.fisica->AnimatedObjectOfBody(impactoPuerta) == 1 &&
+			glb::FindInteractableObject(anim, ojosFrentePuerta, miradaPuerta) == &anim.objetos[1],
 			"el raycast visible y la consulta de puerta identifican el mismo objetivo");
 		comprobar(std::isfinite(distanciaPuerta) && distanciaPuerta > 0.0f && distanciaPuerta < glb::RADIO_INTERACCION,
 			"la consulta de interacción conserva la distancia real del primer impacto de Bullet");
@@ -531,12 +531,12 @@ namespace
 				"hoja cerrada: altura y plano correctos");
 
 		// Se abre SOLO la puerta 1 durante 2 segundos.
-		glb::AlternarPuerta(anim.objetos[0]);
+		glb::ToggleDoor(anim.objetos[0]);
 		for (int i = 0; i < 120; ++i)
 		{
-			glb::ActualizarObjetos(anim, PhysicsWorld::PasoFijo);
-			habitacion.fisica->SincronizarCinematicos(anim);
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
+			glb::UpdateAnimatedObjects(anim, PhysicsWorld::PasoFijo);
+			habitacion.fisica->SyncKinematics(anim);
+			mundo.Advance(PhysicsWorld::PasoFijo);
 		}
 		comprobar(anim.objetos[0].reproductor.tiempo > 1.0f && anim.objetos[1].reproductor.tiempo == 0.0f,
 			"relojes independientes: solo se mueve la puerta 1");
@@ -583,23 +583,23 @@ namespace
 		door.paredId = "wall"; door.aperturaId = "door-opening";
 		glb::AnimatedScene animados;
 		std::string error;
-		comprobar(glb::AnadirObjeto(animados, door.id, door.modelo, door.posicion, 0.0f, error), "carga GLB para pared paramétrica");
+		comprobar(glb::AddAnimatedObject(animados, door.id, door.modelo, door.posicion, 0.0f, error), "carga GLB para pared paramétrica");
 		fisica::PhysicsScene escena(mundo);
-		comprobar(escena.Crear({pared}, animados, {door}, error), "Bullet construye colliders segmentados para el vano");
-		comprobar(escena.NumeroDeCuerpos() == 7, "tres paños de pared sustituyen al collider completo y se suman cuatro colliders de puerta");
-		if (escena.NumeroDeCuerpos() != 7) return;
+		comprobar(escena.CreatePlayback({pared}, animados, {door}, error), "Bullet construye colliders segmentados para el vano");
+		comprobar(escena.BodyCount() == 7, "tres paños de pared sustituyen al collider completo y se suman cuatro colliders de puerta");
+		if (escena.BodyCount() != 7) return;
 		const glm::vec3 origen(0.0f, -1.0f, -0.5f);
 		const glm::vec3 direccion(0.0f, 1.0f, 0.0f);
-		comprobar(mundo.CuerpoAlFinalDelRayo(origen, direccion, 2.0f) != CuerpoInvalido,
+		comprobar(mundo.BodyAtRayEnd(origen, direccion, 2.0f) != CuerpoInvalido,
 			"la hoja cerrada bloquea el cruce en el centro del vano");
-		glb::AlternarPuerta(animados.objetos[0]);
+		glb::ToggleDoor(animados.objetos[0]);
 		for (int i = 0; i < 240; ++i)
 		{
-			glb::ActualizarObjetos(animados, PhysicsWorld::PasoFijo);
-			escena.SincronizarCinematicos(animados);
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
+			glb::UpdateAnimatedObjects(animados, PhysicsWorld::PasoFijo);
+			escena.SyncKinematics(animados);
+			mundo.Advance(PhysicsWorld::PasoFijo);
 		}
-		comprobar(mundo.CuerpoAlFinalDelRayo(origen, direccion, 2.0f) == CuerpoInvalido,
+		comprobar(mundo.BodyAtRayEnd(origen, direccion, 2.0f) == CuerpoInvalido,
 			"con la hoja abierta el rayo atraviesa el vano sin chocar con la pared");
 	}
 
@@ -614,7 +614,7 @@ namespace
 			[](const SceneObject& objeto) { return objeto.fisica.presente; }));
 		for (const SceneAnimatedObject& animado : laboratorio.datos.animados)
 			colisionables += static_cast<int>(animado.colisionadores.size());
-		comprobar(laboratorio.fisica->NumeroDeCuerpos() == colisionables,
+		comprobar(laboratorio.fisica->BodyCount() == colisionables,
 			"suelo y arquitectura conservan colliders unicos; se cuentan tambien los marcos y hojas de puerta GLB");
 		const SceneObject* suelo = nullptr;
 		for (const SceneObject& objeto : laboratorio.datos.objetos)
@@ -624,35 +624,35 @@ namespace
 		if (suelo == nullptr) return;
 
 		const float alturaPavimento = suelo->posicion.z + suelo->escala.z * suelo->fisica.mitadTamano.z;
-		comprobar(mundo.CrearJugador({ 0.0f, 0.0f, alturaPavimento + 0.02f }),
+		comprobar(mundo.CreatePlayerBody({ 0.0f, 0.0f, alturaPavimento + 0.02f }),
 			"se crea el jugador sobre el pavimento modular");
-		Simular(2.0f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
-		const float pies = mundo.PosicionPiesJugador().z;
-		comprobar(mundo.JugadorEnSuelo() && pies > alturaPavimento - 0.08f && pies < alturaPavimento + 0.08f,
+		Simular(2.0f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Advance(dt); });
+		const float pies = mundo.PlayerFeetPosition().z;
+		comprobar(mundo.IsPlayerGrounded() && pies > alturaPavimento - 0.08f && pies < alturaPavimento + 0.08f,
 			"el jugador permanece apoyado sobre la altura del suelo calibrado");
 
 		// Integración geométrica: abrir la hoja GLB permite cruzar el vano rotado
 		// entre recepción y laboratorio, sin atravesar los dos tramos de pared.
-		glb::AnimatedObject* puerta = glb::BuscarObjeto(laboratorio.animados, "puerta_acceso_laboratorio");
+		glb::AnimatedObject* puerta = glb::FindAnimatedObject(laboratorio.animados, "puerta_acceso_laboratorio");
 		comprobar(puerta != nullptr, "la escena compacta incluye la puerta recepción/laboratorio");
 		if (puerta == nullptr) return;
-		glb::IniciarAnimacion(*puerta);
-		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
-		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
-		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
-		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
-		Simular(1.2f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
-		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
-		comprobar(mundo.PosicionPiesJugador().x > -2.2f,
+		glb::BeginAnimation(*puerta);
+		glb::UpdateAnimatedObjects(laboratorio.animados, puerta->reproductor.duracion);
+		laboratorio.fisica->SyncKinematics(laboratorio.animados);
+		mundo.TeleportPlayer({ -3.7f, 4.5f, alturaPavimento });
+		mundo.SetPlayerVelocity({ 1.5f, 0.0f, 0.0f });
+		Simular(1.2f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Advance(dt); });
+		mundo.SetPlayerVelocity({ 0.0f, 0.0f, 0.0f });
+		comprobar(mundo.PlayerFeetPosition().x > -2.2f,
 			"el vano de la puerta abierta deja pasar al jugador y la pared maciza contigua lo sigue bloqueando");
-		glb::AlternarPuerta(*puerta);
-		glb::ActualizarObjetos(laboratorio.animados, puerta->reproductor.duracion);
-		laboratorio.fisica->SincronizarCinematicos(laboratorio.animados);
-		mundo.TeletransportarJugador({ -3.7f, 4.5f, alturaPavimento });
-		mundo.FijarVelocidadJugador({ 1.5f, 0.0f, 0.0f });
-		Simular(1.2f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
-		mundo.FijarVelocidadJugador({ 0.0f, 0.0f, 0.0f });
-		comprobar(mundo.PosicionPiesJugador().x < -2.7f,
+		glb::ToggleDoor(*puerta);
+		glb::UpdateAnimatedObjects(laboratorio.animados, puerta->reproductor.duracion);
+		laboratorio.fisica->SyncKinematics(laboratorio.animados);
+		mundo.TeleportPlayer({ -3.7f, 4.5f, alturaPavimento });
+		mundo.SetPlayerVelocity({ 1.5f, 0.0f, 0.0f });
+		Simular(1.2f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Advance(dt); });
+		mundo.SetPlayerVelocity({ 0.0f, 0.0f, 0.0f });
+		comprobar(mundo.PlayerFeetPosition().x < -2.7f,
 			"la hoja cinemática cerrada bloquea el vano y no permite atravesar la pared");
 	}
 
@@ -670,20 +670,20 @@ namespace
 			"el spawn está dentro de la recepción y separado de sus paredes");
 		glm::vec3 pies, normal;
 		std::string error;
-		const bool valido = mundo.ValidarSpawnJugador(spawn, pies, normal, error);
+		const bool valido = mundo.ValidatePlayerSpawn(spawn, pies, normal, error);
 		comprobar(valido, "Bullet confirma suelo bajo los pies y espacio para la cápsula");
 		if (!valido) { std::cerr << "Spawn laboratorio: " << error << '\n'; return; }
 		comprobar(normal.z > 0.95f && std::abs(pies.z - spawn.z) < 0.02f,
 			"el ajuste de spawn coincide con la cara superior del pavimento");
-		comprobar(mundo.CrearJugador(pies), "se crea el controlador Bullet desde el spawn validado");
-		const glm::vec3 ojos = mundo.PosicionPiesJugador() + glm::vec3(0, 0, mundo.AlturaOjosJugador());
+		comprobar(mundo.CreatePlayerBody(pies), "se crea el controlador Bullet desde el spawn validado");
+		const glm::vec3 ojos = mundo.PlayerFeetPosition() + glm::vec3(0, 0, mundo.PlayerEyeHeight());
 		comprobar(casi(ojos.z, pies.z + 1.70f, 0.001f), "la altura de ojos se deriva de los pies y la altura FPS");
-		Simular(2.0f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Actualizar(dt); });
-		const glm::vec3 trasDosSegundos = mundo.PosicionPiesJugador();
+		Simular(2.0f, PhysicsWorld::PasoFijo, [&](float dt) { mundo.Advance(dt); });
+		const glm::vec3 trasDosSegundos = mundo.PlayerFeetPosition();
 		std::cout << "[inicio laboratorio] spawn feet=" << pies.x << ',' << pies.y << ',' << pies.z
 			<< " eyes=" << ojos.x << ',' << ojos.y << ',' << ojos.z << " feet+2s="
 			<< trasDosSegundos.x << ',' << trasDosSegundos.y << ',' << trasDosSegundos.z << '\n';
-		comprobar(mundo.JugadorEnSuelo() && casi(trasDosSegundos.z, pies.z, 0.06f),
+		comprobar(mundo.IsPlayerGrounded() && casi(trasDosSegundos.z, pies.z, 0.06f),
 			"tras dos segundos el jugador sigue apoyado sobre el suelo del laboratorio");
 		comprobar(glm::length(glm::vec2(trasDosSegundos.x - pies.x, trasDosSegundos.y - pies.y)) < 0.01f,
 			"el jugador de inicio no deriva hacia fuera de la recepción sin entrada");
@@ -694,7 +694,7 @@ namespace
 		if (fs::is_regular_file(runtimeScene))
 		{
 			SceneData runtimeData;
-			comprobar(CargarDatosEscenaJSON(runtimeScene, runtimeData, error) && runtimeData.spawn.presente &&
+			comprobar(LoadSceneDataJson(runtimeScene, runtimeData, error) && runtimeData.spawn.presente &&
 				runtimeData.spawn.pies == spawn,
 				"la aplicación y CTest encuentran la misma configuración de spawn en el directorio de ejecución");
 		}
@@ -707,11 +707,11 @@ namespace
 	{
 		PhysicsWorld mundo;
 		FallingCubeDemo demo(mundo);
-		demo.Iniciar();
-		comprobar(mundo.NumeroDeCuerpos() == 2, "la demo aporta 2 cuerpos");
+		demo.BeginPlayback();
+		comprobar(mundo.BodyCount() == 2, "la demo aporta 2 cuerpos");
 
 		std::unique_ptr<EscenaMontada> actual = std::make_unique<EscenaMontada>(mundo, RutaDeEscena("habitacion_beta.json"));
-		comprobar(actual->ok && mundo.NumeroDeCuerpos() == 22, "demo (2) + habitacion_beta (20) en el mismo mundo");
+		comprobar(actual->ok && mundo.BodyCount() == 22, "demo (2) + habitacion_beta (20) en el mismo mundo");
 
 		// Intento de cargar una escena invalida: la habitacion activa debe seguir intacta.
 		// (Un nodo inexistente en el colisionador se descubre al crear los cuerpos, a mitad del proceso.)
@@ -725,23 +725,23 @@ namespace
 				"\",\"position\":[0,0,0],\"colliders\":[{\"node\":\"NodoQueNoExiste\",\"type\":\"static\",\"halfSize\":[1,1,1]}]}]}";
 			std::ofstream(temp / "mala.json") << json;
 		}
-		const int antes = mundo.NumeroDeCuerpos();
+		const int antes = mundo.BodyCount();
 		EscenaMontada mala(mundo, (temp / "mala.json").string());
 		comprobar(!mala.ok, "una escena con un nodo inexistente falla");
 		comprobar(mala.error.find("NodoQueNoExiste") != std::string::npos, "el error nombra el nodo que falta");
-		comprobar(mundo.NumeroDeCuerpos() == antes, "la carga fallida no deja cuerpos a medio registrar (ni el objeto 'a')");
-		comprobar(mala.fisica->NumeroDeCuerpos() == 0, "la EscenaFisica fallida queda vacia");
-		comprobar(actual->fisica->NumeroDeCuerpos() == 20, "la habitacion activa sigue intacta");
+		comprobar(mundo.BodyCount() == antes, "la carga fallida no deja cuerpos a medio registrar (ni el objeto 'a')");
+		comprobar(mala.fisica->BodyCount() == 0, "la EscenaFisica fallida queda vacia");
+		comprobar(actual->fisica->BodyCount() == 20, "la habitacion activa sigue intacta");
 
 		// Elegir la animacion por nombre: la que existe se acepta y la que no, no.
 		{
 			glb::AnimatedScene una;
 			std::string e;
 			const std::string glbPuerta = (fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/animations/Puerta.glb").string();
-			comprobar(glb::AnadirObjeto(una, "x", glbPuerta, glm::vec3(0.0f), 0.0f, e), "cargar la puerta para elegir animacion");
+			comprobar(glb::AddAnimatedObject(una, "x", glbPuerta, glm::vec3(0.0f), 0.0f, e), "cargar la puerta para elegir animacion");
 			const std::string nombreReal = una.objetos[0].modelo->animaciones[0].nombre;
-			comprobar(glb::SeleccionarAnimacion(una.objetos[0], nombreReal, e), "elegir la animacion por su nombre real");
-			comprobar(!glb::SeleccionarAnimacion(una.objetos[0], "otra", e) && e.find("otra") != std::string::npos,
+			comprobar(glb::SelectAnimation(una.objetos[0], nombreReal, e), "elegir la animacion por su nombre real");
+			comprobar(!glb::SelectAnimation(una.objetos[0], "otra", e) && e.find("otra") != std::string::npos,
 				"una animacion inexistente da un error con su nombre");
 		}
 
@@ -758,28 +758,28 @@ namespace
 		// Cambio de habitacion como hace main.cpp: se crea la nueva y SOLO ENTONCES se vacia la anterior.
 		EscenaMontada nueva(mundo, RutaDeEscena("ejemplo_fisica.json"));
 		comprobar(nueva.ok, "ejemplo_fisica monta");
-		const int cuerposNueva = nueva.fisica->NumeroDeCuerpos();
-		comprobar(mundo.NumeroDeCuerpos() == 2 + 20 + cuerposNueva, "durante el cambio conviven las dos (aun no se ha vaciado la vieja)");
-		actual->fisica->Vaciar();
+		const int cuerposNueva = nueva.fisica->BodyCount();
+		comprobar(mundo.BodyCount() == 2 + 20 + cuerposNueva, "durante el cambio conviven las dos (aun no se ha vaciado la vieja)");
+		actual->fisica->Empty();
 		actual.reset();
-		comprobar(mundo.NumeroDeCuerpos() == 2 + cuerposNueva, "tras el cambio solo quedan la demo y la habitacion nueva");
-		comprobar(demo.EstaActiva() && mundo.NumeroDeCuerpos() > 0, "la demo no se ve afectada por el cambio de habitacion");
+		comprobar(mundo.BodyCount() == 2 + cuerposNueva, "tras el cambio solo quedan la demo y la habitacion nueva");
+		comprobar(demo.IsRunningNow() && mundo.BodyCount() > 0, "la demo no se ve afectada por el cambio de habitacion");
 
 		// Reiniciar la demo no toca los cuerpos de la habitacion.
-		demo.Iniciar();
-		comprobar(mundo.NumeroDeCuerpos() == 2 + cuerposNueva, "reiniciar la demo no duplica ni borra cuerpos de la habitacion");
-		demo.Detener();
-		nueva.fisica->Vaciar();
-		comprobar(mundo.NumeroDeCuerpos() == 0, "al vaciar todo no queda ningun cuerpo residual");
+		demo.BeginPlayback();
+		comprobar(mundo.BodyCount() == 2 + cuerposNueva, "reiniciar la demo no duplica ni borra cuerpos de la habitacion");
+		demo.StopSessionGame();
+		nueva.fisica->Empty();
+		comprobar(mundo.BodyCount() == 0, "al vaciar todo no queda ningun cuerpo residual");
 
 		// Las cajas dinamicas del ejemplo caen y terminan quietas sobre la mesa / el suelo.
 		EscenaMontada ejemplo(mundo, RutaDeEscena("ejemplo_fisica.json"));
 		Avanzar(mundo, 6.0f);
 		int quietas = 0;
-		for (const CollisionBox& c : mundo.CajasDeColision())
+		for (const CollisionBox& c : mundo.CollisionBoxes())
 			if (c.tipo == BodyType::Dinamico && c.pose.posicion.z > -1.8f && c.pose.posicion.z < 0.0f) ++quietas;
 		comprobar(quietas == 3, "las tres cajas del ejemplo han caido y estan apoyadas");
-		for (const CollisionBox& c : mundo.CajasDeColision())
+		for (const CollisionBox& c : mundo.CollisionBoxes())
 			if (c.tipo == BodyType::Dinamico) comprobar(c.dormido, "las cajas del ejemplo terminan en reposo");
 
 		std::error_code ec;
@@ -792,50 +792,50 @@ namespace
 	constexpr float SueloZ = -1.7f;   // cara superior del suelo de la habitación
 
 	// Un suelo grande (cara superior en SueloZ).
-	void CrearSuelo(PhysicsWorld& mundo) { mundo.CrearCajaEstatica({ 0, 0, SueloZ - 0.15f }, { 30, 30, 0.15f }); }
+	void CrearSuelo(PhysicsWorld& mundo) { mundo.CreateStaticBox({ 0, 0, SueloZ - 0.15f }, { 30, 30, 0.15f }); }
 
 	// Una pared vertical: un plano a x = 'x' de 30 cm de grosor.
-	void CrearParedX(PhysicsWorld& mundo, float x) { mundo.CrearCajaEstatica({ x + 0.15f, 0, 0 }, { 0.15f, 10, 2 }); }
+	void CrearParedX(PhysicsWorld& mundo, float x) { mundo.CreateStaticBox({ x + 0.15f, 0, 0 }, { 0.15f, 10, 2 }); }
 
 	// El jugador anda con velocidad constante 'velocidad' durante 'segundos', en fotogramas de 'dt'.
 	void Andar(PhysicsWorld& mundo, const glm::vec3& velocidad, float segundos, float dt)
 	{
-		mundo.FijarVelocidadJugador(velocidad);
-		Simular(segundos, dt, [&](float paso) { mundo.Actualizar(paso); });
+		mundo.SetPlayerVelocity(velocidad);
+		Simular(segundos, dt, [&](float paso) { mundo.Advance(paso); });
 	}
 
 	void PruebaJugadorSueloYGravedad()
 	{
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
-		comprobar(mundo.CrearJugador({ 0, 0, SueloZ + 1.0f }), "se crea el jugador");
-		comprobar(!mundo.CrearJugador({ 0, 0, 0 }), "no se pueden crear dos jugadores");
-		comprobar(mundo.HayJugador() && mundo.NumeroDeCuerpos() == 1, "el jugador no cuenta como cuerpo rigido");
+		comprobar(mundo.CreatePlayerBody({ 0, 0, SueloZ + 1.0f }), "se crea el jugador");
+		comprobar(!mundo.CreatePlayerBody({ 0, 0, 0 }), "no se pueden crear dos jugadores");
+		comprobar(mundo.HasPlayerBody() && mundo.BodyCount() == 1, "el jugador no cuenta como cuerpo rigido");
 
 		Avanzar(mundo, 0.1f);
-		comprobar(mundo.PosicionPiesJugador().z < SueloZ + 1.0f - 0.01f, "con gravedad, el jugador empieza a caer");
+		comprobar(mundo.PlayerFeetPosition().z < SueloZ + 1.0f - 0.01f, "con gravedad, el jugador empieza a caer");
 		Avanzar(mundo, 2.0f);
-		const glm::vec3 pies = mundo.PosicionPiesJugador();
+		const glm::vec3 pies = mundo.PlayerFeetPosition();
 		comprobar(casi(pies.z, SueloZ, 0.06f), "los pies se apoyan en el suelo");
-		comprobar(mundo.JugadorEnSuelo(), "JugadorEnSuelo() es verdadero apoyado");
+		comprobar(mundo.IsPlayerGrounded(), "JugadorEnSuelo() es verdadero apoyado");
 		comprobar(casi(pies.x, 0.0f, 1e-3f) && casi(pies.y, 0.0f, 1e-3f), "cae en vertical (sin deriva horizontal)");
 
 		// Sin pedir movimiento, se queda quieto indefinidamente (no se hunde ni vibra).
 		const float alturaAntes = pies.z;
 		Avanzar(mundo, 3.0f);
-		comprobar(casi(mundo.PosicionPiesJugador().z, alturaAntes, 0.005f), "quieto sobre el suelo no se hunde ni vibra");
+		comprobar(casi(mundo.PlayerFeetPosition().z, alturaAntes, 0.005f), "quieto sobre el suelo no se hunde ni vibra");
 	}
 
 	void PruebaJugadorAndaLibre()
 	{
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
-		mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		mundo.CreatePlayerBody({ 0, 0, SueloZ + 0.02f });
 		Avanzar(mundo, 0.5f);
 		Andar(mundo, { 3, 0, 0 }, 2.0f, PhysicsWorld::PasoFijo);
 		// 3 m/s * 2 s = 6 m (sobre suelo llano la distancia es la esperada).
-		comprobar(casi(mundo.PosicionPiesJugador().x, 6.0f, 0.1f), "sin obstaculos, anda a 3 m/s");
-		comprobar(casi(mundo.PosicionPiesJugador().z, SueloZ, 0.06f), "y se mantiene sobre el suelo");
+		comprobar(casi(mundo.PlayerFeetPosition().x, 6.0f, 0.1f), "sin obstaculos, anda a 3 m/s");
+		comprobar(casi(mundo.PlayerFeetPosition().z, SueloZ, 0.06f), "y se mantiene sobre el suelo");
 	}
 
 	void PruebaJugadorChocaConPared()
@@ -843,62 +843,62 @@ namespace
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
 		CrearParedX(mundo, 5.0f);   // cara en x = 5
-		mundo.CrearJugador({ 3, 0, SueloZ + 0.02f });
+		mundo.CreatePlayerBody({ 3, 0, SueloZ + 0.02f });
 		Avanzar(mundo, 0.5f);
 		Andar(mundo, { 3, 0, 0 }, 3.0f, PhysicsWorld::PasoFijo);
-		const float x = mundo.PosicionPiesJugador().x;
+		const float x = mundo.PlayerFeetPosition().x;
 		// Se detiene con la cápsula (radio 0.3) pegada a la pared: x ~ 4.7.
 		comprobar(x < 5.0f - PlayerDimensions::Radio + 0.03f, "no atraviesa la pared");
 		comprobar(x > 5.0f - PlayerDimensions::Radio - 0.15f, "se detiene junto a la pared (no queda lejos)");
-		comprobar(casi(mundo.PosicionPiesJugador().z, SueloZ, 0.06f), "chocar no lo levanta ni lo hunde");
+		comprobar(casi(mundo.PlayerFeetPosition().z, SueloZ, 0.06f), "chocar no lo levanta ni lo hunde");
 
 		// Seguir empujando mucho tiempo no lo hace "entrar" poco a poco.
 		Andar(mundo, { 3, 0, 0 }, 5.0f, PhysicsWorld::PasoFijo);
-		comprobar(mundo.PosicionPiesJugador().x < 5.0f - PlayerDimensions::Radio + 0.03f, "seguir empujando no atraviesa");
+		comprobar(mundo.PlayerFeetPosition().x < 5.0f - PlayerDimensions::Radio + 0.03f, "seguir empujando no atraviesa");
 	}
 
 	void PruebaJugadorSeAgachaYRespetaTecho()
 	{
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
-		mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		mundo.CreatePlayerBody({ 0, 0, SueloZ + 0.02f });
 		Avanzar(mundo, 1.0f);
 
-		const glm::vec3 piesDePie = mundo.PosicionPiesJugador();
-		comprobar(mundo.ActualizarJugadorAgachado(true, 0.1f), "el jugador empieza a agacharse");
-		comprobar(mundo.AlturaJugador() < PlayerDimensions::Altura &&
-			mundo.AlturaJugador() > PlayerDimensions::AlturaAgachado,
+		const glm::vec3 piesDePie = mundo.PlayerFeetPosition();
+		comprobar(mundo.UpdatePlayerCrouch(true, 0.1f), "el jugador empieza a agacharse");
+		comprobar(mundo.PlayerHeight() < PlayerDimensions::Altura &&
+			mundo.PlayerHeight() > PlayerDimensions::AlturaAgachado,
 			"la altura cambia gradualmente en lugar de instantaneamente");
-		comprobar(mundo.AlturaOjosJugador() < PlayerDimensions::AlturaOjos,
+		comprobar(mundo.PlayerEyeHeight() < PlayerDimensions::AlturaOjos,
 			"la altura de la camara tambien cambia gradualmente");
 		for (int i = 0; i < 10; ++i)
-			mundo.ActualizarJugadorAgachado(true, 0.1f);
-		comprobar(mundo.JugadorAgachado(), "el estado del jugador indica que esta agachado");
-		comprobar(casi(mundo.AlturaJugador(), PlayerDimensions::AlturaAgachado, 1e-3f),
+			mundo.UpdatePlayerCrouch(true, 0.1f);
+		comprobar(mundo.IsPlayerCrouched(), "el estado del jugador indica que esta agachado");
+		comprobar(casi(mundo.PlayerHeight(), PlayerDimensions::AlturaAgachado, 1e-3f),
 			"la transicion termina en la altura agachada configurada");
-		comprobar(casi(mundo.PosicionPiesJugador().z, piesDePie.z, 1e-3f),
+		comprobar(casi(mundo.PlayerFeetPosition().z, piesDePie.z, 1e-3f),
 			"agacharse mantiene los pies en el suelo");
 
 		// El techo deja espacio para la cápsula agachada, pero no para la de pie.
 		const float techoInferior = SueloZ + PlayerDimensions::AlturaAgachado + 0.15f;
-		mundo.CrearCajaEstatica({ 0, 0, techoInferior + 0.1f }, { 2, 2, 0.1f });
+		mundo.CreateStaticBox({ 0, 0, techoInferior + 0.1f }, { 2, 2, 0.1f });
 		bool puedeSeguirLevantandose = true;
 		for (int i = 0; i < 10 && puedeSeguirLevantandose; ++i)
-			puedeSeguirLevantandose = mundo.ActualizarJugadorAgachado(false, 0.1f);
+			puedeSeguirLevantandose = mundo.UpdatePlayerCrouch(false, 0.1f);
 		comprobar(!puedeSeguirLevantandose, "el techo impide seguir levantandose");
-		comprobar(mundo.JugadorAgachado(), "el jugador sigue agachado bajo el techo");
+		comprobar(mundo.IsPlayerCrouched(), "el jugador sigue agachado bajo el techo");
 
 		PhysicsWorld espacioAbierto;
 		CrearSuelo(espacioAbierto);
-		espacioAbierto.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		espacioAbierto.CreatePlayerBody({ 0, 0, SueloZ + 0.02f });
 		Avanzar(espacioAbierto, 1.0f);
 		for (int i = 0; i < 10; ++i)
-			espacioAbierto.ActualizarJugadorAgachado(true, 0.1f);
+			espacioAbierto.UpdatePlayerCrouch(true, 0.1f);
 		bool puedeLevantarse = true;
 		for (int i = 0; i < 10 && puedeLevantarse; ++i)
-			puedeLevantarse = espacioAbierto.ActualizarJugadorAgachado(false, 0.1f);
+			puedeLevantarse = espacioAbierto.UpdatePlayerCrouch(false, 0.1f);
 		comprobar(puedeLevantarse, "se puede levantar sin obstaculos");
-		comprobar(!espacioAbierto.JugadorAgachado(), "el estado vuelve a estar de pie");
+		comprobar(!espacioAbierto.IsPlayerCrouched(), "el estado vuelve a estar de pie");
 	}
 
 	// Agachado suave: curva de Hermite (despacio al empezar y al llegar), pies fijos, sin hundirse ni saltar.
@@ -906,23 +906,23 @@ namespace
 	{
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
-		mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		mundo.CreatePlayerBody({ 0, 0, SueloZ + 0.02f });
 		Avanzar(mundo, 1.0f);
-		const float piesZ = mundo.PosicionPiesJugador().z;
-		comprobar(mundo.JugadorEnSuelo(), "de pie: en el suelo");
+		const float piesZ = mundo.PlayerFeetPosition().z;
+		comprobar(mundo.IsPlayerGrounded(), "de pie: en el suelo");
 
 		// Con delta 0 (pausa) no cambia nada.
-		mundo.ActualizarJugadorAgachado(true, 0.0f);
-		comprobar(!mundo.JugadorAgachado() && mundo.FraccionAgachado() == 0.0f, "delta 0: la postura se congela");
+		mundo.UpdatePlayerCrouch(true, 0.0f);
+		comprobar(!mundo.IsPlayerCrouched() && mundo.CrouchFraction() == 0.0f, "delta 0: la postura se congela");
 
 		// Bajar: la altura es monotona, el primer y el ultimo tramo avanzan menos que el central.
 		std::vector<float> alturas;
 		for (int i = 0; i < 40; ++i)
 		{
-			mundo.ActualizarJugadorAgachado(true, PhysicsWorld::PasoFijo);
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
-			alturas.push_back(mundo.AlturaJugador());
-			comprobar(std::abs(mundo.PosicionPiesJugador().z - piesZ) < 0.01f, "los pies no se mueven al cambiar de postura");
+			mundo.UpdatePlayerCrouch(true, PhysicsWorld::PasoFijo);
+			mundo.Advance(PhysicsWorld::PasoFijo);
+			alturas.push_back(mundo.PlayerHeight());
+			comprobar(std::abs(mundo.PlayerFeetPosition().z - piesZ) < 0.01f, "los pies no se mueven al cambiar de postura");
 		}
 		bool monotona = true;
 		for (std::size_t i = 1; i < alturas.size(); ++i) monotona = monotona && alturas[i] <= alturas[i - 1] + 1e-6f;
@@ -930,17 +930,17 @@ namespace
 		const float primerPaso = PlayerDimensions::Altura - alturas[0];
 		const float pasoCentral = alturas[19] - alturas[20];
 		comprobar(primerPaso < pasoCentral * 0.3f, "el arranque es mas lento que el tramo central (curva suave)");
-		comprobar(mundo.JugadorEnSuelo(), "agachando sigue apoyado en el suelo");
+		comprobar(mundo.IsPlayerGrounded(), "agachando sigue apoyado en el suelo");
 
 		// Subir con el techo libre hasta de pie: misma altura de pies, y alturas de ojos coherentes.
 		for (int i = 0; i < 60; ++i)
 		{
-			mundo.ActualizarJugadorAgachado(false, PhysicsWorld::PasoFijo);
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
+			mundo.UpdatePlayerCrouch(false, PhysicsWorld::PasoFijo);
+			mundo.Advance(PhysicsWorld::PasoFijo);
 		}
-		comprobar(!mundo.JugadorAgachado() && casi(mundo.AlturaJugador(), PlayerDimensions::Altura, 1e-3f), "vuelve a la altura de pie");
-		comprobar(std::abs(mundo.PosicionPiesJugador().z - piesZ) < 0.01f, "tras agacharse y levantarse los pies estan donde estaban");
-		comprobar(casi(mundo.AlturaOjosJugador(), PlayerDimensions::AlturaOjos, 1e-3f), "los ojos vuelven a 1,70 m");
+		comprobar(!mundo.IsPlayerCrouched() && casi(mundo.PlayerHeight(), PlayerDimensions::Altura, 1e-3f), "vuelve a la altura de pie");
+		comprobar(std::abs(mundo.PlayerFeetPosition().z - piesZ) < 0.01f, "tras agacharse y levantarse los pies estan donde estaban");
+		comprobar(casi(mundo.PlayerEyeHeight(), PlayerDimensions::AlturaOjos, 1e-3f), "los ojos vuelven a 1,70 m");
 	}
 
 	// Cambio de postura andando contra un muro y bajo un techo: nunca atraviesa colisionadores.
@@ -950,38 +950,38 @@ namespace
 		CrearSuelo(mundo);
 		CrearParedX(mundo, 5.0f);
 		// Techo bajo (1,3 m) en x > 2: de pie (1,8 m) no cabe, agachado (1,0 m) si.
-		mundo.CrearCajaEstatica({ 3.5f, 0, SueloZ + 1.3f + 0.1f }, { 1.5f, 3, 0.1f });
-		mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+		mundo.CreateStaticBox({ 3.5f, 0, SueloZ + 1.3f + 0.1f }, { 1.5f, 3, 0.1f });
+		mundo.CreatePlayerBody({ 0, 0, SueloZ + 0.02f });
 		Avanzar(mundo, 0.5f);
 
 		for (int i = 0; i < 40; ++i)
 		{
-			mundo.ActualizarJugadorAgachado(true, PhysicsWorld::PasoFijo);
-			mundo.FijarVelocidadJugador({ 1.4f, 0, 0 });
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
+			mundo.UpdatePlayerCrouch(true, PhysicsWorld::PasoFijo);
+			mundo.SetPlayerVelocity({ 1.4f, 0, 0 });
+			mundo.Advance(PhysicsWorld::PasoFijo);
 		}
 		Andar(mundo, { 1.4f, 0, 0 }, 3.0f, PhysicsWorld::PasoFijo);
-		comprobar(mundo.PosicionPiesJugador().x > 2.5f, "agachado pasa bajo el techo bajo");
-		comprobar(mundo.PosicionPiesJugador().x < 5.0f - PlayerDimensions::Radio + 0.03f, "agachado no atraviesa la pared");
+		comprobar(mundo.PlayerFeetPosition().x > 2.5f, "agachado pasa bajo el techo bajo");
+		comprobar(mundo.PlayerFeetPosition().x < 5.0f - PlayerDimensions::Radio + 0.03f, "agachado no atraviesa la pared");
 
 		// Soltar Ctrl bajo el techo: no se levanta.
 		bool sigue = true;
 		for (int i = 0; i < 60; ++i)
 		{
-			sigue = mundo.ActualizarJugadorAgachado(false, PhysicsWorld::PasoFijo) && sigue;
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
+			sigue = mundo.UpdatePlayerCrouch(false, PhysicsWorld::PasoFijo) && sigue;
+			mundo.Advance(PhysicsWorld::PasoFijo);
 		}
-		comprobar(!sigue && mundo.JugadorAgachado(), "bajo el techo bajo se queda agachado");
-		comprobar(mundo.FraccionAgachado() > 0.5f, "la fraccion de agachado lo refleja");
+		comprobar(!sigue && mundo.IsPlayerCrouched(), "bajo el techo bajo se queda agachado");
+		comprobar(mundo.CrouchFraction() > 0.5f, "la fraccion de agachado lo refleja");
 
 		// Sale a campo abierto y entonces se levanta.
 		Andar(mundo, { -1.4f, 0, 0 }, 3.0f, PhysicsWorld::PasoFijo);
 		for (int i = 0; i < 60; ++i)
 		{
-			mundo.ActualizarJugadorAgachado(false, PhysicsWorld::PasoFijo);
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
+			mundo.UpdatePlayerCrouch(false, PhysicsWorld::PasoFijo);
+			mundo.Advance(PhysicsWorld::PasoFijo);
 		}
-		comprobar(!mundo.JugadorAgachado(), "fuera del techo se levanta");
+		comprobar(!mundo.IsPlayerCrouched(), "fuera del techo se levanta");
 	}
 
 	// El mismo agachado a 30, 60 y 120 FPS acaba en la misma altura en el mismo tiempo.
@@ -993,11 +993,11 @@ namespace
 		{
 			PhysicsWorld mundo;
 			CrearSuelo(mundo);
-			mundo.CrearJugador({ 0, 0, SueloZ + 0.02f });
+			mundo.CreatePlayerBody({ 0, 0, SueloZ + 0.02f });
 			Avanzar(mundo, 0.5f);
 			for (int i = 0; i < fps / 5; ++i)   // 0,2 s
-				mundo.ActualizarJugadorAgachado(true, 1.0f / fps);
-			finales[k++] = mundo.AlturaJugador();
+				mundo.UpdatePlayerCrouch(true, 1.0f / fps);
+			finales[k++] = mundo.PlayerHeight();
 		}
 		comprobar(casi(finales[0], finales[1], 2e-3f) && casi(finales[1], finales[2], 2e-3f), "el agachado no depende de los FPS");
 	}
@@ -1007,11 +1007,11 @@ namespace
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
 		CrearParedX(mundo, 5.0f);
-		mundo.CrearJugador({ 3, 0, SueloZ + 0.02f });
+		mundo.CreatePlayerBody({ 3, 0, SueloZ + 0.02f });
 		Avanzar(mundo, 0.5f);
 		// Diagonal contra la pared: la componente X se anula, la Y debe continuar (deslizar).
 		Andar(mundo, { 2.1f, 2.1f, 0 }, 2.0f, PhysicsWorld::PasoFijo);
-		const glm::vec3 pies = mundo.PosicionPiesJugador();
+		const glm::vec3 pies = mundo.PlayerFeetPosition();
 		comprobar(pies.x < 5.0f - PlayerDimensions::Radio + 0.03f, "diagonal: no atraviesa la pared");
 		comprobar(pies.y > 2.5f, "diagonal: sigue avanzando a lo largo de la pared (desliza)");
 		comprobar(pies.y < 2.1f * 2.0f + 0.1f, "diagonal: no avanza mas de lo que pide");
@@ -1022,17 +1022,17 @@ namespace
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
 		// Una mesa/armario: caja de 1 x 1 x 1 m con la base en el suelo, centrada en (5, 0).
-		mundo.CrearCajaEstatica({ 5, 0, SueloZ + 0.5f }, { 0.5f, 0.5f, 0.5f });
-		mundo.CrearJugador({ 2, 0, SueloZ + 0.02f });
+		mundo.CreateStaticBox({ 5, 0, SueloZ + 0.5f }, { 0.5f, 0.5f, 0.5f });
+		mundo.CreatePlayerBody({ 2, 0, SueloZ + 0.02f });
 		Avanzar(mundo, 0.5f);
 		Andar(mundo, { 3, 0, 0 }, 3.0f, PhysicsWorld::PasoFijo);
-		comprobar(mundo.PosicionPiesJugador().x < 4.5f - PlayerDimensions::Radio + 0.03f, "no atraviesa un objeto estatico");
-		comprobar(mundo.PosicionPiesJugador().z < SueloZ + 0.1f, "y no trepa encima (altura de escalon limitada)");
+		comprobar(mundo.PlayerFeetPosition().x < 4.5f - PlayerDimensions::Radio + 0.03f, "no atraviesa un objeto estatico");
+		comprobar(mundo.PlayerFeetPosition().z < SueloZ + 0.1f, "y no trepa encima (altura de escalon limitada)");
 
 		// Rodearlo: yendo en diagonal acaba pasando por un lado.
 		Andar(mundo, { 0, 3, 0 }, 1.0f, PhysicsWorld::PasoFijo);
 		Andar(mundo, { 3, 0, 0 }, 2.0f, PhysicsWorld::PasoFijo);
-		comprobar(mundo.PosicionPiesJugador().x > 6.0f, "se puede rodear el objeto");
+		comprobar(mundo.PlayerFeetPosition().x > 6.0f, "se puede rodear el objeto");
 	}
 
 	// Mismo recorrido con distintos FPS: mismo resultado y nunca atraviesa.
@@ -1045,10 +1045,10 @@ namespace
 			PhysicsWorld mundo;
 			CrearSuelo(mundo);
 			CrearParedX(mundo, 5.0f);
-			mundo.CrearJugador({ 3, 0, SueloZ + 0.02f });
+			mundo.CreatePlayerBody({ 3, 0, SueloZ + 0.02f });
 			Avanzar(mundo, 0.5f);
 			Andar(mundo, { 3, 0, 0 }, 4.0f, dts[i]);
-			finalX[i] = mundo.PosicionPiesJugador().x;
+			finalX[i] = mundo.PlayerFeetPosition().x;
 			comprobar(finalX[i] < 5.0f - PlayerDimensions::Radio + 0.03f, "a cualquier FPS no atraviesa la pared");
 		}
 		comprobar(casi(finalX[0], finalX[3], 0.03f) && casi(finalX[1], finalX[2], 0.03f) && casi(finalX[0], finalX[1], 0.03f),
@@ -1056,43 +1056,43 @@ namespace
 
 		// Y en movimiento libre recorre la misma distancia (salvo el redondeo de fotogramas).
 		PhysicsWorld lento, rapido;
-		for (PhysicsWorld* m : { &lento, &rapido }) { CrearSuelo(*m); m->CrearJugador({ 0, 0, SueloZ + 0.02f }); Avanzar(*m, 0.5f); }
+		for (PhysicsWorld* m : { &lento, &rapido }) { CrearSuelo(*m); m->CreatePlayerBody({ 0, 0, SueloZ + 0.02f }); Avanzar(*m, 0.5f); }
 		Andar(lento, { 3, 0, 0 }, 2.0f, 0.1f);
 		Andar(rapido, { 3, 0, 0 }, 2.0f, 1.0f / 144.0f);
-		comprobar(casi(lento.PosicionPiesJugador().x, rapido.PosicionPiesJugador().x, 0.1f), "misma distancia a 10 FPS y a 144 FPS");
+		comprobar(casi(lento.PlayerFeetPosition().x, rapido.PlayerFeetPosition().x, 0.1f), "misma distancia a 10 FPS y a 144 FPS");
 
 		// Un tirón enorme (10 s de fotograma) se recorta: ni se teletransporta ni atraviesa.
 		PhysicsWorld tiron;
 		CrearSuelo(tiron);
 		CrearParedX(tiron, 5.0f);
-		tiron.CrearJugador({ 4.0f, 0, SueloZ + 0.02f });
+		tiron.CreatePlayerBody({ 4.0f, 0, SueloZ + 0.02f });
 		Avanzar(tiron, 0.5f);
-		tiron.FijarVelocidadJugador({ 3, 0, 0 });
-		tiron.Actualizar(10.0f);
-		comprobar(tiron.PosicionPiesJugador().x < 5.0f - PlayerDimensions::Radio + 0.03f, "un fotograma de 10 s no lo lanza a traves de la pared");
+		tiron.SetPlayerVelocity({ 3, 0, 0 });
+		tiron.Advance(10.0f);
+		comprobar(tiron.PlayerFeetPosition().x < 5.0f - PlayerDimensions::Radio + 0.03f, "un fotograma de 10 s no lo lanza a traves de la pared");
 	}
 
 	void PruebaJugadorPausa()
 	{
 		PhysicsWorld mundo;
 		CrearSuelo(mundo);
-		mundo.CrearJugador({ 0, 0, SueloZ + 1.0f });   // en el aire: cae
+		mundo.CreatePlayerBody({ 0, 0, SueloZ + 1.0f });   // en el aire: cae
 		Avanzar(mundo, 0.1f);
-		mundo.FijarPausa(true);
-		const glm::vec3 enPausa = mundo.PosicionPiesJugador();
-		mundo.FijarVelocidadJugador({ 3, 0, 0 });
-		Simular(2.0f, 0.016f, [&](float dt) { mundo.Actualizar(dt); });
-		comprobar(mundo.PosicionPiesJugador() == enPausa, "en pausa el jugador no se mueve ni cae");
-		mundo.FijarPausa(false);
+		mundo.SetPaused(true);
+		const glm::vec3 enPausa = mundo.PlayerFeetPosition();
+		mundo.SetPlayerVelocity({ 3, 0, 0 });
+		Simular(2.0f, 0.016f, [&](float dt) { mundo.Advance(dt); });
+		comprobar(mundo.PlayerFeetPosition() == enPausa, "en pausa el jugador no se mueve ni cae");
+		mundo.SetPaused(false);
 		Avanzar(mundo, 0.2f);
-		comprobar(mundo.PosicionPiesJugador().x > enPausa.x + 0.3f && mundo.PosicionPiesJugador().z < enPausa.z, "al reanudar anda y cae");
+		comprobar(mundo.PlayerFeetPosition().x > enPausa.x + 0.3f && mundo.PlayerFeetPosition().z < enPausa.z, "al reanudar anda y cae");
 		// Teletransporte: coloca al jugador y resetea la caida.
-		mundo.TeletransportarJugador({ 7, 8, SueloZ + 0.02f });
-		mundo.FijarVelocidadJugador({ 0, 0, 0 });
+		mundo.TeleportPlayer({ 7, 8, SueloZ + 0.02f });
+		mundo.SetPlayerVelocity({ 0, 0, 0 });
 		Avanzar(mundo, 0.5f);
-		comprobar(Cerca(mundo.PosicionPiesJugador(), { 7, 8, SueloZ }, 0.08f), "TeletransportarJugador lo coloca donde se pide");
-		mundo.EliminarJugador();
-		comprobar(!mundo.HayJugador(), "EliminarJugador lo quita");
+		comprobar(Cerca(mundo.PlayerFeetPosition(), { 7, 8, SueloZ }, 0.08f), "TeletransportarJugador lo coloca donde se pide");
+		mundo.RemovePlayerBody();
+		comprobar(!mundo.HasPlayerBody(), "EliminarJugador lo quita");
 	}
 
 	// Recorre la puerta 'puerta_2' de habitacion_beta en el eje X (hueco en x = 6, y = 3). (La puerta_1 queda
@@ -1102,22 +1102,22 @@ namespace
 		glb::AnimatedScene& anim = habitacion.animados;
 		if (abierta)
 		{
-			glb::AlternarPuerta(anim.objetos[1]);
+			glb::ToggleDoor(anim.objetos[1]);
 			for (int i = 0; i < 300; ++i)   // 5 s: de sobra para abrirse del todo
 			{
-				glb::ActualizarObjetos(anim, PhysicsWorld::PasoFijo);
-				habitacion.fisica->SincronizarCinematicos(anim);
-				mundo.Actualizar(PhysicsWorld::PasoFijo);
+				glb::UpdateAnimatedObjects(anim, PhysicsWorld::PasoFijo);
+				habitacion.fisica->SyncKinematics(anim);
+				mundo.Advance(PhysicsWorld::PasoFijo);
 			}
 		}
-		mundo.CrearJugador({ 4.5f, abierta ? 3.04f : 3.0f, SueloZ + 0.02f });   // abierta: la hoja ocupa el lado y<2.68, se pasa por el centro del hueco libre
+		mundo.CreatePlayerBody({ 4.5f, abierta ? 3.04f : 3.0f, SueloZ + 0.02f });   // abierta: la hoja ocupa el lado y<2.68, se pasa por el centro del hueco libre
 		Avanzar(mundo, 0.5f);
-		mundo.FijarVelocidadJugador({ 3, 0, 0 });
+		mundo.SetPlayerVelocity({ 3, 0, 0 });
 		Simular(3.0f, dt, [&](float paso) {
-			habitacion.fisica->SincronizarCinematicos(anim);
-			mundo.Actualizar(paso);
+			habitacion.fisica->SyncKinematics(anim);
+			mundo.Advance(paso);
 		});
-		return mundo.PosicionPiesJugador().x;
+		return mundo.PlayerFeetPosition().x;
 	}
 
 	void PruebaJugadorYPuertas()
@@ -1149,23 +1149,23 @@ namespace
 			PhysicsWorld mundo;
 			EscenaMontada habitacion(mundo, RutaDeEscena("habitacion_beta.json"));
 			glb::AnimatedScene& anim = habitacion.animados;
-			glb::AlternarPuerta(anim.objetos[1]);
-			for (int i = 0; i < 300; ++i) { glb::ActualizarObjetos(anim, PhysicsWorld::PasoFijo); habitacion.fisica->SincronizarCinematicos(anim); mundo.Actualizar(PhysicsWorld::PasoFijo); }
+			glb::ToggleDoor(anim.objetos[1]);
+			for (int i = 0; i < 300; ++i) { glb::UpdateAnimatedObjects(anim, PhysicsWorld::PasoFijo); habitacion.fisica->SyncKinematics(anim); mundo.Advance(PhysicsWorld::PasoFijo); }
 			// La puerta abierta queda tumbada hacia -X (x de 5.14 a 5.98, y ~ 2.6). Al cerrarse, la hoja
 			// barre el cuarto de circulo que hay delante: ponemos al jugador en medio de ese recorrido.
-			mundo.CrearJugador({ 5.6f, 3.1f, SueloZ + 0.02f });
+			mundo.CreatePlayerBody({ 5.6f, 3.1f, SueloZ + 0.02f });
 			Avanzar(mundo, 0.5f);
-			const glm::vec3 inicio = mundo.PosicionPiesJugador();
+			const glm::vec3 inicio = mundo.PlayerFeetPosition();
 			comprobar(Cerca(inicio, { 5.6f, 3.1f, SueloZ }, 0.08f), "el jugador esta en el recorrido de la hoja y la puerta abierta no lo mueve");
-			glb::AlternarPuerta(anim.objetos[1]);   // cerrar
-			glm::vec3 anterior = mundo.PosicionPiesJugador();
+			glb::ToggleDoor(anim.objetos[1]);   // cerrar
+			glm::vec3 anterior = mundo.PlayerFeetPosition();
 			float saltoMaximo = 0.0f;
 			for (int i = 0; i < 300; ++i)
 			{
-				glb::ActualizarObjetos(anim, PhysicsWorld::PasoFijo);
-				habitacion.fisica->SincronizarCinematicos(anim);
-				mundo.Actualizar(PhysicsWorld::PasoFijo);
-				const glm::vec3 ahora = mundo.PosicionPiesJugador();
+				glb::UpdateAnimatedObjects(anim, PhysicsWorld::PasoFijo);
+				habitacion.fisica->SyncKinematics(anim);
+				mundo.Advance(PhysicsWorld::PasoFijo);
+				const glm::vec3 ahora = mundo.PlayerFeetPosition();
 				saltoMaximo = std::max(saltoMaximo, glm::length(ahora - anterior));
 				anterior = ahora;
 			}
@@ -1190,16 +1190,16 @@ namespace
 		const float limitesX[2] = { -3.0f + 0.15f, 13.0f - 0.15f };   // caras interiores de las paredes laterales
 		PhysicsWorld mundo;
 		EscenaMontada habitacion(mundo, RutaDeEscena("habitacion_beta.json"));
-		mundo.CrearJugador({ 10.0f, 0.0f, SueloZ + 0.02f });   // posicion de inicio del juego
+		mundo.CreatePlayerBody({ 10.0f, 0.0f, SueloZ + 0.02f });   // posicion de inicio del juego
 		Avanzar(mundo, 0.5f);
-		comprobar(mundo.JugadorEnSuelo(), "habitacion_beta: el jugador empieza apoyado en el suelo");
+		comprobar(mundo.IsPlayerGrounded(), "habitacion_beta: el jugador empieza apoyado en el suelo");
 		Andar(mundo, { 3, 0, 0 }, 3.0f, 1.0f / 60.0f);
-		comprobar(mundo.PosicionPiesJugador().x < limitesX[1] - PlayerDimensions::Radio + 0.03f, "habitacion_beta: la pared derecha lo detiene");
+		comprobar(mundo.PlayerFeetPosition().x < limitesX[1] - PlayerDimensions::Radio + 0.03f, "habitacion_beta: la pared derecha lo detiene");
 		Andar(mundo, { 0, 3, 0 }, 4.0f, 1.0f / 60.0f);
-		comprobar(mundo.PosicionPiesJugador().y < 5.0f - 0.15f - PlayerDimensions::Radio + 0.03f, "habitacion_beta: la pared delantera lo detiene");
+		comprobar(mundo.PlayerFeetPosition().y < 5.0f - 0.15f - PlayerDimensions::Radio + 0.03f, "habitacion_beta: la pared delantera lo detiene");
 		// Hacia el armario (-1, 3.3): lo cruza en diagonal sin atravesarlo.
 		Andar(mundo, { -3, 0, 0 }, 8.0f, 1.0f / 60.0f);
-		const glm::vec3 pies = mundo.PosicionPiesJugador();
+		const glm::vec3 pies = mundo.PlayerFeetPosition();
 		comprobar(pies.x > -3.0f + 0.15f + PlayerDimensions::Radio - 0.03f, "habitacion_beta: la pared izquierda lo detiene");
 		comprobar(casi(pies.z, SueloZ, 0.1f), "habitacion_beta: sigue en el suelo tras el recorrido");
 		std::cout << "  (info) habitacion_beta: posicion final tras el recorrido " << pies.x << ", " << pies.y << "\n";
@@ -1212,8 +1212,8 @@ namespace
 	void PruebaVistaEstereo()
 	{
 		const glm::mat4 central = glm::lookAt(glm::vec3(3, 2, 1), glm::vec3(8, 2, 0.5f), glm::vec3(0, 0, 1));
-		const glm::mat4 izq = stereo::VistaDeOjo(central, stereo::Ojo::Izquierdo);
-		const glm::mat4 der = stereo::VistaDeOjo(central, stereo::Ojo::Derecho);
+		const glm::mat4 izq = stereo::EyeViewMatrix(central, stereo::Ojo::Izquierdo);
+		const glm::mat4 der = stereo::EyeViewMatrix(central, stereo::Ojo::Derecho);
 		const glm::mat4 invC = glm::inverse(central), invI = glm::inverse(izq), invD = glm::inverse(der);
 		const glm::vec3 derechaCamara = glm::normalize(glm::vec3(invC[0]));
 
@@ -1222,14 +1222,14 @@ namespace
 		comprobar(casi(glm::distance(glm::vec3(invI[3]), glm::vec3(invD[3])), 0.064f, 1e-4f), "separacion entre ojos de 6,4 cm");
 		comprobar(Cerca(glm::vec3(invI[2]), glm::vec3(invC[2]), 1e-5f) && Cerca(glm::vec3(invD[2]), glm::vec3(invC[2]), 1e-5f),
 			"ambos ojos miran en la misma direccion que la camara (el estereo no gira la cabeza)");
-		comprobar(Cerca(glm::vec3(stereo::VistaDeOjo(central, stereo::Ojo::Izquierdo, 0.0f)[3]), glm::vec3(central[3]), 1e-6f),
+		comprobar(Cerca(glm::vec3(stereo::EyeViewMatrix(central, stereo::Ojo::Izquierdo, 0.0f)[3]), glm::vec3(central[3]), 1e-6f),
 			"con separacion 0 la vista del ojo es la central");
-		comprobar(stereo::MitadDePantalla(stereo::Ojo::Izquierdo, 1280).x == 0 && stereo::MitadDePantalla(stereo::Ojo::Derecho, 1280).x == 640 &&
-			stereo::MitadDePantalla(stereo::Ojo::Derecho, 1280).ancho == 640, "cada ojo ocupa una mitad de la pantalla");
+		comprobar(stereo::ScreenHalf(stereo::Ojo::Izquierdo, 1280).x == 0 && stereo::ScreenHalf(stereo::Ojo::Derecho, 1280).x == 640 &&
+			stereo::ScreenHalf(stereo::Ojo::Derecho, 1280).ancho == 640, "cada ojo ocupa una mitad de la pantalla");
 	}
 
 	// Indice de un objeto de la escena por su id (-1 si no esta).
-	int IndiceDe(const EscenaMontada& e, const char* id)
+	int IndexOf(const EscenaMontada& e, const char* id)
 	{
 		for (std::size_t i = 0; i < e.datos.objetos.size(); ++i) if (e.datos.objetos[i].id == id) return static_cast<int>(i);
 		return -1;
@@ -1241,77 +1241,77 @@ namespace
 		EscenaMontada sala(mundo, RutaDeEscena("habitacion_beta.json"));
 		comprobar(sala.ok, "habitacion_beta monta para las pruebas de agarre");
 		if (!sala.ok) return;
-		const int grande = IndiceDe(sala, "box_large");
-		const int pared = IndiceDe(sala, "wall_front");
-		comprobar(grande >= 0 && sala.fisica->NumeroDeDinamicos() == 2, "box_large y box_small son los objetos agarrables");
-		const int cuerposIniciales = mundo.NumeroDeCuerpos();
+		const int grande = IndexOf(sala, "box_large");
+		const int pared = IndexOf(sala, "wall_front");
+		comprobar(grande >= 0 && sala.fisica->DynamicCount() == 2, "box_large y box_small son los objetos agarrables");
+		const int cuerposIniciales = mundo.BodyCount();
 
 		// Jugador a 1,2 m de la caja; los ojos quedan a 1,7 m sobre sus pies.
-		mundo.CrearJugador({ 5.8f, 2.0f, SueloZ + 0.02f });
+		mundo.CreatePlayerBody({ 5.8f, 2.0f, SueloZ + 0.02f });
 		Avanzar(mundo, 1.0f);
-		const glm::vec3 ojos = mundo.PosicionPiesJugador() + glm::vec3(0, 0, PlayerDimensions::AlturaOjos);
+		const glm::vec3 ojos = mundo.PlayerFeetPosition() + glm::vec3(0, 0, PlayerDimensions::AlturaOjos);
 		const glm::vec3 haciaCaja = glm::vec3(7, 2, -1.3f) - ojos;
 
 		// 1) Seleccion: solo lo agarrable, y solo si se ve de verdad.
-		comprobar(sala.fisica->IntentarAgarrar(ojos, glm::vec3(-1, 0, -0.3f)) == -1, "mirando una pared/vacio no se agarra nada");
-		comprobar(sala.fisica->IntentarAgarrar(ojos, glm::vec3(0, 0, -1)) == -1, "mirando al suelo (estatico) no se agarra nada");
-		comprobar(!sala.fisica->HayAgarre(), "tras los intentos fallidos la mano sigue vacia");
-		comprobar(sala.fisica->IntentarAgarrar(glm::vec3(5.8f, 2.0f, -1.2f) + glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)) == -1,
+		comprobar(sala.fisica->TryGrab(ojos, glm::vec3(-1, 0, -0.3f)) == -1, "mirando una pared/vacio no se agarra nada");
+		comprobar(sala.fisica->TryGrab(ojos, glm::vec3(0, 0, -1)) == -1, "mirando al suelo (estatico) no se agarra nada");
+		comprobar(!sala.fisica->HasGrab(), "tras los intentos fallidos la mano sigue vacia");
+		comprobar(sala.fisica->TryGrab(glm::vec3(5.8f, 2.0f, -1.2f) + glm::vec3(0, 0, 0), glm::vec3(0, 1, 0)) == -1,
 			"mirando una mesa/mueble estatico o una puerta no se agarra nada");
-		comprobar(sala.fisica->IntentarAgarrar(ojos, haciaCaja * 3.0f) == grande && sala.fisica->HayAgarre() && sala.fisica->ObjetoAgarrado() == grande,
+		comprobar(sala.fisica->TryGrab(ojos, haciaCaja * 3.0f) == grande && sala.fisica->HasGrab() && sala.fisica->GrabbedObject() == grande,
 			"mirando box_large a 1,8 m se agarra");
-		comprobar(mundo.NumeroDeCuerpos() == cuerposIniciales, "agarrar no crea ni borra cuerpos");
-		sala.fisica->SoltarAgarre();
+		comprobar(mundo.BodyCount() == cuerposIniciales, "agarrar no crea ni borra cuerpos");
+		sala.fisica->ReleaseGrab();
 
 		// El agarre de un cliente vive en la sujeción autoritativa del host, no en cuerpoSujeto local.
-		const glm::vec3 destinoAgarre = PhysicsScene::DestinoDeAgarre(ojos, haciaCaja);
-		comprobar(sala.fisica->SujetarDinamicoRemoto(grande, ojos, haciaCaja),
+		const glm::vec3 destinoAgarre = PhysicsScene::GrabDestination(ojos, haciaCaja);
+		comprobar(sala.fisica->HoldRemoteDynamic(grande, ojos, haciaCaja),
 			"el host sujeta remotamente el mismo cuerpo dinámico que seleccionó el rayo del cliente");
-		comprobar(sala.fisica->ObjetoDinamicoSujeto(grande) && !sala.fisica->HayAgarre() &&
-			 sala.fisica->ObjetoAgarrado() == -1,
+		comprobar(sala.fisica->HeldDynamicObject(grande) && !sala.fisica->HasGrab() &&
+			 sala.fisica->GrabbedObject() == -1,
 			"la sujeción remota se detecta sin fingir que pertenece a la mano local del host");
-		sala.fisica->ActualizarAgarreRemoto(grande, destinoAgarre);
+		sala.fisica->UpdateRemoteGrab(grande, destinoAgarre);
 		Avanzar(mundo, 1.5f);
 		glm::vec3 posicionRemota(0.0f);
-		comprobar(sala.fisica->PosicionObjetoDinamico(grande, posicionRemota) &&
+		comprobar(sala.fisica->DynamicObjectPosition(grande, posicionRemota) &&
 			 Cerca(posicionRemota, destinoAgarre, 0.12f),
 			"el agarre remoto usa el mismo punto delante del rayo que el agarre local");
-		comprobar(sala.fisica->SoltarDinamicoRemoto(grande, glm::vec3(0.0f)) &&
-			!sala.fisica->ObjetoDinamicoSujeto(grande),
+		comprobar(sala.fisica->ReleaseRemoteDynamic(grande, glm::vec3(0.0f)) &&
+			!sala.fisica->HeldDynamicObject(grande),
 			"soltar el agarre remoto recupera la gravedad y elimina la restricción autoritativa");
 
 		// Alcance: desde 4 m no llega.
 		const glm::vec3 lejos = glm::vec3(3.0f, 2.0f, -0.3f);
-		comprobar(sala.fisica->IntentarAgarrar(lejos, glm::vec3(7, 2, -1.3f) - lejos) == -1, "fuera de alcance (2 m) no se agarra");
+		comprobar(sala.fisica->TryGrab(lejos, glm::vec3(7, 2, -1.3f) - lejos) == -1, "fuera de alcance (2 m) no se agarra");
 
 		// 2) Agarre: la caja SIGUE a la mano siendo el mismo cuerpo de Bullet, sin gravedad.
-		comprobar(sala.fisica->IntentarAgarrar(ojos, haciaCaja) == grande, "agarrar box_large");
+		comprobar(sala.fisica->TryGrab(ojos, haciaCaja) == grande, "agarrar box_large");
 		const glm::vec3 mirada(1, 0, 0);
-		for (int i = 0; i < 90; ++i) { sala.fisica->ActualizarAgarre(ojos, mirada); mundo.Actualizar(PhysicsWorld::PasoFijo); }
-		const IdCuerpo cuerpo = mundo.CuerpoSujeto();
-		const glm::vec3 enLaMano = mundo.PoseDe(cuerpo).posicion;
-		comprobar(Cerca(enLaMano, mundo.DestinoDeSujecion(), 0.05f), "la caja llega al punto de la mano");
+		for (int i = 0; i < 90; ++i) { sala.fisica->UpdateGrab(ojos, mirada); mundo.Advance(PhysicsWorld::PasoFijo); }
+		const IdCuerpo cuerpo = mundo.HeldBody();
+		const glm::vec3 enLaMano = mundo.PoseOf(cuerpo).posicion;
+		comprobar(Cerca(enLaMano, mundo.HoldDestination(), 0.05f), "la caja llega al punto de la mano");
 		comprobar(enLaMano.z > -1.0f, "sujeta no cae por la gravedad (esta mas alta que en el suelo)");
-		const glm::mat4 dibujo = sala.fisica->MatrizVisualDe(grande, sala.datos.objetos[grande]);
+		const glm::mat4 dibujo = sala.fisica->VisualMatrixOf(grande, sala.datos.objetos[grande]);
 		comprobar(Cerca(glm::vec3(dibujo[3]), enLaMano, 0.01f), "lo que se dibuja es exactamente la posicion de Bullet");
 		// El objeto de la mano no empuja al jugador (la capsula lo ve como obstaculo, pero esta a >0,6 m).
-		comprobar(Cerca(mundo.PosicionPiesJugador(), glm::vec3(5.8f, 2.0f, SueloZ), 0.1f), "llevar un objeto no desplaza al jugador");
+		comprobar(Cerca(mundo.PlayerFeetPosition(), glm::vec3(5.8f, 2.0f, SueloZ), 0.1f), "llevar un objeto no desplaza al jugador");
 
 		// 3) Pausa: mundo congelado, el agarre no se pierde.
-		mundo.FijarPausa(true);
-		const glm::vec3 enPausa = mundo.PoseDe(cuerpo).posicion;
-		for (int i = 0; i < 30; ++i) { sala.fisica->ActualizarAgarre(ojos, glm::vec3(0, 1, 0)); mundo.Actualizar(PhysicsWorld::PasoFijo); }
-		comprobar(mundo.PoseDe(cuerpo).posicion == enPausa && sala.fisica->HayAgarre(), "en pausa el objeto no se mueve y sigue en la mano");
-		mundo.FijarPausa(false);
+		mundo.SetPaused(true);
+		const glm::vec3 enPausa = mundo.PoseOf(cuerpo).posicion;
+		for (int i = 0; i < 30; ++i) { sala.fisica->UpdateGrab(ojos, glm::vec3(0, 1, 0)); mundo.Advance(PhysicsWorld::PasoFijo); }
+		comprobar(mundo.PoseOf(cuerpo).posicion == enPausa && sala.fisica->HasGrab(), "en pausa el objeto no se mueve y sigue en la mano");
+		mundo.SetPaused(false);
 
 		// 4) Soltar: recupera la gravedad y cae al suelo, quieto y sin atravesarlo.
-		sala.fisica->SoltarAgarre();
-		comprobar(!sala.fisica->HayAgarre() && mundo.CuerpoSujeto() == CuerpoInvalido, "soltar vacia la mano");
+		sala.fisica->ReleaseGrab();
+		comprobar(!sala.fisica->HasGrab() && mundo.HeldBody() == CuerpoInvalido, "soltar vacia la mano");
 		Avanzar(mundo, 4.0f);
-		const glm::vec3 reposo = mundo.PoseDe(cuerpo).posicion;
+		const glm::vec3 reposo = mundo.PoseOf(cuerpo).posicion;
 		comprobar(casi(reposo.z, SueloZ + 0.4f, 0.03f), "soltada, la caja cae y se apoya en el suelo (recupera la gravedad)");
-		comprobar(mundo.EstaDormido(cuerpo) || glm::length(mundo.VelocidadDe(cuerpo)) < 0.05f, "y se queda quieta");
-		comprobar(mundo.NumeroDeCuerpos() == cuerposIniciales, "ni duplicados ni perdidos tras agarrar y soltar");
+		comprobar(mundo.IsAsleep(cuerpo) || glm::length(mundo.VelocityOf(cuerpo)) < 0.05f, "y se queda quieta");
+		comprobar(mundo.BodyCount() == cuerposIniciales, "ni duplicados ni perdidos tras agarrar y soltar");
 		(void)pared;
 	}
 
@@ -1324,31 +1324,31 @@ namespace
 		CrearSuelo(mundo);   // fuera de la escena: suelo propio
 		const SceneObject pared = ObjetoCaja("pared", { 5.15f, 0, 0 }, { 0, 0, 0 }, { 1, 1, 1 }, BodyType::Estatico, { 0.15f, 5, 2 }, { 0, 0, 0 }, 0.0f);
 		const SceneObject caja = ObjetoCaja("caja", { 3.5f, 0, SueloZ + 0.2f }, { 0, 0, 0 }, { 0.2f, 0.2f, 0.2f }, BodyType::Dinamico, { 1, 1, 1 }, { 0, 0, 0 }, 2.0f);
-		comprobar(Crear(escena, { pared, caja }, error), "crear pared y caja");
+		comprobar(CreatePlayback(escena, { pared, caja }, error), "crear pared y caja");
 		Avanzar(mundo, 0.5f);
 		const glm::vec3 ojos(2.5f, 0, SueloZ + 0.2f);   // ojos a media altura de la caja, solo para el rayo
-		comprobar(escena.IntentarAgarrar(ojos, glm::vec3(1, 0, 0)) == 1, "la caja se agarra a 1 m");
+		comprobar(escena.TryGrab(ojos, glm::vec3(1, 0, 0)) == 1, "la caja se agarra a 1 m");
 		// La mano se mueve 3 m a traves de la pared (hasta x = 6.5): Bullet debe frenar la caja.
 		const glm::vec3 manoDetrasDeLaPared(6.5f, 0, SueloZ + 0.2f);
-		mundo.FijarDestinoDeSujecion(manoDetrasDeLaPared);
+		mundo.SetHoldDestination(manoDetrasDeLaPared);
 		float xMax = 0.0f;
 		for (int i = 0; i < 120; ++i)
 		{
-			mundo.FijarDestinoDeSujecion(manoDetrasDeLaPared);
-			mundo.Actualizar(PhysicsWorld::PasoFijo);
-			xMax = std::max(xMax, mundo.PoseDe(mundo.CuerpoSujeto() == CuerpoInvalido ? 2 : mundo.CuerpoSujeto()).posicion.x);
+			mundo.SetHoldDestination(manoDetrasDeLaPared);
+			mundo.Advance(PhysicsWorld::PasoFijo);
+			xMax = std::max(xMax, mundo.PoseOf(mundo.HeldBody() == CuerpoInvalido ? 2 : mundo.HeldBody()).posicion.x);
 		}
-		comprobar(mundo.CuerpoSujeto() != CuerpoInvalido, "la caja sigue sujeta (el auto-soltado lo decide ActualizarAgarre)");
-		const IdCuerpo cuerpo = mundo.CuerpoSujeto();
-		const float x = mundo.PoseDe(cuerpo).posicion.x;
+		comprobar(mundo.HeldBody() != CuerpoInvalido, "la caja sigue sujeta (el auto-soltado lo decide ActualizarAgarre)");
+		const IdCuerpo cuerpo = mundo.HeldBody();
+		const float x = mundo.PoseOf(cuerpo).posicion.x;
 		// Cara de la pared: x = 5.0. La caja mide 0,4 (mitad 0,2): su centro no puede pasar de 4,8 (+ margen de contacto).
 		comprobar(x < 5.0f - 0.2f + 0.05f, "la caja contra la pared no la atraviesa");
 		std::cout << "  (info) agarre contra pared: x maximo del centro " << xMax << " (cara de la pared en 5.0, mitad de la caja 0.2)\n";
 		comprobar(xMax < 4.95f, "ni siquiera un instante: la penetracion maxima es de pocos centimetros");
 
 		// ActualizarAgarre suelta el objeto atascado cuando la mano queda a mas de 2 m.
-		escena.ActualizarAgarre(glm::vec3(6.5f, 0, SueloZ + 0.2f), glm::vec3(1, 0, 0));   // mano a ~7,6 m: a 2,8 m de la caja, mas de 2 m
-		comprobar(!escena.HayAgarre(), "un objeto atascado lejos de la mano se suelta solo");
+		escena.UpdateGrab(glm::vec3(6.5f, 0, SueloZ + 0.2f), glm::vec3(1, 0, 0));   // mano a ~7,6 m: a 2,8 m de la caja, mas de 2 m
+		comprobar(!escena.HasGrab(), "un objeto atascado lejos de la mano se suelta solo");
 	}
 
 	void PruebaSeleccionInteraccionConObstruccion()
@@ -1360,20 +1360,20 @@ namespace
 			BodyType::Estatico, { 0.15f, 2, 2 }, { 0, 0, 0 }, 0.0f);
 		const SceneObject caja = ObjetoCaja("caja", { 6.0f, 0, 0 }, { 0, 0, 0 }, { 0.25f, 0.25f, 0.25f },
 			BodyType::Dinamico, { 1, 1, 1 }, { 0, 0, 0 }, 1.0f);
-		comprobar(Crear(escena, { pared, caja }, error), "crear una caja interactuable tras una pared");
+		comprobar(CreatePlayback(escena, { pared, caja }, error), "crear una caja interactuable tras una pared");
 
 		const glm::vec3 origen(2.0f, 0.0f, 0.0f);
-		const IdCuerpo primerImpacto = mundo.CuerpoAlFinalDelRayo(origen, glm::vec3(1, 0, 0), 5.0f);
-		comprobar(primerImpacto != CuerpoInvalido && escena.ObjetoDinamicoDeCuerpo(primerImpacto) == -1,
+		const IdCuerpo primerImpacto = mundo.BodyAtRayEnd(origen, glm::vec3(1, 0, 0), 5.0f);
+		comprobar(primerImpacto != CuerpoInvalido && escena.DynamicObjectOfBody(primerImpacto) == -1,
 			"el primer impacto es la pared, no el objeto dinamico que queda detras");
-		comprobar(escena.IntentarAgarrar(origen, glm::vec3(1, 0, 0)) == -1 && !escena.HayAgarre(),
+		comprobar(escena.TryGrab(origen, glm::vec3(1, 0, 0)) == -1 && !escena.HasGrab(),
 			"no se puede recoger un objeto a traves de la pared");
 
 		const glm::vec3 origenVisible(4.2f, 0.0f, 0.0f);
-		const IdCuerpo cajaVisible = mundo.CuerpoAlFinalDelRayo(origenVisible, glm::vec3(1, 0, 0), 2.0f);
-		comprobar(escena.ObjetoDinamicoDeCuerpo(cajaVisible) == 1,
+		const IdCuerpo cajaVisible = mundo.BodyAtRayEnd(origenVisible, glm::vec3(1, 0, 0), 2.0f);
+		comprobar(escena.DynamicObjectOfBody(cajaVisible) == 1,
 			"el mismo raycast identifica la caja cuando queda visible y en rango");
-		comprobar(escena.IntentarAgarrar(origenVisible, glm::vec3(1, 0, 0)) == 1,
+		comprobar(escena.TryGrab(origenVisible, glm::vec3(1, 0, 0)) == 1,
 			"la caja visible se puede recoger");
 	}
 
@@ -1382,45 +1382,45 @@ namespace
 	{
 		PhysicsWorld mundo;
 		auto sala = std::make_unique<EscenaMontada>(mundo, RutaDeEscena("habitacion_beta.json"));
-		const int grande = IndiceDe(*sala, "box_large");
+		const int grande = IndexOf(*sala, "box_large");
 		const glm::vec3 ojos(5.8f, 2.0f, 0.0f);
-		comprobar(sala->fisica->IntentarAgarrar(ojos, glm::vec3(7, 2, -1.3f) - ojos) == grande, "agarrar antes de cambiar de sala");
-		comprobar(mundo.CuerpoSujeto() != CuerpoInvalido, "hay un cuerpo sujeto");
+		comprobar(sala->fisica->TryGrab(ojos, glm::vec3(7, 2, -1.3f) - ojos) == grande, "agarrar antes de cambiar de sala");
+		comprobar(mundo.HeldBody() != CuerpoInvalido, "hay un cuerpo sujeto");
 
 		EscenaMontada nueva(mundo, RutaDeEscena("ejemplo_fisica.json"));   // como cargarYAplicarEscena: primero la nueva...
 		comprobar(nueva.ok, "la sala nueva monta");
-		sala->fisica->Vaciar();                                            // ...y luego se vacia la vieja
-		comprobar(mundo.CuerpoSujeto() == CuerpoInvalido && !sala->fisica->HayAgarre(), "al vaciar la sala vieja el agarre desaparece");
+		sala->fisica->Empty();                                            // ...y luego se vacia la vieja
+		comprobar(mundo.HeldBody() == CuerpoInvalido && !sala->fisica->HasGrab(), "al vaciar la sala vieja el agarre desaparece");
 		sala.reset();
-		comprobar(!nueva.fisica->HayAgarre(), "la sala nueva empieza con la mano vacia");
-		comprobar(mundo.NumeroDeCuerpos() == nueva.fisica->NumeroDeCuerpos(), "no quedan cuerpos de la sala anterior");
+		comprobar(!nueva.fisica->HasGrab(), "la sala nueva empieza con la mano vacia");
+		comprobar(mundo.BodyCount() == nueva.fisica->BodyCount(), "no quedan cuerpos de la sala anterior");
 		Avanzar(mundo, 1.0f);   // simular sin referencias colgando no debe fallar ni mover nada raro
-		comprobar(mundo.NumeroDeCuerpos() == nueva.fisica->NumeroDeCuerpos(), "sigue sin haber residuos");
+		comprobar(mundo.BodyCount() == nueva.fisica->BodyCount(), "sigue sin haber residuos");
 
 		// Eliminar el cuerpo sujeto directamente tambien limpia el agarre (sin punteros colgando).
 		const glm::vec3 ojos2(5.0f, -4.0f, 0.0f);
 		PhysicsWorld otro;
-		const IdCuerpo c = otro.CrearCajaDinamica({ 0, 0, 0 }, glm::vec3(0.2f), 1.0f);
-		comprobar(otro.SujetarCuerpo(c) && otro.CuerpoSujeto() == c, "sujetar un cuerpo dinamico");
-		otro.EliminarCuerpo(c);
-		comprobar(otro.CuerpoSujeto() == CuerpoInvalido, "eliminar el cuerpo sujeto limpia el agarre");
-		const IdCuerpo estatico = otro.CrearCajaEstatica({ 0, 0, 0 }, glm::vec3(1.0f));
-		comprobar(!otro.SujetarCuerpo(estatico) && !otro.SujetarCuerpo(CuerpoInvalido), "no se puede sujetar un estatico ni un id invalido");
+		const IdCuerpo c = otro.CreateDynamicBox({ 0, 0, 0 }, glm::vec3(0.2f), 1.0f);
+		comprobar(otro.HoldBody(c) && otro.HeldBody() == c, "sujetar un cuerpo dinamico");
+		otro.RemoveBody(c);
+		comprobar(otro.HeldBody() == CuerpoInvalido, "eliminar el cuerpo sujeto limpia el agarre");
+		const IdCuerpo estatico = otro.CreateStaticBox({ 0, 0, 0 }, glm::vec3(1.0f));
+		comprobar(!otro.HoldBody(estatico) && !otro.HoldBody(CuerpoInvalido), "no se puede sujetar un estatico ni un id invalido");
 		(void)ojos2;
 	}
 
 	void PruebaRebotadorYEmpujeDelJugador()
 	{
 		PhysicsWorld mundo;
-		mundo.CrearCajaEstatica({ 0.0f, 0.0f, -0.15f }, { 3.0f, 3.0f, 0.15f });
-		const IdCuerpo esfera = mundo.CrearEsfera(BodyType::Rebotador, { 0.0f, 0.0f, 0.2f }, 0.2f, 0.25f);
+		mundo.CreateStaticBox({ 0.0f, 0.0f, -0.15f }, { 3.0f, 3.0f, 0.15f });
+		const IdCuerpo esfera = mundo.CreateSphere(BodyType::Rebotador, { 0.0f, 0.0f, 0.2f }, 0.2f, 0.25f);
 		comprobar(esfera != CuerpoInvalido, "se crea la esfera rebotadora");
-		mundo.AplicarImpulso(esfera, { 0.0f, 0.0f, 0.75f });
+		mundo.ApplyImpulseToBody(esfera, { 0.0f, 0.0f, 0.75f });
 		int botes = 0;
-		float velocidadZAnterior = mundo.VelocidadDe(esfera).z;
+		float velocidadZAnterior = mundo.VelocityOf(esfera).z;
 		Simular(6.0f, PhysicsWorld::PasoFijo, [&](float delta) {
-			mundo.Actualizar(delta);
-			const float velocidadZ = mundo.VelocidadDe(esfera).z;
+			mundo.Advance(delta);
+			const float velocidadZ = mundo.VelocityOf(esfera).z;
 			if (velocidadZAnterior < -0.1f && velocidadZ > 0.1f) ++botes;
 			velocidadZAnterior = velocidadZ;
 		});
@@ -1428,14 +1428,14 @@ namespace
 			"Hiriti conserva siete botes perceptibles con restitucion alta");
 
 		PhysicsWorld mundoConJugador;
-		mundoConJugador.CrearCajaEstatica({ 0.0f, 0.0f, -0.15f }, { 3.0f, 3.0f, 0.15f });
-		const IdCuerpo empujable = mundoConJugador.CrearEsfera(
+		mundoConJugador.CreateStaticBox({ 0.0f, 0.0f, -0.15f }, { 3.0f, 3.0f, 0.15f });
+		const IdCuerpo empujable = mundoConJugador.CreateSphere(
 			BodyType::Rebotador, { 0.0f, 0.0f, 0.2f }, 0.2f, 0.25f);
-		comprobar(mundoConJugador.CrearJugador({ -0.8f, 0.0f, 0.0f }),
+		comprobar(mundoConJugador.CreatePlayerBody({ -0.8f, 0.0f, 0.0f }),
 			"se crea el jugador para probar el empuje");
-		mundoConJugador.FijarVelocidadJugador({ 2.0f, 0.0f, 0.0f });
-		Simular(0.8f, PhysicsWorld::PasoFijo, [&](float delta) { mundoConJugador.Actualizar(delta); });
-		comprobar(mundoConJugador.PoseDe(empujable).posicion.x > 0.1f,
+		mundoConJugador.SetPlayerVelocity({ 2.0f, 0.0f, 0.0f });
+		Simular(0.8f, PhysicsWorld::PasoFijo, [&](float delta) { mundoConJugador.Advance(delta); });
+		comprobar(mundoConJugador.PoseOf(empujable).posicion.x > 0.1f,
 			"caminar hacia Hiriti lo empuja y lo desplaza");
 	}
 
@@ -1447,15 +1447,15 @@ namespace
 			{ 0.2f, 0.2f, 0.2f }, BodyType::Rebotador, glm::vec3(1.0f), { 0.0f, 0.0f, 0.75f }, 0.25f);
 		esfera.fisica.forma = BodyShape::Esfera;
 		std::string error;
-		const bool creada = Crear(escena, { esfera }, error);
+		const bool creada = CreatePlayback(escena, { esfera }, error);
 		comprobar(creada, "se crea una esfera dinámica rotada con offset");
 		if (!creada) return;
-		const auto cuerpos = mundo.CajasDeColision();
+		const auto cuerpos = mundo.CollisionBoxes();
 		comprobar(cuerpos.size() == 1 && cuerpos[0].tipo == BodyType::Rebotador,
 			"la autoridad conserva el tipo Rebotador de Hiriti");
 
-		const glm::mat4 modelo = escena.MatrizVisualDe(0, esfera);
-		const glm::mat4 esperado = MatrizDeObjeto(esfera);
+		const glm::mat4 modelo = escena.VisualMatrixOf(0, esfera);
+		const glm::mat4 esperado = ObjectMatrix(esfera);
 		comprobar(glm::length(glm::vec3(modelo[0]) - glm::vec3(esperado[0])) < 1e-5f &&
 			glm::length(glm::vec3(modelo[1]) - glm::vec3(esperado[1])) < 1e-5f &&
 			glm::length(glm::vec3(modelo[2]) - glm::vec3(esperado[2])) < 1e-5f &&

@@ -18,8 +18,8 @@ namespace runtimeui
 		config.rol = mode == 1 ? net::Role::Host : net::Role::Client;
 		config.nombre = name[0] ? name : "jugador";
 		std::string parseError;
-		if (!netgame::PuertoValido(port)) error = "Puerto fuera de rango: usa un valor entre 1 y 65535.";
-		else if (config.rol == net::Role::Client && !netgame::ParsearEndpoint(std::string(ip) + ":" + std::to_string(port), config.host, config.puerto, parseError))
+		if (!netgame::IsValidPort(port)) error = "Puerto fuera de rango: usa un valor entre 1 y 65535.";
+		else if (config.rol == net::Role::Client && !netgame::ParseEndpoint(std::string(ip) + ":" + std::to_string(port), config.host, config.puerto, parseError))
 			error = parseError;
 		else
 		{

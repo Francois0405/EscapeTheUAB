@@ -13,7 +13,7 @@ namespace glb
 			if (existente != escena.modelos.end()) return &existente->second;
 
 			GlbModel nuevo;
-			if (!CargarModeloGLB(rutaGlb, nuevo, error)) return nullptr;
+			if (!LoadGlbModel(rutaGlb, nuevo, error)) return nullptr;
 			return &escena.modelos.emplace(rutaGlb, std::move(nuevo)).first->second;
 		}
 
@@ -27,7 +27,7 @@ namespace glb
 		void PasarAlEstadoFinalSiHaTerminado(AnimatedObject& objeto)
 		{
 			if (objeto.reproductor.reproduciendo) return;
-			if (objeto.estado == DoorState::Abriendo) objeto.estado = DoorState::Abierta;
+			if (objeto.estado == DoorState::Abriendo) objeto.estado = DoorState::IsOpen;
 			if (objeto.estado == DoorState::Cerrando) objeto.estado = DoorState::Cerrada;
 		}
 
@@ -42,10 +42,10 @@ namespace glb
 		}
 	}
 
-	bool AnadirObjeto(AnimatedScene& escena, const std::string& id, const std::string& rutaGlb,
+	bool AddAnimatedObject(AnimatedScene& escena, const std::string& id, const std::string& rutaGlb,
 		const glm::vec3& posicion, float giroZGrados, std::string& error)
 	{
-		if (BuscarObjeto(escena, id) != nullptr)
+		if (FindAnimatedObject(escena, id) != nullptr)
 		{
 			error = "ya existe un objeto animado con el id '" + id + "'";
 			return false;
@@ -58,15 +58,15 @@ namespace glb
 		objeto.modelo = modelo;
 		objeto.posicion = posicion;
 		objeto.giroZGrados = giroZGrados;
-		objeto.pose = CrearPoseDeReposo(*modelo);   // cada instancia empieza con su pose propia
-		objeto.centroDelModelo = CalcularCentroDelModelo(*modelo, objeto.pose);
+		objeto.pose = CreateRestPose(*modelo);   // cada instancia empieza con su pose propia
+		objeto.centroDelModelo = ComputeModelCenter(*modelo, objeto.pose);
 		if (TieneAnimacion(objeto))   // reloj parado en t = 0: la puerta empieza cerrada
 			objeto.reproductor.duracion = modelo->animaciones[objeto.indiceAnimacion].duracion;
 		escena.objetos.push_back(std::move(objeto));
 		return true;
 	}
 
-	bool SeleccionarAnimacion(AnimatedObject& objeto, const std::string& nombre, std::string& error)
+	bool SelectAnimation(AnimatedObject& objeto, const std::string& nombre, std::string& error)
 	{
 		if (objeto.modelo == nullptr) return false;
 		int indice = 0;   // sin nombre: la primera animación
@@ -87,29 +87,29 @@ namespace glb
 		return true;
 	}
 
-	AnimatedObject* BuscarObjeto(AnimatedScene& escena, const std::string& id)
+	AnimatedObject* FindAnimatedObject(AnimatedScene& escena, const std::string& id)
 	{
 		for (AnimatedObject& objeto : escena.objetos)
 			if (objeto.id == id) return &objeto;
 		return nullptr;
 	}
 
-	glm::mat4 MatrizBaseDelObjeto(const AnimatedObject& objeto)
+	glm::mat4 ObjectBaseMatrix(const AnimatedObject& objeto)
 	{
 		const glm::mat4 colocar = glm::translate(glm::mat4(1.0f), objeto.posicion);
 		const glm::mat4 girar = glm::rotate(colocar, glm::radians(objeto.giroZGrados), glm::vec3(0.0f, 0.0f, 1.0f));
 		return glm::scale(girar, glm::vec3(objeto.escala));   // trasladar * girar * escalar
 	}
 
-	void IniciarAnimacion(AnimatedObject& objeto)
+	void BeginAnimation(AnimatedObject& objeto)
 	{
 		if (!TieneAnimacion(objeto)) return;
-		RestaurarPoseDeReposo(*objeto.modelo, objeto.pose);
-		objeto.reproductor.Iniciar(objeto.modelo->animaciones[objeto.indiceAnimacion].duracion);
+		RestoreRestPose(*objeto.modelo, objeto.pose);
+		objeto.reproductor.BeginPlayback(objeto.modelo->animaciones[objeto.indiceAnimacion].duracion);
 		objeto.estado = DoorState::Abriendo;
 	}
 
-	void AlternarPuerta(AnimatedObject& objeto)
+	void ToggleDoor(AnimatedObject& objeto)
 	{
 		if (!TieneAnimacion(objeto)) return;
 		switch (objeto.estado)
@@ -117,12 +117,12 @@ namespace glb
 		case DoorState::Cerrada:
 		case DoorState::Cerrando:    // si se estaba cerrando, vuelve a abrirse desde donde esté
 			objeto.estado = DoorState::Abriendo;
-			objeto.reproductor.Reproducir(+1.0f);
+			objeto.reproductor.PlayAnimation(+1.0f);
 			break;
-		case DoorState::Abierta:
+		case DoorState::IsOpen:
 		case DoorState::Abriendo:    // si se estaba abriendo, empieza a cerrarse desde donde esté
 			objeto.estado = DoorState::Cerrando;
-			objeto.reproductor.Reproducir(-1.0f);
+			objeto.reproductor.PlayAnimation(-1.0f);
 			break;
 		}
 	}
@@ -133,37 +133,37 @@ namespace glb
 		{
 		case DoorState::Cerrada:  return "Cerrada";
 		case DoorState::Abriendo: return "Abriendo";
-		case DoorState::Abierta:  return "Abierta";
+		case DoorState::IsOpen:  return "Abierta";
 		case DoorState::Cerrando: return "Cerrando";
 		}
 		return "?";
 	}
 
-	void ActualizarObjetos(AnimatedScene& escena, float deltaSegundos)
+	void UpdateAnimatedObjects(AnimatedScene& escena, float deltaSegundos)
 	{
 		for (AnimatedObject& objeto : escena.objetos)
 		{
 			if (!TieneAnimacion(objeto)) continue;
-			objeto.reproductor.Actualizar(deltaSegundos);
+			objeto.reproductor.Advance(deltaSegundos);
 			PasarAlEstadoFinalSiHaTerminado(objeto);
-			AplicarAnimacion(objeto.pose, objeto.modelo->animaciones[objeto.indiceAnimacion], objeto.reproductor.tiempo);
+			ApplyAnimation(objeto.pose, objeto.modelo->animaciones[objeto.indiceAnimacion], objeto.reproductor.tiempo);
 		}
 	}
 
-	void VaciarEscenaAnimada(AnimatedScene& escena)
+	void ClearAnimatedScene(AnimatedScene& escena)
 	{
 		escena.objetos.clear();   // primero las instancias, que apuntan a los modelos
 		escena.modelos.clear();
 	}
 
-	glm::vec3 PuntoDeInteraccion(const AnimatedObject& objeto)
+	glm::vec3 InteractionPoint(const AnimatedObject& objeto)
 	{
 		// glTF (Y arriba) -> juego (Z arriba) -> colocación de esta instancia en la habitación.
-		const glm::mat4 aMundo = MatrizBaseDelObjeto(objeto) * MatrizYArribaAZArriba();
+		const glm::mat4 aMundo = ObjectBaseMatrix(objeto) * YUpToZUpMatrix();
 		return glm::vec3(aMundo * glm::vec4(objeto.centroDelModelo, 1.0f));
 	}
 
-	AnimatedObject* BuscarObjetoInteractuable(AnimatedScene& escena, const glm::vec3& origen,
+	AnimatedObject* FindInteractableObject(AnimatedScene& escena, const glm::vec3& origen,
 		const glm::vec3& direccion, float radio, float cosenoMinimo)
 	{
 		if (glm::length(direccion) < 1.0e-6f) return nullptr;
@@ -174,7 +174,7 @@ namespace glb
 		for (AnimatedObject& objeto : escena.objetos)
 		{
 			if (!TieneAnimacion(objeto)) continue;
-			const glm::vec3 punto = PuntoDeInteraccion(objeto);
+			const glm::vec3 punto = InteractionPoint(objeto);
 			if (glm::distance(origen, punto) > radio) continue;              // demasiado lejos
 
 			const float coseno = CosenoHaciaElPunto(origen, mirada, punto);
@@ -184,14 +184,14 @@ namespace glb
 		return mejor;
 	}
 
-	AnimatedObject* InteractuarConObjeto(AnimatedScene& escena, const glm::vec3& origen, const glm::vec3& direccion)
+	AnimatedObject* InteractWithObject(AnimatedScene& escena, const glm::vec3& origen, const glm::vec3& direccion)
 	{
-		AnimatedObject* objeto = BuscarObjetoInteractuable(escena, origen, direccion);
-		if (objeto != nullptr) AlternarPuerta(*objeto);
+		AnimatedObject* objeto = FindInteractableObject(escena, origen, direccion);
+		if (objeto != nullptr) ToggleDoor(*objeto);
 		return objeto;
 	}
 
-	bool PuedeInteractuar(bool juegoPausado, bool windowFocused, bool escribiendoEnInterfaz)
+	bool CanInteract(bool juegoPausado, bool windowFocused, bool escribiendoEnInterfaz)
 	{
 		return !juegoPausado && windowFocused && !escribiendoEnInterfaz;
 	}

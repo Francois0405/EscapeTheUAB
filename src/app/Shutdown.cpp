@@ -26,8 +26,8 @@ void ShutdownApplication(Ps1Framebuffer& ps1)
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-	networkGame.Detener();           // cierra la red (si la hay) antes que la ventana
-	openXrManager.Desactivar();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
+	networkGame.StopSessionGame();           // cierra la red (si la hay) antes que la ventana
+	openXrManager.Deactivate();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
 	NFD_QuitCompat();
 
 	for (auto& entrada : roomModels)
@@ -36,10 +36,10 @@ void ShutdownApplication(Ps1Framebuffer& ps1)
 	roomModels.clear();
 	sceneObjects.clear();
 	releaseSceneAnimations();
-	physicsWorld.EliminarJugador();
+	physicsWorld.RemovePlayerBody();
 	physicsScene.reset();                       // quita las colisiones de la habitacion antes de cerrar
-	fisica::LiberarDibujoColisionadores();
-	netgame::LiberarDibujoAvatares();
+	fisica::ReleaseColliderDrawing();
+	netgame::ReleaseAvatarDrawing();
 
 	if (phoneOBJ != nullptr)
 	{

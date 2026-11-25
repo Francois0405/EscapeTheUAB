@@ -17,7 +17,7 @@ const scene::runtime::SceneRuntimeContext& sceneBindings()
 		[] { return glm::vec3(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z)); },
 		[](const SceneSpawn& spawn) { placeCameraAtSpawn(spawn); },
 		[] { return spawnPhysicsPlayer(); },
-		[] { return networkGame.EnRed(); },
+		[] { return networkGame.IsOnline(); },
 		[] { stopNetwork(); }
 	};
 	return contexto;

@@ -13,8 +13,8 @@ bool grabTraceEnabled()
 
 net::GrabDiagnosticRole grabTraceRole()
 {
-	return networkGame.EsHost() ? net::GrabDiagnosticRole::Host :
-		networkGame.EsCliente() ? net::GrabDiagnosticRole::Client : net::GrabDiagnosticRole::Offline;
+	return networkGame.IsHosting() ? net::GrabDiagnosticRole::Host :
+		networkGame.IsClient() ? net::GrabDiagnosticRole::Client : net::GrabDiagnosticRole::Offline;
 }
 
 void persistGrabTrace(const std::string& registro)

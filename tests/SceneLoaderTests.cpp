@@ -38,7 +38,7 @@ namespace
     bool cargar(const fs::path& ruta, std::vector<SceneObject>& objetos,
         std::string& error, std::string& nombre)
     {
-        return CargarEscenaJSON(ruta, objetos, error, nombre);
+        return LoadSceneJson(ruta, objetos, error, nombre);
     }
 }
 
@@ -50,13 +50,13 @@ int main()
         const std::vector<SceneWallOpening> vanos = {
             {"door_a", -1.0f, 0.9f, 2.1f, 0.0f}, {"door_b", 1.0f, 1.0f, 2.1f, 0.0f}
         };
-        comprobar(GenerarSeccionesPared(glm::vec3(5.0f, 0.15f, 1.5f), vanos, secciones, errorPared),
+        comprobar(GenerateWallSections(glm::vec3(5.0f, 0.15f, 1.5f), vanos, secciones, errorPared),
             "una pared reutilizable genera varios tramos alrededor de dos aperturas");
         comprobar(secciones.size() == 5, "dos huecos producen laterales continuos y dos dinteles");
-        comprobar(!GenerarSeccionesPared(glm::vec3(1.0f, 0.15f, 1.5f),
+        comprobar(!GenerateWallSections(glm::vec3(1.0f, 0.15f, 1.5f),
             {{"door_edge", 0.6f, 0.9f, 2.1f, 0.0f}}, secciones, errorPared),
             "un vano cercano a la esquina se rechaza por margen insuficiente");
-        comprobar(!GenerarSeccionesPared(glm::vec3(3.0f, 0.15f, 1.5f),
+        comprobar(!GenerateWallSections(glm::vec3(3.0f, 0.15f, 1.5f),
             {{"a", 0.0f, 1.2f, 2.1f, 0.0f}, {"b", 0.5f, 1.2f, 2.1f, 0.0f}}, secciones, errorPared),
             "aperturas solapadas se rechazan sin generar geometria parcial");
     }
@@ -77,7 +77,7 @@ int main()
     comprobar(nombre == "habitacion_beta", "nombre de habitacion_beta");
 
     SceneData escenaAntigua;
-    comprobar(CargarDatosEscenaJSON(habitacion, escenaAntigua, error) && !escenaAntigua.spawn.presente,
+    comprobar(LoadSceneDataJson(habitacion, escenaAntigua, error) && !escenaAntigua.spawn.presente,
         "escenas antiguas sin playerSpawn siguen siendo válidas y usan fallback de cámara");
 
     escribir(temp / "malformed.json", "{no-json");
@@ -109,7 +109,7 @@ int main()
         ",\"light\":{\"enabled\":true,\"offset\":[0,0.2,0],\"color\":[0.8,0.9,1],\"intensity\":2.5}");
     escribir(temp / "scene-light.json", escena("[" + conLuz + "]"));
     SceneData datosConLuz;
-    comprobar(CargarDatosEscenaJSON(temp / "scene-light.json", datosConLuz, error),
+    comprobar(LoadSceneDataJson(temp / "scene-light.json", datosConLuz, error),
         "la luz opcional de un objeto debe cargar");
     comprobar(datosConLuz.objetos.size() == 1 && datosConLuz.objetos[0].luz.presente &&
         datosConLuz.objetos[0].luz.encendida && datosConLuz.objetos[0].luz.desplazamiento.y == 0.2f &&
@@ -120,7 +120,7 @@ int main()
         ",\"material\":{\"texture\":\"models/floor.png\",\"tileSize\":[1.0,1.0],\"roughness\":0.92,\"dirtStrength\":0.2,\"dirtScale\":0.42,\"dirtSeed\":17}");
     escribir(temp / "scene-material.json", escena("[" + conMaterial + "]"));
     SceneData datosMaterial;
-    comprobar(CargarDatosEscenaJSON(temp / "scene-material.json", datosMaterial, error),
+    comprobar(LoadSceneDataJson(temp / "scene-material.json", datosMaterial, error),
         "el material de instancia admite textura relativa, tamaño fisico y roughness");
     comprobar(datosMaterial.objetos.size() == 1 && datosMaterial.objetos[0].material.presente &&
         datosMaterial.objetos[0].material.textura == "models/floor.png" &&
@@ -134,26 +134,26 @@ int main()
     materialAntiguo.insert(materialAntiguo.size() - 1,
         ",\"material\":{\"texture\":\"models/floor.png\",\"tileSize\":[1.0,1.0],\"roughness\":0.92}");
     escribir(temp / "scene-material-legacy.json", escena("[" + materialAntiguo + "]"));
-    comprobar(CargarDatosEscenaJSON(temp / "scene-material-legacy.json", datosMaterial, error) &&
+    comprobar(LoadSceneDataJson(temp / "scene-material-legacy.json", datosMaterial, error) &&
         datosMaterial.objetos[0].material.dirtStrength == 0.0f,
         "los materiales JSON anteriores mantienen suciedad desactivada por defecto");
     std::string materialFueraDeRango = conMaterial;
     const auto tileSize = materialFueraDeRango.find("[1.0,1.0]");
     materialFueraDeRango.replace(tileSize, std::string("[1.0,1.0]").size(), "[0.01,1.0]");
     escribir(temp / "scene-material-invalid.json", escena("[" + materialFueraDeRango + "]"));
-    comprobar(!CargarDatosEscenaJSON(temp / "scene-material-invalid.json", datosMaterial, error),
+    comprobar(!LoadSceneDataJson(temp / "scene-material-invalid.json", datosMaterial, error),
         "se rechaza tiling que provocaria un patron excesivamente fino");
     std::string suciedadFueraDeRango = conMaterial;
     suciedadFueraDeRango.replace(suciedadFueraDeRango.find("\"dirtStrength\":0.2"),
         std::string("\"dirtStrength\":0.2").size(), "\"dirtStrength\":0.8");
     escribir(temp / "scene-dirt-invalid.json", escena("[" + suciedadFueraDeRango + "]"));
-    comprobar(!CargarDatosEscenaJSON(temp / "scene-dirt-invalid.json", datosMaterial, error),
+    comprobar(!LoadSceneDataJson(temp / "scene-dirt-invalid.json", datosMaterial, error),
         "se rechaza una intensidad de suciedad excesiva");
     std::string luzInvalida = conLuz;
     const auto colorLuz = luzInvalida.find("[0.8,0.9,1]");
     luzInvalida.replace(colorLuz, std::string("[0.8,0.9,1]").size(), "[0.8,0.9,1.2]");
     escribir(temp / "scene-light-invalid.json", escena("[" + luzInvalida + "]"));
-    comprobar(!CargarDatosEscenaJSON(temp / "scene-light-invalid.json", datosConLuz, error),
+    comprobar(!LoadSceneDataJson(temp / "scene-light-invalid.json", datosConLuz, error),
         "color de luz fuera de rango debe rechazarse");
 
     const auto objetosPrevios = objetos;
@@ -175,16 +175,16 @@ int main()
         escribir(temp / archivo, json);
         SceneData datos;
         std::string mensaje;
-        const bool ok = CargarDatosEscenaJSON(temp / archivo, datos, mensaje);
+        const bool ok = LoadSceneDataJson(temp / archivo, datos, mensaje);
         return ok ? std::string("<sin error>") : mensaje;
     };
 
     // 1) Un JSON antiguo (sin physics ni animated) sigue cargando y no tiene fisica.
     SceneData datos;
-    comprobar(CargarDatosEscenaJSON(temp / "relative-model.json", datos, error), "JSON antiguo carga con el cargador nuevo");
+    comprobar(LoadSceneDataJson(temp / "relative-model.json", datos, error), "JSON antiguo carga con el cargador nuevo");
     comprobar(datos.objetos.size() == 1 && !datos.objetos[0].fisica.presente && datos.animados.empty(),
         "sin 'physics' el objeto no tiene fisica");
-    comprobar(CargarDatosEscenaJSON(habitacion, datos, error) && datos.objetos.size() == 12,
+    comprobar(LoadSceneDataJson(habitacion, datos, error) && datos.objetos.size() == 12,
         "habitacion_beta sigue con 12 instancias OBJ");
     comprobar(datos.animados.size() == 2 && datos.animados[0].colisionadores.size() == 4,
         "habitacion_beta declara dos puertas animadas con 4 colisionadores cada una");
@@ -192,7 +192,7 @@ int main()
     // 2) Fisica valida: se interpreta cada campo.
     escribir(temp / "fisica-ok.json", conFisica(
         "{\"type\":\"dynamic\",\"shape\":\"box\",\"halfSize\":[0.5,0.25,1],\"offset\":[0,0,0.5],\"mass\":2.5}"));
-    comprobar(CargarDatosEscenaJSON(temp / "fisica-ok.json", datos, error), "physics valido carga");
+    comprobar(LoadSceneDataJson(temp / "fisica-ok.json", datos, error), "physics valido carga");
     {
         const ScenePhysics& f = datos.objetos[0].fisica;
         comprobar(f.presente && f.tipo == fisica::BodyType::Dinamico && f.masa == 2.5f &&
@@ -200,19 +200,19 @@ int main()
             "physics: tipo, masa, halfSize y offset se leen bien");
     }
     escribir(temp / "fisica-estatica.json", conFisica("{\"type\":\"static\",\"halfSize\":[1,1,1]}"));
-    comprobar(CargarDatosEscenaJSON(temp / "fisica-estatica.json", datos, error) &&
+    comprobar(LoadSceneDataJson(temp / "fisica-estatica.json", datos, error) &&
         datos.objetos[0].fisica.tipo == fisica::BodyType::Estatico && datos.objetos[0].fisica.desplazamiento == glm::vec3(0.0f),
         "physics estatico: offset opcional vale 0");
     escribir(temp / "fisica-rebotador.json", conFisica(
         "{\"type\":\"bouncy\",\"shape\":\"sphere\",\"halfSize\":[1,1,1],\"mass\":0.25}"));
-    comprobar(CargarDatosEscenaJSON(temp / "fisica-rebotador.json", datos, error) &&
+    comprobar(LoadSceneDataJson(temp / "fisica-rebotador.json", datos, error) &&
         datos.objetos[0].fisica.tipo == fisica::BodyType::Rebotador &&
         datos.objetos[0].fisica.forma == fisica::BodyShape::Esfera &&
         datos.objetos[0].fisica.masa == 0.25f,
         "physics bouncy carga como esfera dinamica con masa");
     escribir(temp / "fisica-rebotador-caja.json", conFisica(
         "{\"type\":\"bouncy\",\"shape\":\"box\",\"halfSize\":[1,1,1],\"mass\":0.25}"));
-    comprobar(!CargarDatosEscenaJSON(temp / "fisica-rebotador-caja.json", datos, error) &&
+    comprobar(!LoadSceneDataJson(temp / "fisica-rebotador-caja.json", datos, error) &&
         error.find("sphere") != std::string::npos,
         "physics bouncy rechaza una forma que no sea esfera");
 
@@ -243,7 +243,7 @@ int main()
         return "{\"version\":1,\"name\":\"t\",\"architecture\":[],\"objects\":[" + object + "],\"animated\":" + lista + "}";
     };
     escribir(temp / "animado-ok.json", conAnimados("[" + animado + "]"));
-    comprobar(CargarDatosEscenaJSON(temp / "animado-ok.json", datos, error), "objeto animado valido carga");
+    comprobar(LoadSceneDataJson(temp / "animado-ok.json", datos, error), "objeto animado valido carga");
     comprobar(datos.animados.size() == 1 && datos.animados[0].giroZGrados == -90.0f && datos.animados[0].escala == 2.0f &&
         datos.animados[0].animation == "Abrir" && datos.animados[0].colisionadores[0].tipo == fisica::BodyType::Cinematico,
         "objeto animado: giro, escala, animacion y colisionador se leen bien");
@@ -253,13 +253,13 @@ int main()
        "wall":{"apertures":[{"doorId":"door","centerU":0,"width":0.9,"height":2.1}]}}
       ],"objects":[],"animated":[{"id":"door","model":"models/puerta.glb","position":[0,0,0],"wallId":"wall","openingId":"door"}]} )json";
     escribir(temp / "wall-opening.json", paredConVano);
-    comprobar(CargarDatosEscenaJSON(temp / "wall-opening.json", datos, error) && datos.objetos[0].pared.aperturas.size() == 1 &&
+    comprobar(LoadSceneDataJson(temp / "wall-opening.json", datos, error) && datos.objetos[0].pared.aperturas.size() == 1 &&
         datos.animados[0].paredId == "wall" && datos.animados[0].aperturaId == "door",
         "pared paramétrica y asociación puerta-vano explícitas cargan con sus rutas intactas");
     std::string distinto = animado;
     distinto.replace(distinto.find("\"p1\""), 4, "\"p2\"");
     escribir(temp / "animado-dos.json", conAnimados("[" + animado + "," + distinto + "]"));
-    comprobar(CargarDatosEscenaJSON(temp / "animado-dos.json", datos, error) && datos.animados.size() == 2,
+    comprobar(LoadSceneDataJson(temp / "animado-dos.json", datos, error) && datos.animados.size() == 2,
         "dos instancias del mismo GLB con ids distintos son validas");
     mensaje = textoDelError(conAnimados("[" + animado + "," + animado + "]"), "a1.json");
     comprobar(contiene(mensaje, "duplicado"), "id animado duplicado se rechaza");
@@ -284,17 +284,17 @@ int main()
 
     // 5) Una carga fallida no publica nada: los datos previos quedan intactos.
     SceneData previos;
-    comprobar(CargarDatosEscenaJSON(temp / "animado-dos.json", previos, error), "preparar datos previos");
+    comprobar(LoadSceneDataJson(temp / "animado-dos.json", previos, error), "preparar datos previos");
     comprobar(std::abs(previos.indirectAmbientBase - 0.025f) < 1e-6f &&
         std::abs(previos.directSceneLightScale - 1.0f) < 1e-6f &&
         previos.indirectFloorColor == glm::vec3(0.42f, 0.46f, 0.43f),
         "las escenas antiguas reciben valores ambientales predeterminados y mantienen la intensidad directa");
-    comprobar(!CargarDatosEscenaJSON(temp / "a3.json", previos, error) && previos.animados.size() == 2 &&
+    comprobar(!LoadSceneDataJson(temp / "a3.json", previos, error) && previos.animados.size() == 2 &&
         previos.objetos.size() == 1, "carga fallida no modifica los datos previos");
 
     SceneData laboratorio;
     const fs::path escenaLaboratorio = fs::path(ESCAPETHEUAB_SOURCE_DIR) / "assets/scenes/aula_informatica_calibrada.json";
-    comprobar(CargarDatosEscenaJSON(escenaLaboratorio, laboratorio, error),
+    comprobar(LoadSceneDataJson(escenaLaboratorio, laboratorio, error),
         "la escena calibrada y sus nuevas rutas de materiales se cargan");
     comprobar(laboratorio.objetos.size() == 83,
         "la union calibrada conserva sus 22 instancias de arquitectura y 61 objetos");
