@@ -62,6 +62,19 @@ int main()
 	comprobar(!ValidatePlacement({ caja({ 0, 0, 0.8f }, { 0.5f, 0.5f, 0.5f }) }, { legacyAnterior }, { mesa }, false).valida,
 		"una penetracion antigua no puede empeorarse");
 
+	float desplazamiento = 0.0f;
+	const auto obstaculoGrande = caja({ 4, 0, 0 }, { 6, 2, 2 });
+	const auto modeloGrande = caja({ 0, 0, 0 }, { 3, 1, 1 }, 30.0f);
+	const bool hayZonaLibre = CalculateStagingOffsetX(
+		{ modeloGrande }, { obstaculoGrande }, 1.0f, desplazamiento);
+	comprobar(hayZonaLibre && desplazamiento > 0.0f,
+		"el modelo se desplaza a la derecha del obstaculo mas lejano con margen");
+	const auto modeloEnZona = caja({ desplazamiento, 0, 0 }, { 3, 1, 1 }, 30.0f);
+	comprobar(ObbPenetration(modeloEnZona, obstaculoGrande) == 0.0f,
+		"la ubicacion de preparacion queda libre incluso con un modelo rotado grande");
+	comprobar(!CalculateStagingOffsetX({ modeloGrande }, {}, 1.0f, desplazamiento),
+		"sin obstaculos no se necesita calcular una ubicacion de preparacion");
+
 	if (fallos == 0) std::cout << "EditorPlacementTests: todas las comprobaciones OBB pasaron.\n";
 	return fallos == 0 ? 0 : 1;
 }

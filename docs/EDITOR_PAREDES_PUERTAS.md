@@ -108,6 +108,8 @@ Al eliminar una puerta asociada, el editor permite:
 
 La validación del editor permite que una puerta asociada coexista con la pared que contiene su apertura, pero sigue validando la puerta contra los segmentos restantes y los demás objetos. No es necesario activar la opción insegura de penetrar arquitectura.
 
+Al añadir un OBJ, el editor primero intenta colocarlo junto al pivote de la cámara. Si sus límites se solapan con elementos existentes, lo coloca en una zona de preparación a la derecha de la escena y enfoca la cámara en él. Desde allí se puede reducir su escala y moverlo al lugar deseado; el editor seguirá impidiendo solapes nuevos al colocarlo. La validación de colocación es independiente de los colliders físicos: los límites del modelo se usan para evitar solapes incluso si el collider físico está desactivado.
+
 ## Undo/Redo y Save
 
 Las operaciones estructurales registran una instantánea del estado previo de la escena en el historial de `SceneEditor`. Una operación válida de instalación o eliminación modifica puerta y pared como una sola acción de usuario; un rechazo no registra historial ni deja media apertura. Undo/Redo restaura los datos y la sincronización física se solicita de nuevo.
