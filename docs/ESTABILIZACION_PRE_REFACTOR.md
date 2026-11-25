@@ -152,3 +152,24 @@ En una repetición posterior con ambas instancias Release activas en `127.0.0.1:
 Se amplió `PhysicsTests` para apuntar con Bullet a una réplica cinemática después de aplicar un snapshot, tanto para un objeto `Dinamico` como para `Rebotador` (Hirity). La prueba confirma en ambas configuraciones Windows que el raycast aislado identifica el índice dinámico de la réplica y que el cuerpo continúa siendo cinemático. Compilación con `run-windows.cmd -NoRun` y resultado focalizado por CTest: Debug 1/1 PASS; Release 1/1 PASS. Esto descarta que la máscara de colisión del raycast excluya por sí sola las réplicas cinemáticas en ese escenario de física; no valida la ruta completa de input, solicitud ENet, autorización/segundo raycast del host, ownership, restricción, lanzamiento ni animación/seguimiento de Hirity en gameplay.
 
 Validación automatizada del commit con el test nuevo: lanzadores oficiales Debug y Release completados con ENet, Bullet, Meshoptimizer y OpenXR habilitados; CTest completo 20/20 en ambas configuraciones. Repeticiones secuenciales: `NetJuegoTests` 20/20 en Debug y 20/20 en Release; `ENetLoopbackTests` 10/10 en Debug y 10/10 en Release. No hubo fallos ni concurrencia de pruebas de red. Estos resultados no sustituyen la validación gráfica de agarre ni verifican comunicación entre dos equipos físicos.
+
+### Validación del debugger persistente — 25 de noviembre de 2026
+
+Se integró `itsCarlosDev/multiplayer-debugger-codex` en el merge `4a2030877bfaedc51b5d731fe5a265e84140feef`, con persistencia optativa por rol/PID, límite de 1 MiB por archivo, marca monotónica `mono_ns`, eventos de agarre/liberación/desconexión y panel F4 de hasta ocho objetos dinámicos. El panel indica explícitamente que el seguimiento de Hirity es desconocido para la réplica cliente; no presenta ese dato como seguimiento confirmado. El logger conserva la salida de consola existente. La suite `GrabDiagnosticsTests` cubre escritura, marca temporal, separación de procesos y límite del archivo.
+
+Validación ejecutada sobre el merge integrado:
+
+| Prueba | Debug | Release |
+|---|---:|---:|
+| Lanzador oficial `run-windows.cmd -NoRun` | PASS | PASS |
+| ENet, Bullet, Meshoptimizer y OpenXR configurados | PASS | PASS |
+| CTest completo | 21/21 PASS | 21/21 PASS |
+| `NetJuegoTests --repeat until-fail:20` | 20/20 PASS | 20/20 PASS |
+| `ENetLoopbackTests --repeat until-fail:10` | 10/10 PASS | 10/10 PASS |
+| `GrabDiagnosticsTests`, `PhysicsTests`, `EscalaUITests`, `AnimacionHiritiTests`, `AudioDecoderTests` | PASS en CTest completo | PASS en CTest completo |
+
+El ejecutable Release construido en este checkout está en `build/windows-release/bin/EntornVGI.exe`, tamaño 3.265.024 bytes, SHA-256 `69AD4893E5A94D6D42FF5767C95DE5D72A574EDB60A7C6F3B3436E3ECAD76ABD`; se construyó desde el árbol correspondiente al merge `4a20308`. Los cuatro ciclos de repetición de red se ejecutaron en serie. Estas pruebas verifican la lógica automatizada y el transporte ENet local, no la interacción física ni el renderizado entre dos instancias gráficas.
+
+El agarre/movimiento/lanzamiento de Hirity desde el cliente fue reportado satisfactorio en una sesión local anterior. En cambio, no se ha registrado una selección confirmada de objeto normal ni una comparación visual simultánea de transformaciones host/cliente. Tampoco se ha demostrado con movimiento observado que el comportamiento autónomo de Hirity reanude tras soltarlo; `tracking=eligible` solo indica elegibilidad. Por ello, el multiplayer debugger y sus pruebas automatizadas están implementados, pero la verificación manual integral permanece **PENDIENTE**. La comunicación entre equipos físicos/Tailscale y OpenXR con runtime/hardware también permanece pendiente.
+
+Durante las builds MSVC mostró advertencias C4996 por llamadas a `getenv` en `GrabDiagnostics.cpp`; no impidieron las compilaciones y las pruebas pasaron. No se observaron nuevas alertas del antivirus durante esta validación; el antivirus permaneció activo.
