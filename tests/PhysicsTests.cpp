@@ -382,22 +382,28 @@ namespace
 			"soltar un objeto no libera el objeto del otro jugador");
 		comprobar(Cerca(mundo.VelocidadDe(cuerpoA), { 0, 0, 4 }), "la velocidad de lanzamiento se aplica al cuerpo autoritativo");
 
-		MundoFisico cliente;
-		SceneObject objeto = ObjetoCaja("replica", { 0, 0, 2 }, { 0, 0, 0 }, { 1, 1, 1 }, TipoCuerpo::Dinamico,
-			{ 0.25f, 0.25f, 0.25f }, { 0, 0, 0 }, 1.0f);
-		EscenaFisica escena(cliente);
-		std::string error;
-		comprobar(escena.Crear({ objeto }, {}, {}, error, false), "el cliente crea las cajas dinamicas como cinemáticas");
-		auto cuerpos = cliente.CajasDeColision();
-		comprobar(cuerpos.size() == 1 && cuerpos[0].tipo == TipoCuerpo::Cinematico,
-			"el cliente no ejecuta una segunda simulacion dinamica del objeto compartido");
-		EscenaFisica::EstadoDinamico estado;
-		estado.indiceObjeto = 0; estado.pose.posicion = { 3, 2, 4 }; estado.pose.rotacion = glm::quat(1, 0, 0, 0);
-		comprobar(escena.AplicarEstadoReplicado(estado), "snapshot actualiza el cuerpo cinemático sin reconstruirlo");
-		const auto pose = cliente.CajasDeColision()[0].pose;
-		comprobar(Cerca(pose.posicion, { 3, 2, 4 }), "pose replicada actualiza el AABB de Bullet");
-		comprobar(Cerca(glm::vec3(escena.MatrizVisualDe(0, objeto)[3]), { 3, 2, 4 }),
-			"la representacion visual toma la misma pose del cuerpo replicado");
+		for (const TipoCuerpo tipo : { TipoCuerpo::Dinamico, TipoCuerpo::Rebotador })
+		{
+			MundoFisico cliente;
+			const char* id = tipo == TipoCuerpo::Rebotador ? "hiriti-replica" : "replica";
+			SceneObject objeto = ObjetoCaja(id, { 0, 0, 2 }, { 0, 0, 0 }, { 1, 1, 1 }, tipo,
+				{ 0.25f, 0.25f, 0.25f }, { 0, 0, 0 }, tipo == TipoCuerpo::Rebotador ? 0.25f : 1.0f);
+			EscenaFisica escena(cliente);
+			std::string error;
+			comprobar(escena.Crear({ objeto }, {}, {}, error, false),
+				"la réplica cliente crea dynamic y Rebotador como cinemáticos");
+			auto cuerpos = cliente.CajasDeColision();
+			comprobar(cuerpos.size() == 1 && cuerpos[0].tipo == TipoCuerpo::Cinematico,
+				"el cliente no ejecuta una segunda simulacion del objeto con autoridad");
+			EscenaFisica::EstadoDinamico estado;
+			estado.indiceObjeto = 0; estado.pose.posicion = { 3, 2, 4 }; estado.pose.rotacion = glm::quat(1, 0, 0, 0);
+			comprobar(escena.AplicarEstadoReplicado(estado),
+				"snapshot acepta la réplica cinemática de dynamic y Rebotador");
+			const auto pose = cliente.CajasDeColision()[0].pose;
+			comprobar(Cerca(pose.posicion, { 3, 2, 4 }), "pose replicada actualiza el AABB de Bullet");
+			comprobar(Cerca(glm::vec3(escena.MatrizVisualDe(0, objeto)[3]), { 3, 2, 4 }),
+				"la representacion visual toma la misma pose del cuerpo replicado");
+		}
 	}
 
 	// Suelo + caja dinamica con offset y giro: cae, choca y se detiene.
@@ -1440,6 +1446,9 @@ namespace
 		const bool creada = Crear(escena, { esfera }, error);
 		comprobar(creada, "se crea una esfera dinámica rotada con offset");
 		if (!creada) return;
+		const auto cuerpos = mundo.CajasDeColision();
+		comprobar(cuerpos.size() == 1 && cuerpos[0].tipo == TipoCuerpo::Rebotador,
+			"la autoridad conserva el tipo Rebotador de Hiriti");
 
 		const glm::mat4 modelo = escena.MatrizVisualDe(0, esfera);
 		const glm::mat4 esperado = MatrizDeObjeto(esfera);

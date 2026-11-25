@@ -1183,7 +1183,8 @@ namespace
 			if (e.id == 0 || !ids.emplace(e.id, objeto.id).second) return false;
 			e.posicion = objeto.posicion; e.rotacion = objeto.rotacion; e.escala = objeto.escala;
 			e.colisionPresente = objeto.fisica.presente;
-			e.tipoColision = !objeto.fisica.presente ? 0 : (objeto.fisica.tipo == fisica::TipoCuerpo::Dinamico ? 2 : 1);
+			e.tipoColision = netjuego::TipoColisionEscena(objeto.fisica.presente,
+				fisica::EsCuerpoDinamico(objeto.fisica.tipo));
 			e.mitadTamano = objeto.fisica.mitadTamano; e.desplazamiento = objeto.fisica.desplazamiento; e.masa = objeto.fisica.masa;
 			if (!netjuego::EstadoObjetoEscenaValido(e)) return false;
 			salida.push_back(e);
@@ -1193,11 +1194,12 @@ namespace
 
 	bool indiceUnicoObjetoRed(uint32_t id, std::size_t& indice)
 	{
-		std::size_t encontrados = 0;
-		for (std::size_t i = 0; i < objetosEscena.size(); ++i)
-			if (netjuego::HashId(objetosEscena[i].id) == id) { indice = i; ++encontrados; }
-		return encontrados == 1 && indice < objetosEscena.size() && objetosEscena[indice].fisica.presente &&
-			objetosEscena[indice].fisica.tipo == fisica::TipoCuerpo::Dinamico;
+		return netjuego::IndiceUnicoObjetoRed(id, objetosEscena,
+			[](const SceneObject& objeto) { return netjuego::HashId(objeto.id); },
+			[](const SceneObject& objeto)
+			{
+				return objeto.fisica.presente && fisica::EsCuerpoDinamico(objeto.fisica.tipo);
+			}, indice);
 	}
 
 	void guardarMuestraFisicaRemota(const net::DynamicStateEntry& estado, double ahora)

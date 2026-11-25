@@ -114,7 +114,7 @@ namespace fisica
 			const glm::vec3 centro = objeto.posicion + glm::vec3(giro * glm::vec4(desplazamiento, 0.0f));
 			const glm::vec3 mitad = glm::abs(objeto.escala) * objeto.fisica.mitadTamano;
 
-			const TipoCuerpo tipoFisico = objeto.fisica.tipo == TipoCuerpo::Dinamico && !autoridadFisica
+			const TipoCuerpo tipoFisico = EsCuerpoDinamico(objeto.fisica.tipo) && !autoridadFisica
 				? TipoCuerpo::Cinematico : objeto.fisica.tipo;
 			const float masaFisica = EsCuerpoDinamico(tipoFisico) ? objeto.fisica.masa : 0.0f;
 			const IdCuerpo id = objeto.fisica.forma == FormaCuerpo::Esfera
