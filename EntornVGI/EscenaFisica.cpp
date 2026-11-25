@@ -255,6 +255,13 @@ namespace fisica
 		return false;
 	}
 
+	bool EscenaFisica::ObjetoDinamicoSujeto(int indiceObjeto) const
+	{
+		for (const Dinamico& d : dinamicos)
+			if (d.indiceObjeto == indiceObjeto) return mundo.EstaSujeto(d.cuerpo);
+		return false;
+	}
+
 	bool EscenaFisica::AplicarEstadoReplicado(const EstadoDinamico& estado)
 	{
 		for (const Dinamico& d : dinamicos)
@@ -305,19 +312,19 @@ namespace fisica
 
 	// ---- Agarre ---------------------------------------------------------------
 
-	namespace
+	// Punto común para agarres locales y remotos. Los remotos deben usar el rayo de interacción,
+	// no la mano sintética del avatar de escritorio, que está mucho más cerca de la cabeza.
+	glm::vec3 EscenaFisica::DestinoDeAgarre(const glm::vec3& origen, const glm::vec3& direccion)
 	{
-		// Punto del mundo donde queda el objeto: delante de los ojos, a DistanciaDeLaMano. La parte
-		// vertical se limita: si se mira muy abajo, el objeto no debe acabar dentro de los pies.
-		glm::vec3 PuntoDeLaMano(const glm::vec3& origen, const glm::vec3& direccion)
-		{
-			const glm::vec3 mirada = glm::normalize(direccion);
-			glm::vec3 horizontal(mirada.x, mirada.y, 0.0f);
-			if (glm::length(horizontal) < 1.0e-4f) horizontal = glm::vec3(1.0f, 0.0f, 0.0f);   // mirando recto arriba/abajo
-			horizontal = glm::normalize(horizontal);
-			const float subida = std::clamp(mirada.z * EscenaFisica::DistanciaDeLaMano, -0.4f, 0.6f);
-			return origen + horizontal * (EscenaFisica::DistanciaDeLaMano * 0.9f) + glm::vec3(0.0f, 0.0f, subida);
-		}
+		const float longitud = glm::length(direccion);
+		if (!std::isfinite(longitud) || longitud < 1.0e-5f ||
+			!std::isfinite(origen.x + origen.y + origen.z)) return origen;
+		const glm::vec3 mirada = direccion / longitud;
+		glm::vec3 horizontal(mirada.x, mirada.y, 0.0f);
+		if (glm::length(horizontal) < 1.0e-4f) horizontal = glm::vec3(1.0f, 0.0f, 0.0f);
+		horizontal = glm::normalize(horizontal);
+		const float subida = std::clamp(mirada.z * DistanciaDeLaMano, -0.4f, 0.6f);
+		return origen + horizontal * (DistanciaDeLaMano * 0.9f) + glm::vec3(0.0f, 0.0f, subida);
 	}
 
 	int EscenaFisica::IntentarAgarrar(const glm::vec3& origen, const glm::vec3& direccion)
@@ -348,7 +355,7 @@ namespace fisica
 		{
 			if (d.indiceObjeto != indiceObjeto) continue;
 			if (!mundo.SujetarCuerpo(d.cuerpo)) return false;
-			mundo.FijarDestinoDeSujecion(PuntoDeLaMano(origen, direccion));
+			mundo.FijarDestinoDeSujecion(DestinoDeAgarre(origen, direccion));
 			return true;
 		}
 		return false;
@@ -357,7 +364,7 @@ namespace fisica
 	void EscenaFisica::ActualizarAgarre(const glm::vec3& origen, const glm::vec3& direccion)
 	{
 		if (!HayAgarre()) return;
-		mundo.FijarDestinoDeSujecion(PuntoDeLaMano(origen, direccion));
+		mundo.FijarDestinoDeSujecion(DestinoDeAgarre(origen, direccion));
 		// Si algo (una pared) frena el objeto y la mano ya está lejos, se suelta: así no queda
 		// "tensando" contra el obstáculo ni cruza al otro lado cuando por fin cede.
 		if (glm::distance(mundo.PoseDe(mundo.CuerpoSujeto()).posicion, mundo.DestinoDeSujecion()) > SoltarSiSeAleja)

@@ -92,6 +92,7 @@ namespace fisica
 		static constexpr float AlcanceDeAgarre = 2.0f;       // m: hasta dónde llega el rayo
 		static constexpr float DistanciaDeLaMano = 1.2f;     // m: a qué distancia delante queda el objeto
 		static constexpr float SoltarSiSeAleja = 2.0f;       // m: si queda atascado más lejos de la mano, se suelta
+		static glm::vec3 DestinoDeAgarre(const glm::vec3& origen, const glm::vec3& direccion);
 
 		// Agarra el objeto dinámico que se mira. Devuelve su índice en la lista de la escena (-1 si no hay).
 		int IntentarAgarrar(const glm::vec3& origen, const glm::vec3& direccion);
@@ -110,6 +111,7 @@ namespace fisica
 		bool SujetarDinamicoRemoto(int indiceObjeto, const glm::vec3& origen, const glm::vec3& direccion);
 		void ActualizarAgarreRemoto(int indiceObjeto, const glm::vec3& destino);
 		bool SoltarDinamicoRemoto(int indiceObjeto, const glm::vec3& velocidad);
+		bool ObjetoDinamicoSujeto(int indiceObjeto) const;
 		bool AplicarEstadoReplicado(const EstadoDinamico& estado);
 		void CapturarEstadosDinamicos(std::vector<EstadoDinamico>& salida) const;
 

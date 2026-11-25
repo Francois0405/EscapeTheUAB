@@ -50,6 +50,11 @@ int main()
 		"agarrar a Hiriti cancela el sonido pendiente");
 	comprobar(!hiriti.MarcarAgarrado(),
 		"el evento de agarrarlo solo se activa una vez");
+	juego::AnimacionHiriti agarreValidado;
+	comprobar(agarreValidado.DescubrirPorInteraccion() && agarreValidado.MarcarAgarrado(),
+		"un agarre físico validado descubre a Hiriti aunque otra réplica no detectara su mirada");
+	comprobar(!agarreValidado.MarcarAgarrado(),
+		"el estado remoto de Hiriti no duplica el evento de agarre");
 	hiriti.Reiniciar();
 	comprobar(!hiriti.MarcarAgarrado(),
 		"no se registra el agarre antes de descubrir a Hiriti");

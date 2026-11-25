@@ -1253,6 +1253,23 @@ namespace
 		comprobar(mundo.NumeroDeCuerpos() == cuerposIniciales, "agarrar no crea ni borra cuerpos");
 		sala.fisica->SoltarAgarre();
 
+		// El agarre de un cliente vive en la sujeción autoritativa del host, no en cuerpoSujeto local.
+		const glm::vec3 destinoAgarre = EscenaFisica::DestinoDeAgarre(ojos, haciaCaja);
+		comprobar(sala.fisica->SujetarDinamicoRemoto(grande, ojos, haciaCaja),
+			"el host sujeta remotamente el mismo cuerpo dinámico que seleccionó el rayo del cliente");
+		comprobar(sala.fisica->ObjetoDinamicoSujeto(grande) && !sala.fisica->HayAgarre() &&
+			 sala.fisica->ObjetoAgarrado() == -1,
+			"la sujeción remota se detecta sin fingir que pertenece a la mano local del host");
+		sala.fisica->ActualizarAgarreRemoto(grande, destinoAgarre);
+		Avanzar(mundo, 1.5f);
+		glm::vec3 posicionRemota(0.0f);
+		comprobar(sala.fisica->PosicionObjetoDinamico(grande, posicionRemota) &&
+			 Cerca(posicionRemota, destinoAgarre, 0.12f),
+			"el agarre remoto usa el mismo punto delante del rayo que el agarre local");
+		comprobar(sala.fisica->SoltarDinamicoRemoto(grande, glm::vec3(0.0f)) &&
+			!sala.fisica->ObjetoDinamicoSujeto(grande),
+			"soltar el agarre remoto recupera la gravedad y elimina la restricción autoritativa");
+
 		// Alcance: desde 4 m no llega.
 		const glm::vec3 lejos = glm::vec3(3.0f, 2.0f, -0.3f);
 		comprobar(sala.fisica->IntentarAgarrar(lejos, glm::vec3(7, 2, -1.3f) - lejos) == -1, "fuera de alcance (2 m) no se agarra");

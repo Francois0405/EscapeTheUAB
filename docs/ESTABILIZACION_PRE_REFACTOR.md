@@ -111,3 +111,27 @@ No se realizaron pruebas gráficas de 1080p/4K, dos equipos, Tailscale, hardware
 ## Incidencia de Kaspersky
 
 Kaspersky informó que terminó el proceso de la detección anterior, guardó una copia de seguridad y eliminó el `SceneLoaderTests.exe` generado manualmente en `build/lighting-validation`. No se restauró ese archivo, no se añadió una exclusión y no se concluyó que fuera un falso positivo. El usuario confirmó que el análisis rápido terminó sin amenazas y autorizó continuar mientras el análisis completo permanece en curso. Kaspersky permaneció activo. No se observó una nueva detección durante la conversión ni la validación documentada; este resultado no determina retrospectivamente si la detección anterior fue un falso positivo.
+
+## Regresión de agarre y autoridad de Hirity
+
+La QA manual del commit `af5b98d` reportó agarres defectuosos y a Hirity descontrolado en cliente. `af5b98d` no contiene cambios de gameplay frente a `18d935d`; la regresión es anterior a la corrección del OGG. La ruta de agarre remoto ya aparece en la implementación multijugador integrada: el host crea la sujeción Bullet autoritativa, pero la réplica de cliente es cinemática. Dos huecos explicaban los síntomas: (1) el destino remoto de escritorio seguía la mano sintética del avatar, aproximadamente a 0,5 m de la cabeza, en vez del punto de agarre local situado a 1,08 m delante del rayo; (2) el control de Hirity consultaba `ObjetoAgarrado()`, que solo identifica la sujeción local y no una restricción remota almacenada por cuerpo. El host podía entonces mantener el seguimiento autónomo o evaluar la reaparición mientras el cliente tenía a Hirity sujeto. `ca26104` limita correctamente la simulación autónoma al host/offline, pero no vinculó ese control con el propietario remoto. El cooldown de 30 s de `d2e55e8` hacía más visible el segundo problema; no se encontró una modificación de gameplay en `af5b98d`.
+
+La corrección comparte `EscenaFisica::DestinoDeAgarre()` entre agarres locales y remotos. Los agarres de escritorio siguen la cabeza y el rayo; los agarres OpenXR siguen la pose real del mando derecho. La sujeción remota continúa siendo una restricción física en el cuerpo dinámico autoritativo del host: el cliente no añade una restricción al cuerpo cinemático. `ObjetoDinamicoSujeto()` consulta el estado de sujeción por cuerpo y, además, Hirity considera su propietario de red; esto suspende seguimiento y reaparición mientras el host u otro cliente lo sostiene. Un agarre físico aceptado descubre a Hirity incluso si el cliente/host no había coincidido en su detección visual. Al soltar, el host conserva la liberación, la velocidad de lanzamiento, el contacto y la reanudación condicionada del seguimiento. El objetivo de seguimiento en multijugador sigue siendo el jugador local del host, porque el host conserva la autoridad y usa su propia cápsula para el seguimiento/reaparición.
+
+Se añadió diagnóstico opcional, sin mensajes por frame, con `ENTORNVGI_DEBUG_GRAB=1`. Las líneas `[grab] request`, `accepted`, `reject`, `holding`, `released`, `replica`, `hiriti` y `hiriti-respawn` informan ID, peer/propietario, posición, destino, clase de cuerpo, seguimiento y tiempo desde reaparición. La prueba de física ahora verifica que una sujeción remota reporta el cuerpo sujeto sin fingir agarre local, alcanza el destino común y restaura gravedad al liberar. `AnimacionHiritiTests` cubre el descubrimiento/agarre validado por física.
+
+Validación de esta corrección en `integration/pre-refactor` sobre el árbol modificado:
+
+| Prueba | Resultado |
+|---|---|
+| Lanzador oficial Debug (`run-windows.cmd -NoRun`) | PASS; ENet, Bullet, Meshoptimizer y OpenXR habilitados |
+| Lanzador oficial Release (`run-windows.cmd -Configuration Release -NoRun`) | PASS; mismas dependencias habilitadas |
+| CTest Debug | PASS, 20/20 |
+| CTest Release | PASS, 20/20 |
+| `NetJuegoTests`, Debug/Release, repetición hasta 20 | PASS, 20/20 en cada configuración |
+| `ENetLoopbackTests`, Debug/Release, repetición hasta 10 | PASS, 10/10 en cada configuración |
+| `PhysicsTests` y `AnimacionHiritiTests` | PASS en CTest completo de ambas configuraciones |
+| Arranque simultáneo de dos instancias Release con los argumentos host y cliente | Ambas cargaron la escena; modo de cuerpo host dinámico y cliente réplica cinemática confirmados en diagnóstico |
+| Handshake y manipulación interactiva entre ventanas | NO VERIFICADO; Orca no reconoció las ventanas GLFW para captura/entrada, y el cliente no pudo guardar `multijugador.ini` en AppData bajo los permisos del entorno |
+
+Por tanto, los PASS automatizados no demuestran que el handshake ni el agarre se hayan reproducido visualmente. Para cerrar QA manual, ejecutar ambas instancias desde una terminal normal de Windows con `ENTORNVGI_DEBUG_GRAB=1`, confirmar el panel F4 y realizar el checklist de manipulación que sigue. Si aparecen `reject`, usar su `detail` para distinguir raycast exacto fallido, propiedad ocupada o pose no disponible; durante un agarre remoto se espera `holding ... host-dynamic-constraint-active`, y Hirity debe indicar `held=yes`/`tracking=suspended-or-stabilizing` hasta soltarlo.

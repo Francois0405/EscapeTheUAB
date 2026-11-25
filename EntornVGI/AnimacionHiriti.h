@@ -35,6 +35,9 @@ namespace juego
 			m_tiempoDesdeReaparicion = 0.0f;
 		}
 
+		bool SeguimientoSuspendido() const { return m_seguimientoSuspendido; }
+		float TiempoDesdeReaparicion() const { return m_tiempoDesdeReaparicion; }
+
 		static glm::vec3 CalcularDireccionSeguimiento(const glm::vec3& posicionHiriti,
 			const glm::vec3& posicionJugador, const std::array<float, 5>& distanciasObstaculos)
 		{
@@ -99,6 +102,17 @@ namespace juego
 			if (!m_descubierto || m_agarrado) return false;
 			m_agarrado = true;
 			m_esperandoAgarrame = false;
+			return true;
+		}
+
+		// Un agarre físico validado por el host también cuenta como descubrimiento, incluso si
+		// la detección visual local y la hitbox no coinciden exactamente entre dos réplicas.
+		bool DescubrirPorInteraccion()
+		{
+			if (m_descubierto) return false;
+			m_descubierto = true;
+			m_esperandoAgarrame = false;
+			m_tiempoDesdeDescubrimiento = 0.0f;
 			return true;
 		}
 
