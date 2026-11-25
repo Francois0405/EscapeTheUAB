@@ -191,8 +191,8 @@ namespace glb
 		return objeto;
 	}
 
-	bool PuedeInteractuar(bool juegoPausado, bool ventanaConFoco, bool escribiendoEnInterfaz)
+	bool PuedeInteractuar(bool juegoPausado, bool windowFocused, bool escribiendoEnInterfaz)
 	{
-		return !juegoPausado && ventanaConFoco && !escribiendoEnInterfaz;
+		return !juegoPausado && windowFocused && !escribiendoEnInterfaz;
 	}
 }

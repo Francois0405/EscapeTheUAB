@@ -38,157 +38,157 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 		glfwPollEvents();
 
 		// 2. Sincronizar la pausa interna del motor (libera/captura el ratón automáticamente)
-		fpsPausado = (estadoActual != ESTADO_JUGANDO);
+		fpsPaused = (currentGameState != ESTADO_JUGANDO);
 
-		editorEscenas.Actualizar(window, static_cast<float>(delta));
-		sincronizarCursorFPS(window);
-		actualizarCargaLanzamiento(window, static_cast<float>(delta));
+		sceneEditor.Actualizar(window, static_cast<float>(delta));
+		syncFpsCursor(window);
+		updateThrowChargeInput(window, static_cast<float>(delta));
 
 		// 3. Movimiento, física y VR (solo cuando estamos jugando)
-		if (estadoActual == ESTADO_JUGANDO)
+		if (currentGameState == ESTADO_JUGANDO)
 		{
 			const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||
 				glfwGetKey(window, GLFW_KEY_RIGHT_CONTROL) == GLFW_PRESS;
-			const float deltaPostura = (editorEscenas.Activo() || (modoJuegoFPS() && !entradaFPSActiva()))
+			const float deltaPostura = (sceneEditor.Activo() || (fpsModeActive() && !fpsInputActive()))
 				? 0.0f : fps::LimitarDelta(static_cast<float>(delta));
-			mundoFisico.ActualizarJugadorAgachado(modoJuegoFPS() && ctrlPulsado, deltaPostura);
+			physicsWorld.ActualizarJugadorAgachado(fpsModeActive() && ctrlPulsado, deltaPostura);
 
 			// Movimiento WASD
-			mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
+			physicsWorld.FijarVelocidadJugador(glm::vec3(0.0f));
 			{
 				fps::MovementInput entrada;
-				entrada.activo = !editorEscenas.Activo() && entradaFPSActiva() && mundoFisico.HayJugador();
-				entrada.quiereMoverse = entrada.activo && hayTeclaDeMovimiento(window);
+				entrada.activo = !sceneEditor.Activo() && fpsInputActive() && physicsWorld.HayJugador();
+				entrada.quiereMoverse = entrada.activo && movementKeyPressed(window);
 				entrada.sprintPedido = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
 					glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
-				entrada.enSuelo = mundoFisico.JugadorEnSuelo();
-				entrada.fraccionAgachado = mundoFisico.FraccionAgachado();
-				const float velocidad = movimientoJugador.Actualizar(static_cast<float>(delta), entrada);
+				entrada.enSuelo = physicsWorld.JugadorEnSuelo();
+				entrada.fraccionAgachado = physicsWorld.FraccionAgachado();
+				const float velocidad = playerMovement.Actualizar(static_cast<float>(delta), entrada);
 				if (entrada.activo)
-					moverJugadorFPS(window, velocidad);
-				barraEstamina.Actualizar(static_cast<float>(delta), movimientoJugador.FraccionEstamina(), movimientoJugador.Sprintando());
+					moveFirstPersonPlayer(window, velocidad);
+				staminaBar.Actualizar(static_cast<float>(delta), playerMovement.FraccionEstamina(), playerMovement.Sprintando());
 			}
 
-			actualizarMovimientoMovil(window, static_cast<float>(delta));
+			updatePhoneMotion(window, static_cast<float>(delta));
 
 			const bool animacionPausada = netgame::PausarMundoJuego(
-				estadoActual == ESTADO_JUGANDO, editorEscenas.Activo(), fpsPausado,
-				ventanaConFoco, gestorOpenXR.SesionEnMarcha(), redJuego.EsHost());
-			actualizarPuertaDemo(animacionPausada ? 0.0f : static_cast<float>(delta));
+				currentGameState == ESTADO_JUGANDO, sceneEditor.Activo(), fpsPaused,
+				windowFocused, openXrManager.SesionEnMarcha(), networkGame.EsHost());
+			updateDemoDoor(animacionPausada ? 0.0f : static_cast<float>(delta));
 			const auto inicioAnimacion = std::chrono::steady_clock::now();
-			glb::ActualizarObjetos(objetosAnimados, animacionPausada ? 0.0f : static_cast<float>(delta));
+			glb::ActualizarObjetos(animatedObjects, animacionPausada ? 0.0f : static_cast<float>(delta));
 			if (renderMetrics::enabled) renderMetrics::animacionMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioAnimacion).count();
-			gestorOpenXR.ProcesarEventos();
+			openXrManager.ProcesarEventos();
 
-			if (gestorOpenXR.SesionEnMarcha() && entradaFPSActiva())
+			if (openXrManager.SesionEnMarcha() && fpsInputActive())
 			{
-				if (gestorOpenXR.GatilloRecienPulsado())
+				if (openXrManager.GatilloRecienPulsado())
 				{
-			if (jugadorTieneAgarre()) iniciarCargaLanzamiento();
-					else interactuar();
+			if (playerHoldsObject()) beginThrowCharge();
+					else performInteraction();
 				}
-				if (gestorOpenXR.GatilloRecienSoltado() && cargaLanzamientoActiva)
-					lanzarObjetoCargado();
+				if (openXrManager.GatilloRecienSoltado() && throwChargeActive)
+					throwHeldObject();
 
-				if (gestorOpenXR.GatilloIzquierdoRecienPulsado())
-					linternaMovilActiva = !linternaMovilActiva;
+				if (openXrManager.GatilloIzquierdoRecienPulsado())
+					phoneFlashlightEnabled = !phoneFlashlightEnabled;
 			}
 
-			escenaFisica->SincronizarCinematicos(objetosAnimados);
-			actualizarAgarreDelJugador(!animacionPausada && !mostrarPanelesDebug && modoJuegoFPS() &&
-				(!redJuego.EsHost() || entradaFPSActiva()));
-			mundoFisico.FijarPausa(animacionPausada);
+			physicsScene->SincronizarCinematicos(animatedObjects);
+			updateHeldObject(!animacionPausada && !showDebugPanels && fpsModeActive() &&
+				(!networkGame.EsHost() || fpsInputActive()));
+			physicsWorld.FijarPausa(animacionPausada);
 			const auto inicioFisica = std::chrono::steady_clock::now();
-			mundoFisico.Actualizar(static_cast<float>(delta));
+			physicsWorld.Actualizar(static_cast<float>(delta));
 			if (renderMetrics::enabled) renderMetrics::fisicaMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioFisica).count();
-			sincronizarJugadorYCamara();
-			actualizarBalanceoVisual(static_cast<float>(delta));
+			syncPlayerWithCamera();
+			updateCameraBobbing(static_cast<float>(delta));
 		}
 
 		// Red: los mensajes se aplican aqui (hilo de juego). Offline: no hace nada.
-		actualizarRed(glfwGetTime(), estadoActual == ESTADO_JUGANDO);
+		updateNetwork(glfwGetTime(), currentGameState == ESTADO_JUGANDO);
 
 		// Una sola consulta de Bullet por fotograma; el HUD y E consumen el mismo objetivo.
-		actualizarHiriti(estadoActual == ESTADO_JUGANDO &&
-			entradaFPSActiva() && !gestorOpenXR.SesionEnMarcha(),
-			estadoActual == ESTADO_JUGANDO && !editorEscenas.Activo() && !redJuego.EsCliente(),
+		updateHiritiBehaviour(currentGameState == ESTADO_JUGANDO &&
+			fpsInputActive() && !openXrManager.SesionEnMarcha(),
+			currentGameState == ESTADO_JUGANDO && !sceneEditor.Activo() && !networkGame.EsCliente(),
 			static_cast<float>(delta));
-		actualizarAudioAmbiente(estadoActual == ESTADO_JUGANDO && !editorEscenas.Activo(),
+		updateAmbientSound(currentGameState == ESTADO_JUGANDO && !sceneEditor.Activo(),
 			static_cast<float>(delta));
-		actualizarObjetivoInteraccion(estadoActual == ESTADO_JUGANDO);
+		updateCurrentInteractionTarget(currentGameState == ESTADO_JUGANDO);
 
 		// La linterna se ancla durante el dibujo, una vez calculada la ViewMatrix actual.
-		if (estadoActual != ESTADO_JUGANDO) llumGL[3].encesa = false;
+		if (currentGameState != ESTADO_JUGANDO) llumGL[3].encesa = false;
 		const auto inicioLuces = std::chrono::steady_clock::now();
-		actualizarLucesDeEscena();
+		updateSceneLights();
 		if (renderMetrics::enabled) renderMetrics::lucesMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioLuces).count();
 
 		draw_Menu_ImGui();
-		if (editorEscenas.ConsumeReconstruirFisicaRequest())
+		if (sceneEditor.ConsumeReconstruirFisicaRequest())
 		{
 			std::string errorEditor;
-			if (!reconstruirFisicaTrasEdicion(errorEditor))
+			if (!rebuildPhysicsAfterEditing(errorEditor))
 			{
 				std::cerr << "No se pudo actualizar Bullet tras cambiar instancias GLB: " << errorEditor << '\n';
-				editorEscenas.InformarEstado("Physics rebuild failed: " + errorEditor, true);
+				sceneEditor.InformarEstado("Physics rebuild failed: " + errorEditor, true);
 			}
 		}
-		if (editorEscenas.ConsumeGuardarRequest())
+		if (sceneEditor.ConsumeGuardarRequest())
 		{
 			std::string errorGuardado;
-			if (serializadorEscena.Guardar(objetosEscena, datosAnimadosEscena, errorGuardado))
+			if (sceneSerializer.Guardar(sceneObjects, sceneAnimatedData, errorGuardado))
 			{
-				editorEscenas.MarcarGuardado();
-				editorEscenas.InformarEstado("Saved: " + serializadorEscena.Ruta().filename().string());
-				std::cout << "Escena guardada en " << serializadorEscena.Ruta() << '\n';
-				if (!serializadorEscena.RutaFuente().empty())
-					std::cout << "Copia fuente actualizada en " << serializadorEscena.RutaFuente() << '\n';
-				if (editorEscenas.ConsumeCerrarTrasGuardar()) glfwSetWindowShouldClose(window, GLFW_TRUE);
+				sceneEditor.MarcarGuardado();
+				sceneEditor.InformarEstado("Saved: " + sceneSerializer.Ruta().filename().string());
+				std::cout << "Escena guardada en " << sceneSerializer.Ruta() << '\n';
+				if (!sceneSerializer.RutaFuente().empty())
+					std::cout << "Copia fuente actualizada en " << sceneSerializer.RutaFuente() << '\n';
+				if (sceneEditor.ConsumeCerrarTrasGuardar()) glfwSetWindowShouldClose(window, GLFW_TRUE);
 			}
 			else
 			{
-				editorEscenas.InformarEstado("Save failed: " + errorGuardado, true);
+				sceneEditor.InformarEstado("Save failed: " + errorGuardado, true);
 				std::cerr << "No se guardó la escena: " << errorGuardado << '\n';
 			}
 		}
-		if (editorEscenas.ConsumeCerrarConfirmado()) glfwSetWindowShouldClose(window, GLFW_TRUE);
-		if (editorEscenas.ConsumeEntradaPlay())
+		if (sceneEditor.ConsumeCerrarConfirmado()) glfwSetWindowShouldClose(window, GLFW_TRUE);
+		if (sceneEditor.ConsumeEntradaPlay())
 		{
 			std::string errorEditor;
-			if (!reconstruirFisicaTrasEdicion(errorEditor))
+			if (!rebuildPhysicsAfterEditing(errorEditor))
 			{
 				std::cerr << "No se pudo reconstruir Bullet al salir del editor: " << errorEditor << '\n';
-				editorEscenas.Activar(true);
+				sceneEditor.Activar(true);
 			}
 			else
 			{
-				mundoFisico.FijarVelocidadJugador(glm::vec3(0.0f));
-				if (redJuego.Activa() && redJuego.EsHost())
+				physicsWorld.FijarVelocidadJugador(glm::vec3(0.0f));
+				if (networkGame.Activa() && networkGame.EsHost())
 				{
 					std::vector<netgame::SceneObjectState> estados;
-					if (!capturarEstadoEscenaRed(estados) || !redJuego.FijarEstadoEscena(estados, true))
-						editorEscenas.InformarEstado("La sesión solo replica objetos existentes; no se sincronizaron altas, bajas o IDs no válidos.", true);
+					if (!captureNetworkSceneState(estados) || !networkGame.FijarEstadoEscena(estados, true))
+						sceneEditor.InformarEstado("La sesión solo replica objetos existentes; no se sincronizaron altas, bajas o IDs no válidos.", true);
 				}
 			}
 			// Sin saltos: se descartan el ultimo cursor, los deltas del raton y la referencia del balanceo.
-			fpsTienePosicionAnterior = false;
+			fpsHasPreviousPosition = false;
 			mouseDeltaX = mouseDeltaY = 0.0;
-			hayPiesFotogramaAnterior = false;
-			sincronizarCursorFPS(window);
+			hasPreviousFrameFeet = false;
+			syncFpsCursor(window);
 		}
 
 		// Con VR en marcha, la escena se dibuja en el visor (y se refleja en la ventana). Sin VR, o si el visor
 		// no está mostrando imagen, se dibuja la vista de escritorio con normalidad.
 		{
 			static bool vrEnMarchaAntes = false;
-			const bool vrEnMarcha = gestorOpenXR.SesionEnMarcha();
+			const bool vrEnMarcha = openXrManager.SesionEnMarcha();
 			if (vrEnMarcha != vrEnMarchaAntes)
 			{	// xrWaitFrame ya marca el ritmo del visor: la sincronía vertical del monitor lo frenaría
 				glfwSwapInterval(vrEnMarcha ? 0 : 1);
 				vrEnMarchaAntes = vrEnMarcha;
 			}
 
-			const bool vrDibujado = !editorEscenas.Activo() && vrEnMarcha && dibujarEscenaVR();
+			const bool vrDibujado = !sceneEditor.Activo() && vrEnMarcha && drawVrScene();
 			if (!vrDibujado)
 			{
 				// Guardamos el tamaño real de la ventana antes de cambiar w y h para el FBO PS1
@@ -197,7 +197,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 
 				// EDIT: resolución nativa.
 				// PLAY: resolución PS1 (320x240).
-				const bool modoEditor = editorEscenas.Activo();
+				const bool modoEditor = sceneEditor.Activo();
 
 				glBindFramebuffer(
 					GL_FRAMEBUFFER,

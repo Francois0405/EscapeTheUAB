@@ -2,5 +2,5 @@
 
 #include "src/app/AppState.h"
 
-GLuint texturaDeMaterial(const SceneMaterial& material);
-unsigned int texturaParaEditor(const std::filesystem::path& ruta);
+GLuint materialTexture(const SceneMaterial& material);
+unsigned int editorTexture(const std::filesystem::path& ruta);

@@ -35,10 +35,10 @@ struct RuntimeRenderControls
 	char& shader;
 	unsigned int& shader_programID;
 	Shader& shaderLighting;
-	bool& oclusoresPhongInvalidos;
+	bool& phongOccludersDirty;
 
 	// Service that stays in main.cpp (the render path uses it too).
-	std::function<void(unsigned int programa, bool ambienteActivo)> aplicarIntensidadMaterial;
+	std::function<void(unsigned int programa, bool ambienteActivo)> applyMaterialIntensity;
 
 	void OnIluminacioLlumfixe();
 	void OnIluminacio2Sides();

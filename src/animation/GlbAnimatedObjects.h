@@ -106,7 +106,7 @@ namespace glb
 
 	// ¿Debe tenerse en cuenta la tecla E ahora? No si el juego está en pausa, la ventana no
 	// tiene el foco o se está escribiendo en un cuadro de texto de ImGui.
-	bool PuedeInteractuar(bool juegoPausado, bool ventanaConFoco, bool escribiendoEnInterfaz);
+	bool PuedeInteractuar(bool juegoPausado, bool windowFocused, bool escribiendoEnInterfaz);
 
 	// Avanza el reloj de todas las instancias y coloca cada una en su pose.
 	// 'delta' es el tiempo transcurrido; pasa 0 para pausar.

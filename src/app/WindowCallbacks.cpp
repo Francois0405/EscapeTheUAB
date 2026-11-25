@@ -5,24 +5,24 @@
 
 void OnWindowFocus(GLFWwindow* window, int focused)
 {
-	ventanaConFoco = focused == GLFW_TRUE;
-	if (!ventanaConFoco)
+	windowFocused = focused == GLFW_TRUE;
+	if (!windowFocused)
 	{
-		cancelarCargaLanzamiento();
-		fijarCapturaCursor(window, false);
+		cancelThrowChargeInput();
+		setCursorCapture(window, false);
 	}
 	else
 	{
-		fpsTienePosicionAnterior = false;
+		fpsHasPreviousPosition = false;
 	}
 }
 
 void OnWindowCloseRequest(GLFWwindow* window)
 {
-	if (editorEscenas.HayCambiosSinGuardar())
+	if (sceneEditor.HayCambiosSinGuardar())
 	{
 		glfwSetWindowShouldClose(window, GLFW_FALSE);
-		editorEscenas.SolicitarConfirmacionCierre();
+		sceneEditor.SolicitarConfirmacionCierre();
 	}
 }
 

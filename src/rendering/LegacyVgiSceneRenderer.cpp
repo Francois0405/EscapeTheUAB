@@ -22,40 +22,40 @@
 void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 {
 	const auto inicioEscena = std::chrono::steady_clock::now();
-	glcache::enabled = ctx.renderizadoOptimizado;
-	ctx.iniciarConsultaGpu();
-	ctx.actualizarOclusoresPhong();
+	glcache::enabled = ctx.optimizedRendering;
+	ctx.beginGpuQuery();
+	ctx.updatePhongOccluders();
 	glUseProgram(ctx.shader_programID);
-	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uIndirectIntensity"), ctx.intensidadIndirectaEscena);
-	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uIndirectAmbientBase"), ctx.intensidadAmbientalBaseEscena);
-	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uSceneDirectScale"), ctx.escalaLuzDirectaEscena);
-	glUniform1i(glcache::UniformLocation(ctx.shader_programID, "uLightingDebugMode"), ctx.modoDiagnosticoIluminacion);
+	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uIndirectIntensity"), ctx.sceneIndirectIntensity);
+	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uIndirectAmbientBase"), ctx.sceneBaseAmbientIntensity);
+	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uSceneDirectScale"), ctx.sceneDirectLightScale);
+	glUniform1i(glcache::UniformLocation(ctx.shader_programID, "uLightingDebugMode"), ctx.lightingDiagnosticMode);
 	glUniform3f(glcache::UniformLocation(ctx.shader_programID, "uIndirectFloorColor"),
-		ctx.colorReboteSueloEscena.r, ctx.colorReboteSueloEscena.g, ctx.colorReboteSueloEscena.b);
+		ctx.sceneGroundBounceColor.r, ctx.sceneGroundBounceColor.g, ctx.sceneGroundBounceColor.b);
 	glUniform3f(glcache::UniformLocation(ctx.shader_programID, "uIndirectSkyColor"),
-		ctx.colorReboteCieloEscena.r, ctx.colorReboteCieloEscena.g, ctx.colorReboteCieloEscena.b);
+		ctx.sceneSkyBounceColor.r, ctx.sceneSkyBounceColor.g, ctx.sceneSkyBounceColor.b);
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), 1.0f);
-	const bool renderizarMovil = ctx.modoJuegoFPS() && !ctx.editorEscenas.Activo()
-		&& ctx.mostrarMovil && ctx.phoneOBJ != nullptr;
+	const bool renderizarMovil = ctx.fpsModeActive() && !ctx.sceneEditor.Activo()
+		&& ctx.showPhone && ctx.phoneOBJ != nullptr;
 	glm::mat4 matrizMovilMundo(1.0f);
 	if (renderizarMovil)
 	{
 		glm::mat4 mundoMandoIzq(1.0f);
-		if (ctx.matrizMandoIzquierdoMundo(mundoMandoIzq))
+		if (ctx.leftControllerWorldMatrix(mundoMandoIzq))
 		{
 			// En VR: anclado al mando izquierdo
 			glm::mat4 ajusteLocal(1.0f);
 			ajusteLocal = glm::rotate(ajusteLocal, glm::radians(90.0f), glm::vec3(1.0f, 0.0f, 0.0f));
-			ajusteLocal = glm::scale(ajusteLocal, glm::vec3(ctx.movilEscala));
+			ajusteLocal = glm::scale(ajusteLocal, glm::vec3(ctx.phoneScale));
 			matrizMovilMundo = mundoMandoIzq * ajusteLocal;
 		}
 		else
 		{
 			// En PC: anclado a la cámara
-			matrizMovilMundo = glm::inverse(ctx.ViewMatrix) * ctx.matrizLocalMovilActual();
+			matrizMovilMundo = glm::inverse(ctx.ViewMatrix) * ctx.currentPhoneLocalMatrix();
 		}
 
-		ctx.actualizarLinternaMovil(matrizMovilMundo);
+		ctx.updatePhoneFlashlight(matrizMovilMundo);
 	}
 	else ctx.llumGL[3].encesa = false;
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uDirtStrength"), 0.0f);
@@ -64,7 +64,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 
 	// Dibuix SkyBox Cúbic.
 	// El Skybox se muestra en PLAY, pero no en EDIT.
-	if (ctx.SkyBoxCube && !ctx.editorEscenas.Activo())
+	if (ctx.SkyBoxCube && !ctx.sceneEditor.Activo())
 	{
 		dibuixa_Skybox(
 			ctx.skC_programID,
@@ -78,15 +78,15 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	dibuixa_Eixos(ctx.eixos_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid, ctx.ProjectionMatrix, ctx.ViewMatrix);
 
 	// Dibuja cada objeto de la habitacion con su transformacion.
-	if (!ctx.objetosEscena.empty())
+	if (!ctx.sceneObjects.empty())
 	{
-		for (std::size_t i = 0; i < ctx.objetosEscena.size(); ++i)
+		for (std::size_t i = 0; i < ctx.sceneObjects.size(); ++i)
 		{
-			const SceneObject& obj = ctx.objetosEscena[i];
-			if (!ctx.editorEscenas.ObjetoVisible(i)) continue;   // visibilidad TEMPORAL de la vista de edicion
-			auto it = ctx.modelosHabitacion.find(obj.modelo);
+			const SceneObject& obj = ctx.sceneObjects[i];
+			if (!ctx.sceneEditor.ObjetoVisible(i)) continue;   // visibilidad TEMPORAL de la vista de edicion
+			auto it = ctx.roomModels.find(obj.modelo);
 
-			if (it == ctx.modelosHabitacion.end())
+			if (it == ctx.roomModels.end())
 				continue;
 
 			// Un muro paramétrico se dibuja como paños generados al vuelo. El OBJ compartido
@@ -108,9 +108,9 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 				}
 				else std::cerr << "Pared paramétrica '" << obj.id << "' inválida: " << errorPared << '\n';
 			}
-			if (matrices.empty()) matrices.push_back(ctx.editorEscenas.Activo()
-				? fisica::MatrizDeObjeto(obj) : ctx.escenaFisica->MatrizVisualDe(static_cast<int>(i), obj));
-			if (ctx.renderizadoOptimizado)
+			if (matrices.empty()) matrices.push_back(ctx.sceneEditor.Activo()
+				? fisica::MatrizDeObjeto(obj) : ctx.physicsScene->MatrizVisualDe(static_cast<int>(i), obj));
+			if (ctx.optimizedRendering)
 			{
 				Vector3D minimo{}, maximo{};
 				if (it->second->GetLocalBounds(minimo, maximo))
@@ -128,7 +128,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			}
 			else if (renderMetrics::enabled) ++renderMetrics::visibles;
 			if (matrices.empty()) continue;
-			const GLuint texturaOverride = ctx.texturaDeMaterial(obj.material);
+			const GLuint texturaOverride = ctx.materialTexture(obj.material);
 			const float rugosidad = std::clamp(obj.material.roughness, 0.0f, 1.0f);
 			const float brilloPhong = 4.0f + std::pow(1.0f - rugosidad, 4.0f) * 124.0f;
 			it->second->SetInstanceMaterialOverride(texturaOverride, obj.material.presente ? brilloPhong : -1.0f);
@@ -141,7 +141,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uDirtScale"), obj.material.dirtScale);
 			glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uDirtSeed"), obj.material.dirtSeed);
 			const float emisionLuminaria = obj.luz.presente
-				? (obj.luz.encendida && ctx.lamparasLaboratorioActivas ? 1.0f : 0.0f) : 1.0f;
+				? (obj.luz.encendida && ctx.labLampsEnabled ? 1.0f : 0.0f) : 1.0f;
 			glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), emisionLuminaria);
 
 			for (const glm::mat4& matriz : matrices)
@@ -169,7 +169,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	}
 
 	// DEMO FASE 1: la puerta usa el cubo test.obj ya cargado por la escena.
-	for (const auto& modelo : ctx.modelosHabitacion)
+	for (const auto& modelo : ctx.roomModels)
 	{
 		if (!modelo.first.ends_with("test.obj")) continue;
 		dibuixa_EscenaGL(
@@ -178,22 +178,22 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			false, ctx.texturesID, ctx.textura_map, ctx.tFlag_invert_Y,
 			ctx.npts_T, ctx.PC_t, ctx.pas_CS, ctx.sw_Punts_Control, ctx.dibuixa_TriedreFrenet,
 			modelo.second.get(),
-			animation::MatrizPuertaConBisagra(ctx.mitadTamanoPuertaDemo, ctx.bisagraPuertaDemo, ctx.anguloPuertaDemo)
+			animation::MatrizPuertaConBisagra(ctx.demoDoorHalfSize, ctx.demoDoorHinge, ctx.demoDoorAngle)
 		);
 		break;
 	}
 
 	// DEMO FÍSICA: dibuja el cubo con la pose que calcula Bullet (reutiliza test.obj, de ±1 m).
-	if (ctx.demoFisica.EstaActiva())
+	if (ctx.fallingCubeDemo.EstaActiva())
 	{
-		for (const auto& modelo : ctx.modelosHabitacion)
+		for (const auto& modelo : ctx.roomModels)
 		{
 			if (!modelo.first.ends_with("test.obj")) continue;
-			const fisica::BodyPose pose = ctx.demoFisica.PoseCubo();
+			const fisica::BodyPose pose = ctx.fallingCubeDemo.PoseCubo();
 			// Matriz = traslación * rotación * escala (la escala es la mitad del tamaño, porque el modelo mide ±1).
 			const glm::mat4 matrizCubo = glm::translate(glm::mat4(1.0f), pose.posicion)
 				* glm::mat4_cast(pose.rotacion)
-				* glm::scale(glm::mat4(1.0f), ctx.demoFisica.MitadTamanoCubo());
+				* glm::scale(glm::mat4(1.0f), ctx.fallingCubeDemo.MitadTamanoCubo());
 			dibuixa_EscenaGL(
 				ctx.shader_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid,
 				OBJOBJ, ctx.col_obj, ctx.sw_material,
@@ -206,11 +206,11 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	}
 
 	// Objetos animados GLB (puertas...): mismo shader y cámara que el resto de la escena.
-	if (ctx.objetosAnimadosListos && ctx.editorEscenas.MostrarAnimados())
+	if (ctx.animatedObjectsReady && ctx.sceneEditor.MostrarAnimados())
 	{
 		glUseProgram(ctx.shader_programID);
-		glb::DibujarObjetosAnimados(ctx.objetosAnimados, ctx.shader_programID,
-			ctx.ProjectionMatrix * ctx.ViewMatrix, ctx.renderizadoOptimizado);
+		glb::DibujarObjetosAnimados(ctx.animatedObjects, ctx.shader_programID,
+			ctx.ProjectionMatrix * ctx.ViewMatrix, ctx.optimizedRendering);
 	}
 
 	if (renderizarMovil)
@@ -230,13 +230,13 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	}
 
 	// En EDIT se visualizan las cajas derivadas de la transformación actual; en PLAY las de Bullet.
-	if (ctx.editorEscenas.Activo() && ctx.editorEscenas.MostrarColisionadores())
+	if (ctx.sceneEditor.Activo() && ctx.sceneEditor.MostrarColisionadores())
 	{
 		std::vector<fisica::CollisionBox> cajasEditor;
-		for (std::size_t indiceObjeto = 0; indiceObjeto < ctx.objetosEscena.size(); ++indiceObjeto)
+		for (std::size_t indiceObjeto = 0; indiceObjeto < ctx.sceneObjects.size(); ++indiceObjeto)
 		{
-			const SceneObject& objeto = ctx.objetosEscena[indiceObjeto];
-			if (!objeto.fisica.presente || !ctx.editorEscenas.ObjetoVisible(indiceObjeto)) continue;
+			const SceneObject& objeto = ctx.sceneObjects[indiceObjeto];
+			if (!objeto.fisica.presente || !ctx.sceneEditor.ObjetoVisible(indiceObjeto)) continue;
 			glm::mat4 giro(1.0f);
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.z), glm::vec3(0, 0, 1));
 			giro = glm::rotate(giro, glm::radians(objeto.rotacion.y), glm::vec3(0, 1, 0));
@@ -250,21 +250,21 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 		}
 		fisica::DibujarColisionadores(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, cajasEditor);
 	}
-	else if (ctx.mostrarColisionadores && !ctx.editorEscenas.Activo())
-		fisica::DibujarColisionadores(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, ctx.mundoFisico.CajasDeColision());
+	else if (ctx.showColliders && !ctx.sceneEditor.Activo())
+		fisica::DibujarColisionadores(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix, ctx.physicsWorld.CajasDeColision());
 
 	// Multijugador: jugadores remotos (el local NUNCA se dibuja) y objeto compartido de prueba.
-	if (ctx.redJuego.Activa() && !ctx.editorEscenas.Activo())
+	if (ctx.networkGame.Activa() && !ctx.sceneEditor.Activo())
 	{
 		netgame::DibujarAvataresRemotos(ctx.eixos_programID, ctx.ProjectionMatrix, ctx.ViewMatrix,
-			ctx.redJuego.RemotosParaDibujar(glfwGetTime()),
-			ctx.redJuego.Objeto().conocido, ctx.redJuego.PosicionVisualObjeto(), ctx.redJuego.SoyDuenoDelObjeto(),
-			ctx.redJuego.Objeto().dueno != netgame::kSinDueno);
+			ctx.networkGame.RemotosParaDibujar(glfwGetTime()),
+			ctx.networkGame.Objeto().conocido, ctx.networkGame.PosicionVisualObjeto(), ctx.networkGame.SoyDuenoDelObjeto(),
+			ctx.networkGame.Objeto().dueno != netgame::kSinDueno);
 	}
 
 	// Dibujar el rayo láser del mando derecho en VR.
-	ctx.dibujarRayoMandoVR();
-	ctx.finalizarConsultaGpu();
+	ctx.drawVrControllerRay();
+	ctx.endGpuQuery();
 	if (renderMetrics::enabled)
 		renderMetrics::escenaMs += std::chrono::duration<double, std::milli>(
 			std::chrono::steady_clock::now() - inicioEscena).count();

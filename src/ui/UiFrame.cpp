@@ -7,9 +7,9 @@
 #include "src/legacy_vgi/VgiMainWindow.h"
 
 // Ventanas ImGui heredadas del entorno VGI (demo, EntornVGI y "Status Menu").
-void dibujarVentanasLegacyImGui()
+void drawLegacyImGuiWindows()
 {
-	if (!modoJuegoFPS() || mostrarPanelesDebug)
+	if (!fpsModeActive() || showDebugPanels)
 	{
 
 // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -110,34 +110,34 @@ void dibujarVentanasLegacyImGui()
 
 void draw_Menu_ImGui()
 {
-	const auto fpsMode = [] { return modoJuegoFPS(); };
+	const auto fpsMode = [] { return fpsModeActive(); };
 	const runtimeui::FrameContext contexto{
 		// HUD
-		{ fpsMode, [] { return entradaFPSActiva(); }, [] { return editorEscenas.Activo(); },
-			barraEstamina, movimientoJugador, mostrarPorcentajeEstamina,
-			cargaLanzamientoActiva, tiempoCargaLanzamiento, TiempoMaximoCargaLanzamiento, escenaFisica,
-			[]() -> const char* { return objetivoInteraccionActual.accion == InteractionAction::Ninguna
-				? nullptr : objetivoInteraccionActual.texto; },
-			texturaManoInteraccion },
+		{ fpsMode, [] { return fpsInputActive(); }, [] { return sceneEditor.Activo(); },
+			staminaBar, playerMovement, showStaminaPercent,
+			throwChargeActive, throwChargeTime, kMaxThrowChargeDuration, physicsScene,
+			[]() -> const char* { return currentInteractionTarget.accion == InteractionAction::Ninguna
+				? nullptr : currentInteractionTarget.texto; },
+			interactionHandTexture },
 		// Menus
-		{ window, estadoActual, texturaFondoMenu, volumenGeneralPorcentaje, audioManager,
-			[] { fpsTienePosicionAnterior = false; mouseDeltaX = mouseDeltaY = 0.0; } },
+		{ window, currentGameState, menuBackgroundTexture, masterVolumePercent, audioManager,
+			[] { fpsHasPreviousPosition = false; mouseDeltaX = mouseDeltaY = 0.0; } },
 		// Multijugador
-		{ redJuego, configRedPendiente, mostrarPanelRed,
-			[](const netgame::NetworkConfig& cfg) { iniciarRed(cfg); }, [] { detenerRed(); } },
+		{ networkGame, pendingNetworkConfig, showNetworkPanel,
+			[](const netgame::NetworkConfig& cfg) { startNetwork(cfg); }, [] { stopNetwork(); } },
 		// Objetos dinamicos (F4)
-		{ redJuego, escenaFisica, objetosEscena, hiritiFollowPlayerEnabled, animacionHiriti },
+		{ networkGame, physicsScene, sceneObjects, hiritiFollowPlayerEnabled, hiritiAnimator },
 		// Paneles de depuracion (F1)
-		{ mostrarMovil, movilPosicion, movilRotacion, movilEscala, intensidadIdle, intensidadWalking, intensidadMouse, deltaFPS,
-			movimientoJugador, balanceoCamara, mostrarPorcentajeEstamina, mostrarContadorFPS, renderizadoOptimizado, ultimoGpuMs, modoDiagnosticoIluminacion,
-			reproductorPuertaDemo, anguloPuertaDemo, mostrarColisionadores, hiritiFollowPlayerEnabled, hiritiFollowStopDistance, hiritiFollowMaxSpeed,
-			modoEstereoPrueba, gestorOpenXR,
-			mundoFisico, escenaFisica, demoFisica, redJuego, objetosEscena, objetosAnimados,
-			[] { iniciarPuertaDemo(); }, [] { alternarOpenXR(); } },
+		{ showPhone, phonePosition, phoneRotation, phoneScale, idleSwayIntensity, walkSwayIntensity, mouseSwayIntensity, deltaFPS,
+			playerMovement, cameraBob, showStaminaPercent, showFpsCounter, optimizedRendering, lastGpuMs, lightingDiagnosticMode,
+			demoDoorPlayback, demoDoorAngle, showColliders, hiritiFollowPlayerEnabled, hiritiFollowStopDistance, hiritiFollowMaxSpeed,
+			stereoTestMode, openXrManager,
+			physicsWorld, physicsScene, fallingCubeDemo, networkGame, sceneObjects, animatedObjects,
+			[] { startDemoDoor(); }, [] { toggleOpenXr(); } },
 		(c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5),
-		mostrarPanelesDebug, mostrarContadorFPS,
-		dibujarVentanasLegacyImGui,
-		[](int ancho, int alto) { editorEscenas.DibujarInterfaz(editor::EditorSceneContext{ objetosEscena, datosAnimadosEscena, objetosAnimados }, ancho, alto); }
+		showDebugPanels, showFpsCounter,
+		drawLegacyImGuiWindows,
+		[](int ancho, int alto) { sceneEditor.DibujarInterfaz(editor::EditorSceneContext{ sceneObjects, sceneAnimatedData, animatedObjects }, ancho, alto); }
 	};
 	runtimeui::DrawRuntimeUiFrame(contexto);
 }

@@ -1,7 +1,7 @@
 #include "src/app/AppState.h"
 #include "src/legacy_vgi/VgiMaterial.h"
 
-void aplicarIntensidadMaterial(GLuint programa, bool ambienteActivo)
+void applyMaterialIntensity(GLuint programa, bool ambienteActivo)
 {
 	if (programa == 0) return;
 	const GLint localizacion = glcache::UniformLocation(programa, "sw_intensity");

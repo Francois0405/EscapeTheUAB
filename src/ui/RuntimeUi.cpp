@@ -25,25 +25,25 @@ float uiScale = 1.0f;
 // Aparece al correr o mientras no esta llena y se desvanece sola. Solo se ve en la ventana, nunca dentro del visor VR.
 void DrawStaminaBar(const HudContext& context)
 {
-	const auto& barraEstamina = context.staminaBar;
-	const auto& movimientoJugador = context.movement;
-	if (!context.isFpsMode() || context.isEditorActive() || barraEstamina.visible < 0.01f) return;
+	const auto& staminaBar = context.staminaBar;
+	const auto& playerMovement = context.movement;
+	if (!context.isFpsMode() || context.isEditorActive() || staminaBar.visible < 0.01f) return;
 	const ImGuiIO& io = ImGui::GetIO();
 	const float escala = uiScale;
 	const float ancho = std::min(260.0f * escala, io.DisplaySize.x * 0.4f), alto = 8.0f * escala;
 	const float x0 = (io.DisplaySize.x - ancho) * 0.5f, y0 = io.DisplaySize.y - 48.0f * escala;
-	const float a = barraEstamina.visible;
-	const bool agotada = movimientoJugador.Agotada();
+	const float a = staminaBar.visible;
+	const bool agotada = playerMovement.Agotada();
 	const ImU32 fondo = IM_COL32(10, 10, 10, static_cast<int>(150 * a));
 	const ImU32 relleno = agotada ? IM_COL32(200, 60, 50, static_cast<int>(230 * a))
 		: IM_COL32(220, 220, 205, static_cast<int>(210 * a));
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
 	dl->AddRectFilled(ImVec2(x0 - 2 * escala, y0 - 2 * escala), ImVec2(x0 + ancho + 2 * escala, y0 + alto + 2 * escala), fondo, 3.0f * escala);
-	dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ancho * std::clamp(barraEstamina.mostrada, 0.0f, 1.0f), y0 + alto), relleno, 2.0f * escala);
+	dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ancho * std::clamp(staminaBar.mostrada, 0.0f, 1.0f), y0 + alto), relleno, 2.0f * escala);
 	if (context.showStaminaPercent)
 	{
 		char texto[16];
-		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(movimientoJugador.FraccionEstamina() * 100.0f + 0.5f));
+		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(playerMovement.FraccionEstamina() * 100.0f + 0.5f));
 		dl->AddText(ImVec2(x0 + ancho + 8 * escala, y0 - 4 * escala), IM_COL32(230, 230, 220, static_cast<int>(200 * a)), texto);
 	}
 }

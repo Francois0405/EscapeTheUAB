@@ -9,7 +9,7 @@
 #include "src/rendering/SceneLighting.h"
 
 // Viewport i dibuix del fotograma: implementacions a src/rendering/RuntimeRenderer.cpp.
-RuntimeRenderer& renderizadorRuntime()
+RuntimeRenderer& runtimeRenderer()
 {
 	static RuntimeRenderer renderizador{
 		.w = w,
@@ -46,33 +46,33 @@ RuntimeRenderer& renderizadorRuntime()
 		.grid = grid,
 		.hgrid = hgrid,
 		.statusB = statusB,
-		.modoEstereoPrueba = modoEstereoPrueba,
+		.stereoTestMode = stereoTestMode,
 		.shader_programID = shader_programID,
 		.eixos_programID = eixos_programID,
 		.eixos_Id = eixos_Id,
 		.shaderEixos = shaderEixos,
 		.shaderLighting = shaderLighting,
-		.editorEscenas = editorEscenas,
-		.gestorOpenXR = gestorOpenXR,
-		.ultimaCabezaVR = ultimaCabezaVR,
-		.hayCabezaVR = hayCabezaVR,
+		.sceneEditor = sceneEditor,
+		.openXrManager = openXrManager,
+		.lastVrHead = lastVrHead,
+		.hasVrHead = hasVrHead,
 		.configura_Escena = [] { configura_Escena(); },
 		.dibuixa_Escena = [] { dibuixa_Escena(); },
 		.Barra_Estat = [] { Barra_Estat(); },
-		.desplazamientoVisualDeCamara = [] { return desplazamientoVisualDeCamara(); },
-		.piesJugador = [] { return mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara(); },
-		.alturaOjosJugador = [] { return mundoFisico.AlturaOjosJugador(); }
+		.cameraVisualOffset = [] { return cameraVisualOffset(); },
+		.piesJugador = [] { return physicsWorld.HayJugador() ? physicsWorld.PosicionPiesJugador() : feetPositionFromCamera(); },
+		.alturaOjosJugador = [] { return physicsWorld.AlturaOjosJugador(); }
 	};
 	return renderizador;
 }
 
-void OnSize(GLFWwindow* window, int width, int height) { renderizadorRuntime().OnSize(window, width, height); }
+void OnSize(GLFWwindow* window, int width, int height) { runtimeRenderer().OnSize(window, width, height); }
 
-void OnFramebufferSize(GLFWwindow* window, int width, int height) { renderizadorRuntime().OnFramebufferSize(window, width, height); }
+void OnFramebufferSize(GLFWwindow* window, int width, int height) { runtimeRenderer().OnFramebufferSize(window, width, height); }
 
-bool dibujarEscenaVR() { return renderizadorRuntime().dibujarEscenaVR(); }
+bool drawVrScene() { return runtimeRenderer().drawVrScene(); }
 
-void OnPaint(GLFWwindow* window) { renderizadorRuntime().OnPaint(window); }
+void OnPaint(GLFWwindow* window) { runtimeRenderer().OnPaint(window); }
 
 // configura_Escena: Funcio que configura els parametres de Model i dibuixa les
 //                   primitives OpenGL dins classe Model
@@ -111,39 +111,39 @@ void dibuixa_Escena()
 		.dibuixa_TriedreFrenet = dibuixa_TriedreFrenet,
 		.ObOBJ = ObOBJ,
 		.GTMatrix = GTMatrix,
-		.renderizadoOptimizado = renderizadoOptimizado,
-		.intensidadIndirectaEscena = intensidadIndirectaEscena,
-		.intensidadAmbientalBaseEscena = intensidadAmbientalBaseEscena,
-		.escalaLuzDirectaEscena = escalaLuzDirectaEscena,
-		.modoDiagnosticoIluminacion = modoDiagnosticoIluminacion,
-		.colorReboteSueloEscena = colorReboteSueloEscena,
-		.colorReboteCieloEscena = colorReboteCieloEscena,
-		.lamparasLaboratorioActivas = lamparasLaboratorioActivas,
+		.optimizedRendering = optimizedRendering,
+		.sceneIndirectIntensity = sceneIndirectIntensity,
+		.sceneBaseAmbientIntensity = sceneBaseAmbientIntensity,
+		.sceneDirectLightScale = sceneDirectLightScale,
+		.lightingDiagnosticMode = lightingDiagnosticMode,
+		.sceneGroundBounceColor = sceneGroundBounceColor,
+		.sceneSkyBounceColor = sceneSkyBounceColor,
+		.labLampsEnabled = labLampsEnabled,
 		.llumGL = llumGL,
-		.mostrarMovil = mostrarMovil,
+		.showPhone = showPhone,
 		.phoneOBJ = phoneOBJ,
-		.movilEscala = movilEscala,
-		.objetosEscena = objetosEscena,
-		.modelosHabitacion = modelosHabitacion,
-		.editorEscenas = editorEscenas,
-		.escenaFisica = escenaFisica,
-		.mitadTamanoPuertaDemo = mitadTamanoPuertaDemo,
-		.bisagraPuertaDemo = bisagraPuertaDemo,
-		.anguloPuertaDemo = anguloPuertaDemo,
-		.demoFisica = demoFisica,
-		.objetosAnimadosListos = objetosAnimadosListos,
-		.objetosAnimados = objetosAnimados,
-		.mostrarColisionadores = mostrarColisionadores,
-		.mundoFisico = mundoFisico,
-		.redJuego = redJuego,
-		.iniciarConsultaGpu = iniciarConsultaGpu,
-		.actualizarOclusoresPhong = actualizarOclusoresPhong,
-		.modoJuegoFPS = modoJuegoFPS,
-		.matrizMandoIzquierdoMundo = matrizMandoIzquierdoMundo,
-		.matrizLocalMovilActual = matrizLocalMovilActual,
-		.actualizarLinternaMovil = actualizarLinternaMovil,
-		.texturaDeMaterial = texturaDeMaterial,
-		.dibujarRayoMandoVR = dibujarRayoMandoVR,
-		.finalizarConsultaGpu = finalizarConsultaGpu,
+		.phoneScale = phoneScale,
+		.sceneObjects = sceneObjects,
+		.roomModels = roomModels,
+		.sceneEditor = sceneEditor,
+		.physicsScene = physicsScene,
+		.demoDoorHalfSize = demoDoorHalfSize,
+		.demoDoorHinge = demoDoorHinge,
+		.demoDoorAngle = demoDoorAngle,
+		.fallingCubeDemo = fallingCubeDemo,
+		.animatedObjectsReady = animatedObjectsReady,
+		.animatedObjects = animatedObjects,
+		.showColliders = showColliders,
+		.physicsWorld = physicsWorld,
+		.networkGame = networkGame,
+		.beginGpuQuery = beginGpuQuery,
+		.updatePhongOccluders = updatePhongOccluders,
+		.fpsModeActive = fpsModeActive,
+		.leftControllerWorldMatrix = leftControllerWorldMatrix,
+		.currentPhoneLocalMatrix = currentPhoneLocalMatrix,
+		.updatePhoneFlashlight = updatePhoneFlashlight,
+		.materialTexture = materialTexture,
+		.drawVrControllerRay = drawVrControllerRay,
+		.endGpuQuery = endGpuQuery,
 	});
 }

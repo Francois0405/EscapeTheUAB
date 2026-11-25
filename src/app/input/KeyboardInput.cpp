@@ -35,17 +35,17 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	if (key == GLFW_KEY_F4 && action == GLFW_PRESS && mods == 0 &&
 		!io.WantTextInput)
 	{
-		mostrarPanelRed = !mostrarPanelRed;
-		sincronizarCursorFPS(window);
+		showNetworkPanel = !showNetworkPanel;
+		syncFpsCursor(window);
 		return;
 	}
-	if (key == GLFW_KEY_E && action == GLFW_RELEASE && cargaLanzamientoActiva)
+	if (key == GLFW_KEY_E && action == GLFW_RELEASE && throwChargeActive)
 	{
-		if (entradaFPSActiva() && !io.WantTextInput && !io.WantCaptureKeyboard &&
-			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha())
-			lanzarObjetoCargado();
+		if (fpsInputActive() && !io.WantTextInput && !io.WantCaptureKeyboard &&
+			!io.WantCaptureMouse && !openXrManager.SesionEnMarcha())
+			throwHeldObject();
 		else
-			cancelarCargaLanzamiento();
+			cancelThrowChargeInput();
 		return;
 	}
 
@@ -54,60 +54,60 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		action == GLFW_PRESS &&
 		mods == 0 &&
 		!io.WantTextInput &&
-		estadoActual != ESTADO_MENU_PRINCIPAL)
+		currentGameState != ESTADO_MENU_PRINCIPAL)
 	{
-		if (redJuego.EnRed() && redJuego.EsCliente())
+		if (networkGame.EnRed() && networkGame.EsCliente())
 		{
-			editorEscenas.InformarEstado("Solo el host puede editar la escena compartida.", true);
+			sceneEditor.InformarEstado("Solo el host puede editar la escena compartida.", true);
 			return;
 		}
-		editorEscenas.Atajo(key, action, mods, false);
-		sincronizarCursorFPS(window);
+		sceneEditor.Atajo(key, action, mods, false);
+		syncFpsCursor(window);
 		return;
 	}
 
-	if (editorEscenas.Activo())
+	if (sceneEditor.Activo())
 	{
-		editorEscenas.Atajo(key, action, mods, io.WantTextInput);
-		sincronizarCursorFPS(window);
+		sceneEditor.Atajo(key, action, mods, io.WantTextInput);
+		syncFpsCursor(window);
 		return;
 	}
 
 	// F: encender/apagar linterna solo durante el juego.
 	if (key == GLFW_KEY_F &&
 		action == GLFW_PRESS &&
-		estadoActual == ESTADO_JUGANDO &&
-		entradaFPSActiva() &&
+		currentGameState == ESTADO_JUGANDO &&
+		fpsInputActive() &&
 		!io.WantTextInput &&
 		!io.WantCaptureKeyboard)
 	{
-		linternaMovilActiva = !linternaMovilActiva;
+		phoneFlashlightEnabled = !phoneFlashlightEnabled;
 
 		std::cout << "Linterna: "
-				<< (linternaMovilActiva ? "ON" : "OFF")
+				<< (phoneFlashlightEnabled ? "ON" : "OFF")
 				<< std::endl;
 		return;
 	}
 
-	if (modoJuegoFPS())
+	if (fpsModeActive())
 	{
 	// ESC: pausar y reanudar.
 	if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 	{
-		if (estadoActual == ESTADO_JUGANDO)
+		if (currentGameState == ESTADO_JUGANDO)
 		{
-			estadoActual = ESTADO_PAUSA;
-			cancelarCargaLanzamiento();
+			currentGameState = ESTADO_PAUSA;
+			cancelThrowChargeInput();
 		}
-		else if (estadoActual == ESTADO_PAUSA)
+		else if (currentGameState == ESTADO_PAUSA)
 		{
-			estadoActual = ESTADO_JUGANDO;
-			fpsTienePosicionAnterior = false;
+			currentGameState = ESTADO_JUGANDO;
+			fpsHasPreviousPosition = false;
 			mouseDeltaX = mouseDeltaY = 0.0;
 		}
 
-		fpsPausado = (estadoActual != ESTADO_JUGANDO);
-		sincronizarCursorFPS(window);
+		fpsPaused = (currentGameState != ESTADO_JUGANDO);
+		syncFpsCursor(window);
 		return;
 	}
 
@@ -115,54 +115,54 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 	if (key == GLFW_KEY_M && action == GLFW_PRESS &&
 		(mods & GLFW_MOD_CONTROL) && (mods & GLFW_MOD_SHIFT))
 	{
-		fpsCapturaSolicitada = !fpsCapturaSolicitada;
-		sincronizarCursorFPS(window);
+		fpsCaptureRequested = !fpsCaptureRequested;
+		syncFpsCursor(window);
 		return;
 	}
 	if (key == GLFW_KEY_F1 && action == GLFW_PRESS)
 	{
-		mostrarPanelesDebug = !mostrarPanelesDebug;
-		if (mostrarPanelesDebug) show_EntornVGI_window = true;
-		sincronizarCursorFPS(window);
+		showDebugPanels = !showDebugPanels;
+		if (showDebugPanels) show_EntornVGI_window = true;
+		syncFpsCursor(window);
 		return;
 	}
 	// Mantener E carga el lanzamiento; soltarla lanza el objeto sujeto.
 	if (key == GLFW_KEY_E && action == GLFW_PRESS)
 	{
-		const bool gateJuego = glb::PuedeInteractuar(fpsPausado, ventanaConFoco, io.WantTextInput);
-		const bool gateInterfaz = !mostrarPanelesDebug && !io.WantCaptureKeyboard &&
-			!io.WantCaptureMouse && !gestorOpenXR.SesionEnMarcha();
-		if (diagnosticoAgarreActivo())
+		const bool gateJuego = glb::PuedeInteractuar(fpsPaused, windowFocused, io.WantTextInput);
+		const bool gateInterfaz = !showDebugPanels && !io.WantCaptureKeyboard &&
+			!io.WantCaptureMouse && !openXrManager.SesionEnMarcha();
+		if (grabTraceEnabled())
 		{
-			const InteractionTarget& objetivo = objetivoInteraccionActual;
+			const InteractionTarget& objetivo = currentInteractionTarget;
 			uint32_t idObjetivo = 0;
 			if (objetivo.accion == InteractionAction::Recoger && objetivo.indiceDinamico >= 0 &&
-				objetivo.indiceDinamico < static_cast<int>(objetosEscena.size()))
-				idObjetivo = netgame::HashId(objetosEscena[objetivo.indiceDinamico].id);
+				objetivo.indiceDinamico < static_cast<int>(sceneObjects.size()))
+				idObjetivo = netgame::HashId(sceneObjects[objetivo.indiceDinamico].id);
 			glm::vec3 origenRayo(0.0f), direccionRayo(0.0f);
-			origenYDireccionDeLaMirada(origenRayo, direccionRayo);
+			gazeOriginAndDirection(origenRayo, direccionRayo);
 			float distanciaRayo = std::numeric_limits<float>::infinity();
-			const fisica::IdCuerpo cuerpoRayo = mundoFisico.CuerpoAlFinalDelRayo(
+			const fisica::IdCuerpo cuerpoRayo = physicsWorld.CuerpoAlFinalDelRayo(
 				origenRayo, direccionRayo,
 				std::max(fisica::PhysicsScene::AlcanceDeAgarre, glb::RADIO_INTERACCION), &distanciaRayo);
 			const int indiceCuerpoDinamico = cuerpoRayo == fisica::CuerpoInvalido
-				? -1 : escenaFisica->ObjetoDinamicoDeCuerpo(cuerpoRayo);
+				? -1 : physicsScene->ObjetoDinamicoDeCuerpo(cuerpoRayo);
 			const int indiceCuerpoAnimado = cuerpoRayo == fisica::CuerpoInvalido
-				? -1 : escenaFisica->ObjetoAnimadoDeCuerpo(cuerpoRayo);
+				? -1 : physicsScene->ObjetoAnimadoDeCuerpo(cuerpoRayo);
 			std::string idCuerpoRayo = "none";
-			if (indiceCuerpoDinamico >= 0 && indiceCuerpoDinamico < static_cast<int>(objetosEscena.size()))
-				idCuerpoRayo = objetosEscena[indiceCuerpoDinamico].id;
-			const char* rol = redJuego.EsHost() ? "host" : redJuego.EsCliente() ? "client" : "offline";
+			if (indiceCuerpoDinamico >= 0 && indiceCuerpoDinamico < static_cast<int>(sceneObjects.size()))
+				idCuerpoRayo = sceneObjects[indiceCuerpoDinamico].id;
+			const char* rol = networkGame.EsHost() ? "host" : networkGame.EsCliente() ? "client" : "offline";
 			std::ostringstream registro;
 			registro << "[grab] input key=E role=" << rol
-				<< " game=" << (estadoActual == ESTADO_JUGANDO)
+				<< " game=" << (currentGameState == ESTADO_JUGANDO)
 				<< " allowed=" << (gateJuego && gateInterfaz)
-				<< " paused=" << fpsPausado << " focused=" << ventanaConFoco
+				<< " paused=" << fpsPaused << " focused=" << windowFocused
 				<< " text=" << io.WantTextInput << " captureKeyboard=" << io.WantCaptureKeyboard
 				<< " captureMouse=" << io.WantCaptureMouse
-				<< " debugPanels=" << mostrarPanelesDebug
-				<< " xr=" << gestorOpenXR.SesionEnMarcha()
-				<< " holding=" << jugadorTieneAgarre()
+				<< " debugPanels=" << showDebugPanels
+				<< " xr=" << openXrManager.SesionEnMarcha()
+				<< " holding=" << playerHoldsObject()
 				<< " action=" << static_cast<int>(objetivo.accion)
 				<< " dynamicIndex=" << objetivo.indiceDinamico
 				<< " targetId=" << idObjetivo
@@ -171,29 +171,29 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 				<< " rayDistance=" << distanciaRayo
 				<< " rayOrigin=(" << origenRayo.x << ',' << origenRayo.y << ',' << origenRayo.z
 				<< ") rayDirection=(" << direccionRayo.x << ',' << direccionRayo.y << ',' << direccionRayo.z << ')';
-			emitirDiagnosticoAgarre(registro.str());
+			emitGrabTrace(registro.str());
 		}
 		if (gateJuego && gateInterfaz)
 		{
-			if (jugadorTieneAgarre()) iniciarCargaLanzamiento();
-			else interactuar();
+			if (playerHoldsObject()) beginThrowCharge();
+			else performInteraction();
 		}
 		return;
 	}
 	// F3: activar/desactivar OpenXR de forma EXPLÍCITA (independiente de F2).
 	if (key == GLFW_KEY_F3 && action == GLFW_PRESS)
 	{
-		alternarOpenXR();
+		toggleOpenXr();
 		return;
 	}
 	// F2: alternar la vista estereoscópica de prueba (dos ojos en pantalla partida).
 	if (key == GLFW_KEY_F2 && action == GLFW_PRESS)
 	{
-		modoEstereoPrueba = !modoEstereoPrueba;
-		std::cout << "Vista estereoscopica de prueba: " << (modoEstereoPrueba ? "ON" : "OFF") << std::endl;
+		stereoTestMode = !stereoTestMode;
+		std::cout << "Vista estereoscopica de prueba: " << (stereoTestMode ? "ON" : "OFF") << std::endl;
 		return;
 	}
-	if (fpsPausado || !ventanaConFoco) return;
+	if (fpsPaused || !windowFocused) return;
 	if (key == GLFW_KEY_W || key == GLFW_KEY_A || key == GLFW_KEY_S || key == GLFW_KEY_D) return;
 	if (key == GLFW_KEY_PRINT_SCREEN && mods == 0 && action == GLFW_PRESS)
 		statusB = !statusB;
@@ -205,7 +205,7 @@ void OnKeyDown(GLFWwindow* window, int key, int scancode, int action, int mods)
 		// EntornVGI: Si tecla pulsada és ESCAPE, tancar finestres i aplicació.
 		if (mods == 0 && key == GLFW_KEY_ESCAPE && action == GLFW_PRESS)
 		{
-			if (editorEscenas.HayCambiosSinGuardar()) editorEscenas.SolicitarConfirmacionCierre();
+			if (sceneEditor.HayCambiosSinGuardar()) sceneEditor.SolicitarConfirmacionCierre();
 			else glfwSetWindowShouldClose(window, GL_TRUE);
 		}
 		else if (mods == 0 && key == GLFW_KEY_PRINT_SCREEN && action == GLFW_PRESS) statusB = !statusB;

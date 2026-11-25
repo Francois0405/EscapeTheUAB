@@ -28,8 +28,8 @@ struct LegacyVgiViewControls
 	CPunt3D& opvN;
 	double (&n)[3];
 	double& angleZ;
-	const SceneSpawn& spawnEscenaActiva;
-	bool (&crearJugadorFisico)();
+	const SceneSpawn& activeSceneSpawn;
+	bool (&spawnPhysicsPlayer)();
 
 	// View: full screen, pan, axes and mouse transforms
 	const bool& fullscreen;

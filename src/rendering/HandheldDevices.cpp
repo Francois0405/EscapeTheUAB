@@ -4,25 +4,25 @@
 #include "src/app/adapters/PlayerAdapters.h"
 #include "src/app/input/CursorCapture.h"
 
-glm::mat4 matrizLocalMovilActual()
+glm::mat4 currentPhoneLocalMatrix()
 {
-	const float idle = intensidadIdle;
-	const float bob = pesoCaminata * intensidadWalking;
+	const float idle = idleSwayIntensity;
+	const float bob = walkWeight * walkSwayIntensity;
 	glm::mat4 matriz(1.0f);
-	matriz = glm::translate(matriz, movilPosicion + glm::vec3(
-		std::sin(faseCaminata) * bob * 0.45f,
-		std::sin(tiempoFPS * 1.4f) * idle + std::abs(std::sin(faseCaminata)) * bob, 0.0f));
-	matriz = glm::rotate(matriz, glm::radians(movilRotacion.x) + std::sin(tiempoFPS * 1.4f) * idle + mouseSwayY, glm::vec3(1, 0, 0));
-	matriz = glm::rotate(matriz, glm::radians(movilRotacion.y) - std::sin(faseCaminata) * bob * 0.8f - mouseSwayX, glm::vec3(0, 1, 0));
-	matriz = glm::rotate(matriz, glm::radians(movilRotacion.z) + std::cos(faseCaminata) * bob * 0.4f, glm::vec3(0, 0, 1));
-	return glm::scale(matriz, glm::vec3(movilEscala));
+	matriz = glm::translate(matriz, phonePosition + glm::vec3(
+		std::sin(walkPhase) * bob * 0.45f,
+		std::sin(fpsTime * 1.4f) * idle + std::abs(std::sin(walkPhase)) * bob, 0.0f));
+	matriz = glm::rotate(matriz, glm::radians(phoneRotation.x) + std::sin(fpsTime * 1.4f) * idle + mouseSwayY, glm::vec3(1, 0, 0));
+	matriz = glm::rotate(matriz, glm::radians(phoneRotation.y) - std::sin(walkPhase) * bob * 0.8f - mouseSwayX, glm::vec3(0, 1, 0));
+	matriz = glm::rotate(matriz, glm::radians(phoneRotation.z) + std::cos(walkPhase) * bob * 0.4f, glm::vec3(0, 0, 1));
+	return glm::scale(matriz, glm::vec3(phoneScale));
 }
 
-void actualizarLinternaMovil(const glm::mat4& matrizMovilMundo)
+void updatePhoneFlashlight(const glm::mat4& matrizMovilMundo)
 {
 	constexpr int idx = 3;
 	auto& luz = llumGL[idx];
-	if (!linternaMovilActiva || !mostrarMovil || !modoJuegoFPS() || editorEscenas.Activo())
+	if (!phoneFlashlightEnabled || !showPhone || !fpsModeActive() || sceneEditor.Activo())
 	{ luz.encesa = false; return; }
 
 	// Phone.obj coloca el conjunto cámara/flash trasero en el saliente superior de la cara +Y.
@@ -48,32 +48,32 @@ void actualizarLinternaMovil(const glm::mat4& matrizMovilMundo)
 	luz.areaSource = false;
 }
 
-bool matrizMandoIzquierdoMundo(glm::mat4& matrizMundo)
+bool leftControllerWorldMatrix(glm::mat4& matrizMundo)
 {
-	if (!gestorOpenXR.SesionEnMarcha()) return false;
+	if (!openXrManager.SesionEnMarcha()) return false;
 
 	vr::XrPose poseMandoIzq;
-	if (!gestorOpenXR.PoseApuntadoMando(0, poseMandoIzq)) return false;
+	if (!openXrManager.PoseApuntadoMando(0, poseMandoIzq)) return false;
 
-	const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+	const glm::vec3 pies = physicsWorld.HayJugador() ? physicsWorld.PosicionPiesJugador() : feetPositionFromCamera();
 	const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
 	const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-		gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo, mundoFisico.AlturaOjosJugador());
+		openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo, physicsWorld.AlturaOjosJugador());
 
 	const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMandoIzq, anclaje);
 	matrizMundo = glm::inverse(vistaMando);
 	return true;
 }
 
-void dibujarRayoMandoVR()
+void drawVrControllerRay()
 {
-	if (!gestorOpenXR.SesionEnMarcha() || eixos_programID == 0) return;
+	if (!openXrManager.SesionEnMarcha() || eixos_programID == 0) return;
 
 	vr::XrPose poseMando;
-	if (!gestorOpenXR.PoseApuntadoMando(1, poseMando)) return; // Solo mando derecho (1)
+	if (!openXrManager.PoseApuntadoMando(1, poseMando)) return; // Solo mando derecho (1)
 
 	glm::vec3 origen, direccion;
-	origenYDireccionDeLaMirada(origen, direccion);
+	gazeOriginAndDirection(origen, direccion);
 	direccion = glm::normalize(direccion);
 
 	// Longitud del láser (mismo alcance que el agarre/interacción)
@@ -81,8 +81,8 @@ void dibujarRayoMandoVR()
 	const glm::vec3 destino = origen + direccion * alcance;
 
 	// Color RGBA: verde si estás agarrando o apuntando a algo interactuable; cian por defecto
-	const InteractionTarget objetivo = buscarObjetivoInteraccion();
-	const bool resaltado = escenaFisica->HayAgarre() || objetivo.accion != InteractionAction::Ninguna;
+	const InteractionTarget objetivo = findCurrentInteractionTarget();
+	const bool resaltado = physicsScene->HayAgarre() || objetivo.accion != InteractionAction::Ninguna;
 	const float r = resaltado ? 0.1f : 0.0f;
 	const float g = resaltado ? 1.0f : 0.85f;
 	const float b = resaltado ? 0.2f : 1.0f;
@@ -94,12 +94,12 @@ void dibujarRayoMandoVR()
 		destino.x, destino.y, destino.z, r, g, b, a
 	};
 
-	if (rayoVao == 0)
+	if (rayVao == 0)
 	{
-		glGenVertexArrays(1, &rayoVao);
-		glGenBuffers(1, &rayoVbo);
-		glBindVertexArray(rayoVao);
-		glBindBuffer(GL_ARRAY_BUFFER, rayoVbo);
+		glGenVertexArrays(1, &rayVao);
+		glGenBuffers(1, &rayVbo);
+		glBindVertexArray(rayVao);
+		glBindBuffer(GL_ARRAY_BUFFER, rayVbo);
 		glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_DYNAMIC_DRAW);
 
 		// location = 0 -> vec3 posición
@@ -112,8 +112,8 @@ void dibujarRayoMandoVR()
 	}
 	else
 	{
-		glBindVertexArray(rayoVao);
-		glBindBuffer(GL_ARRAY_BUFFER, rayoVbo);
+		glBindVertexArray(rayVao);
+		glBindBuffer(GL_ARRAY_BUFFER, rayVbo);
 		glBufferSubData(GL_ARRAY_BUFFER, 0, sizeof(vertices), vertices);
 	}
 

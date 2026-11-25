@@ -15,15 +15,15 @@ void ParseNetworkArguments(int argc, char** argv)
 {
 	{	// Red: --host [--port N] | --connect HOST[:PUERTO] [--name N]. Sin argumentos: OFFLINE.
 		std::string errorRed;
-		if (!netgame::ParsearArgumentos(argc, argv, configRedPendiente, errorRed))
+		if (!netgame::ParsearArgumentos(argc, argv, pendingNetworkConfig, errorRed))
 		{
 			std::cerr << "Argumentos de red ignorados: " << errorRed << std::endl;
-			configRedPendiente = netgame::NetworkConfig{};
+			pendingNetworkConfig = netgame::NetworkConfig{};
 		}
-		else if (configRedPendiente.rol == net::Role::Client)
+		else if (pendingNetworkConfig.rol == net::Role::Client)
 		{
 			std::string errorGuardado;
-			if (!netgame::GuardarUltimoEndpoint({ configRedPendiente.host, configRedPendiente.puerto }, errorGuardado))
+			if (!netgame::GuardarUltimoEndpoint({ pendingNetworkConfig.host, pendingNetworkConfig.puerto }, errorGuardado))
 				std::cerr << "Red: no se guardo la ultima direccion: " << errorGuardado << std::endl;
 		}
 	}
@@ -125,9 +125,9 @@ bool CreateMainWindow()
 	GLint major = 0, minor = 0;
 	glGetIntegerv(GL_MAJOR_VERSION, &major);
 	glGetIntegerv(GL_MINOR_VERSION, &minor);
-	ventanaPrincipal = window;
-	versionGLMayor = major;
-	versionGLMenor = minor;
+	mainWindow = window;
+	glMajorVersion = major;
+	glMinorVersion = minor;
 // ------------ - Entorn VGI : Enable OpenGL debug context if context allows for DEBUG CONTEXT (GL4.6)
 	if (GLEW_VERSION_4_6)
 	{	GLint flags; glGetIntegerv(GL_CONTEXT_FLAGS, &flags);
@@ -149,7 +149,7 @@ void InitializeGraphicsResources()
 {
 // Initialize Application control varibles
 	InitGL();
-	cargarTexturaManoInteraccion();
+	loadInteractionHandTexture();
 
 	char phonePath[] = "./assets/models/Phone.obj";
 	phoneOBJ = new COBJModel();
@@ -168,9 +168,9 @@ void RegisterWindowCallbacks()
 	glfwSetFramebufferSizeCallback(window, OnFramebufferSize);							// - Medidas del framebuffer en píxeles
 	glfwSetWindowFocusCallback(window, OnWindowFocus);
 	glfwSetWindowCloseCallback(window, OnWindowCloseRequest);
-	editorEscenas.FijarCargadorModelos(cargarModeloParaEditor);
-	editorEscenas.FijarCargadorTexturas(texturaParaEditor);
-	editorEscenas.FijarCargadorPuertas([](const std::filesystem::path& ruta, const SceneAnimatedObject& datos,
+	sceneEditor.FijarCargadorModelos(loadEditorModel);
+	sceneEditor.FijarCargadorTexturas(editorTexture);
+	sceneEditor.FijarCargadorPuertas([](const std::filesystem::path& ruta, const SceneAnimatedObject& datos,
 		editor::EditorSceneContext contexto, std::string& error)
 	{
 		std::error_code ec;
@@ -218,10 +218,10 @@ void InitializeImGui()
 bool StartGame()
 {
 	// Arrancar directamente con la habitación y la configuración de juego.
-	aplicarPresetJuego();
+	applyStartupPreset();
 	std::error_code raizActivaError;
 	std::cerr << "Directorio de recursos activo: " << std::filesystem::current_path(raizActivaError).string() << std::endl;
-	if (!cargarYAplicarEscena("assets/scenes/aula_informatica_calibrada.json") || !crearJugadorFisico())
+	if (!loadAndApplyScene("assets/scenes/aula_informatica_calibrada.json") || !spawnPhysicsPlayer())
 	{
 		std::cerr << "Inicio cancelado: no se inicia PLAY sin escena, suelo y spawn Bullet validados." << std::endl;
 		ImGui_ImplOpenGL3_Shutdown();
@@ -232,7 +232,7 @@ bool StartGame()
 		return false;
 	}
 	// Red solo si se pidio por linea de comandos (--host / --connect); por defecto sigue OFFLINE.
-	if (configRedPendiente.rol != net::Role::Offline) iniciarRed(configRedPendiente);
+	if (pendingNetworkConfig.rol != net::Role::Offline) startNetwork(pendingNetworkConfig);
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
 	OnFramebufferSize(window, w, h);
@@ -242,21 +242,21 @@ bool StartGame()
 
 void LoadMenuBackground()
 {
-	texturaFondoMenu = SOIL_load_OGL_texture(
+	menuBackgroundTexture = SOIL_load_OGL_texture(
 		"assets/textures/fonde-menu.png",
     	SOIL_LOAD_AUTO,
     	SOIL_CREATE_NEW_ID,
     	0
 	);
 
-	if (texturaFondoMenu == 0)
+	if (menuBackgroundTexture == 0)
 	{
     	std::cerr << "Error cargando fondo_menu.png: " << SOIL_last_result() << "\n";
 	}
 	else
 	{
     	// Opcional: GL_NEAREST mantiene los píxeles nítidos (estilo PS1) al estirarse
-    	glBindTexture(GL_TEXTURE_2D, texturaFondoMenu);
+    	glBindTexture(GL_TEXTURE_2D, menuBackgroundTexture);
    		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
  	   glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	}

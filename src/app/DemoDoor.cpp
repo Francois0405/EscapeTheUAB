@@ -2,14 +2,14 @@
 #include "src/app/DemoDoor.h"
 
 // Se llama una vez por fotograma: avanza el reloj y calcula el ángulo con los keyframes.
-void actualizarPuertaDemo(float deltaSegundos)
+void updateDemoDoor(float deltaSegundos)
 {
-	reproductorPuertaDemo.Actualizar(deltaSegundos);
-	anguloPuertaDemo = animation::AnguloEnTiempo(keyframesPuertaDemo, reproductorPuertaDemo.tiempo);
+	demoDoorPlayback.Actualizar(deltaSegundos);
+	demoDoorAngle = animation::AnguloEnTiempo(demoDoorKeyframes, demoDoorPlayback.tiempo);
 }
 
 // Arranca la animación desde el principio (la puerta vuelve a estar cerrada).
-void iniciarPuertaDemo()
+void startDemoDoor()
 {
-	reproductorPuertaDemo.Iniciar(keyframesPuertaDemo.back().tiempo);
+	demoDoorPlayback.Iniciar(demoDoorKeyframes.back().tiempo);
 }

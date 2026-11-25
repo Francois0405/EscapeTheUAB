@@ -555,7 +555,7 @@ void ShowEntornVGIWindow(bool* p_open)
 		}
 
 		// Pas de propietats de materials al shader
-		aplicarIntensidadMaterial(shader_programID, llum_ambient);
+		applyMaterialIntensity(shader_programID, llum_ambient);
 
 		//IMGUI_DEMO_MARKER("Widgets/Selectables/Single Selection TEXTURES");
 		ImGui::PushStyleColor(ImGuiCol_Text, IM_COL32(255, 0, 0, 255));
@@ -603,7 +603,7 @@ void ShowEntornVGIWindow(bool* p_open)
 			ImGui::Checkbox("Llum #7?(<Ctrl>+7)", &llumGL[7].encesa);
 			ImGui::EndTable();
 		}
-		ImGui::Checkbox("Lamparas de escena", &lamparasLaboratorioActivas);
+		ImGui::Checkbox("Lamparas de escena", &labLampsEnabled);
 		if (ImGui::IsItemHovered())
 		{
 			ImGui::BeginTooltip();

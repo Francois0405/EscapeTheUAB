@@ -51,7 +51,7 @@ void RuntimeRenderControls::OnIluminacioPlana()
 	if (ilumina != PLANA)
 		{	ilumina = PLANA;	shader = FLAT_SHADER; oIlumina = 2;
 			// Elimina shader anterior
-			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
+			glcache::InvalidateAll(); phongOccludersDirty = true; shaderLighting.DeleteProgram();
 			// Càrrega Flat shader
 			shader_programID = shaderLighting.loadFileShaders("./assets/shaders/flat_shdrML.vert", "./assets/shaders/flat_shdrML.frag");
 		}
@@ -66,7 +66,7 @@ void RuntimeRenderControls::OnIluminacioSuau()
 	if (ilumina != SUAU)
 		{	ilumina = SUAU;		shader = GOURAUD_SHADER;
 			// Elimina shader anterior
-			glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();
+			glcache::InvalidateAll(); phongOccludersDirty = true; shaderLighting.DeleteProgram();
 			// Càrrega Flat shader
 			shader_programID = shaderLighting.loadFileShaders("./assets/shaders/gouraud_shdrML.vert", "./assets/shaders/gouraud_shdrML.frag");
 		}
@@ -91,7 +91,7 @@ void RuntimeRenderControls::OnMaterialEmissio()
 	sw_material[0] = !sw_material[0];
 
 // Pas màscara llums
-	aplicarIntensidadMaterial(shader_programID, llum_ambient);
+	applyMaterialIntensity(shader_programID, llum_ambient);
 }
 
 
@@ -102,7 +102,7 @@ void RuntimeRenderControls::OnMaterialAmbient()
 	sw_material[1] = !sw_material[1];
 
 // Pas màscara llums
-	aplicarIntensidadMaterial(shader_programID, llum_ambient);
+	applyMaterialIntensity(shader_programID, llum_ambient);
 }
 
 
@@ -113,7 +113,7 @@ void RuntimeRenderControls::OnMaterialDifusa()
 	sw_material[2] = !sw_material[2];
 
 // Pas màscara llums
-	aplicarIntensidadMaterial(shader_programID, llum_ambient);
+	applyMaterialIntensity(shader_programID, llum_ambient);
 }
 
 
@@ -124,7 +124,7 @@ void RuntimeRenderControls::OnMaterialEspecular()
 	sw_material[3] = !sw_material[3];
 
 // Pas màscara llums
-	aplicarIntensidadMaterial(shader_programID, llum_ambient);
+	applyMaterialIntensity(shader_programID, llum_ambient);
 }
 
 
@@ -198,7 +198,7 @@ void RuntimeRenderControls::OnLlumsLlumAmbient()
 	sw_il = true;
 
 // Pas màscara llums al shader
-	aplicarIntensidadMaterial(shader_programID, llum_ambient); // actualiza el vector bvec4 completo
+	applyMaterialIntensity(shader_programID, llum_ambient); // actualiza el vector bvec4 completo
 }
 
 // LLUMS: Activació /Desactivació llum 0 (GL_LIGHT0)
@@ -310,7 +310,7 @@ void RuntimeRenderControls::OnShaderFlat()
 	fprintf(stderr, "Flat Shader: \n");
 
 // Elimina shader anterior
-	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); phongOccludersDirty = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Flat shader
 	newShaderID = shaderLighting.loadFileShaders("./assets/shaders/flat_shdrML.vert", "./assets/shaders/flat_shdrML.frag");
 
@@ -335,7 +335,7 @@ void RuntimeRenderControls::OnShaderGouraud()
 	fprintf(stderr, "Gouraud Shader: \n");
 
 // Elimina shader anterior
-	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); phongOccludersDirty = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Gouraud shader
 	newShaderID = shaderLighting.loadFileShaders("./assets/shaders/gouraud_shdrML.vert", "./assets/shaders/gouraud_shdrML.frag");
 
@@ -361,7 +361,7 @@ void RuntimeRenderControls::OnShaderPhong()
 	fprintf(stderr, "Phong Shader: \n");
 
 // Elimina shader anterior
-	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); phongOccludersDirty = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 // Càrrega Phong Shader
 	newShaderID = shaderLighting.loadFileShaders("./assets/shaders/phong_shdrML.vert", "./assets/shaders/phong_shdrML.frag");
 
@@ -420,7 +420,7 @@ void RuntimeRenderControls::OnShaderLoadFiles()
 
 // Entorn VGI: Carrega dels shaders
 // Elimina shader anterior
-	glcache::InvalidateAll(); oclusoresPhongInvalidos = true; shaderLighting.DeleteProgram();	shader_programID = 0;
+	glcache::InvalidateAll(); phongOccludersDirty = true; shaderLighting.DeleteProgram();	shader_programID = 0;
 	newShaderID = shaderLighting.loadFileShaders(nomVertS, nomFragS);
 
 // Càrrega shaders dels fitxers
@@ -559,7 +559,7 @@ void RuntimeRenderControls::OnShaderPBinaryRead()
 			}
 		else {
 			//shaderLighting.DeleteProgram();	// Eliminar shader anterior
-			glcache::InvalidateAll(); oclusoresPhongInvalidos = true;
+			glcache::InvalidateAll(); phongOccludersDirty = true;
 			shader_programID = shader_BinProgramID; // Assignar nou Binary Program com l'actual.
 			glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 			glUseProgram(shader_programID);			// Activa shader llegit.

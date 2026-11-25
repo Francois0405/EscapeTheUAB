@@ -2,5 +2,5 @@
 
 #include "src/app/AppState.h"
 
-void dibujarVentanasLegacyImGui();
+void drawLegacyImGuiWindows();
 void draw_Menu_ImGui();

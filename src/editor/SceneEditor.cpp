@@ -1126,7 +1126,7 @@ namespace editor
 		herramientaBoton("Scale [3]", Herramienta::Escalar);
 		ImGui::SameLine(); ImGui::Checkbox("Local", &local);
 		ImGui::SameLine(); ImGui::Checkbox("Snap", &snap);
-		ImGui::SameLine(); ImGui::Checkbox("Boxes", &mostrarColisionadores);
+		ImGui::SameLine(); ImGui::Checkbox("Boxes", &showColliders);
 		ImGui::SameLine();
 		if (ImGui::Button(camara.vista == Vista::Perspectiva ? "Top view" : "Perspective"))
 			camara.CambiarVista(camara.vista == Vista::Perspectiva ? Vista::Superior : Vista::Perspectiva);

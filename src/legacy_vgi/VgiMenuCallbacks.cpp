@@ -4,7 +4,7 @@
 #include "src/legacy_vgi/VgiFileActions.h"
 #include "src/legacy_vgi/VgiMaterial.h"
 
-LegacyVgiViewControls& controlesVistaVgi()
+LegacyVgiViewControls& vgiViewBindings()
 {
 	static LegacyVgiViewControls controles{
 		.camera = camera,
@@ -20,8 +20,8 @@ LegacyVgiViewControls& controlesVistaVgi()
 		.opvN = opvN,
 		.n = n,
 		.angleZ = angleZ,
-		.spawnEscenaActiva = spawnEscenaActiva,
-		.crearJugadorFisico = crearJugadorFisico,
+		.activeSceneSpawn = activeSceneSpawn,
+		.spawnPhysicsPlayer = spawnPhysicsPlayer,
 		.fullscreen = fullscreen,
 		.pan = pan,
 		.fact_pan = fact_pan,
@@ -41,49 +41,49 @@ LegacyVgiViewControls& controlesVistaVgi()
 	return controles;
 }
 
-void OnCameraEsferica() { controlesVistaVgi().OnCameraEsferica(); }
+void OnCameraEsferica() { vgiViewBindings().OnCameraEsferica(); }
 
-void OnCameraOrigenEsferica() { controlesVistaVgi().OnCameraOrigenEsferica(); }
+void OnCameraOrigenEsferica() { vgiViewBindings().OnCameraOrigenEsferica(); }
 
-void OnVistaMobil() { controlesVistaVgi().OnVistaMobil(); }
+void OnVistaMobil() { vgiViewBindings().OnVistaMobil(); }
 
-void OnVistaZoom() { controlesVistaVgi().OnVistaZoom(); }
+void OnVistaZoom() { vgiViewBindings().OnVistaZoom(); }
 
-void OnVistaZoomOrto() { controlesVistaVgi().OnVistaZoomOrto(); }
+void OnVistaZoomOrto() { vgiViewBindings().OnVistaZoomOrto(); }
 
-void OnVistaSatelit() { controlesVistaVgi().OnVistaSatelit(); }
+void OnVistaSatelit() { vgiViewBindings().OnVistaSatelit(); }
 
-void OnVistaPolarsX() { controlesVistaVgi().OnVistaPolarsX(); }
+void OnVistaPolarsX() { vgiViewBindings().OnVistaPolarsX(); }
 
-void OnVistaPolarsY() { controlesVistaVgi().OnVistaPolarsY(); }
+void OnVistaPolarsY() { vgiViewBindings().OnVistaPolarsY(); }
 
-void OnVistaPolarsZ() { controlesVistaVgi().OnVistaPolarsZ(); }
+void OnVistaPolarsZ() { vgiViewBindings().OnVistaPolarsZ(); }
 
-void OnCameraNavega() { controlesVistaVgi().OnCameraNavega(); }
+void OnCameraNavega() { vgiViewBindings().OnCameraNavega(); }
 
-void OnCameraOrigenNavega() { controlesVistaVgi().OnCameraOrigenNavega(); }
+void OnCameraOrigenNavega() { vgiViewBindings().OnCameraOrigenNavega(); }
 
-void OnCameraGeode() { controlesVistaVgi().OnCameraGeode(); }
+void OnCameraGeode() { vgiViewBindings().OnCameraGeode(); }
 
-void OnCameraOrigenGeode() { controlesVistaVgi().OnCameraOrigenGeode(); }
+void OnCameraOrigenGeode() { vgiViewBindings().OnCameraOrigenGeode(); }
 
-void OnVistaFullscreen() { controlesVistaVgi().OnVistaFullscreen(); }
+void OnVistaFullscreen() { vgiViewBindings().OnVistaFullscreen(); }
 
-void OnVistaPan() { controlesVistaVgi().OnVistaPan(); }
+void OnVistaPan() { vgiViewBindings().OnVistaPan(); }
 
-void OnVistaOrigenPan() { controlesVistaVgi().OnVistaOrigenPan(); }
+void OnVistaOrigenPan() { vgiViewBindings().OnVistaOrigenPan(); }
 
-void OnVistaEixos() { controlesVistaVgi().OnVistaEixos(); }
+void OnVistaEixos() { vgiViewBindings().OnVistaEixos(); }
 
-void OnVistaSkyBox() { controlesVistaVgi().OnVistaSkyBox(); }
+void OnVistaSkyBox() { vgiViewBindings().OnVistaSkyBox(); }
 
-void OnProjeccioPerspectiva() { controlesVistaVgi().OnProjeccioPerspectiva(); }
+void OnProjeccioPerspectiva() { vgiViewBindings().OnProjeccioPerspectiva(); }
 
-void OnProjeccioOrtografica() { controlesVistaVgi().OnProjeccioOrtografica(); }
+void OnProjeccioOrtografica() { vgiViewBindings().OnProjeccioOrtografica(); }
 
-void OnProjeccioAxonometrica() { controlesVistaVgi().OnProjeccioAxonometrica(); }
+void OnProjeccioAxonometrica() { vgiViewBindings().OnProjeccioAxonometrica(); }
 
-LegacyVgiGeometryControls& controlesGeometriaVgi()
+LegacyVgiGeometryControls& vgiGeometryBindings()
 {
 	static LegacyVgiGeometryControls controles{
 		.objecte = objecte,
@@ -118,70 +118,70 @@ LegacyVgiGeometryControls& controlesGeometriaVgi()
 	return controles;
 }
 
-void OnObjecteCap() { controlesGeometriaVgi().OnObjecteCap(); }
+void OnObjecteCap() { vgiGeometryBindings().OnObjecteCap(); }
 
-void OnObjecteCub() { controlesGeometriaVgi().OnObjecteCub(); }
+void OnObjecteCub() { vgiGeometryBindings().OnObjecteCub(); }
 
-void OnObjecteCubRGB() { controlesGeometriaVgi().OnObjecteCubRGB(); }
+void OnObjecteCubRGB() { vgiGeometryBindings().OnObjecteCubRGB(); }
 
-void OnObjecteEsfera() { controlesGeometriaVgi().OnObjecteEsfera(); }
+void OnObjecteEsfera() { vgiGeometryBindings().OnObjecteEsfera(); }
 
-void OnObjecteTetera() { controlesGeometriaVgi().OnObjecteTetera(); }
+void OnObjecteTetera() { vgiGeometryBindings().OnObjecteTetera(); }
 
-void OnObjecteArc() { controlesGeometriaVgi().OnObjecteArc(); }
+void OnObjecteArc() { vgiGeometryBindings().OnObjecteArc(); }
 
-void OnObjecteTie() { controlesGeometriaVgi().OnObjecteTie(); }
+void OnObjecteTie() { vgiGeometryBindings().OnObjecteTie(); }
 
-void OnObjecteCorbaBezier() { controlesGeometriaVgi().OnObjecteCorbaBezier(); }
+void OnObjecteCorbaBezier() { vgiGeometryBindings().OnObjecteCorbaBezier(); }
 
-void OnObjecteCorbaLemniscata() { controlesGeometriaVgi().OnObjecteCorbaLemniscata(); }
+void OnObjecteCorbaLemniscata() { vgiGeometryBindings().OnObjecteCorbaLemniscata(); }
 
-void OnObjecteCorbaHermitte() { controlesGeometriaVgi().OnObjecteCorbaHermitte(); }
+void OnObjecteCorbaHermitte() { vgiGeometryBindings().OnObjecteCorbaHermitte(); }
 
-void OnObjecteCorbaCatmullRom() { controlesGeometriaVgi().OnObjecteCorbaCatmullRom(); }
+void OnObjecteCorbaCatmullRom() { vgiGeometryBindings().OnObjecteCorbaCatmullRom(); }
 
-void OnObjecteCorbaBSpline() { controlesGeometriaVgi().OnObjecteCorbaBSpline(); }
+void OnObjecteCorbaBSpline() { vgiGeometryBindings().OnObjecteCorbaBSpline(); }
 
-void OnObjectePuntsControl() { controlesGeometriaVgi().OnObjectePuntsControl(); }
+void OnObjectePuntsControl() { vgiGeometryBindings().OnObjectePuntsControl(); }
 
-void OnCorbesTriedreFrenet() { controlesGeometriaVgi().OnCorbesTriedreFrenet(); }
+void OnCorbesTriedreFrenet() { vgiGeometryBindings().OnCorbesTriedreFrenet(); }
 
-void OnCorbesTriedreDarboux() { controlesGeometriaVgi().OnCorbesTriedreDarboux(); }
+void OnCorbesTriedreDarboux() { vgiGeometryBindings().OnCorbesTriedreDarboux(); }
 
-void OnObjecteMatriuPrimitives() { controlesGeometriaVgi().OnObjecteMatriuPrimitives(); }
+void OnObjecteMatriuPrimitives() { vgiGeometryBindings().OnObjecteMatriuPrimitives(); }
 
-void OnObjecteMatriuPrimitivesVAO() { controlesGeometriaVgi().OnObjecteMatriuPrimitivesVAO(); }
+void OnObjecteMatriuPrimitivesVAO() { vgiGeometryBindings().OnObjecteMatriuPrimitivesVAO(); }
 
-void OnTransformaTraslacio() { controlesGeometriaVgi().OnTransformaTraslacio(); }
+void OnTransformaTraslacio() { vgiGeometryBindings().OnTransformaTraslacio(); }
 
-void OnTransformaOrigenTraslacio() { controlesGeometriaVgi().OnTransformaOrigenTraslacio(); }
+void OnTransformaOrigenTraslacio() { vgiGeometryBindings().OnTransformaOrigenTraslacio(); }
 
-void OnTransformaRotacio() { controlesGeometriaVgi().OnTransformaRotacio(); }
+void OnTransformaRotacio() { vgiGeometryBindings().OnTransformaRotacio(); }
 
-void OnTransformaOrigenRotacio() { controlesGeometriaVgi().OnTransformaOrigenRotacio(); }
+void OnTransformaOrigenRotacio() { vgiGeometryBindings().OnTransformaOrigenRotacio(); }
 
-void OnTransformaEscalat() { controlesGeometriaVgi().OnTransformaEscalat(); }
+void OnTransformaEscalat() { vgiGeometryBindings().OnTransformaEscalat(); }
 
-void OnTransformaOrigenEscalat() { controlesGeometriaVgi().OnTransformaOrigenEscalat(); }
+void OnTransformaOrigenEscalat() { vgiGeometryBindings().OnTransformaOrigenEscalat(); }
 
-void OnTransformaMobilX() { controlesGeometriaVgi().OnTransformaMobilX(); }
+void OnTransformaMobilX() { vgiGeometryBindings().OnTransformaMobilX(); }
 
-void OnTransformaMobilY() { controlesGeometriaVgi().OnTransformaMobilY(); }
+void OnTransformaMobilY() { vgiGeometryBindings().OnTransformaMobilY(); }
 
-void OnTransformaMobilZ() { controlesGeometriaVgi().OnTransformaMobilZ(); }
+void OnTransformaMobilZ() { vgiGeometryBindings().OnTransformaMobilZ(); }
 
-void OnOcultacionsFrontFaces() { controlesGeometriaVgi().OnOcultacionsFrontFaces(); }
+void OnOcultacionsFrontFaces() { vgiGeometryBindings().OnOcultacionsFrontFaces(); }
 
-void OnOcultacionsTestvis() { controlesGeometriaVgi().OnOcultacionsTestvis(); }
+void OnOcultacionsTestvis() { vgiGeometryBindings().OnOcultacionsTestvis(); }
 
-void OnOcultacionsZBuffer() { controlesGeometriaVgi().OnOcultacionsZBuffer(); }
+void OnOcultacionsZBuffer() { vgiGeometryBindings().OnOcultacionsZBuffer(); }
 
 /* ------------------------------------------------------------------------- */
 /*		10-12. IL.LUMINACIÓ, LLUMS, SHADERS								 */
 /* ------------------------------------------------------------------------- */
 
 // Implementacions a src/rendering/RuntimeRenderControls.cpp.
-RuntimeRenderControls& controlesRender()
+RuntimeRenderControls& renderControlBindings()
 {
 	static RuntimeRenderControls controles{
 		.ifixe = ifixe,
@@ -201,67 +201,67 @@ RuntimeRenderControls& controlesRender()
 		.shader = shader,
 		.shader_programID = shader_programID,
 		.shaderLighting = shaderLighting,
-		.oclusoresPhongInvalidos = oclusoresPhongInvalidos,
-		.aplicarIntensidadMaterial = [](GLuint programa, bool ambienteActivo)
-			{ aplicarIntensidadMaterial(programa, ambienteActivo); }
+		.phongOccludersDirty = phongOccludersDirty,
+		.applyMaterialIntensity = [](GLuint programa, bool ambienteActivo)
+			{ applyMaterialIntensity(programa, ambienteActivo); }
 	};
 	return controles;
 }
 
-void OnIluminacioLlumfixe() { controlesRender().OnIluminacioLlumfixe(); }
+void OnIluminacioLlumfixe() { renderControlBindings().OnIluminacioLlumfixe(); }
 
-void OnIluminacio2Sides() { controlesRender().OnIluminacio2Sides(); }
+void OnIluminacio2Sides() { renderControlBindings().OnIluminacio2Sides(); }
 
-void OnIluminacioPunts() { controlesRender().OnIluminacioPunts(); }
+void OnIluminacioPunts() { renderControlBindings().OnIluminacioPunts(); }
 
-void OnIluminacioFilferros() { controlesRender().OnIluminacioFilferros(); }
+void OnIluminacioFilferros() { renderControlBindings().OnIluminacioFilferros(); }
 
-void OnIluminacioPlana() { controlesRender().OnIluminacioPlana(); }
+void OnIluminacioPlana() { renderControlBindings().OnIluminacioPlana(); }
 
-void OnIluminacioSuau() { controlesRender().OnIluminacioSuau(); }
+void OnIluminacioSuau() { renderControlBindings().OnIluminacioSuau(); }
 
-void OnMaterialReflmaterial() { controlesRender().OnMaterialReflmaterial(); }
+void OnMaterialReflmaterial() { renderControlBindings().OnMaterialReflmaterial(); }
 
-void OnMaterialEmissio() { controlesRender().OnMaterialEmissio(); }
+void OnMaterialEmissio() { renderControlBindings().OnMaterialEmissio(); }
 
-void OnMaterialAmbient() { controlesRender().OnMaterialAmbient(); }
+void OnMaterialAmbient() { renderControlBindings().OnMaterialAmbient(); }
 
-void OnMaterialDifusa() { controlesRender().OnMaterialDifusa(); }
+void OnMaterialDifusa() { renderControlBindings().OnMaterialDifusa(); }
 
-void OnMaterialEspecular() { controlesRender().OnMaterialEspecular(); }
+void OnMaterialEspecular() { renderControlBindings().OnMaterialEspecular(); }
 
-void OnIluminacioTextures() { controlesRender().OnIluminacioTextures(); }
+void OnIluminacioTextures() { renderControlBindings().OnIluminacioTextures(); }
 
-void OnIluminacioTexturaFitxerimatge() { controlesRender().OnIluminacioTexturaFitxerimatge(); }
+void OnIluminacioTexturaFitxerimatge() { renderControlBindings().OnIluminacioTexturaFitxerimatge(); }
 
-void OnIluminacioTexturaFlagInvertY() { controlesRender().OnIluminacioTexturaFlagInvertY(); }
+void OnIluminacioTexturaFlagInvertY() { renderControlBindings().OnIluminacioTexturaFlagInvertY(); }
 
-void OnLlumsLlumAmbient() { controlesRender().OnLlumsLlumAmbient(); }
+void OnLlumsLlumAmbient() { renderControlBindings().OnLlumsLlumAmbient(); }
 
-void OnLlumsLlum0() { controlesRender().OnLlumsLlum0(); }
+void OnLlumsLlum0() { renderControlBindings().OnLlumsLlum0(); }
 
-void OnLlumsLlum1() { controlesRender().OnLlumsLlum1(); }
+void OnLlumsLlum1() { renderControlBindings().OnLlumsLlum1(); }
 
-void OnLlumsLlum2() { controlesRender().OnLlumsLlum2(); }
+void OnLlumsLlum2() { renderControlBindings().OnLlumsLlum2(); }
 
-void OnLlumsLlum3() { controlesRender().OnLlumsLlum3(); }
+void OnLlumsLlum3() { renderControlBindings().OnLlumsLlum3(); }
 
-void OnLlumsLlum4() { controlesRender().OnLlumsLlum4(); }
+void OnLlumsLlum4() { renderControlBindings().OnLlumsLlum4(); }
 
-void OnLlumsLlum5() { controlesRender().OnLlumsLlum5(); }
+void OnLlumsLlum5() { renderControlBindings().OnLlumsLlum5(); }
 
-void OnLlumsLlum6() { controlesRender().OnLlumsLlum6(); }
+void OnLlumsLlum6() { renderControlBindings().OnLlumsLlum6(); }
 
-void OnLlumsLlum7() { controlesRender().OnLlumsLlum7(); }
+void OnLlumsLlum7() { renderControlBindings().OnLlumsLlum7(); }
 
-void OnShaderFlat() { controlesRender().OnShaderFlat(); }
+void OnShaderFlat() { renderControlBindings().OnShaderFlat(); }
 
-void OnShaderGouraud() { controlesRender().OnShaderGouraud(); }
+void OnShaderGouraud() { renderControlBindings().OnShaderGouraud(); }
 
-void OnShaderPhong() { controlesRender().OnShaderPhong(); }
+void OnShaderPhong() { renderControlBindings().OnShaderPhong(); }
 
-void OnShaderLoadFiles() { controlesRender().OnShaderLoadFiles(); }
+void OnShaderLoadFiles() { renderControlBindings().OnShaderLoadFiles(); }
 
-void OnShaderPBinaryWrite() { controlesRender().OnShaderPBinaryWrite(); }
+void OnShaderPBinaryWrite() { renderControlBindings().OnShaderPBinaryWrite(); }
 
-void OnShaderPBinaryRead() { controlesRender().OnShaderPBinaryRead(); }
+void OnShaderPBinaryRead() { renderControlBindings().OnShaderPBinaryRead(); }

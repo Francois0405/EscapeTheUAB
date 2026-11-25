@@ -4,38 +4,38 @@
 #include "src/app/adapters/SessionAdapters.h"
 
 // Contexto prestado a src/scene/SceneRuntime: el estado sigue siendo de main.cpp.
-const scene::runtime::SceneRuntimeContext& contextoEscena()
+const scene::runtime::SceneRuntimeContext& sceneBindings()
 {
 	static const scene::runtime::SceneRuntimeContext contexto{
-		objetosEscena, modelosHabitacion, texturasMaterialEscena, datosAnimadosEscena, objetosAnimados,
-		objetosAnimadosListos, serializadorEscena, mundoFisico, escenaFisica,
-		nombreEscenaActiva, spawnEscenaActiva, intensidadIndirectaEscena, intensidadAmbientalBaseEscena,
-		escalaLuzDirectaEscena, colorReboteSueloEscena, colorReboteCieloEscena,
-		escenaTieneGeometriaValida, oclusoresPhongInvalidos, editorEscenas, animacionHiriti,
+		sceneObjects, roomModels, sceneMaterialTextures, sceneAnimatedData, animatedObjects,
+		animatedObjectsReady, sceneSerializer, physicsWorld, physicsScene,
+		activeSceneName, activeSceneSpawn, sceneIndirectIntensity, sceneBaseAmbientIntensity,
+		sceneDirectLightScale, sceneGroundBounceColor, sceneSkyBounceColor,
+		sceneHasValidGeometry, phongOccludersDirty, sceneEditor, hiritiAnimator,
 		objecte, textura, tFlag_invert_Y, shader_programID,
-		[] { return posicionPiesDesdeCamara(); },
+		[] { return feetPositionFromCamera(); },
 		[] { return glm::vec3(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z)); },
-		[](const SceneSpawn& spawn) { fijarCamaraAlSpawn(spawn); },
-		[] { return crearJugadorFisico(); },
-		[] { return redJuego.EnRed(); },
-		[] { detenerRed(); }
+		[](const SceneSpawn& spawn) { placeCameraAtSpawn(spawn); },
+		[] { return spawnPhysicsPlayer(); },
+		[] { return networkGame.EnRed(); },
+		[] { stopNetwork(); }
 	};
 	return contexto;
 }
 
-void liberarObjetosAnimados() { scene::runtime::ReleaseAnimatedObjects(contextoEscena()); }
+void releaseSceneAnimations() { scene::runtime::ReleaseAnimatedObjects(sceneBindings()); }
 
-bool cargarYAplicarEscena(const std::filesystem::path& ruta)
+bool loadAndApplyScene(const std::filesystem::path& ruta)
 {
-	return scene::runtime::LoadAndApplyScene(contextoEscena(), ruta);
+	return scene::runtime::LoadAndApplyScene(sceneBindings(), ruta);
 }
 
-bool reconstruirFisicaTrasEdicion(std::string& error, bool autoridadFisica)
+bool rebuildPhysicsAfterEditing(std::string& error, bool autoridadFisica)
 {
-	return scene::runtime::RebuildPhysicsAfterEdit(contextoEscena(), error, autoridadFisica);
+	return scene::runtime::RebuildPhysicsAfterEdit(sceneBindings(), error, autoridadFisica);
 }
 
-bool cargarModeloParaEditor(const std::filesystem::path& ruta, std::string& modeloCargado, std::string& error)
+bool loadEditorModel(const std::filesystem::path& ruta, std::string& modeloCargado, std::string& error)
 {
-	return scene::runtime::LoadModelForEditor(contextoEscena(), ruta, modeloCargado, error);
+	return scene::runtime::LoadModelForEditor(sceneBindings(), ruta, modeloCargado, error);
 }

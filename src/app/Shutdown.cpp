@@ -7,37 +7,37 @@
 void ShutdownApplication(Ps1Framebuffer& ps1)
 {
 	// Una salida por el boton de Windows tambien devuelve el cursor al sistema.
-	fijarCapturaCursor(window, false);
-	if (texturaManoInteraccion != 0)
+	setCursorCapture(window, false);
+	if (interactionHandTexture != 0)
 	{
-		glDeleteTextures(1, &texturaManoInteraccion);
-		texturaManoInteraccion = 0;
+		glDeleteTextures(1, &interactionHandTexture);
+		interactionHandTexture = 0;
 	}
 
 // RESET RECURSOS PS1
 	ps1.Destroy();
-	if (texturaFondoMenu != 0)
+	if (menuBackgroundTexture != 0)
 	{
-		glDeleteTextures(1, &texturaFondoMenu);
-		texturaFondoMenu = 0;
+		glDeleteTextures(1, &menuBackgroundTexture);
+		menuBackgroundTexture = 0;
 	}
 
 // Entorn VGI.ImGui: Cleanup ImGui
 	ImGui_ImplOpenGL3_Shutdown();
 	ImGui_ImplGlfw_Shutdown();
 	ImGui::DestroyContext();
-	redJuego.Detener();           // cierra la red (si la hay) antes que la ventana
-	gestorOpenXR.Desactivar();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
+	networkGame.Detener();           // cierra la red (si la hay) antes que la ventana
+	openXrManager.Desactivar();   // sesión e instancia OpenXR (si las hay) antes de cerrar la ventana
 	NFD_QuitCompat();
 
-	for (auto& entrada : modelosHabitacion)
+	for (auto& entrada : roomModels)
 		entrada.second->netejaTextures_OBJ();
 
-	modelosHabitacion.clear();
-	objetosEscena.clear();
-	liberarObjetosAnimados();
-	mundoFisico.EliminarJugador();
-	escenaFisica.reset();                       // quita las colisiones de la habitacion antes de cerrar
+	roomModels.clear();
+	sceneObjects.clear();
+	releaseSceneAnimations();
+	physicsWorld.EliminarJugador();
+	physicsScene.reset();                       // quita las colisiones de la habitacion antes de cerrar
 	fisica::LiberarDibujoColisionadores();
 	netgame::LiberarDibujoAvatares();
 
@@ -52,8 +52,8 @@ void ShutdownApplication(Ps1Framebuffer& ps1)
 	if (Get_VAOId(CUBE_SKYBOX) != 0) deleteVAOList(CUBE_SKYBOX);
 	netejaVAOList();
 	if (eixos_Id != 0) glDeleteVertexArrays(1, &eixos_Id);
-	if (rayoVao != 0) glDeleteVertexArrays(1, &rayoVao);
-	if (rayoVbo != 0) glDeleteBuffers(1, &rayoVbo);
+	if (rayVao != 0) glDeleteVertexArrays(1, &rayVao);
+	if (rayVbo != 0) glDeleteBuffers(1, &rayVbo);
 	for (int textureIndex = 0; textureIndex < NUM_MAX_TEXTURES; ++textureIndex)
 	{
 		if (texturesID[textureIndex] != 0)
@@ -69,8 +69,8 @@ void ShutdownApplication(Ps1Framebuffer& ps1)
 	}
 
 	// Delete GPU programs while the OpenGL context that created them is current.
-	glcache::InvalidateAll(); oclusoresPhongInvalidos = true;
-	if (consultasGpu[0] != 0) glDeleteQueries(3, consultasGpu);
+	glcache::InvalidateAll(); phongOccludersDirty = true;
+	if (gpuQueries[0] != 0) glDeleteQueries(3, gpuQueries);
 	if (shaderLighting.getProgramID() != -1) shaderLighting.DeleteProgram();
 	if (shaderSkyBox.getProgramID() != -1) shaderSkyBox.DeleteProgram();
 	if (shaderEixos.getProgramID() != -1) shaderEixos.DeleteProgram();

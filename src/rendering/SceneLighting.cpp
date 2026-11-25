@@ -3,10 +3,10 @@
 
 // Slots 4-16 pertenecen a las luces declaradas en JSON. Los slots 0-3 siguen
 // reservados para las fuentes generales y la linterna móvil.
-void actualizarLucesDeEscena()
+void updateSceneLights()
 {
 	constexpr int primerSlot = 4;
-	const bool hayLucesDeEscena = std::any_of(objetosEscena.begin(), objetosEscena.end(),
+	const bool hayLucesDeEscena = std::any_of(sceneObjects.begin(), sceneObjects.end(),
 		[](const SceneObject& objeto) { return objeto.luz.presente; });
 	for (int slot = primerSlot; slot < NUM_MAX_LLUMS; ++slot)
 	{
@@ -16,11 +16,11 @@ void actualizarLucesDeEscena()
 	}
 	if (!hayLucesDeEscena) return;
 
-	if (!lamparasLaboratorioActivas) return;
+	if (!labLampsEnabled) return;
 
 	int slot = primerSlot;
 	std::size_t lucesSinSlot = 0;
-	for (const SceneObject& objeto : objetosEscena)
+	for (const SceneObject& objeto : sceneObjects)
 	{
 		if (!objeto.luz.presente || !objeto.luz.encendida) continue;
 		if (slot >= NUM_MAX_LLUMS) { ++lucesSinSlot; continue; }
@@ -61,7 +61,7 @@ void actualizarLucesDeEscena()
 	}
 }
 
-void actualizarOclusoresPhong()
+void updatePhongOccluders()
 {
 	const auto inicio = std::chrono::steady_clock::now();
 	static std::size_t firmaAnterior = 0;
@@ -71,7 +71,7 @@ void actualizarOclusoresPhong()
 	static GLuint bufferOclusores = 0;
 	size_t firma = 1469598103934665603ull;
 	auto mezclar = [&firma](size_t valor) { firma ^= valor; firma *= 1099511628211ull; };
-	for (const SceneObject& objeto : objetosEscena)
+	for (const SceneObject& objeto : sceneObjects)
 	{
 		if (!objeto.fisica.presente || objeto.fisica.tipo != fisica::BodyType::Estatico) continue;
 		for (int eje = 0; eje < 3; ++eje)
@@ -119,7 +119,7 @@ void actualizarOclusoresPhong()
 	}
 	// El binding point pertenece al contexto y se reafirma incluso si la firma de escena no cambió.
 	glBindBufferBase(GL_UNIFORM_BUFFER, bindingOclusores, bufferOclusores);
-	if (renderizadoOptimizado && !oclusoresPhongInvalidos && firma == firmaAnterior && programaAnterior == shader_programID)
+	if (optimizedRendering && !phongOccludersDirty && firma == firmaAnterior && programaAnterior == shader_programID)
 	{
 		if (renderMetrics::enabled) renderMetrics::oclusoresMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicio).count();
 		return;
@@ -127,7 +127,7 @@ void actualizarOclusoresPhong()
 	BloqueOclusoresGpu bloque{};
 	int cantidad = 0;
 	int cantidadIndirecta = 0;
-	for (const SceneObject& objeto : objetosEscena)
+	for (const SceneObject& objeto : sceneObjects)
 	{
 		if (!objeto.fisica.presente ||
 			objeto.fisica.tipo != fisica::BodyType::Estatico) continue;
@@ -161,7 +161,7 @@ void actualizarOclusoresPhong()
 	}
 
 	glUseProgram(shader_programID);
-	if (shader_programID != 0 && (programaBloqueAnterior != shader_programID || oclusoresPhongInvalidos))
+	if (shader_programID != 0 && (programaBloqueAnterior != shader_programID || phongOccludersDirty))
 	{
 		indiceBloqueOclusores = glGetUniformBlockIndex(shader_programID, "PhongOccludersBlock");
 		if (indiceBloqueOclusores != GL_INVALID_INDEX)
@@ -175,6 +175,6 @@ void actualizarOclusoresPhong()
 		glBindBuffer(GL_UNIFORM_BUFFER, bufferOclusores);
 		glBufferSubData(GL_UNIFORM_BUFFER, 0, sizeof(BloqueOclusoresGpu), &bloque);
 	}
-	firmaAnterior = firma; programaAnterior = shader_programID; oclusoresPhongInvalidos = false;
+	firmaAnterior = firma; programaAnterior = shader_programID; phongOccludersDirty = false;
 	if (renderMetrics::enabled) renderMetrics::oclusoresMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicio).count();
 }

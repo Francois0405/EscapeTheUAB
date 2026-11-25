@@ -6,72 +6,72 @@
 #include "src/diagnostics/GrabTrace.h"
 
 // Contexto prestado a src/gameplay/interaction: el estado sigue siendo de main.cpp.
-const game::interaction::InteractionContext& contextoInteraccion()
+const game::interaction::InteractionContext& interactionBindings()
 {
 	static const game::interaction::InteractionContext contexto{
-		objetosEscena, escenaFisica, mundoFisico, redJuego, objetosAnimados, puertasRed,
-		objetivoInteraccionActual, cargaLanzamientoActiva, tiempoCargaLanzamiento, mostrarPanelesDebug,
-		[] { return entradaFPSActiva(); },
-		[] { return editorEscenas.Activo(); },
-		[] { return gestorOpenXR.SesionEnMarcha(); },
-		[](glm::vec3& origen, glm::vec3& direccion) { origenYDireccionDeLaMirada(origen, direccion); },
+		sceneObjects, physicsScene, physicsWorld, networkGame, animatedObjects, networkDoors,
+		currentInteractionTarget, throwChargeActive, throwChargeTime, showDebugPanels,
+		[] { return fpsInputActive(); },
+		[] { return sceneEditor.Activo(); },
+		[] { return openXrManager.SesionEnMarcha(); },
+		[](glm::vec3& origen, glm::vec3& direccion) { gazeOriginAndDirection(origen, direccion); },
 		[] { return glfwGetTime(); },
 		[](const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
 			const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
-			{ trazarAgarre(evento, id, peer, propietario, posicion, punto, detalle); },
+			{ traceGrab(evento, id, peer, propietario, posicion, punto, detalle); },
 		[]
 		{
-			animacionHiriti.DescubrirPorInteraccion();
-			if (animacionHiriti.MarcarAgarrado())
-				reproducirSonidoHiriti("assets/audio/hirity/story/lohashechobien.ogg");
+			hiritiAnimator.DescubrirPorInteraccion();
+			if (hiritiAnimator.MarcarAgarrado())
+				playHiritiSoundCue("assets/audio/hirity/story/lohashechobien.ogg");
 		},
-		[](float carga) { animacionHiriti.MarcarLanzadoPorJugador(carga); }
+		[](float carga) { hiritiAnimator.MarcarLanzadoPorJugador(carga); }
 	};
 	return contexto;
 }
 
-bool jugadorTieneAgarre()
+bool playerHoldsObject()
 {
-	return game::interaction::PlayerHasGrab(contextoInteraccion());
+	return game::interaction::PlayerHasGrab(interactionBindings());
 }
 
-InteractionTarget buscarObjetivoInteraccion()
+InteractionTarget findCurrentInteractionTarget()
 {
-	return game::interaction::FindInteractionTarget(contextoInteraccion());
+	return game::interaction::FindInteractionTarget(interactionBindings());
 }
 
-void actualizarObjetivoInteraccion(bool permitido)
+void updateCurrentInteractionTarget(bool permitido)
 {
-	game::interaction::UpdateInteractionTarget(contextoInteraccion(), permitido);
+	game::interaction::UpdateInteractionTarget(interactionBindings(), permitido);
 }
 
-void iniciarCargaLanzamiento()
+void beginThrowCharge()
 {
-	game::interaction::StartThrowCharge(contextoInteraccion());
+	game::interaction::StartThrowCharge(interactionBindings());
 }
 
-void interactuar()
+void performInteraction()
 {
-	game::interaction::Interact(contextoInteraccion());
+	game::interaction::Interact(interactionBindings());
 }
 
-void actualizarAgarreDelJugador(bool puedeJugar)
+void updateHeldObject(bool puedeJugar)
 {
-	game::interaction::UpdatePlayerGrab(contextoInteraccion(), puedeJugar);
+	game::interaction::UpdatePlayerGrab(interactionBindings(), puedeJugar);
 }
 
-void cancelarCargaLanzamiento()
+void cancelThrowChargeInput()
 {
-	game::interaction::CancelThrowCharge(contextoInteraccion());
+	game::interaction::CancelThrowCharge(interactionBindings());
 }
 
-void lanzarObjetoCargado()
+void throwHeldObject()
 {
-	game::interaction::ThrowChargedObject(contextoInteraccion());
+	game::interaction::ThrowChargedObject(interactionBindings());
 }
 
-void actualizarCargaLanzamiento(GLFWwindow* window, float delta)
+void updateThrowChargeInput(GLFWwindow* window, float delta)
 {
-	game::interaction::UpdateThrowCharge(contextoInteraccion(), delta, [window]
-		{ return glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS || gestorOpenXR.GatilloPulsado(); });
+	game::interaction::UpdateThrowCharge(interactionBindings(), delta, [window]
+		{ return glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS || openXrManager.GatilloPulsado(); });
 }

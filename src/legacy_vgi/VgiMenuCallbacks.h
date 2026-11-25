@@ -2,7 +2,7 @@
 
 #include "src/app/AppState.h"
 
-LegacyVgiViewControls& controlesVistaVgi();
+LegacyVgiViewControls& vgiViewBindings();
 void OnCameraEsferica();
 void OnCameraOrigenEsferica();
 void OnVistaMobil();
@@ -24,7 +24,7 @@ void OnVistaSkyBox();
 void OnProjeccioPerspectiva();
 void OnProjeccioOrtografica();
 void OnProjeccioAxonometrica();
-LegacyVgiGeometryControls& controlesGeometriaVgi();
+LegacyVgiGeometryControls& vgiGeometryBindings();
 void OnObjecteCap();
 void OnObjecteCub();
 void OnObjecteCubRGB();
@@ -54,7 +54,7 @@ void OnTransformaMobilZ();
 void OnOcultacionsFrontFaces();
 void OnOcultacionsTestvis();
 void OnOcultacionsZBuffer();
-RuntimeRenderControls& controlesRender();
+RuntimeRenderControls& renderControlBindings();
 void OnIluminacioLlumfixe();
 void OnIluminacio2Sides();
 void OnIluminacioPunts();

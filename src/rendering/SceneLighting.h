@@ -2,5 +2,5 @@
 
 #include "src/app/AppState.h"
 
-void actualizarLucesDeEscena();
-void actualizarOclusoresPhong();
+void updateSceneLights();
+void updatePhongOccluders();

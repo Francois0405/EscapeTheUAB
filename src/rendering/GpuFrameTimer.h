@@ -2,5 +2,5 @@
 
 #include "src/app/AppState.h"
 
-void iniciarConsultaGpu();
-void finalizarConsultaGpu();
+void beginGpuQuery();
+void endGpuQuery();

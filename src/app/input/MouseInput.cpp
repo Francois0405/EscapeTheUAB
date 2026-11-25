@@ -24,8 +24,8 @@ void OnMouseButton(GLFWwindow* window, int button, int action, int mods)
 	ImGuiIO& io = ImGui::GetIO();
 
 	// (2) ONLY forward mouse data to your underlying app/game.
-	if (editorEscenas.Activo()) return;
-	if (modoJuegoFPS()) return;
+	if (sceneEditor.Activo()) return;
+	if (fpsModeActive()) return;
 
 	if (!io.WantCaptureMouse) { //<Tractament mouse de l'aplicació>}
 		// OnLButtonDown
@@ -85,20 +85,20 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 	CSize gir = { 0,0 }, girn = { 0,0 }, girT = { 0,0 }, zoomincr = { 0,0 };
 
 	// TODO: Add your message handler code here and/or call default
-	if (modoJuegoFPS())
+	if (fpsModeActive())
 	{
-		if (!fpsCursorCapturado || fpsPausado || !ventanaConFoco) return;
-		if (!fpsTienePosicionAnterior)
+		if (!fpsCursorCaptured || fpsPaused || !windowFocused) return;
+		if (!fpsHasPreviousPosition)
 		{
-			fpsUltimoX = xpos;
-			fpsUltimoY = ypos;
-			fpsTienePosicionAnterior = true;
+			fpsLastX = xpos;
+			fpsLastY = ypos;
+			fpsHasPreviousPosition = true;
 			return;
 		}
-		const double deltaX = xpos - fpsUltimoX;
-		const double deltaY = ypos - fpsUltimoY;
-		fpsUltimoX = xpos;
-		fpsUltimoY = ypos;
+		const double deltaX = xpos - fpsLastX;
+		const double deltaY = ypos - fpsLastY;
+		fpsLastX = xpos;
+		fpsLastY = ypos;
 		mouseDeltaX += deltaX;
 		mouseDeltaY += deltaY;
 
@@ -109,7 +109,7 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 			const double dy = n[1] - opvN.y;
 			n[0] = opvN.x + dx * cos(angulo) - dy * sin(angulo);
 			n[1] = opvN.y + dx * sin(angulo) + dy * cos(angulo);
-			inclinarJugadorFPS(deltaY);
+			pitchFpsPlayer(deltaY);
 		}
 		return;
 	}
@@ -374,9 +374,9 @@ void OnMouseMove(GLFWwindow* window, double xpos, double ypos)
 void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 {
 // TODO: Agregue aquí su código de controlador de mensajes o llame al valor predeterminado
-	if (editorEscenas.Activo())
+	if (sceneEditor.Activo())
 	{	// la rueda es de la camara solo sobre el viewport; sobre un panel ImGui desplaza el panel
-		editorEscenas.RuedaRaton(static_cast<float>(yoffset));
+		sceneEditor.RuedaRaton(static_cast<float>(yoffset));
 		return;
 	}
 	double modul = 0;
@@ -387,7 +387,7 @@ void OnMouseWheel(GLFWwindow* window, double xoffset, double yoffset)
 	ImGuiIO& io = ImGui::GetIO();
 
 // (2) ONLY forward mouse data to your underlying app/game.
-	if (editorEscenas.Activo() || modoJuegoFPS()) return;
+	if (sceneEditor.Activo() || fpsModeActive()) return;
 	if (!io.WantCaptureMouse) { // <Tractament mouse de l'aplicació>}
 		// Funció de zoom quan està activada la funció pan o les T. Geomètriques
 		if ((zzoom || zzoomO) || (transX) || (transY) || (transZ))

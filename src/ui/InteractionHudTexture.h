@@ -2,4 +2,4 @@
 
 #include "src/app/AppState.h"
 
-void cargarTexturaManoInteraccion();
+void loadInteractionHandTexture();

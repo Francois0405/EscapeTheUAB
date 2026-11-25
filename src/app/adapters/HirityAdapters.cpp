@@ -4,34 +4,34 @@
 #include "src/diagnostics/GrabTrace.h"
 
 // Contexto prestado a src/gameplay/hirity: el estado sigue siendo de main.cpp.
-const game::hiriti::HiritiContext& contextoHiriti()
+const game::hiriti::HiritiContext& hiritiBindings()
 {
 	static const game::hiriti::HiritiContext contexto{
-		audioManager, animacionHiriti, temporizadorAudioHiriti, objetosEscena, escenaFisica, mundoFisico,
-		redJuego, hiritiFollowPlayerEnabled, hiritiFollowStopDistance, hiritiFollowMaxSpeed,
-		[](glm::vec3& origen, glm::vec3& direccion) { origenYDireccionDeLaMirada(origen, direccion); },
+		audioManager, hiritiAnimator, hiritiAudioTimer, sceneObjects, physicsScene, physicsWorld,
+		networkGame, hiritiFollowPlayerEnabled, hiritiFollowStopDistance, hiritiFollowMaxSpeed,
+		[](glm::vec3& origen, glm::vec3& direccion) { gazeOriginAndDirection(origen, direccion); },
 		[] { return glm::vec2(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y)); },
 		[] { return glfwGetTime(); },
-		[] { return diagnosticoAgarreActivo(); },
-		[](const std::string& registro) { emitirDiagnosticoAgarre(registro); },
+		[] { return grabTraceEnabled(); },
+		[](const std::string& registro) { emitGrabTrace(registro); },
 		[](const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
 			const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
-			{ trazarAgarre(evento, id, peer, propietario, posicion, punto, detalle); }
+			{ traceGrab(evento, id, peer, propietario, posicion, punto, detalle); }
 	};
 	return contexto;
 }
 
-void reproducirSonidoHiriti(const std::string& ruta, float volumenBase)
+void playHiritiSoundCue(const std::string& ruta, float volumenBase)
 {
-	game::hiriti::PlayHiritiSound(contextoHiriti(), ruta, volumenBase);
+	game::hiriti::PlayHiritiSound(hiritiBindings(), ruta, volumenBase);
 }
 
-void actualizarHiriti(bool puedeDescubrir, bool puedeProcesarColisiones, float delta)
+void updateHiritiBehaviour(bool puedeDescubrir, bool puedeProcesarColisiones, float delta)
 {
-	game::hiriti::UpdateHiriti(contextoHiriti(), puedeDescubrir, puedeProcesarColisiones, delta);
+	game::hiriti::UpdateHiriti(hiritiBindings(), puedeDescubrir, puedeProcesarColisiones, delta);
 }
 
-void actualizarAudioAmbiente(bool activo, float delta)
+void updateAmbientSound(bool activo, float delta)
 {
-	game::hiriti::UpdateAmbientAudio(contextoHiriti(), activo, delta);
+	game::hiriti::UpdateAmbientAudio(hiritiBindings(), activo, delta);
 }

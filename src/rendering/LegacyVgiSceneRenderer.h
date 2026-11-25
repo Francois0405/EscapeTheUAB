@@ -47,44 +47,44 @@ struct SceneRenderContext
 	const glm::mat4& GTMatrix;
 
 	// Lighting and phone
-	const bool& renderizadoOptimizado;
-	const float& intensidadIndirectaEscena;
-	const float& intensidadAmbientalBaseEscena;
-	const float& escalaLuzDirectaEscena;
-	const int& modoDiagnosticoIluminacion;
-	const glm::vec3& colorReboteSueloEscena;
-	const glm::vec3& colorReboteCieloEscena;
-	const bool& lamparasLaboratorioActivas;
+	const bool& optimizedRendering;
+	const float& sceneIndirectIntensity;
+	const float& sceneBaseAmbientIntensity;
+	const float& sceneDirectLightScale;
+	const int& lightingDiagnosticMode;
+	const glm::vec3& sceneGroundBounceColor;
+	const glm::vec3& sceneSkyBounceColor;
+	const bool& labLampsEnabled;
 	LLUM (&llumGL)[NUM_MAX_LLUMS];
-	const bool& mostrarMovil;
+	const bool& showPhone;
 	COBJModel* const& phoneOBJ;
-	const float& movilEscala;
+	const float& phoneScale;
 
 	// Scene and live runtime state
-	const std::vector<SceneObject>& objetosEscena;
-	const std::unordered_map<std::string, std::unique_ptr<COBJModel>>& modelosHabitacion;
-	const editor::SceneEditor& editorEscenas;
-	const std::unique_ptr<fisica::PhysicsScene>& escenaFisica;
-	const glm::vec3& mitadTamanoPuertaDemo;
-	const glm::vec3& bisagraPuertaDemo;
-	const float& anguloPuertaDemo;
-	const fisica::FallingCubeDemo& demoFisica;
-	const bool& objetosAnimadosListos;
-	const glb::AnimatedScene& objetosAnimados;
-	const bool& mostrarColisionadores;
-	const fisica::PhysicsWorld& mundoFisico;
-	const netgame::NetworkGame& redJuego;
+	const std::vector<SceneObject>& sceneObjects;
+	const std::unordered_map<std::string, std::unique_ptr<COBJModel>>& roomModels;
+	const editor::SceneEditor& sceneEditor;
+	const std::unique_ptr<fisica::PhysicsScene>& physicsScene;
+	const glm::vec3& demoDoorHalfSize;
+	const glm::vec3& demoDoorHinge;
+	const float& demoDoorAngle;
+	const fisica::FallingCubeDemo& fallingCubeDemo;
+	const bool& animatedObjectsReady;
+	const glb::AnimatedScene& animatedObjects;
+	const bool& showColliders;
+	const fisica::PhysicsWorld& physicsWorld;
+	const netgame::NetworkGame& networkGame;
 
 	// Services provided by the application
-	void (*iniciarConsultaGpu)();
-	void (*actualizarOclusoresPhong)();
-	bool (*modoJuegoFPS)();
-	bool (*matrizMandoIzquierdoMundo)(glm::mat4&);
-	glm::mat4 (*matrizLocalMovilActual)();
-	void (*actualizarLinternaMovil)(const glm::mat4&);
-	GLuint (*texturaDeMaterial)(const SceneMaterial&);
-	void (*dibujarRayoMandoVR)();
-	void (*finalizarConsultaGpu)();
+	void (*beginGpuQuery)();
+	void (*updatePhongOccluders)();
+	bool (*fpsModeActive)();
+	bool (*leftControllerWorldMatrix)(glm::mat4&);
+	glm::mat4 (*currentPhoneLocalMatrix)();
+	void (*updatePhoneFlashlight)(const glm::mat4&);
+	GLuint (*materialTexture)(const SceneMaterial&);
+	void (*drawVrControllerRay)();
+	void (*endGpuQuery)();
 };
 
 void RenderLegacyVgiScene(const SceneRenderContext& ctx);

@@ -17,18 +17,18 @@ namespace netgame::session
 		// Adaptador de entrada. SOLO LEE la camara/mandos; nunca los modifica (la pose local manda).
 		bool BuildLocalPose(const SessionContext& context, net::PoseEntry& pose)
 		{
-			const auto& gestorOpenXR = context.xr;
-			auto& mundoFisico = context.physicsWorld;
+			const auto& openXrManager = context.xr;
+			auto& physicsWorld = context.physicsWorld;
 
 			const glm::vec3 ojos = context.eyePosition();
 			const glm::vec3 frente = context.viewForward();
-			if (gestorOpenXR.SesionEnMarcha() && context.hasHeadPose)
+			if (openXrManager.SesionEnMarcha() && context.hasHeadPose)
 			{
 				const glm::vec3 pies = context.bodyFeetPosition();
 				const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, frente,
-					gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo, mundoFisico.AlturaOjosJugador());
+					openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo, physicsWorld.AlturaOjosJugador());
 				vr::XrPose izq, der;
-				const bool hayIzq = gestorOpenXR.PoseApuntadoMando(0, izq), hayDer = gestorOpenXR.PoseApuntadoMando(1, der);
+				const bool hayIzq = openXrManager.PoseApuntadoMando(0, izq), hayDer = openXrManager.PoseApuntadoMando(1, der);
 				if (netgame::PoseDesdeVR(context.headPose, hayIzq ? &izq : nullptr, hayDer ? &der : nullptr, anclaje, pose)) return true;
 			}
 			return netgame::PoseDesdeEscritorio(ojos, frente, pose);
@@ -36,15 +36,15 @@ namespace netgame::session
 
 		bool FindDynamicObject(const SessionContext& context, uint32_t id, std::size_t& indice)
 		{
-			const auto& objetosEscena = context.sceneObjects;
-			return netgame::scene_network_state::FindUniqueDynamicSceneObjectIndex(id, objetosEscena, indice);
+			const auto& sceneObjects = context.sceneObjects;
+			return netgame::scene_network_state::FindUniqueDynamicSceneObjectIndex(id, sceneObjects, indice);
 		}
 
 		bool ApplySceneState(const SessionContext& context, const std::vector<netgame::SceneObjectState>& estados)
 		{
-			auto& objetosEscena = context.sceneObjects;
-			auto& redJuego = context.session;
-			const auto& reconstruirFisicaTrasEdicion = context.rebuildPhysics;
+			auto& sceneObjects = context.sceneObjects;
+			auto& networkGame = context.session;
+			const auto& rebuildPhysicsAfterEditing = context.rebuildPhysics;
 
 			std::vector<std::pair<std::size_t, const netgame::SceneObjectState*>> aplicaciones;
 			std::map<uint32_t, bool> idsRecibidos;
@@ -57,16 +57,16 @@ namespace netgame::session
 			{
 				const auto it = std::find_if(estados.rbegin(), estados.rend(), [&](const auto& e) { return e.id == par.first; });
 				if (it == estados.rend()) return false;
-				std::size_t indice = objetosEscena.size(), coincidencias = 0;
-				for (std::size_t i = 0; i < objetosEscena.size(); ++i)
-					if (netgame::HashId(objetosEscena[i].id) == par.first) { indice = i; ++coincidencias; }
+				std::size_t indice = sceneObjects.size(), coincidencias = 0;
+				for (std::size_t i = 0; i < sceneObjects.size(); ++i)
+					if (netgame::HashId(sceneObjects[i].id) == par.first) { indice = i; ++coincidencias; }
 				if (coincidencias != 1) return false; // desconocido o ID de escena ambiguo
 				aplicaciones.push_back({ indice, &*it });
 			}
 			std::vector<std::pair<std::size_t, SceneObject>> anteriores;
 			for (const auto& aplicacion : aplicaciones)
 			{
-				SceneObject& objeto = objetosEscena[aplicacion.first];
+				SceneObject& objeto = sceneObjects[aplicacion.first];
 				anteriores.push_back({ aplicacion.first, objeto });
 				const auto& e = *aplicacion.second;
 				objeto.posicion = e.posicion; objeto.rotacion = e.rotacion; objeto.escala = e.escala;
@@ -77,9 +77,9 @@ namespace netgame::session
 				objeto.fisica.mitadTamano = e.mitadTamano; objeto.fisica.desplazamiento = e.desplazamiento; objeto.fisica.masa = e.masa;
 			}
 			std::string error;
-			if (!aplicaciones.empty() && !reconstruirFisicaTrasEdicion(error, !redJuego.EsCliente()))
+			if (!aplicaciones.empty() && !rebuildPhysicsAfterEditing(error, !networkGame.EsCliente()))
 			{
-				for (const auto& anterior : anteriores) objetosEscena[anterior.first] = anterior.second;
+				for (const auto& anterior : anteriores) sceneObjects[anterior.first] = anterior.second;
 				std::cerr << "Red: se rechazo un cambio de escena porque Bullet no pudo reconstruirlo: " << error << '\n';
 				return false;
 			}
@@ -94,145 +94,145 @@ namespace netgame::session
 
 	void StartSession(const SessionContext& context, const NetworkConfig& cfg)
 	{
-		auto& redJuego = context.session;
-		auto& objetosAnimados = context.animatedObjects;
-		auto& puertasRed = context.networkDoors;
+		auto& networkGame = context.session;
+		auto& animatedObjects = context.animatedObjects;
+		auto& networkDoors = context.networkDoors;
 		bool& fisicaRedEnModoReplica = context.state.physicsInReplicaMode;
 		auto& objetosDormidosAntes = context.state.sleepingObjects;
 		auto& bufferFisicaRemota = context.state.remotePhysics;
-		const auto& reconstruirFisicaTrasEdicion = context.rebuildPhysics;
+		const auto& rebuildPhysicsAfterEditing = context.rebuildPhysics;
 
 		if (cfg.rol == net::Role::Offline)
 		{
-			const bool eraCliente = redJuego.EsCliente();
-			redJuego.Detener();
-			if (eraCliente || fisicaRedEnModoReplica) { std::string error; reconstruirFisicaTrasEdicion(error, true); fisicaRedEnModoReplica = false; }
+			const bool eraCliente = networkGame.EsCliente();
+			networkGame.Detener();
+			if (eraCliente || fisicaRedEnModoReplica) { std::string error; rebuildPhysicsAfterEditing(error, true); fisicaRedEnModoReplica = false; }
 			return;
 		}
-		if (redJuego.EnRed()) return;
+		if (networkGame.EnRed()) return;
 		bufferFisicaRemota.clear(); objetosDormidosAntes.clear();
-		puertasRed = std::make_unique<netgame::GlbDoors>(objetosAnimados);
+		networkDoors = std::make_unique<netgame::GlbDoors>(animatedObjects);
 		const std::string nombreEscena = context.sceneName();
 		std::vector<netgame::SceneObjectState> estadoEscena;
-		if (!CaptureSceneState(context, estadoEscena) || !redJuego.FijarEstadoEscena(estadoEscena, false))
+		if (!CaptureSceneState(context, estadoEscena) || !networkGame.FijarEstadoEscena(estadoEscena, false))
 		{
 			std::cerr << "Red: la escena tiene IDs duplicados o propiedades no validas; no se inicia la sesion.\n";
 			return;
 		}
 		const std::string escena = netgame::SceneNetworkFingerprint(nombreEscena, estadoEscena);
 		const glm::vec3 posicionObjetoPrueba = SharedObjectSpawnPosition(context.eyePosition(), context.viewForward());
-		if (!redJuego.Iniciar(cfg, escena, puertasRed.get(), posicionObjetoPrueba)) return;
+		if (!networkGame.Iniciar(cfg, escena, networkDoors.get(), posicionObjetoPrueba)) return;
 		std::string errorFisica;
-		if (!reconstruirFisicaTrasEdicion(errorFisica, cfg.rol != net::Role::Client))
+		if (!rebuildPhysicsAfterEditing(errorFisica, cfg.rol != net::Role::Client))
 		{
 			std::cerr << "Red: no se pudo preparar la autoridad fisica de la escena: " << errorFisica << '\n';
-			redJuego.Detener();
+			networkGame.Detener();
 		}
 		else fisicaRedEnModoReplica = cfg.rol == net::Role::Client;
 	}
 
 	void StopSession(const SessionContext& context)
 	{
-		auto& escenaFisica = context.physicsScene;
-		auto& redJuego = context.session;
+		auto& physicsScene = context.physicsScene;
+		auto& networkGame = context.session;
 		bool& fisicaRedEnModoReplica = context.state.physicsInReplicaMode;
 		auto& objetosDormidosAntes = context.state.sleepingObjects;
 		auto& agarresRemotosDesdeCabeza = context.state.headAnchoredRemoteGrabs;
 		auto& bufferFisicaRemota = context.state.remotePhysics;
-		const auto& reconstruirFisicaTrasEdicion = context.rebuildPhysics;
-		const auto& trazarAgarre = context.traceGrab;
+		const auto& rebuildPhysicsAfterEditing = context.rebuildPhysics;
+		const auto& traceGrab = context.traceGrab;
 
-		const bool eraCliente = redJuego.EsCliente();
-		if (redJuego.EsHost())
+		const bool eraCliente = networkGame.EsCliente();
+		if (networkGame.EsHost())
 		{
-			for (const auto& par : redJuego.PropietariosDinamicos())
+			for (const auto& par : networkGame.PropietariosDinamicos())
 			{
 				if (par.second == netgame::kSinDueno || par.second == net::kHostPeerId) continue;
 				std::size_t indice = 0;
 				if (FindDynamicObject(context, par.first, indice))
 				{
-					const bool liberado = escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
+					const bool liberado = physicsScene->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
 					glm::vec3 posicion(0.0f);
-					if (liberado) escenaFisica->PosicionObjetoDinamico(static_cast<int>(indice), posicion);
-					trazarAgarre("disconnect-release", par.first, par.second, par.second, posicion,
+					if (liberado) physicsScene->PosicionObjetoDinamico(static_cast<int>(indice), posicion);
+					traceGrab("disconnect-release", par.first, par.second, par.second, posicion,
 						glm::vec3(0.0f), liberado ? "host-session-stopped-and-cleared-peer-owner" : "host-session-stopped-constraint-not-active");
 				}
 				agarresRemotosDesdeCabeza.erase(par.first);
-				redJuego.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
+				networkGame.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
 			}
 		}
-		redJuego.Detener();
+		networkGame.Detener();
 		bufferFisicaRemota.clear(); objetosDormidosAntes.clear();
 		agarresRemotosDesdeCabeza.clear();
 		if (eraCliente || fisicaRedEnModoReplica)
 		{
 			std::string error;
-			if (!reconstruirFisicaTrasEdicion(error, true)) std::cerr << "Offline: no se pudo restaurar la simulacion local: " << error << '\n';
+			if (!rebuildPhysicsAfterEditing(error, true)) std::cerr << "Offline: no se pudo restaurar la simulacion local: " << error << '\n';
 			fisicaRedEnModoReplica = false;
 		}
 	}
 
 	void UpdateSession(const SessionContext& context, double ahora, bool jugando)
 	{
-		auto& objetosEscena = context.sceneObjects;
-		auto& escenaFisica = context.physicsScene;
-		auto& redJuego = context.session;
+		auto& sceneObjects = context.sceneObjects;
+		auto& physicsScene = context.physicsScene;
+		auto& networkGame = context.session;
 		bool& fisicaRedEnModoReplica = context.state.physicsInReplicaMode;
 		auto& objetosDormidosAntes = context.state.sleepingObjects;
 		auto& agarresRemotosDesdeCabeza = context.state.headAnchoredRemoteGrabs;
 		auto& bufferFisicaRemota = context.state.remotePhysics;
-		const auto& reconstruirFisicaTrasEdicion = context.rebuildPhysics;
-		const auto& trazarAgarre = context.traceGrab;
-		const auto& diagnosticoAgarreActivo = context.grabDebugActive;
-		const auto& entradaFPSActiva = context.fpsInputActive;
-		const auto& origenYDireccionDeLaMirada = context.lookRay;
+		const auto& rebuildPhysicsAfterEditing = context.rebuildPhysics;
+		const auto& traceGrab = context.traceGrab;
+		const auto& grabTraceEnabled = context.grabDebugActive;
+		const auto& fpsInputActive = context.fpsInputActive;
+		const auto& gazeOriginAndDirection = context.lookRay;
 
-		if (!redJuego.EnRed())
+		if (!networkGame.EnRed())
 		{
 			if (fisicaRedEnModoReplica)
 			{
 				std::string error;
-				if (!reconstruirFisicaTrasEdicion(error, true)) std::cerr << "Red: no se pudo restaurar Bullet local: " << error << '\n';
+				if (!rebuildPhysicsAfterEditing(error, true)) std::cerr << "Red: no se pudo restaurar Bullet local: " << error << '\n';
 				fisicaRedEnModoReplica = false;
 			}
 			return;
 		}
 		net::PoseEntry pose;
 		const bool hayPose = BuildLocalPose(context, pose);
-		redJuego.Actualizar(ahora, hayPose ? &pose : nullptr);
-		if (redJuego.EsHost())
+		networkGame.Actualizar(ahora, hayPose ? &pose : nullptr);
+		if (networkGame.EsHost())
 		{
 			std::vector<netgame::DynamicObjectRequest> solicitudes;
-			redJuego.TomarSolicitudesFisicas(solicitudes);
+			networkGame.TomarSolicitudesFisicas(solicitudes);
 			for (const auto& solicitud : solicitudes)
 			{
-				const net::PeerId propietario = redJuego.PropietarioDinamico(solicitud.id);
+				const net::PeerId propietario = networkGame.PropietarioDinamico(solicitud.id);
 				std::size_t indice = 0;
 				if (solicitud.agarrar)
 				{
 					if (!netgame::PuedeAdquirirDinamico(propietario, solicitud.peer,
-						redJuego.ObjetoDinamicoDePeer(solicitud.peer)) || !FindDynamicObject(context, solicitud.id, indice))
+						networkGame.ObjetoDinamicoDePeer(solicitud.peer)) || !FindDynamicObject(context, solicitud.id, indice))
 					{
-						trazarAgarre("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
+						traceGrab("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
 							solicitud.direccion, "owned-busy-or-unknown-dynamic-id");
 						continue;
 					}
 					net::PoseEntry poseRemota;
-					if (!redJuego.PoseDePeer(solicitud.peer, poseRemota))
+					if (!networkGame.PoseDePeer(solicitud.peer, poseRemota))
 					{
-						trazarAgarre("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
+						traceGrab("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
 							solicitud.direccion, "peer-pose-unavailable");
 						continue;
 					}
 					if (!RemoteGrabRayMatchesPose(solicitud.origen, solicitud.direccion, poseRemota))
 					{
-						trazarAgarre("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
+						traceGrab("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
 							solicitud.direccion, "ray-origin-or-direction-does-not-match-peer-pose");
 						continue;
 					}
-					if (!escenaFisica->SujetarDinamicoRemoto(static_cast<int>(indice), solicitud.origen, solicitud.direccion))
+					if (!physicsScene->SujetarDinamicoRemoto(static_cast<int>(indice), solicitud.origen, solicitud.direccion))
 					{
-						trazarAgarre("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
+						traceGrab("reject", solicitud.id, solicitud.peer, propietario, solicitud.origen,
 							solicitud.direccion, "host-ray-missed-target-or-target-already-constrained");
 						continue;
 					}
@@ -240,41 +240,41 @@ namespace netgame::session
 					// marcador visual a 0,5 m. En VR el rayo y la pose real salen del mismo mando.
 					const bool desdeCabeza = GrabAnchorsToHead(solicitud.origen, poseRemota);
 					agarresRemotosDesdeCabeza[solicitud.id] = desdeCabeza;
-					redJuego.FijarPropietarioDinamico(solicitud.id, solicitud.peer);
+					networkGame.FijarPropietarioDinamico(solicitud.id, solicitud.peer);
 					glm::vec3 posicionObjeto(0.0f);
-					escenaFisica->PosicionObjetoDinamico(static_cast<int>(indice), posicionObjeto);
+					physicsScene->PosicionObjetoDinamico(static_cast<int>(indice), posicionObjeto);
 					const net::Transform7& poseAgarre = desdeCabeza ? poseRemota.head : poseRemota.rightHand;
 					const glm::vec3 puntoAgarre = fisica::PhysicsScene::DestinoDeAgarre(
 						netgame::PosDe(poseAgarre), netgame::RotDe(poseAgarre) * glm::vec3(0, 1, 0));
-					trazarAgarre("accepted", solicitud.id, solicitud.peer, solicitud.peer, posicionObjeto,
+					traceGrab("accepted", solicitud.id, solicitud.peer, solicitud.peer, posicionObjeto,
 						puntoAgarre, desdeCabeza ? "host-dynamic-remote-constraint-head-anchor" : "host-dynamic-remote-constraint-vr-hand-anchor");
-					if (objetosEscena[indice].id == "hiriti") context.onHiritiGrabbed();
+					if (sceneObjects[indice].id == "hiriti") context.onHiritiGrabbed();
 				}
 				else if (propietario == solicitud.peer)
 				{
 					const bool liberado = FindDynamicObject(context, solicitud.id, indice) &&
-						escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), solicitud.velocidad);
+						physicsScene->SoltarDinamicoRemoto(static_cast<int>(indice), solicitud.velocidad);
 					glm::vec3 posicionLiberada(0.0f);
-					if (liberado) escenaFisica->PosicionObjetoDinamico(static_cast<int>(indice), posicionLiberada);
-					trazarAgarre(solicitud.desconexionPeer ? "disconnect-release" : (liberado ? "released" : "release-rejected"), solicitud.id, solicitud.peer,
+					if (liberado) physicsScene->PosicionObjetoDinamico(static_cast<int>(indice), posicionLiberada);
+					traceGrab(solicitud.desconexionPeer ? "disconnect-release" : (liberado ? "released" : "release-rejected"), solicitud.id, solicitud.peer,
 						propietario, posicionLiberada, solicitud.velocidad,
 						solicitud.desconexionPeer
 							? (liberado ? "peer-left-and-host-restored-gravity" : "peer-left-but-constraint-not-active")
 							: (liberado ? "host-restored-gravity-and-applied-throw-velocity" : "constraint-was-not-active"));
-					if (liberado && objetosEscena[indice].id == "hiriti")
+					if (liberado && sceneObjects[indice].id == "hiriti")
 						context.onHiritiThrown(ThrowChargeFromReleaseVelocity(solicitud.velocidad));
 					agarresRemotosDesdeCabeza.erase(solicitud.id);
 					// La propiedad también se limpia si el cuerpo ya no existe/reconstruyó.
-					redJuego.FijarPropietarioDinamico(solicitud.id, netgame::kSinDueno);
+					networkGame.FijarPropietarioDinamico(solicitud.id, netgame::kSinDueno);
 				}
 				else if (!solicitud.agarrar)
 				{
-					trazarAgarre("release-rejected", solicitud.id, solicitud.peer, propietario,
+					traceGrab("release-rejected", solicitud.id, solicitud.peer, propietario,
 						solicitud.velocidad, glm::vec3(0.0f), "requester-is-not-current-owner");
 				}
 			}
 
-			for (const auto& par : redJuego.PropietariosDinamicos())
+			for (const auto& par : networkGame.PropietariosDinamicos())
 			{
 				if (par.second == netgame::kSinDueno) continue;
 				static std::map<uint32_t, double> ultimaMuestraAgarre;
@@ -282,28 +282,28 @@ namespace netgame::session
 				if (!FindDynamicObject(context, par.first, indice)) continue;
 				if (par.second == net::kHostPeerId)
 				{
-					if (escenaFisica->ObjetoAgarrado() != static_cast<int>(indice))
+					if (physicsScene->ObjetoAgarrado() != static_cast<int>(indice))
 					{
-						trazarAgarre("auto-drop", par.first, par.second, par.second, glm::vec3(0.0f),
+						traceGrab("auto-drop", par.first, par.second, par.second, glm::vec3(0.0f),
 							glm::vec3(0.0f), "host-owner-set-but-local-constraint-missing-owner-cleared");
 						agarresRemotosDesdeCabeza.erase(par.first);
-						redJuego.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
+						networkGame.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
 					}
-					else if (diagnosticoAgarreActivo())
+					else if (grabTraceEnabled())
 					{
 						auto& ultima = ultimaMuestraAgarre[par.first];
 						if (ahora - ultima >= 0.5)
 						{
 							glm::vec3 posicion(0.0f);
-							if (escenaFisica->PosicionObjetoDinamico(static_cast<int>(indice), posicion))
-								trazarAgarre("holding", par.first, net::kHostPeerId, net::kHostPeerId, posicion,
+							if (physicsScene->PosicionObjetoDinamico(static_cast<int>(indice), posicion))
+								traceGrab("holding", par.first, net::kHostPeerId, net::kHostPeerId, posicion,
 									posicion, "host-local-dynamic-constraint-active");
 							ultima = ahora;
 						}
 					}
 					continue;
 				}
-				if (!redJuego.PoseDePeer(par.second, poseRemota)) continue;
+				if (!networkGame.PoseDePeer(par.second, poseRemota)) continue;
 				const auto anclaje = agarresRemotosDesdeCabeza.find(par.first);
 				const bool desdeCabeza = anclaje != agarresRemotosDesdeCabeza.end() && anclaje->second;
 				const net::Transform7& poseAnclaje = desdeCabeza ? poseRemota.head : poseRemota.rightHand;
@@ -311,33 +311,33 @@ namespace netgame::session
 				const glm::vec3 direccionAgarre = netgame::RotDe(poseAnclaje) * glm::vec3(0, 1, 0);
 				const glm::vec3 destino = fisica::PhysicsScene::DestinoDeAgarre(origenAgarre, direccionAgarre);
 				std::vector<fisica::PhysicsScene::DynamicState> actuales;
-				escenaFisica->CapturarEstadosDinamicos(actuales);
+				physicsScene->CapturarEstadosDinamicos(actuales);
 				auto actual = std::find_if(actuales.begin(), actuales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
 				if (actual == actuales.end())
 				{
-					trazarAgarre("auto-drop", par.first, par.second, par.second, glm::vec3(0.0f),
+					traceGrab("auto-drop", par.first, par.second, par.second, glm::vec3(0.0f),
 						glm::vec3(0.0f), "host-body-missing-position-unavailable-owner-cleared");
 					agarresRemotosDesdeCabeza.erase(par.first);
-					redJuego.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
+					networkGame.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
 				}
 				else if (glm::distance(actual->pose.posicion, destino) > fisica::PhysicsScene::SoltarSiSeAleja)
 				{
-					const bool liberado = escenaFisica->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
-					trazarAgarre(liberado ? "auto-release" : "auto-drop", par.first, par.second, par.second, actual->pose.posicion,
+					const bool liberado = physicsScene->SoltarDinamicoRemoto(static_cast<int>(indice), glm::vec3(0.0f));
+					traceGrab(liberado ? "auto-release" : "auto-drop", par.first, par.second, par.second, actual->pose.posicion,
 						destino, liberado ? "host-dynamic-constraint-exceeded-two-meter-limit" : "distance-limit-but-constraint-not-active");
 					agarresRemotosDesdeCabeza.erase(par.first);
-					redJuego.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
+					networkGame.FijarPropietarioDinamico(par.first, netgame::kSinDueno);
 				}
 				else
 				{
-					escenaFisica->ActualizarAgarreRemoto(static_cast<int>(indice), destino);
-					if (diagnosticoAgarreActivo())
+					physicsScene->ActualizarAgarreRemoto(static_cast<int>(indice), destino);
+					if (grabTraceEnabled())
 					{
 						auto& ultima = ultimaMuestraAgarre[par.first];
 						if (ahora - ultima >= 0.5)
 						{
-							trazarAgarre("holding", par.first, par.second, par.second, actual->pose.posicion,
-								destino, escenaFisica->ObjetoDinamicoSujeto(static_cast<int>(indice))
+							traceGrab("holding", par.first, par.second, par.second, actual->pose.posicion,
+								destino, physicsScene->ObjetoDinamicoSujeto(static_cast<int>(indice))
 									? "host-dynamic-constraint-active" : "owner-set-but-constraint-missing");
 							ultima = ahora;
 						}
@@ -348,14 +348,14 @@ namespace netgame::session
 			if (jugando)
 			{
 				std::vector<fisica::PhysicsScene::DynamicState> fisicos;
-				escenaFisica->CapturarEstadosDinamicos(fisicos);
+				physicsScene->CapturarEstadosDinamicos(fisicos);
 				std::vector<net::DynamicStateEntry> estados;
 				estados.reserve(fisicos.size());
 				for (const auto& fisico : fisicos)
 				{
-					if (fisico.indiceObjeto < 0 || fisico.indiceObjeto >= static_cast<int>(objetosEscena.size())) continue;
+					if (fisico.indiceObjeto < 0 || fisico.indiceObjeto >= static_cast<int>(sceneObjects.size())) continue;
 					net::DynamicStateEntry estado;
-					estado.objectId = netgame::HashId(objetosEscena[fisico.indiceObjeto].id);
+					estado.objectId = netgame::HashId(sceneObjects[fisico.indiceObjeto].id);
 					estado.tick = PhysicsSnapshotTick(ahora);
 					estado.transform = netgame::ATransform(fisico.pose.posicion, fisico.pose.rotacion);
 					for (int i = 0; i < 3; ++i)
@@ -363,33 +363,33 @@ namespace netgame::session
 						estado.linearVelocity[i] = fisico.velocidad[i];
 						estado.angularVelocity[i] = fisico.velocidadAngular[i];
 					}
-					estado.owner = redJuego.PropietarioDinamico(estado.objectId);
+					estado.owner = networkGame.PropietarioDinamico(estado.objectId);
 					estado.flags = PhysicsStateFlags(fisico.activo, estado.owner);
 					estados.push_back(estado);
 					if (netgame::publication::ObserveHostSleepTransition(
 						objetosDormidosAntes, estado.objectId, fisico.activo))
-						redJuego.PublicarEstadoFisicoFinal(estado);
+						networkGame.PublicarEstadoFisicoFinal(estado);
 				}
-				redJuego.EnviarEstadosFisicos(estados);
+				networkGame.EnviarEstadosFisicos(estados);
 			}
 		}
-		if (redJuego.EsCliente())
+		if (networkGame.EsCliente())
 		{
-			const uint32_t objetoPropio = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
-			const auto hiritiPropio = std::find_if(objetosEscena.begin(), objetosEscena.end(), [objetoPropio](const SceneObject& objeto)
+			const uint32_t objetoPropio = networkGame.ObjetoDinamicoDePeer(networkGame.PeerLocal());
+			const auto hiritiPropio = std::find_if(sceneObjects.begin(), sceneObjects.end(), [objetoPropio](const SceneObject& objeto)
 				{ return objetoPropio != 0 && netgame::HashId(objeto.id) == objetoPropio && objeto.id == "hiriti"; });
-			if (hiritiPropio != objetosEscena.end()) context.onHiritiGrabbed();
+			if (hiritiPropio != sceneObjects.end()) context.onHiritiGrabbed();
 
 			std::vector<netgame::SceneObjectState> estados;
-			redJuego.TomarEstadosEscena(estados);
+			networkGame.TomarEstadosEscena(estados);
 			if (!estados.empty() && !ApplySceneState(context, estados))
 				std::cerr << "Red: actualizacion de objeto desconocido, ambiguo o incompatible descartada.\n";
 
 			std::vector<net::DynamicStateEntry> finales;
-			redJuego.TomarEstadosFisicosFiables(finales);
+			networkGame.TomarEstadosFisicosFiables(finales);
 			for (const auto& estado : finales)
 				netgame::timeline::ApplyReliableFinalPhysicsState(bufferFisicaRemota, estado, ahora);
-			for (const auto& par : redJuego.EstadosFisicosRemotos())
+			for (const auto& par : networkGame.EstadosFisicosRemotos())
 				netgame::timeline::StoreRemotePhysicsSample(bufferFisicaRemota, par.second, ahora);
 
 			static double ultimoTiempoFisica = ahora;
@@ -407,7 +407,7 @@ namespace netgame::session
 				if ((objetivo.flags & 1) != 0)
 				{
 					std::vector<fisica::PhysicsScene::DynamicState> locales;
-					escenaFisica->CapturarEstadosDinamicos(locales);
+					physicsScene->CapturarEstadosDinamicos(locales);
 					auto actual = std::find_if(locales.begin(), locales.end(), [&](const auto& e) { return e.indiceObjeto == static_cast<int>(indice); });
 					if (actual != locales.end())
 					{
@@ -418,10 +418,10 @@ namespace netgame::session
 						aplicado.pose.rotacion = mezcla.rotation;
 					}
 				}
-				escenaFisica->AplicarEstadoReplicado(aplicado);
-				const net::PeerId propietario = redJuego.PropietarioDinamico(par.first);
-				if (diagnosticoAgarreActivo() && propietario != netgame::kSinDueno &&
-					redJuego.EsCliente())
+				physicsScene->AplicarEstadoReplicado(aplicado);
+				const net::PeerId propietario = networkGame.PropietarioDinamico(par.first);
+				if (grabTraceEnabled() && propietario != netgame::kSinDueno &&
+					networkGame.EsCliente())
 				{
 					static std::map<uint32_t, double> ultimaMuestraReplica;
 					auto& ultima = ultimaMuestraReplica[par.first];
@@ -434,18 +434,18 @@ namespace netgame::session
 							<< rotacion.x << ',' << rotacion.y << ',' << rotacion.z << ',' << rotacion.w
 							<< ");host-target-rotation=(" << rotacionObjetivo.x << ',' << rotacionObjetivo.y << ','
 							<< rotacionObjetivo.z << ',' << rotacionObjetivo.w << ')';
-						trazarAgarre("replica", par.first, propietario, propietario, aplicado.pose.posicion,
+						traceGrab("replica", par.first, propietario, propietario, aplicado.pose.posicion,
 							netgame::PosDe(objetivo.transform), detalle.str().c_str());
 						ultima = ahora;
 					}
 				}
 			}
 		}
-		if (jugando && redJuego.Activa() && entradaFPSActiva())
+		if (jugando && networkGame.Activa() && fpsInputActive())
 		{
 			glm::vec3 origen, direccion;
-			origenYDireccionDeLaMirada(origen, direccion);
-			redJuego.ActualizarAcarreo(origen, direccion, ahora);
+			gazeOriginAndDirection(origen, direccion);
+			networkGame.ActualizarAcarreo(origen, direccion, ahora);
 		}
 	}
 }

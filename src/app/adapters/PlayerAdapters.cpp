@@ -3,10 +3,10 @@
 #include "src/app/input/CursorCapture.h"
 #include "src/legacy_vgi/VgiMenuCallbacks.h"
 
-gameplay::player::PlayerContext& contextoJugador()
+gameplay::player::PlayerContext& playerBindings()
 {
 	static gameplay::player::PlayerContext context{
-		mundoFisico, escenaFisica, escenaTieneGeometriaValida, spawnEscenaActiva, nombreEscenaActiva,
+		physicsWorld, physicsScene, sceneHasValidGeometry, activeSceneSpawn, activeSceneName,
 		opvN, n, angleZ, camera, projeccio, CAM_NAVEGA, PERSPECT,
 		show_EntornVGI_window, oProjeccio, oCamera, oObjecte, oIlumina, oShader, ifixe, SkyBoxCube,
 		[] { OnProjeccioPerspectiva(); }, [] { OnCameraNavega(); }, [] { OnObjecteCub(); },
@@ -16,18 +16,18 @@ gameplay::player::PlayerContext& contextoJugador()
 			llumGL[0].difusa.r = 0.12f; llumGL[0].difusa.g = 0.15f; llumGL[0].difusa.b = 0.18f;
 			llumGL[0].especular.r = 0.03f; llumGL[0].especular.g = 0.03f; llumGL[0].especular.b = 0.03f;
 		},
-		 movimientoJugador, balanceoCamara, hayPiesFotogramaAnterior, piesFotogramaAnterior,
-		 pesoCaminata, faseCaminata, mouseSwayX, mouseSwayY, mouseDeltaX, mouseDeltaY, intensidadMouse,
-		 tiempoFPS, deltaFPS, [] { return entradaFPSActiva(); }
+		 playerMovement, cameraBob, hasPreviousFrameFeet, previousFrameFeet,
+		 walkWeight, walkPhase, mouseSwayX, mouseSwayY, mouseDeltaX, mouseDeltaY, mouseSwayIntensity,
+		 fpsTime, deltaFPS, [] { return fpsInputActive(); }
 	};
 	return context;
 }
 
-void fijarCamaraAlSpawn(const SceneSpawn& spawn) { gameplay::player::fixCameraAtSpawn(contextoJugador(), spawn); }
+void placeCameraAtSpawn(const SceneSpawn& spawn) { gameplay::player::fixCameraAtSpawn(playerBindings(), spawn); }
 
-void aplicarPresetJuego() { gameplay::player::applyGamePreset(contextoJugador()); }
+void applyStartupPreset() { gameplay::player::applyGamePreset(playerBindings()); }
 
-void inclinarJugadorFPS(double deltaY) { gameplay::player::look(contextoJugador(), deltaY); }
+void pitchFpsPlayer(double deltaY) { gameplay::player::look(playerBindings(), deltaY); }
 
 // --- JUGADOR FÍSICO (Fase 3) ---------------------------------------------------------
 // Reparto de trabajo (el mismo que se usará con VR):
@@ -38,28 +38,28 @@ void inclinarJugadorFPS(double deltaY) { gameplay::player::look(contextoJugador(
 // La orientación (ratón) NO pasa por Bullet: sigue siendo cosa de la cámara.
 // (las velocidades -caminar, agachado, sprint- viven en fps::ParametrosMovimiento, editables en F1)
 
-bool hayTeclaDeMovimiento(GLFWwindow* window)
+bool movementKeyPressed(GLFWwindow* window)
 {
 	return glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS ||
 		glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS || glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS;
 }
 
-glm::vec3 posicionPiesDesdeCamara()
+glm::vec3 feetPositionFromCamera()
 {
-	return glm::vec3(opvN.x, opvN.y, opvN.z - mundoFisico.AlturaOjosJugador());
+	return glm::vec3(opvN.x, opvN.y, opvN.z - physicsWorld.AlturaOjosJugador());
 }
 
-void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
+void gazeOriginAndDirection(glm::vec3& origen, glm::vec3& direccion)
 {
-	if (gestorOpenXR.SesionEnMarcha())
+	if (openXrManager.SesionEnMarcha())
 	{
 		vr::XrPose poseMando;
-		if (gestorOpenXR.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
+		if (openXrManager.PoseApuntadoMando(1, poseMando)) // Solo mando derecho (1)
 		{
-			const glm::vec3 pies = mundoFisico.HayJugador() ? mundoFisico.PosicionPiesJugador() : posicionPiesDesdeCamara();
+			const glm::vec3 pies = physicsWorld.HayJugador() ? physicsWorld.PosicionPiesJugador() : feetPositionFromCamera();
 			const glm::vec3 frenteFPS(static_cast<float>(n[0] - opvN.x), static_cast<float>(n[1] - opvN.y), static_cast<float>(n[2] - opvN.z));
 			const vr::Anchor anclaje = vr::AnclajeDelJugador(pies, frenteFPS,
-				gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo, mundoFisico.AlturaOjosJugador());
+				openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo, physicsWorld.AlturaOjosJugador());
 
 			const glm::mat4 vistaMando = vr::VistaDeOjoVR(poseMando, anclaje);
 			const glm::mat4 mundoMando = glm::inverse(vistaMando);
@@ -77,22 +77,22 @@ void origenYDireccionDeLaMirada(glm::vec3& origen, glm::vec3& direccion)
 
 // Crea la cápsula bajo la cámara actual. Se llama tras cargar la primera habitación, para que
 // el suelo ya exista y el jugador no caiga al vacío.
-bool crearJugadorFisico() { return gameplay::player::createPhysicsPlayer(contextoJugador()); }
+bool spawnPhysicsPlayer() { return gameplay::player::createPhysicsPlayer(playerBindings()); }
 
 // Convierte las teclas WASD en una velocidad horizontal DEL MUNDO (sin tocar la posición).
-void moverJugadorFPS(GLFWwindow* window, double velocidadJugador) { gameplay::player::moveFpsPlayer(contextoJugador(), window, velocidadJugador); }
+void moveFirstPersonPlayer(GLFWwindow* window, double velocidadJugador) { gameplay::player::moveFpsPlayer(playerBindings(), window, velocidadJugador); }
 
 // Después de simular: la cámara va a donde está la cápsula (conservando hacia dónde mira).
 // Si NO estamos en modo FPS (cámaras de depuración), ocurre lo contrario: la cápsula sigue a la
 // cámara, para que al volver al modo FPS esté donde toca y no haya un salto.
-void sincronizarJugadorYCamara() { gameplay::player::synchronizePlayerAndCamera(contextoJugador()); }
+void syncPlayerWithCamera() { gameplay::player::synchronizePlayerAndCamera(playerBindings()); }
 
-void actualizarMovimientoMovil(GLFWwindow* window, float deltaTime) { (void)window; gameplay::player::updateMobile(contextoJugador(), deltaTime); }
+void updatePhoneMotion(GLFWwindow* window, float deltaTime) { (void)window; gameplay::player::updateMobile(playerBindings(), deltaTime); }
 
 // Despues de simular: el balanceo visual sigue el desplazamiento REAL de la capsula (no la tecla pulsada),
 // asi que la camara y el movil comparten la misma fase y se quedan quietos al chocar con una pared.
-void actualizarBalanceoVisual(float delta) { gameplay::player::updateVisualBob(contextoJugador(), delta); }
+void updateCameraBobbing(float delta) { gameplay::player::updateVisualBob(playerBindings(), delta); }
 
 // Desplazamiento SOLO VISUAL del ojo en pantalla (derecha y arriba de la camara). No modifica opvN/n, que usan la
 // fisica, las puertas y el agarre. No se aplica en VR: alli manda la cabeza real.
-glm::dvec3 desplazamientoVisualDeCamara() { return gameplay::player::visualCameraDisplacement(contextoJugador()); }
+glm::dvec3 cameraVisualOffset() { return gameplay::player::visualCameraDisplacement(playerBindings()); }

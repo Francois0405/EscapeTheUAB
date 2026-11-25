@@ -53,7 +53,7 @@ struct RuntimeRenderer
 	const CMask3D& grid;
 	const CPunt3D& hgrid;
 	const bool& statusB;
-	const bool& modoEstereoPrueba;
+	const bool& stereoTestMode;
 
 	// Shader programs and axes VAO
 	GLuint& shader_programID;
@@ -63,23 +63,23 @@ struct RuntimeRenderer
 	Shader& shaderLighting;
 
 	// Editor and VR
-	const editor::SceneEditor& editorEscenas;
-	vr::OpenXrManager& gestorOpenXR;
-	vr::XrPose& ultimaCabezaVR;		// head pose of the last VR frame, read by networking
-	bool& hayCabezaVR;
+	const editor::SceneEditor& sceneEditor;
+	vr::OpenXrManager& openXrManager;
+	vr::XrPose& lastVrHead;		// head pose of the last VR frame, read by networking
+	bool& hasVrHead;
 
 	// Services that stay in main.cpp
 	std::function<void()> configura_Escena;
 	std::function<void()> dibuixa_Escena;
 	std::function<void()> Barra_Estat;
-	std::function<glm::dvec3()> desplazamientoVisualDeCamara;
+	std::function<glm::dvec3()> cameraVisualOffset;
 	std::function<glm::vec3()> piesJugador;
 	std::function<float()> alturaOjosJugador;
 
 	void OnSize(GLFWwindow* window, int width, int height);
 	void OnFramebufferSize(GLFWwindow* window, int width, int height);
 	void dibujarEscenaEstereo(int anchoVentana, int altoVentana);
-	bool dibujarEscenaVR();
+	bool drawVrScene();
 	void OnPaint(GLFWwindow* window);
 
 private:

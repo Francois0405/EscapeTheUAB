@@ -2,7 +2,7 @@
 
 #include "src/app/AppState.h"
 
-bool modoJuegoFPS();
-void fijarCapturaCursor(GLFWwindow* window, bool capturar);
-void sincronizarCursorFPS(GLFWwindow* window);
-bool entradaFPSActiva();
+bool fpsModeActive();
+void setCursorCapture(GLFWwindow* window, bool capturar);
+void syncFpsCursor(GLFWwindow* window);
+bool fpsInputActive();

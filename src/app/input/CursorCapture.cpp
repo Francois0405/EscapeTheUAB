@@ -2,26 +2,26 @@
 #include "src/app/input/CursorCapture.h"
 #include "src/app/adapters/PlayerAdapters.h"
 
-bool modoJuegoFPS() { return gameplay::player::isFpsMode(contextoJugador()); }
+bool fpsModeActive() { return gameplay::player::isFpsMode(playerBindings()); }
 
-void fijarCapturaCursor(GLFWwindow* window, bool capturar)
+void setCursorCapture(GLFWwindow* window, bool capturar)
 {
-	if (fpsCursorCapturado == capturar) return;
-	fpsCursorCapturado = capturar;
-	fpsTienePosicionAnterior = false;
+	if (fpsCursorCaptured == capturar) return;
+	fpsCursorCaptured = capturar;
+	fpsHasPreviousPosition = false;
 	glfwSetInputMode(window, GLFW_CURSOR, capturar ? GLFW_CURSOR_DISABLED : GLFW_CURSOR_NORMAL);
 	// Al cambiar GLFW_CURSOR se reinicia el delta antes de aplicar giro FPS.
 }
 
-void sincronizarCursorFPS(GLFWwindow* window)
+void syncFpsCursor(GLFWwindow* window)
 {
-	const bool capturar = modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug && ventanaConFoco && fpsCapturaSolicitada;
-	fijarCapturaCursor(window, capturar);
+	const bool capturar = fpsModeActive() && !sceneEditor.Activo() && !fpsPaused && !showDebugPanels && windowFocused && fpsCaptureRequested;
+	setCursorCapture(window, capturar);
 }
 
 // Estado del juego FPS que permite la entrada (no hay pausa, ni foco perdido, ni paneles de depuracion).
-bool entradaFPSActiva()
+bool fpsInputActive()
 {
-	return modoJuegoFPS() && !editorEscenas.Activo() && !fpsPausado && !mostrarPanelesDebug &&
-		(ventanaConFoco || gestorOpenXR.SesionEnMarcha());
+	return fpsModeActive() && !sceneEditor.Activo() && !fpsPaused && !showDebugPanels &&
+		(windowFocused || openXrManager.SesionEnMarcha());
 }

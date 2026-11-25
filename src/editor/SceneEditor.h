@@ -70,7 +70,7 @@ namespace editor
 		// Visibilidad TEMPORAL de la vista de edición (no toca la escena ni el JSON). Fuera de EDIT todo es visible.
 		bool ObjetoVisible(std::size_t indice) const;
 		bool MostrarAnimados() const;
-		bool MostrarColisionadores() const { return mostrarColisionadores; }
+		bool MostrarColisionadores() const { return showColliders; }
 
 		int Seleccionado() const { return seleccionado; }
 		void MarcarGuardado() { modificada = false; }
@@ -162,7 +162,7 @@ namespace editor
 		bool local = false;
 		bool snap = false;
 		GizmoPostSelectionLock bloqueoGizmoTrasSeleccion;
-		bool mostrarColisionadores = false;
+		bool showColliders = false;
 		bool seleccionCambiada = false;
 		bool mensajeEsError = false;
 		int seleccionado = -1;

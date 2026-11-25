@@ -44,25 +44,25 @@ void MostraEntornVGIWindow(bool* p_open)
 			ShowArxiusOptions();
 			ImGui::EndMenu();
 		}
-		if (modoJuegoFPS() && ImGui::BeginMenu("Juego"))
+		if (fpsModeActive() && ImGui::BeginMenu("Juego"))
 		{
 			if (ImGui::MenuItem(
-				estadoActual == ESTADO_PAUSA ? "Reanudar juego FPS" : "Pausar juego FPS"))
+				currentGameState == ESTADO_PAUSA ? "Reanudar juego FPS" : "Pausar juego FPS"))
 			{
-				if (estadoActual == ESTADO_JUGANDO)
+				if (currentGameState == ESTADO_JUGANDO)
 				{
-					estadoActual = ESTADO_PAUSA;
-					cancelarCargaLanzamiento();
+					currentGameState = ESTADO_PAUSA;
+					cancelThrowChargeInput();
 				}
-				else if (estadoActual == ESTADO_PAUSA)
+				else if (currentGameState == ESTADO_PAUSA)
 				{
-					estadoActual = ESTADO_JUGANDO;
-					fpsTienePosicionAnterior = false;
+					currentGameState = ESTADO_JUGANDO;
+					fpsHasPreviousPosition = false;
 					mouseDeltaX = mouseDeltaY = 0.0;
 				}
 
-				fpsPausado = (estadoActual != ESTADO_JUGANDO);
-				sincronizarCursorFPS(window);
+				fpsPaused = (currentGameState != ESTADO_JUGANDO);
+				syncFpsCursor(window);
 			}
 			ImGui::EndMenu();
 		}
@@ -87,9 +87,9 @@ void ShowArxiusOptions()
 	ImGui::MenuItem("(Arxius menu)", NULL, false, false);
 	if (ImGui::MenuItem("New")) {}
 	if (ImGui::MenuItem("Cargar habitacion JSON"))
-		cargarYAplicarEscena("assets/scenes/habitacion_beta.json");
+		loadAndApplyScene("assets/scenes/habitacion_beta.json");
 	if (ImGui::MenuItem("Cargar ejemplo fisica JSON"))
-		cargarYAplicarEscena("assets/scenes/ejemplo_fisica.json");
+		loadAndApplyScene("assets/scenes/ejemplo_fisica.json");
 
 	if (ImGui::MenuItem("Obrir Fitxer OBJ", "(<Shift>+#)")) {
 		nfdchar_t* nomFitxer = NULL;

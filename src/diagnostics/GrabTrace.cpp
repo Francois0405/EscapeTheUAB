@@ -1,7 +1,7 @@
 #include "src/app/AppState.h"
 #include "src/diagnostics/GrabTrace.h"
 
-bool diagnosticoAgarreActivo()
+bool grabTraceEnabled()
 {
 	static const bool activo = []
 	{
@@ -11,17 +11,17 @@ bool diagnosticoAgarreActivo()
 	return activo;
 }
 
-net::GrabDiagnosticRole rolDiagnosticoAgarre()
+net::GrabDiagnosticRole grabTraceRole()
 {
-	return redJuego.EsHost() ? net::GrabDiagnosticRole::Host :
-		redJuego.EsCliente() ? net::GrabDiagnosticRole::Client : net::GrabDiagnosticRole::Offline;
+	return networkGame.EsHost() ? net::GrabDiagnosticRole::Host :
+		networkGame.EsCliente() ? net::GrabDiagnosticRole::Client : net::GrabDiagnosticRole::Offline;
 }
 
-void persistirDiagnosticoAgarre(const std::string& registro)
+void persistGrabTrace(const std::string& registro)
 {
 	if (!net::GrabPersistenceEnabledFromEnvironment()) return;
 	static std::array<std::unique_ptr<net::GrabDiagnostics>, 3> sinks;
-	const auto rol = rolDiagnosticoAgarre();
+	const auto rol = grabTraceRole();
 	const auto indice = static_cast<std::size_t>(rol);
 	auto& sink = sinks[indice];
 	if (!sink)
@@ -30,19 +30,19 @@ void persistirDiagnosticoAgarre(const std::string& registro)
 	sink->Write(registro);
 }
 
-void emitirDiagnosticoAgarre(const std::string& registro)
+void emitGrabTrace(const std::string& registro)
 {
 	std::clog << registro << '\n';
-	persistirDiagnosticoAgarre(registro);
+	persistGrabTrace(registro);
 }
 
-void trazarAgarre(const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
+void traceGrab(const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
 	const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
 {
-	if (!diagnosticoAgarreActivo()) return;
+	if (!grabTraceEnabled()) return;
 	std::ostringstream registro;
 	registro << "[grab] " << evento << " id=" << id << " peer=" << peer << " owner=" << propietario
 		<< " detail=" << detalle << " pos=(" << posicion.x << ',' << posicion.y << ',' << posicion.z
 		<< ") point=(" << punto.x << ',' << punto.y << ',' << punto.z << ')';
-	emitirDiagnosticoAgarre(registro.str());
+	emitGrabTrace(registro.str());
 }

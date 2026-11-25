@@ -575,7 +575,7 @@ namespace vr
 		if (estado != OpenXrState::Desactivado && estado != OpenXrState::NoCompilado) { estado = OpenXrState::Desactivado; mensaje = "OpenXR desactivado."; }
 	}
 
-	OpenXrState OpenXrManager::Activar(GLFWwindow* ventana, int versionGLMayor, int versionGLMenor)
+	OpenXrState OpenXrManager::Activar(GLFWwindow* ventana, int glMajorVersion, int glMinorVersion)
 	{
 		(void)ventana;   // solo se usa en Windows (ya hay un contexto activo); se conserva para otras plataformas
 		if (TieneRecursos()) return estado;   // ya activo: no se crea nada dos veces
@@ -590,7 +590,7 @@ namespace vr
 		if (resultado == OpenXrState::Desactivado)
 		{
 			DescribirRuntimeYVisor(impl->instancia, impl->sistema, informe);
-			resultado = ComprobarVersionOpenGL(impl->instancia, impl->sistema, versionGLMayor, versionGLMenor, aviso, informe);
+			resultado = ComprobarVersionOpenGL(impl->instancia, impl->sistema, glMajorVersion, glMinorVersion, aviso, informe);
 		}
 		if (resultado == OpenXrState::Desactivado)
 		{

@@ -4,82 +4,82 @@
 // ---------------------------
 
 // Objetos de la escena cargada.
-std::vector<SceneObject> objetosEscena;
+std::vector<SceneObject> sceneObjects;
 
-std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
+std::unordered_map<std::string, std::unique_ptr<COBJModel>> roomModels;
 
-editor::SceneEditor editorEscenas;
+editor::SceneEditor sceneEditor;
 
-editor::SceneSerializer serializadorEscena;
+editor::SceneSerializer sceneSerializer;
 
-std::vector<SceneAnimatedObject> datosAnimadosEscena;
+std::vector<SceneAnimatedObject> sceneAnimatedData;
 
 COBJModel* phoneOBJ = nullptr;
 
-std::unordered_map<std::string, GLuint> texturasMaterialEscena;
+std::unordered_map<std::string, GLuint> sceneMaterialTextures;
 
 // F2: vista estereoscópica DE PRUEBA en pantalla (dos mitades). No es VR real: no hay OpenXR ni visor.
-bool modoEstereoPrueba = false;
+bool stereoTestMode = false;
 
 // OpenXR (VR real): SOLO se inicia cuando el usuario lo pide (F3 o el botón del panel de física).
 // No tiene nada que ver con F2. Si no hay runtime o visor, el juego sigue en pantalla.
-vr::OpenXrManager gestorOpenXR;
+vr::OpenXrManager openXrManager;
 
-GLFWwindow* ventanaPrincipal = nullptr;   // la necesita OpenXR para enlazar su sesión con el contexto OpenGL
+GLFWwindow* mainWindow = nullptr;   // la necesita OpenXR para enlazar su sesión con el contexto OpenGL
 
-int versionGLMayor = 0, versionGLMenor = 0;
+int glMajorVersion = 0, glMinorVersion = 0;
 
-bool fpsPausado = false;
+bool fpsPaused = false;
 
-bool fpsCapturaSolicitada = true;
+bool fpsCaptureRequested = true;
 
-bool fpsCursorCapturado = false;
+bool fpsCursorCaptured = false;
 
-bool fpsTienePosicionAnterior = false;
+bool fpsHasPreviousPosition = false;
 
-bool ventanaConFoco = true;
+bool windowFocused = true;
 
-bool mostrarPanelesDebug = false;
+bool showDebugPanels = false;
 
-bool mostrarContadorFPS = false;
+bool showFpsCounter = false;
 
-bool renderizadoOptimizado = true;
+bool optimizedRendering = true;
 
-bool oclusoresPhongInvalidos = true;
+bool phongOccludersDirty = true;
 
-GLuint consultasGpu[3]{};
+GLuint gpuQueries[3]{};
 
-bool consultaGpuPendiente[3]{};
+bool gpuQueryPending[3]{};
 
-int consultaGpuActual = 0;
+int currentGpuQuery = 0;
 
-double ultimoGpuMs = 0.0;
+double lastGpuMs = 0.0;
 
-bool consultaGpuActiva = false;
+bool gpuQueryActive = false;
 
-int modoDiagnosticoIluminacion = 0;
+int lightingDiagnosticMode = 0;
 
-double fpsUltimoX = 0.0;
+double fpsLastX = 0.0;
 
-double fpsUltimoY = 0.0;
+double fpsLastY = 0.0;
 
-bool mostrarMovil = true;
+bool showPhone = true;
 
-glm::vec3 movilPosicion(-0.30f, -0.28f, -0.65f);
+glm::vec3 phonePosition(-0.30f, -0.28f, -0.65f);
 
-glm::vec3 movilRotacion(90.0f, 0.0f, -12.0f);
+glm::vec3 phoneRotation(90.0f, 0.0f, -12.0f);
 
-float movilEscala = 0.09f;
+float phoneScale = 0.09f;
 
-float intensidadIdle = 0.002f;
+float idleSwayIntensity = 0.002f;
 
-float intensidadWalking = 0.018f;
+float walkSwayIntensity = 0.018f;
 
-float intensidadMouse = 0.0008f;
+float mouseSwayIntensity = 0.0008f;
 
-float pesoCaminata = 0.0f;
+float walkWeight = 0.0f;
 
-float faseCaminata = 0.0f;
+float walkPhase = 0.0f;
 
 float mouseSwayX = 0.0f;
 
@@ -89,60 +89,60 @@ double mouseDeltaX = 0.0;
 
 double mouseDeltaY = 0.0;
 
-float tiempoFPS = 0.0f;
+float fpsTime = 0.0f;
 
 float deltaFPS = 0.0f;
 
 AudioManager audioManager;
 
-float volumenGeneralPorcentaje = 100.0f;
+float masterVolumePercent = 100.0f;
 
-game::HiritiAnimator animacionHiriti;
+game::HiritiAnimator hiritiAnimator;
 
-game::HiritiAudioTimer temporizadorAudioHiriti;
+game::HiritiAudioTimer hiritiAudioTimer;
 
 // --- Movimiento FPS: sprint, estamina y balanceo visual (MovimientoFPS.h) ---
-fps::PlayerMovement movimientoJugador;
+fps::PlayerMovement playerMovement;
 
-fps::CameraBob balanceoCamara;
+fps::CameraBob cameraBob;
 
-fps::StaminaBar barraEstamina;
+fps::StaminaBar staminaBar;
 
-bool mostrarPorcentajeEstamina = true;
+bool showStaminaPercent = true;
 
-glm::vec3 piesFotogramaAnterior(0.0f);
+glm::vec3 previousFrameFeet(0.0f);
 
-bool hayPiesFotogramaAnterior = false;
+bool hasPreviousFrameFeet = false;
 
 // --- DEMO FASE 1: puerta que se abre girando sobre su bisagra ---
 // Keyframes: en 0 s la puerta está cerrada (0 grados), en 2 s abierta (90 grados).
 // Para cambiar la duración o el ángulo basta con editar esta lista.
-std::vector<animation::AngleKeyframe> keyframesPuertaDemo = { {0.0f, 0.0f}, {2.0f, 90.0f} };
+std::vector<animation::AngleKeyframe> demoDoorKeyframes = { {0.0f, 0.0f}, {2.0f, 90.0f} };
 
-animation::Reproductor reproductorPuertaDemo;
+animation::Reproductor demoDoorPlayback;
 
-float anguloPuertaDemo = 0.0f;                              // ángulo actual (se recalcula cada fotograma)
+float demoDoorAngle = 0.0f;                              // ángulo actual (se recalcula cada fotograma)
 
-extern const glm::vec3 mitadTamanoPuertaDemo(0.05f, 0.5f, 1.0f);   // puerta de 1 m de ancho, 10 cm de grosor y 2 m de alto
+extern const glm::vec3 demoDoorHalfSize(0.05f, 0.5f, 1.0f);   // puerta de 1 m de ancho, 10 cm de grosor y 2 m de alto
 
-extern const glm::vec3 bisagraPuertaDemo(6.0f, -0.5f, -1.7f);      // punto del mundo (a ras de suelo)
+extern const glm::vec3 demoDoorHinge(6.0f, -0.5f, -1.7f);      // punto del mundo (a ras de suelo)
 
 // --- OBJETOS ANIMADOS GLB: las animaciones vienen de Blender (assets/animations/*.glb) ---
 // No hay keyframes ni puertas escritas aquí: la lista "animated" del JSON de la habitación
 // declara cada instancia (puerta, cajón...) y cargarYAplicarEscena() las crea.
 // Varias instancias pueden usar el mismo .glb y se abren de forma independiente.
-glb::AnimatedScene objetosAnimados;
+glb::AnimatedScene animatedObjects;
 
 // --- FÍSICA (Bullet, Fase 1): cubo que cae sobre un suelo estático. Ver MundoFisico.h ---
 // UN solo mundo físico para toda la partida. La habitación activa y la demo ponen cuerpos
 // en él y cada una quita solo los suyos. No depende de GLFW ni de la cámara (válido para VR).
-fisica::PhysicsWorld mundoFisico;
+fisica::PhysicsWorld physicsWorld;
 
-std::unique_ptr<fisica::PhysicsScene> escenaFisica = std::make_unique<fisica::PhysicsScene>(mundoFisico);
+std::unique_ptr<fisica::PhysicsScene> physicsScene = std::make_unique<fisica::PhysicsScene>(physicsWorld);
 
-fisica::FallingCubeDemo demoFisica(mundoFisico);
+fisica::FallingCubeDemo fallingCubeDemo(physicsWorld);
 
-bool mostrarColisionadores = false;   // opción de depuración (panel "Fisica (Bullet)")
+bool showColliders = false;   // opción de depuración (panel "Fisica (Bullet)")
 
 bool hiritiFollowPlayerEnabled = false;
 
@@ -150,57 +150,57 @@ float hiritiFollowStopDistance = 1.8f;
 
 float hiritiFollowMaxSpeed = 2.4f;
 
-bool objetosAnimadosListos = false;   // true cuando los modelos ya están en la GPU
+bool animatedObjectsReady = false;   // true cuando los modelos ya están en la GPU
 
-GLuint texturaManoInteraccion = 0;
+GLuint interactionHandTexture = 0;
 
-bool cargaLanzamientoActiva = false;
+bool throwChargeActive = false;
 
-float tiempoCargaLanzamiento = 0.0f;
+float throwChargeTime = 0.0f;
 
 // ÚNICO sitio que conoce la cámara FPS: convierte "lo que ve el jugador" en una posición y una
 // dirección del mundo. Todo el sistema de interacción (puertas y agarre) solo recibe esos dos
 // vectores; con VR se llamaría igual, pero con los de la mano o el mando.
 
-bool linternaMovilActiva = true;
+bool phoneFlashlightEnabled = true;
 
-bool lamparasLaboratorioActivas = true;
+bool labLampsEnabled = true;
 
 // --- Multijugador (OFFLINE por defecto: no hay hilo, ni socket, ni ENet hasta pulsar Iniciar o usar --host/--connect) ---
-netgame::NetworkGame redJuego;
+netgame::NetworkGame networkGame;
 
 // El panel puede cerrarse y recuperarse con F4, sin depender de los paneles F1.
-bool mostrarPanelRed = true;
+bool showNetworkPanel = true;
 
-std::unique_ptr<netgame::GlbDoors> puertasRed;       // adaptador de las puertas GLB (IDs de escena)
+std::unique_ptr<netgame::GlbDoors> networkDoors;       // adaptador de las puertas GLB (IDs de escena)
 
-netgame::NetworkConfig configRedPendiente;                 // lo que editan el menu y la linea de comandos
+netgame::NetworkConfig pendingNetworkConfig;                 // lo que editan el menu y la linea de comandos
 
-netgame::session::SessionRuntimeState estadoSesionRed;  // estado propio de src/networking/session
+netgame::session::SessionRuntimeState networkSessionState;  // estado propio de src/networking/session
 
-vr::XrPose ultimaCabezaVR;                              // pose real del visor, la rellena el render VR
+vr::XrPose lastVrHead;                              // pose real del visor, la rellena el render VR
 
-bool hayCabezaVR = false;
+bool hasVrHead = false;
 
-InteractionTarget objetivoInteraccionActual;
+InteractionTarget currentInteractionTarget;
 
-std::string nombreEscenaActiva;
+std::string activeSceneName;
 
-SceneSpawn spawnEscenaActiva;
+SceneSpawn activeSceneSpawn;
 
-float intensidadIndirectaEscena = 0.16f;
+float sceneIndirectIntensity = 0.16f;
 
-float intensidadAmbientalBaseEscena = 0.025f;
+float sceneBaseAmbientIntensity = 0.025f;
 
-float escalaLuzDirectaEscena = 1.0f;
+float sceneDirectLightScale = 1.0f;
 
-glm::vec3 colorReboteSueloEscena{ 0.42f, 0.46f, 0.43f };
+glm::vec3 sceneGroundBounceColor{ 0.42f, 0.46f, 0.43f };
 
-glm::vec3 colorReboteCieloEscena{ 0.24f, 0.28f, 0.34f };
+glm::vec3 sceneSkyBounceColor{ 0.24f, 0.28f, 0.34f };
 
-bool escenaTieneGeometriaValida = false;
+bool sceneHasValidGeometry = false;
 
-GLuint rayoVao = 0, rayoVbo = 0;
+GLuint rayVao = 0, rayVbo = 0;
 
 /* ------------------------------------------------------------------------- */
 /*                            MENUS ImGui                                    */
@@ -210,6 +210,6 @@ GLuint rayoVao = 0, rayoVbo = 0;
 //		- menú standard Imgui [show_demo_window()]
 //		- menú propi de l'aplicació EntornVGI [show_EntornVGI_window()]
 
-GLuint texturaFondoMenu = 0;
+GLuint menuBackgroundTexture = 0;
 
-EstadoJuego estadoActual = ESTADO_MENU_PRINCIPAL;
+EstadoJuego currentGameState = ESTADO_MENU_PRINCIPAL;

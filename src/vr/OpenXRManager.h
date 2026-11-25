@@ -88,7 +88,7 @@ namespace vr
 
 		// Activación EXPLÍCITA. Necesita el contexto OpenGL de 'ventana' activo y su versión (por ejemplo 4, 6).
 		// Si algo falla no queda ningún recurso a medias (se destruye lo creado) y se devuelve el motivo.
-		OpenXrState Activar(GLFWwindow* ventana, int versionGLMayor, int versionGLMenor);
+		OpenXrState Activar(GLFWwindow* ventana, int glMajorVersion, int glMinorVersion);
 
 		// Atiende los eventos de OpenXR (inicia/termina la sesión según su estado). Llamar una vez por
 		// fotograma; no hace nada si no está activo.

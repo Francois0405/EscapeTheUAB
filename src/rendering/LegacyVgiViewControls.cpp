@@ -149,7 +149,7 @@ void LegacyVgiViewControls::OnCameraNavega()
 // Tornar a lloc d'origen
 void LegacyVgiViewControls::OnCameraOrigenNavega()
 {
-	if (camera == CAM_NAVEGA && spawnEscenaActiva.presente) crearJugadorFisico();
+	if (camera == CAM_NAVEGA && activeSceneSpawn.presente) spawnPhysicsPlayer();
 }
 
 // CÀMERA--> GEODE:  Mode de navegació centrat a l'origent mirant un punt en coord. esfèriques (R,alfa,beta) (opció booleana)

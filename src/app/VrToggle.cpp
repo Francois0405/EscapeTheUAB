@@ -1,8 +1,8 @@
 #include "src/app/AppState.h"
 #include "src/app/VrToggle.h"
 
-void alternarOpenXR()
+void toggleOpenXr()
 {
-	if (gestorOpenXR.TieneRecursos()) gestorOpenXR.Desactivar();
-	else gestorOpenXR.Activar(ventanaPrincipal, versionGLMayor, versionGLMenor);
+	if (openXrManager.TieneRecursos()) openXrManager.Desactivar();
+	else openXrManager.Activar(mainWindow, glMajorVersion, glMinorVersion);
 }

@@ -1,7 +1,7 @@
 #include "src/app/AppState.h"
 #include "src/ui/InteractionHudTexture.h"
 
-void cargarTexturaManoInteraccion()
+void loadInteractionHandTexture()
 {
 	std::error_code ec;
 	const std::filesystem::path rutaAbs = std::filesystem::absolute("assets/ui/hand.png", ec).lexically_normal();
@@ -37,10 +37,10 @@ void cargarTexturaManoInteraccion()
 		pixels[i * 4 + 3] = opacidad;
 	}
 
-	glGenTextures(1, &texturaManoInteraccion);
-	if (texturaManoInteraccion != 0)
+	glGenTextures(1, &interactionHandTexture);
+	if (interactionHandTexture != 0)
 	{
-		glBindTexture(GL_TEXTURE_2D, texturaManoInteraccion);
+		glBindTexture(GL_TEXTURE_2D, interactionHandTexture);
 		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, ancho, alto, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);

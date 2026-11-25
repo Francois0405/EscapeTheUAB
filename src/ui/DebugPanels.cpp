@@ -22,59 +22,59 @@ namespace runtimeui
 {
 void DrawDebugPanels(const DebugPanelsContext& context)
 {
-	auto& mostrarMovil = context.showPhone;
-	auto& movilPosicion = context.phonePosition;
-	auto& movilRotacion = context.phoneRotation;
-	auto& movilEscala = context.phoneScale;
-	auto& intensidadIdle = context.idleIntensity;
-	auto& intensidadWalking = context.walkingIntensity;
-	auto& intensidadMouse = context.mouseIntensity;
+	auto& showPhone = context.showPhone;
+	auto& phonePosition = context.phonePosition;
+	auto& phoneRotation = context.phoneRotation;
+	auto& phoneScale = context.phoneScale;
+	auto& idleSwayIntensity = context.idleIntensity;
+	auto& walkSwayIntensity = context.walkingIntensity;
+	auto& mouseSwayIntensity = context.mouseIntensity;
 	auto& deltaFPS = context.frameDeltaSeconds;
-	auto& movimientoJugador = context.movement;
-	auto& balanceoCamara = context.cameraSway;
-	auto& mostrarPorcentajeEstamina = context.showStaminaPercent;
-	auto& mostrarContadorFPS = context.showFpsCounter;
-	auto& renderizadoOptimizado = context.optimizedRendering;
-	auto& ultimoGpuMs = context.lastGpuMs;
-	auto& modoDiagnosticoIluminacion = context.lightingView;
-	auto& reproductorPuertaDemo = context.doorDemoPlayer;
-	auto& anguloPuertaDemo = context.doorDemoAngle;
-	auto& mostrarColisionadores = context.showColliders;
+	auto& playerMovement = context.movement;
+	auto& cameraBob = context.cameraSway;
+	auto& showStaminaPercent = context.showStaminaPercent;
+	auto& showFpsCounter = context.showFpsCounter;
+	auto& optimizedRendering = context.optimizedRendering;
+	auto& lastGpuMs = context.lastGpuMs;
+	auto& lightingDiagnosticMode = context.lightingView;
+	auto& demoDoorPlayback = context.doorDemoPlayer;
+	auto& demoDoorAngle = context.doorDemoAngle;
+	auto& showColliders = context.showColliders;
 	auto& hiritiFollowPlayerEnabled = context.hiritiFollowEnabled;
 	auto& hiritiFollowStopDistance = context.hiritiStopDistance;
 	auto& hiritiFollowMaxSpeed = context.hiritiMaxSpeed;
-	auto& modoEstereoPrueba = context.stereoPreview;
-	auto& gestorOpenXR = context.openXR;
-	auto& mundoFisico = context.physicsWorld;
-	auto& escenaFisica = context.physicsScene;
-	auto& demoFisica = context.cubeDemo;
-	auto& redJuego = context.session;
-	auto& objetosEscena = context.sceneObjects;
-	auto& objetosAnimados = context.animatedObjects;
+	auto& stereoTestMode = context.stereoPreview;
+	auto& openXrManager = context.openXR;
+	auto& physicsWorld = context.physicsWorld;
+	auto& physicsScene = context.physicsScene;
+	auto& fallingCubeDemo = context.cubeDemo;
+	auto& networkGame = context.session;
+	auto& sceneObjects = context.sceneObjects;
+	auto& animatedObjects = context.animatedObjects;
 
 	ImGui::Begin("Movil FPS");
-	ImGui::Checkbox("Mostrar movil", &mostrarMovil);
-	ImGui::InputFloat3("Posicion", &movilPosicion.x, "%.3f");
-	ImGui::InputFloat3("Rotacion (grados)", &movilRotacion.x, "%.1f");
-	ImGui::SliderFloat("Escala", &movilEscala, 0.02f, 0.40f, "%.3f");
-	ImGui::SliderFloat("Intensidad idle", &intensidadIdle, 0.0f, 0.02f, "%.4f");
-	ImGui::SliderFloat("Intensidad walking", &intensidadWalking, 0.0f, 0.08f, "%.3f");
-	ImGui::SliderFloat("Intensidad mouse", &intensidadMouse, 0.0f, 0.003f, "%.4f");
+	ImGui::Checkbox("Mostrar movil", &showPhone);
+	ImGui::InputFloat3("Posicion", &phonePosition.x, "%.3f");
+	ImGui::InputFloat3("Rotacion (grados)", &phoneRotation.x, "%.1f");
+	ImGui::SliderFloat("Escala", &phoneScale, 0.02f, 0.40f, "%.3f");
+	ImGui::SliderFloat("Intensidad idle", &idleSwayIntensity, 0.0f, 0.02f, "%.4f");
+	ImGui::SliderFloat("Intensidad walking", &walkSwayIntensity, 0.0f, 0.08f, "%.3f");
+	ImGui::SliderFloat("Intensidad mouse", &mouseSwayIntensity, 0.0f, 0.003f, "%.4f");
 	ImGui::Text("deltaTime: %.4f s", deltaFPS);
 	ImGui::End();
 
 	ImGui::Begin("Movimiento FPS");
 	{
-		fps::MovementParameters& pm = movimientoJugador.parametros;
-		fps::BobParameters& pb = balanceoCamara.parametros;
-		ImGui::Text("Estamina: %.1f / %.1f%s", movimientoJugador.Estamina(), pm.estaminaMaxima,
-			movimientoJugador.Agotada() ? "  (AGOTADA)" : (movimientoJugador.Sprintando() ? "  (corriendo)" : ""));
-		ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", movimientoJugador.Velocidad(),
-			mundoFisico.FraccionAgachado() * 100.0f, mundoFisico.JugadorEnSuelo() ? "si" : "no");
-		ImGui::Checkbox("Porcentaje junto a la barra", &mostrarPorcentajeEstamina);
-		if (ImGui::Button("Rellenar estamina")) movimientoJugador.Reiniciar();
-		ImGui::Checkbox("Mostrar FPS en esquina superior derecha", &mostrarContadorFPS);
-		ImGui::Checkbox("Renderizado optimizado (frustum culling)", &renderizadoOptimizado);
+		fps::MovementParameters& pm = playerMovement.parametros;
+		fps::BobParameters& pb = cameraBob.parametros;
+		ImGui::Text("Estamina: %.1f / %.1f%s", playerMovement.Estamina(), pm.estaminaMaxima,
+			playerMovement.Agotada() ? "  (AGOTADA)" : (playerMovement.Sprintando() ? "  (corriendo)" : ""));
+		ImGui::Text("Velocidad: %.2f m/s | agachado: %.0f %% | en suelo: %s", playerMovement.Velocidad(),
+			physicsWorld.FraccionAgachado() * 100.0f, physicsWorld.JugadorEnSuelo() ? "si" : "no");
+		ImGui::Checkbox("Porcentaje junto a la barra", &showStaminaPercent);
+		if (ImGui::Button("Rellenar estamina")) playerMovement.Reiniciar();
+		ImGui::Checkbox("Mostrar FPS en esquina superior derecha", &showFpsCounter);
+		ImGui::Checkbox("Renderizado optimizado (frustum culling)", &optimizedRendering);
 		ImGui::Checkbox("Instrumentacion de render", &renderMetrics::enabled);
 		if (renderMetrics::enabled)
 		{
@@ -85,7 +85,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 				renderMetrics::drawCalls, renderMetrics::visibles, renderMetrics::descartados);
 			ImGui::Text("CPU escena %.3f ms | oclusores %.3f ms", renderMetrics::escenaMs, renderMetrics::oclusoresMs);
 			ImGui::Text("CPU fisica %.3f ms | animacion %.3f ms | update luces %.3f ms", renderMetrics::fisicaMs, renderMetrics::animacionMs, renderMetrics::lucesMs);
-			ImGui::Text("GPU escena (consulta retardada): %.3f ms", ultimoGpuMs);
+			ImGui::Text("GPU escena (consulta retardada): %.3f ms", lastGpuMs);
 		}
 		ImGui::SeparatorText("Velocidades (m/s)");
 		ImGui::SliderFloat("Caminar", &pm.velocidadCaminar, 0.5f, 6.0f, "%.2f");
@@ -107,79 +107,79 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		ImGui::SliderFloat("Zancada caminar (m)", &pb.zancadaCaminar, 0.5f, 3.0f, "%.2f");
 		ImGui::SliderFloat("Zancada correr (m)", &pb.zancadaCorrer, 0.5f, 4.0f, "%.2f");
 		ImGui::SliderFloat("Amortiguacion al parar", &pb.salida, 1.0f, 20.0f, "%.1f");
-		ImGui::Text("fase: %.2f rad | peso: %.2f", balanceoCamara.Fase(), balanceoCamara.Peso());
+		ImGui::Text("fase: %.2f rad | peso: %.2f", cameraBob.Fase(), cameraBob.Peso());
 	}
 	ImGui::End();
 
 	ImGui::Begin("Diagnostico de iluminacion");
 	const char* modosIluminacion[] = { "Final", "Ambiental", "Directa", "Indirecta", "Normales", "Albedo" };
-	ImGui::Combo("Vista", &modoDiagnosticoIluminacion, modosIluminacion, IM_ARRAYSIZE(modosIluminacion));
+	ImGui::Combo("Vista", &lightingDiagnosticMode, modosIluminacion, IM_ARRAYSIZE(modosIluminacion));
 	ImGui::TextUnformatted("Solo afecta al shader Phong; vuelve a Final para la escena normal.");
 	ImGui::End();
 
 	ImGui::Begin("Demo puerta");
 	if (ImGui::Button("Abrir puerta")) context.startDoorDemo();
-	ImGui::Text("tiempo: %.2f / %.2f s", reproductorPuertaDemo.tiempo, reproductorPuertaDemo.duracion);
-	ImGui::Text("angulo: %.1f grados", anguloPuertaDemo);
+	ImGui::Text("tiempo: %.2f / %.2f s", demoDoorPlayback.tiempo, demoDoorPlayback.duracion);
+	ImGui::Text("angulo: %.1f grados", demoDoorAngle);
 	ImGui::End();
 
 	ImGui::Begin("Fisica (Bullet)");
-	ImGui::Checkbox("Mostrar colisionadores", &mostrarColisionadores);
+	ImGui::Checkbox("Mostrar colisionadores", &showColliders);
 	ImGui::Text("Hiriti sigue al jugador: %s", hiritiFollowPlayerEnabled ? "BUSCANDO" : "inactivo");
 	ImGui::SliderFloat("Distancia de parada Hiriti (m)", &hiritiFollowStopDistance, 1.0f, 3.0f);
 	ImGui::SliderFloat("Velocidad maxima Hiriti (m/s)", &hiritiFollowMaxSpeed, 0.5f, 4.0f);
 	ImGui::TextUnformatted("azul: estatico  verde: dinamico  naranja: cinematico");
-	ImGui::Text("cuerpos en el mundo: %d (habitacion: %d, dinamicos: %d)", mundoFisico.NumeroDeCuerpos(),
-		escenaFisica->NumeroDeCuerpos(), escenaFisica->NumeroDeDinamicos());
-	ImGui::Text("pasos fisicos: %lld", mundoFisico.PasosTotales());
-	ImGui::Checkbox("Vista estereoscopica de prueba (F2) - NO es VR real", &modoEstereoPrueba);
+	ImGui::Text("cuerpos en el mundo: %d (habitacion: %d, dinamicos: %d)", physicsWorld.NumeroDeCuerpos(),
+		physicsScene->NumeroDeCuerpos(), physicsScene->NumeroDeDinamicos());
+	ImGui::Text("pasos fisicos: %lld", physicsWorld.PasosTotales());
+	ImGui::Checkbox("Vista estereoscopica de prueba (F2) - NO es VR real", &stereoTestMode);
 	ImGui::Separator();
-	ImGui::Text("OpenXR (VR real, F3): %s", vr::NombreDelEstado(gestorOpenXR.Estado()));
+	ImGui::Text("OpenXR (VR real, F3): %s", vr::NombreDelEstado(openXrManager.Estado()));
 	if (!vr::OpenXrManager::EstaCompilado())
 		ImGui::TextUnformatted("No incluido en esta compilacion (macOS u OpenXR no instalado).");
-	else if (ImGui::Button(gestorOpenXR.TieneRecursos() ? "Desactivar OpenXR" : "Activar OpenXR"))
+	else if (ImGui::Button(openXrManager.TieneRecursos() ? "Desactivar OpenXR" : "Activar OpenXR"))
 		context.toggleOpenXR();
-	ImGui::TextWrapped("%s", gestorOpenXR.Mensaje().c_str());
-	if (gestorOpenXR.TieneRecursos())
+	ImGui::TextWrapped("%s", openXrManager.Mensaje().c_str());
+	if (openXrManager.TieneRecursos())
 	{
-		ImGui::Text("Sesion: %s%s | espacio: %s | ojos: %d", gestorOpenXR.NombreEstadoSesion(),
-			gestorOpenXR.SesionEnMarcha() ? " (en marcha)" : "",
-			gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Suelo ? "STAGE" : (gestorOpenXR.Espacio() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
-			gestorOpenXR.NumeroDeOjos());
+		ImGui::Text("Sesion: %s%s | espacio: %s | ojos: %d", openXrManager.NombreEstadoSesion(),
+			openXrManager.SesionEnMarcha() ? " (en marcha)" : "",
+			openXrManager.Espacio() == vr::ReferenceSpaceKind::Suelo ? "STAGE" : (openXrManager.Espacio() == vr::ReferenceSpaceKind::Local ? "LOCAL" : "-"),
+			openXrManager.NumeroDeOjos());
 	}
-	if (!gestorOpenXR.Diagnostico().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
+	if (!openXrManager.Diagnostico().empty() && ImGui::TreeNode("Diagnostico OpenXR"))
 	{
-		ImGui::TextWrapped("%s", gestorOpenXR.Diagnostico().c_str());
+		ImGui::TextWrapped("%s", openXrManager.Diagnostico().c_str());
 		ImGui::TreePop();
 	}
 	ImGui::Separator();
 	bool estadoAgarreMostrado = false;
-	const int agarradoLocal = escenaFisica->ObjetoAgarrado();
-	if (agarradoLocal >= 0 && agarradoLocal < static_cast<int>(objetosEscena.size()))
+	const int agarradoLocal = physicsScene->ObjetoAgarrado();
+	if (agarradoLocal >= 0 && agarradoLocal < static_cast<int>(sceneObjects.size()))
 	{
-		ImGui::Text("en tu mano: %s", objetosEscena[agarradoLocal].id.c_str());
+		ImGui::Text("en tu mano: %s", sceneObjects[agarradoLocal].id.c_str());
 		estadoAgarreMostrado = true;
 	}
-	else if (redJuego.EsCliente())
+	else if (networkGame.EsCliente())
 	{
-		const uint32_t idPropio = redJuego.ObjetoDinamicoDePeer(redJuego.PeerLocal());
-		const auto propio = std::find_if(objetosEscena.begin(), objetosEscena.end(), [idPropio](const SceneObject& objeto)
+		const uint32_t idPropio = networkGame.ObjetoDinamicoDePeer(networkGame.PeerLocal());
+		const auto propio = std::find_if(sceneObjects.begin(), sceneObjects.end(), [idPropio](const SceneObject& objeto)
 			{ return idPropio != 0 && netgame::HashId(objeto.id) == idPropio; });
-		if (propio != objetosEscena.end())
+		if (propio != sceneObjects.end())
 		{
 			ImGui::Text("en tu mano (host autoritativo): %s", propio->id.c_str());
 			estadoAgarreMostrado = true;
 		}
 	}
-	if (!estadoAgarreMostrado && redJuego.EsHost())
+	if (!estadoAgarreMostrado && networkGame.EsHost())
 	{
-		for (const auto& par : redJuego.PropietariosDinamicos())
+		for (const auto& par : networkGame.PropietariosDinamicos())
 			if (par.second != netgame::kSinDueno && par.second != net::kHostPeerId)
 			{
 				std::size_t indice = 0;
-				if (netgame::scene_network_state::FindUniqueDynamicSceneObjectIndex(par.first, objetosEscena, indice))
+				if (netgame::scene_network_state::FindUniqueDynamicSceneObjectIndex(par.first, sceneObjects, indice))
 				{
-					ImGui::Text("sujeto por peer %u: %s", static_cast<unsigned>(par.second), objetosEscena[indice].id.c_str());
+					ImGui::Text("sujeto por peer %u: %s", static_cast<unsigned>(par.second), sceneObjects[indice].id.c_str());
 					estadoAgarreMostrado = true;
 					break;
 				}
@@ -187,43 +187,43 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 	}
 	if (!estadoAgarreMostrado)
 		ImGui::TextUnformatted("mano vacia (E sobre un objeto dinamico para agarrarlo)");
-	if (mundoFisico.HayJugador())
+	if (physicsWorld.HayJugador())
 	{
-		const glm::vec3 pies = mundoFisico.PosicionPiesJugador();
+		const glm::vec3 pies = physicsWorld.PosicionPiesJugador();
 		ImGui::Text("jugador (pies): (%.2f, %.2f, %.2f) m  %s", pies.x, pies.y, pies.z,
-			mundoFisico.JugadorEnSuelo() ? "en el suelo" : "en el aire");
+			physicsWorld.JugadorEnSuelo() ? "en el suelo" : "en el aire");
 	}
 	ImGui::Separator();
 	ImGui::TextUnformatted("Demo: cubo que cae (independiente de la habitacion)");
-	if (!demoFisica.EstaActiva())
+	if (!fallingCubeDemo.EstaActiva())
 	{
-		if (ImGui::Button("Activar demo cubo")) demoFisica.Iniciar();
+		if (ImGui::Button("Activar demo cubo")) fallingCubeDemo.Iniciar();
 	}
 	else
 	{
-		if (ImGui::Button("Reiniciar demo")) demoFisica.Iniciar();
+		if (ImGui::Button("Reiniciar demo")) fallingCubeDemo.Iniciar();
 		ImGui::SameLine();
-		if (ImGui::Button("Quitar demo")) demoFisica.Detener();
-		const fisica::BodyPose pose = demoFisica.PoseCubo();
-		const glm::vec3 velocidad = demoFisica.VelocidadCubo();
-		const glm::vec3 gravedad = mundoFisico.Gravedad();
+		if (ImGui::Button("Quitar demo")) fallingCubeDemo.Detener();
+		const fisica::BodyPose pose = fallingCubeDemo.PoseCubo();
+		const glm::vec3 velocidad = fallingCubeDemo.VelocidadCubo();
+		const glm::vec3 gravedad = physicsWorld.Gravedad();
 		ImGui::Text("gravedad: (%.2f, %.2f, %.2f) m/s2", gravedad.x, gravedad.y, gravedad.z);
 		ImGui::Text("cubo pos: (%.3f, %.3f, %.3f) m", pose.posicion.x, pose.posicion.y, pose.posicion.z);
 		ImGui::Text("cubo vel: (%.3f, %.3f, %.3f) m/s", velocidad.x, velocidad.y, velocidad.z);
-		ImGui::Text("estado: %s", demoFisica.CuboEnReposo() ? "en reposo (dormido)" : "en movimiento");
+		ImGui::Text("estado: %s", fallingCubeDemo.CuboEnReposo() ? "en reposo (dormido)" : "en movimiento");
 	}
 	ImGui::End();
 
 	ImGui::Begin("Objetos animados GLB");
 	ImGui::Text("Objetos animados GLB (Blender)");
-	if (objetosAnimados.objetos.empty())
+	if (animatedObjects.objetos.empty())
 		ImGui::TextUnformatted("Ninguno cargado (ver consola)");
-	for (glb::AnimatedObject& objeto : objetosAnimados.objetos)
+	for (glb::AnimatedObject& objeto : animatedObjects.objetos)
 	{
 		ImGui::PushID(objeto.id.c_str());   // cada fila necesita un ID distinto para sus botones
 		if (ImGui::Button("Abrir")) glb::IniciarAnimacion(objeto);     // depuración: reinicia la apertura
 		ImGui::SameLine();
-		if (ImGui::Button("Alternar") && !redJuego.EsCliente()) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
+		if (ImGui::Button("Alternar") && !networkGame.EsCliente()) glb::AlternarPuerta(objeto);   // igual que pulsar E junto a la puerta
 		ImGui::SameLine();
 		ImGui::Text("%s  %s  %.2f / %.2f s", objeto.id.c_str(), glb::NombreDelEstado(objeto.estado),
 			objeto.reproductor.tiempo, objeto.reproductor.duracion);

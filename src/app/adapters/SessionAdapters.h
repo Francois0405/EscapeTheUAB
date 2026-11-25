@@ -2,8 +2,8 @@
 
 #include "src/app/AppState.h"
 
-const netgame::session::SessionContext& contextoSesionRed();
-bool capturarEstadoEscenaRed(std::vector<netgame::SceneObjectState>& salida);
-void iniciarRed(const netgame::NetworkConfig& cfg);
-void detenerRed();
-void actualizarRed(double ahora, bool jugando);
+const netgame::session::SessionContext& sessionBindings();
+bool captureNetworkSceneState(std::vector<netgame::SceneObjectState>& salida);
+void startNetwork(const netgame::NetworkConfig& cfg);
+void stopNetwork();
+void updateNetwork(double ahora, bool jugando);
