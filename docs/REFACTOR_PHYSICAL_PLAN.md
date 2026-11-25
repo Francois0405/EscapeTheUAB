@@ -253,7 +253,7 @@ Rollback de cualquier lote: anotar el SHA de partida; un commit o serie corta co
 
 1. Targets estáticos para `ObjetosAnimadosGLB`, física (`MundoFisico`, `EscenaFisica`, con Bullet), `NetJuego` (con `EntornVGI_network` y GLM), `GrabDiagnostics` y `PreferenciasRed`. Las pruebas los enlazan en lugar de listar `.cpp`. Declarar `cxx_std_20` y avisos; `GLM_ENABLE_EXPERIMENTAL` y `NOMINMAX` por paridad con el ejecutable (de estas unidades, `GrabDiagnostics.cpp` incluye `windows.h` [C]).
 2. Variables de raíz de recursos y comprobación de ficheros sonda (§7), con los valores actuales.
-3. En un commit aparte: sustituir en `GlbTests`, `PhysicsTests`, `SceneLoaderTests` y `ObjLoaderTests` las rutas literales `EntornVGI/...` por las macros.
+3. **Diferido y no bloquea B2:** antes de B4, en un commit aparte, sustituir en `GlbTests`, `PhysicsTests`, `SceneLoaderTests` y `ObjLoaderTests` las rutas literales `EntornVGI/...` por las macros; cubrir también la ruta literal de assets de `AudioDecoderTests`. Añadir las macros de §7. B4 no empieza hasta que este cambio y sus pruebas pasen.
 4. `.gitignore`: añadir `!resources/assets/models/**/*.obj` sin quitar la excepción actual.
 
 **B2:** `git mv` de los nueve ficheros de transporte y su `CMakeLists.txt`; `add_subdirectory` con directorio binario explícito, después de definir `ENTORNVGI_ENABLE_NETWORK`; `EntornVGI_network` añade `src/` a su include público y **conserva** `EntornVGI/` (estrecharlo es otro cambio). Includes a actualizar [C]: `NetJuegoLogica.h`, `NetJuego.h`, `NetJuego.cpp`, `NetworkTests.cpp`, `ENetLoopbackTests.cpp`. No toca `main.cpp`.
