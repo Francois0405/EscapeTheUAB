@@ -130,7 +130,7 @@ def main():
         path.write_text(new, encoding='utf-8')
         print(f'MODIFICADO: {path} (backup: {backup.name})')
     print('LISTO. Compila con .\\run-windows.cmd -NoRun. Solo afecta al shader Phong y a los OBJ de arquitectura base.')
-    print('Si aun no tienes GL_REPEAT en LoadTexture2, configurarlo en objLoader.cpp.')
+    print('Si aun no tienes GL_REPEAT en LoadTexture2, configurarlo en src/scene/objLoader.cpp.')
 
 
 if __name__ == '__main__':

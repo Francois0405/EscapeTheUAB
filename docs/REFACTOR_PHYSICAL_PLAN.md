@@ -114,7 +114,7 @@ Columna **Sec.**: lote en que se mueve (§3). Los ficheros se renombran al ingl�
 | `escena`, `visualitzacio`, `glut_geometry`, `material`, `shader`, `quatern` (`.{h,cpp}`) | `legacy_vgi/`, mismos nombres | P6 | Ciclo `material` ↔ `glut_geometry` |
 | `constants.h`, `framework.h` | `legacy_vgi/` | P6 | Contienen cambios del equipo (**I3**) |
 | `objLoader.{h,cpp}` | `legacy_vgi/` | P6 | Llamadas del equipo dentro (**I3**) |
-| `platform_compat.h` | `core/platform/PlatformCompat.h` | P6 | Código propio (`2dbf344`). Lo incluyen `framework.h` y `objLoader.h`: cambian solo rutas de include, preservando bytes |
+| `platform_compat.h` | `src/platform/platform_compat.h` | P6 | Código propio (`2dbf344`). Lo incluyen `framework.h` y `objLoader.h`: cambian solo rutas de include, preservando bytes |
 | `ObjMeshOptimization.{h,cpp}` | Capa de soporte del equipo, ubicación abierta | P6 | **I3**. Código propio (`906b312`) |
 | `third_party/stb_vorbis_compat.h`, `stb_vorbis_impl.c` | `audio/StbVorbisCompat.h`, `StbVorbisImpl.c` | P5 | Adaptadores propios (`443a321`), no son terceros |
 | `DibujoGLB.{h,cpp}` | `rendering/GlbRenderer.{h,cpp}` | P7 | |

@@ -353,3 +353,9 @@ Commit central `f6496cb9b5ac774194650ed5fb1cb6bc9e852705` (origen Claude `181326
 La integración retiró 347 líneas y añadió 60 adaptadores en `main.cpp` (neto −287; conteo medido por contenido del archivo). Los lanzadores oficiales Debug y Release terminaron con código 0; CTest completo pasó 22/22 en cada configuración. ENet y OpenXR se detectaron habilitados. La primera llamada Debug sin elevar falló al crear `build/windows-debug/CMakeFiles/pkgRedirects` en el worktree C:; el mismo lanzador oficial con acceso autorizado completó. No se ejecutó el juego ni se probó hardware OpenXR; InitGL y otras responsabilidades siguen pendientes.
 
 Métrica de `main.cpp` en el commit central: 8.022 líneas frente a 10.212 en `62a7018` (−2.190; −21,4 %). No se repitieron tests de red porque esta extracción no toca su código.
+
+## 21. Traslado del cargador OBJ y adaptador de plataforma (2026-11-25)
+
+Commits `0026d9c` y `2400658` trasladan físicamente `objLoader.cpp/.h` de `EntornVGI/` a `src/scene/` y `platform_compat.h` a `src/platform/`. El segundo commit actualiza CMake, `ObjLoaderTests`, includes heredados, y los manifiestos Visual Studio. No se renombraron APIs ni cambió el comportamiento. Se corrigió además el destino documentado del adaptador y la ruta citada por la herramienta de tiling.
+
+Validación sobre el árbol de ambos commits: lanzadores oficiales Debug/Release PASS; CTest completo 22/22 en ambas configuraciones. La invocación focalizada de `ObjLoaderTests` devolvió SKIP al no inicializar su requisito gráfico; en las dos ejecuciones completas posteriores `ObjLoaderTests` pasó (6,57 s Debug; 2,52 s Release). `git diff --check` pasó. `main.cpp` permanece en 8.022 líneas. No hubo ejecución gráfica interactiva ni validación en macOS/Linux.
