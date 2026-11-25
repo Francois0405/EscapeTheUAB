@@ -1,0 +1,48 @@
+#include "src/app/AppState.h"
+#include "src/diagnostics/GrabTrace.h"
+
+bool diagnosticoAgarreActivo()
+{
+	static const bool activo = []
+	{
+		const char* valor = std::getenv("ENTORNVGI_DEBUG_GRAB");
+		return valor != nullptr && valor[0] != '\0' && valor[0] != '0';
+	}();
+	return activo;
+}
+
+net::GrabDiagnosticRole rolDiagnosticoAgarre()
+{
+	return redJuego.EsHost() ? net::GrabDiagnosticRole::Host :
+		redJuego.EsCliente() ? net::GrabDiagnosticRole::Client : net::GrabDiagnosticRole::Offline;
+}
+
+void persistirDiagnosticoAgarre(const std::string& registro)
+{
+	if (!net::GrabPersistenceEnabledFromEnvironment()) return;
+	static std::array<std::unique_ptr<net::GrabDiagnostics>, 3> sinks;
+	const auto rol = rolDiagnosticoAgarre();
+	const auto indice = static_cast<std::size_t>(rol);
+	auto& sink = sinks[indice];
+	if (!sink)
+		sink = std::make_unique<net::GrabDiagnostics>(net::DefaultGrabDiagnosticsDirectory(),
+			rol, net::CurrentProcessId());
+	sink->Write(registro);
+}
+
+void emitirDiagnosticoAgarre(const std::string& registro)
+{
+	std::clog << registro << '\n';
+	persistirDiagnosticoAgarre(registro);
+}
+
+void trazarAgarre(const char* evento, uint32_t id, net::PeerId peer, net::PeerId propietario,
+	const glm::vec3& posicion, const glm::vec3& punto, const char* detalle)
+{
+	if (!diagnosticoAgarreActivo()) return;
+	std::ostringstream registro;
+	registro << "[grab] " << evento << " id=" << id << " peer=" << peer << " owner=" << propietario
+		<< " detail=" << detalle << " pos=(" << posicion.x << ',' << posicion.y << ',' << posicion.z
+		<< ") point=(" << punto.x << ',' << punto.y << ',' << punto.z << ')';
+	emitirDiagnosticoAgarre(registro.str());
+}

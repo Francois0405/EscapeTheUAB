@@ -78,7 +78,38 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/rendering/LegacyVgiSceneRenderer.h
 	${REPO_ROOT}/src/rendering/LegacyVgiViewControls.cpp
 	${REPO_ROOT}/third_party/imguizmo/ImGuizmo.cpp
-	main.cpp
+	${REPO_ROOT}/src/app/AppState.cpp
+	${REPO_ROOT}/src/app/DemoDoor.cpp
+	${REPO_ROOT}/src/app/VrToggle.cpp
+	${REPO_ROOT}/src/app/WindowCallbacks.cpp
+	${REPO_ROOT}/src/app/WorkingDirectory.cpp
+	${REPO_ROOT}/src/app/adapters/GraphicsAdapters.cpp
+	${REPO_ROOT}/src/app/adapters/HirityAdapters.cpp
+	${REPO_ROOT}/src/app/adapters/InteractionAdapters.cpp
+	${REPO_ROOT}/src/app/adapters/PlayerAdapters.cpp
+	${REPO_ROOT}/src/app/adapters/RenderAdapters.cpp
+	${REPO_ROOT}/src/app/adapters/SceneAdapters.cpp
+	${REPO_ROOT}/src/app/adapters/SessionAdapters.cpp
+	${REPO_ROOT}/src/app/input/CursorCapture.cpp
+	${REPO_ROOT}/src/app/input/KeyboardInput.cpp
+	${REPO_ROOT}/src/app/input/MouseInput.cpp
+	${REPO_ROOT}/src/app/main.cpp
+	${REPO_ROOT}/src/diagnostics/GrabTrace.cpp
+	${REPO_ROOT}/src/legacy_vgi/LegacyVgiState.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiFileActions.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiKeyboard.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiMainWindow.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiMaterial.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiMenuCallbacks.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiMenus.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiStatusBar.cpp
+	${REPO_ROOT}/src/legacy_vgi/VgiTimer.cpp
+	${REPO_ROOT}/src/rendering/GpuFrameTimer.cpp
+	${REPO_ROOT}/src/rendering/HandheldDevices.cpp
+	${REPO_ROOT}/src/rendering/MaterialTextures.cpp
+	${REPO_ROOT}/src/rendering/SceneLighting.cpp
+	${REPO_ROOT}/src/ui/InteractionHudTexture.cpp
+	${REPO_ROOT}/src/ui/UiFrame.cpp
 	${REPO_ROOT}/src/rendering/material.cpp
 	${REPO_ROOT}/src/networking/replication/NetAvatar.cpp
 	${REPO_ROOT}/src/scene/objLoader.cpp
