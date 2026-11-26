@@ -319,6 +319,11 @@ void RuntimeRenderer::OnPaint(GLFWwindow* window)
 			CPunt3D ojoVisual = opvN;
 			ojoVisual.x += balanceo.x; ojoVisual.y += balanceo.y; ojoVisual.z += balanceo.z;
 			GLdouble objetivoVisual[3] = { n[0] + balanceo.x, n[1] + balanceo.y, n[2] + balanceo.z };
+			if (cameraSanityLookOffset)
+			{
+				const glm::dvec3 temblor = cameraSanityLookOffset();
+				objetivoVisual[0] += temblor.x; objetivoVisual[1] += temblor.y; objetivoVisual[2] += temblor.z;
+			}
 			ViewMatrix = Vista_Navega(shader_programID, ojoVisual, //false,
 				objetivoVisual, vpv, pan, tr_cpv, tr_cpvF, c_fons, col_obj, objecte, true, pas,
 				front_faces, oculta, test_vis, back_line,

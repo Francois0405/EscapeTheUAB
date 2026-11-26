@@ -105,3 +105,24 @@ void updateCameraBobbing(float delta) { gameplay::player::updateVisualBob(player
 // Desplazamiento SOLO VISUAL del ojo en pantalla (derecha y arriba de la camara). No modifica opvN/n, que usan la
 // fisica, las puertas y el agarre. No se aplica en VR: alli manda la cabeza real.
 glm::dvec3 cameraVisualOffset() { return gameplay::player::visualCameraDisplacement(playerBindings()); }
+
+// Temblor por baja cordura: desplaza SOLO el punto mirado (un giro pequeño de yaw/pitch), nunca opvN ni n,
+// asi que la fisica, el agarre y la direccion real de la camara no cambian y al volver a cordura 100 % o salir
+// de PLAYING el desplazamiento es exactamente cero.
+glm::dvec3 cameraSanityLookOffset()
+{
+	if (currentGameState != GAME_STATE_PLAYING || sceneEditor.IsEnabled() || openXrManager.IsSessionRunning())
+		return glm::dvec3(0.0);
+	const sanity::Shake shake = sanitySystem.CameraShake();
+	if (shake.yaw == 0.0f && shake.pitch == 0.0f) return glm::dvec3(0.0);
+	const glm::dvec3 forward(n[0] - opvN.x, n[1] - opvN.y, n[2] - opvN.z);
+	const double length = glm::length(forward);
+	if (length < 1.0e-6) return glm::dvec3(0.0);
+	const glm::dvec3 dir = forward / length;
+	glm::dvec3 right = glm::cross(dir, glm::dvec3(0.0, 0.0, 1.0));   // Z es "arriba"
+	const double rightLength = glm::length(right);
+	if (rightLength < 1.0e-6) return glm::dvec3(0.0);                // mirando recto arriba o abajo
+	right /= rightLength;
+	const glm::dvec3 up = glm::cross(right, dir);
+	return (right * std::tan(static_cast<double>(shake.yaw)) + up * std::tan(static_cast<double>(shake.pitch))) * length;
+}

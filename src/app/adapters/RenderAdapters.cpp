@@ -1,6 +1,7 @@
 #include "src/app/AppIncludes.h"
 #include "src/app/state/SceneState.h"
 #include "src/app/state/RenderState.h"
+#include "src/app/state/PlayerState.h"
 #include "src/app/state/NetworkState.h"
 #include "src/app/state/VrState.h"
 #include "src/app/adapters/RenderAdapters.h"
@@ -71,6 +72,7 @@ RuntimeRenderer& runtimeRenderer()
 		.dibuixa_Escena = [] { dibuixa_Escena(); },
 		.Barra_Estat = [] { Barra_Estat(); },
 		.cameraVisualOffset = [] { return cameraVisualOffset(); },
+		.cameraSanityLookOffset = [] { return cameraSanityLookOffset(); },
 		.piesJugador = [] { return physicsWorld.HasPlayerBody() ? physicsWorld.PlayerFeetPosition() : feetPositionFromCamera(); },
 		.alturaOjosJugador = [] { return physicsWorld.PlayerEyeHeight(); }
 	};
@@ -134,6 +136,10 @@ void dibuixa_Escena()
 		.showHeldViewModel = retroSettings.heldViewModel && !stereoTestMode && !openXrManager.IsSessionRunning(),
 		.fogDensity = retro::IsActive(retroSettings, sceneEditor.IsEnabled(), stereoTestMode,
 			openXrManager.IsSessionRunning()) ? retroSettings.fogDensity : 0.0f,
+		// Deformacion por cordura: solo en la vista de juego de escritorio (no editor, F2 ni OpenXR).
+		.sanityInsanity = (currentGameState == GAME_STATE_PLAYING && !sceneEditor.IsEnabled() && !stereoTestMode &&
+			!openXrManager.IsSessionRunning()) ? sanitySystem.Insanity() : 0.0f,
+		.sanityTime = static_cast<float>(std::fmod(glfwGetTime(), 1000.0)),
 		.showPhone = showPhone,
 		.phoneOBJ = phoneOBJ,
 		.phoneScale = phoneScale,

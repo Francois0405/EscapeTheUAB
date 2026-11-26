@@ -16,6 +16,7 @@
     <Filter Include="src\gameplay\hirity" />
     <Filter Include="src\gameplay\interaction" />
     <Filter Include="src\gameplay\player" />
+    <Filter Include="src\gameplay\sanity" />
     <Filter Include="src\legacy_vgi" />
     <Filter Include="src\networking" />
     <Filter Include="src\networking\preferences" />
@@ -496,6 +497,12 @@
     <ClInclude Include="..\src\gameplay\player\PlayerRuntime.h">
       <Filter>src\gameplay\player</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\gameplay\sanity\Sanity.h">
+      <Filter>src\gameplay\sanity</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\sanity\SanityEffects.h">
+      <Filter>src\gameplay\sanity</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\legacy_vgi\constants.h">
       <Filter>src\legacy_vgi</Filter>
     </ClInclude>
@@ -668,6 +675,9 @@
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\RuntimeUiLogic.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ui\SanityOverlay.h">
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\StatusBar.h">

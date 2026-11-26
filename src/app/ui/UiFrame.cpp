@@ -133,7 +133,7 @@ void draw_Menu_ImGui()
 			throwChargeActive, throwChargeTime, kMaxThrowChargeDuration, physicsScene,
 			[]() -> const char* { return currentInteractionTarget.accion == InteractionAction::None
 				? nullptr : currentInteractionTarget.texto; },
-			interactionHandTexture, retroSettings.pickupNotice },
+			interactionHandTexture, retroSettings.pickupNotice, sanitySystem, sanityEffects },
 		// Menus
 		{ window, currentGameState, menuBackgroundTexture, masterVolumePercent, audioManager,
 			[] { fpsHasPreviousPosition = false; mouseDeltaX = mouseDeltaY = 0.0; } },

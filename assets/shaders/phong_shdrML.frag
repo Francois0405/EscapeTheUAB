@@ -349,10 +349,42 @@ float valueNoise(vec2 p)
                mix(hash21(i + vec2(0.0, 1.0)), hash21(i + vec2(1.0)), f.x), f.y);
 }
 
+// Cordura baja: pixelacion en bloques de la textura y corrupcion de color por bloques. 0 = sin efecto.
+uniform float uInsanity;
+uniform float uInsanityTime;
+
+float insHash2(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
+
+vec2 insanityUv()
+{
+    float s = smoothstep(0.15, 1.0, uInsanity);
+    if (s <= 0.0) return vertexTexCoord;
+    float B = mix(1.0, 10.0, s * s);
+    if (B < 1.5) return vertexTexCoord;
+    vec2 centro = (floor(gl_FragCoord.xy / B) + 0.5) * B;
+    vec2 d = centro - gl_FragCoord.xy;
+    return vertexTexCoord + dFdx(vertexTexCoord) * d.x + dFdy(vertexTexCoord) * d.y;
+}
+
+void insanityColor(inout vec3 c)
+{
+    float s = smoothstep(0.15, 1.0, uInsanity);
+    if (s <= 0.0) return;
+    float niveles = mix(32.0, 5.0, s * s);
+    c = floor(c * niveles + 0.5) / niveles;
+    float B = mix(24.0, 8.0, s);
+    vec2 celda = floor(gl_FragCoord.xy / B);
+    float tk = floor(uInsanityTime * 9.0);
+    float h = insHash2(celda + tk * vec2(17.0, 31.0));
+    if (h > 1.0 - 0.10 * s * s)
+        c = mix(c, c.gbr * vec3(1.3, 0.5, 0.9) + vec3(0.12, 0.0, 0.0), 0.85);
+}
+
 void main ()
 {
 
 // --- L173- Transpar�ncia
+    vec2 uvG = insanityUv();
     int numMaterials = 0;		// Numero de materials actius a sw_material[].
     float aValor = 0.0;			// Valor de coordenada a de transpar�ncia acumulat dels materials. 
     vec4 fragmentColor = vec4(0.0,0.0,0.0,1.0);	// Intensitat final del fragment (pixel) segons equaci� il.luminaci�.
@@ -366,7 +398,7 @@ void main ()
 	else fragmentColor.a = vertexColor.a;
 
    if (textur) { // Intensitat amb textura
-		 vec4 colorT = texture(texture0,vertexTexCoord);
+		 vec4 colorT = texture(texture0, uvG);
 			 if (uMobileSurface) {
 			     float detail = pow(clamp(max(max(colorT.r, colorT.g), colorT.b), 0.0, 1.0), 0.68);
 			     float panel = smoothstep(0.025, 0.46, detail);
@@ -392,7 +424,7 @@ void main ()
     if (uLightingDebugMode == 5)
     {
         vec3 albedo = sw_material ? material.diffuse.rgb : vertexColor.rgb;
-        if (textur) albedo *= texture(texture0, vertexTexCoord).rgb;
+        if (textur) albedo *= texture(texture0, uvG).rgb;
         FragColor = vec4(clamp(albedo, 0.0, 1.0), 1.0);
         return;
     }
@@ -404,4 +436,5 @@ void main ()
         float clear = exp(-uFogDensity * max(length(vertexPV) - 3.0, 0.0));
         FragColor.rgb = mix(vec3(0.045, 0.055, 0.080), FragColor.rgb, clear);
     }
+    insanityColor(FragColor.rgb);
 }

@@ -61,6 +61,8 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 		ctx.sceneSkyBounceColor.r, ctx.sceneSkyBounceColor.g, ctx.sceneSkyBounceColor.b);
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), 1.0f);
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uFogDensity"), ctx.fogDensity);
+	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uInsanity"), ctx.sanityInsanity);
+	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uInsanityTime"), ctx.sanityTime);
 	const bool renderizarMovil = ctx.fpsModeActive() && !ctx.sceneEditor.IsEnabled()
 		&& ctx.showPhone && ctx.phoneOBJ != nullptr;
 	glm::mat4 matrizMovilMundo(1.0f);

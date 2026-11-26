@@ -58,6 +58,8 @@ struct SceneRenderContext
 	LLUM (&llumGL)[NUM_MAX_LLUMS];
 	bool showHeldViewModel;
 	float fogDensity;
+	float sanityInsanity;   // 0..1, deformacion y pixelacion por baja cordura (0 = sin efecto)
+	float sanityTime;       // segundos, solo para animar el glitch
 	const bool& showPhone;
 	COBJModel* const& phoneOBJ;
 	const float& phoneScale;

@@ -80,6 +80,21 @@ void RunMainLoop(Ps1Framebuffer& ps1, float previous, const RetroPostFX& postFx)
 		updateThrowChargeInput(window, static_cast<float>(delta));
 
 		// 3. Movimiento, física y VR (solo cuando estamos jugando)
+		{
+			// Partida nueva (menu principal -> jugar): la cordura vuelve al 100 %. La pausa no la consume.
+			static GameState estadoAnterior = currentGameState;
+			if (estadoAnterior == GAME_STATE_MAIN_MENU && currentGameState == GAME_STATE_PLAYING)
+			{
+				sanitySystem.Reset();
+				sanityEffects.Reset();
+			}
+			estadoAnterior = currentGameState;
+			if (currentGameState == GAME_STATE_PLAYING && !sceneEditor.IsEnabled())
+			{
+				sanitySystem.Update(static_cast<float>(delta));
+				sanityEffects.Update(static_cast<float>(delta), sanitySystem.Insanity());
+			}
+		}
 		if (currentGameState == GAME_STATE_PLAYING)
 		{
 			const bool ctrlPulsado = glfwGetKey(window, GLFW_KEY_LEFT_CONTROL) == GLFW_PRESS ||

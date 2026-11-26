@@ -14,6 +14,9 @@
 
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/player/FpsMovement.h"
+#include "src/gameplay/sanity/Sanity.h"
+#include "src/gameplay/sanity/SanityEffects.h"
+#include "src/ui/SanityOverlay.h"
 #include "src/physics/PhysicsScene.h"
 #include "src/ui/RuntimeUiLogic.h"
 #include "src/ui/UiScale.h"
@@ -51,6 +54,51 @@ void DrawStaminaBar(const HudContext& context)
 		std::snprintf(texto, sizeof(texto), "%d%%", static_cast<int>(playerMovement.StaminaFraction() * 100.0f + 0.5f));
 		dl->AddText(ImVec2(x0 + ancho + 8 * escala, y0 - 4 * escala), IM_COL32(230, 230, 220, static_cast<int>(200 * a)), texto);
 	}
+}
+
+// Tinte rojo por baja cordura: rectangulo a pantalla completa en la lista de fondo de ImGui (bajo el HUD y los
+// menus, sobre la escena ya compuesta). Funciona con o sin efectos retro. Alfa 0 con cordura plena.
+void DrawSanityTint(const HudContext& context)
+{
+	if (!context.isFpsMode() || context.isEditorActive()) return;
+	const float alfa = context.sanitySystem.TintAlpha();
+	if (alfa <= 0.001f) return;
+	const ImGuiIO& io = ImGui::GetIO();
+	ImGui::GetBackgroundDrawList()->AddRectFilled(ImVec2(0.0f, 0.0f), io.DisplaySize,
+		IM_COL32(170, 0, 8, static_cast<int>(std::clamp(alfa, 0.0f, 1.0f) * 255.0f + 0.5f)));
+}
+
+void DrawSanityEffects(const HudContext& context)
+{
+	if (!context.isFpsMode() || context.isEditorActive()) return;
+	DrawSanityOverlay(context.sanityEffects, uiScale);
+}
+
+// Barra de cordura abajo a la derecha, anclada al borde de la ventana y escalada con uiScale.
+// Se encoge de derecha a izquierda y cambia de color de forma continua (rosa -> magenta -> rojo).
+void DrawSanityBar(const HudContext& context)
+{
+	if (!context.isFpsMode() || context.isEditorActive()) return;
+	const ImGuiIO& io = ImGui::GetIO();
+	if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f) return;
+	const float escala = uiScale;
+	const float margen = 24.0f * escala;
+	const float ancho = std::min(220.0f * escala, io.DisplaySize.x * 0.35f), alto = 14.0f * escala;
+	const float x1 = io.DisplaySize.x - margen, x0 = x1 - ancho;
+	const float y1 = io.DisplaySize.y - margen, y0 = y1 - alto;
+	const float fraccion = context.sanitySystem.Fraction();
+	const sanity::Color c = sanity::BarColor(fraccion);
+	const auto canal = [](float v) { return static_cast<int>(std::clamp(v, 0.0f, 1.0f) * 255.0f + 0.5f); };
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	dl->AddRectFilled(ImVec2(x0 - 2 * escala, y0 - 2 * escala), ImVec2(x1 + 2 * escala, y1 + 2 * escala),
+		IM_COL32(10, 10, 10, 170), 3.0f * escala);
+	if (fraccion > 0.0f)
+		dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + ancho * fraccion, y1),
+			IM_COL32(canal(c.r), canal(c.g), canal(c.b), 235), 2.0f * escala);
+	char texto[24];
+	std::snprintf(texto, sizeof(texto), "CORDURA %d%%", static_cast<int>(fraccion * 100.0f + 0.5f));
+	const ImVec2 tam = ImGui::CalcTextSize(texto);
+	dl->AddText(ImVec2(x1 - tam.x, y0 - tam.y - 5 * escala), IM_COL32(canal(c.r), canal(c.g), canal(c.b), 230), texto);
 }
 
 void DrawInteractionHud(const HudContext& context)
@@ -343,7 +391,10 @@ void DrawRuntimeUiFrame(const FrameContext& context)
 	// 1. La barra de estamina solo se dibuja mientras juegas
 	if (context.menu.state == GAME_STATE_PLAYING)
 	{
+		DrawSanityTint(context.hud);
+		DrawSanityEffects(context.hud);
 		DrawStaminaBar(context.hud);
+		DrawSanityBar(context.hud);
 		DrawInteractionHud(context.hud);
 	}
 

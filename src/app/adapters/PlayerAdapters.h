@@ -15,3 +15,4 @@ void syncPlayerWithCamera();
 void updatePhoneMotion(GLFWwindow* window, float deltaTime);
 void updateCameraBobbing(float delta);
 glm::dvec3 cameraVisualOffset();
+glm::dvec3 cameraSanityLookOffset();

@@ -225,6 +225,8 @@
     <ClInclude Include="..\src\gameplay\interaction\ThrowCharge.h" />
     <ClInclude Include="..\src\gameplay\player\FpsMovement.h" />
     <ClInclude Include="..\src\gameplay\player\PlayerRuntime.h" />
+    <ClInclude Include="..\src\gameplay\sanity\Sanity.h" />
+    <ClInclude Include="..\src\gameplay\sanity\SanityEffects.h" />
     <ClInclude Include="..\src\legacy_vgi\constants.h" />
     <ClInclude Include="..\src\legacy_vgi\framework.h" />
     <ClInclude Include="..\src\legacy_vgi\LegacyVgiState.h" />
@@ -283,6 +285,7 @@
     <ClInclude Include="..\src\scene\SceneRuntime.h" />
     <ClInclude Include="..\src\ui\RuntimeUi.h" />
     <ClInclude Include="..\src\ui\RuntimeUiLogic.h" />
+    <ClInclude Include="..\src\ui\SanityOverlay.h" />
     <ClInclude Include="..\src\ui\StatusBar.h" />
     <ClInclude Include="..\src\ui\UiScale.h" />
     <ClInclude Include="..\src\vr\OpenXRManager.h" />

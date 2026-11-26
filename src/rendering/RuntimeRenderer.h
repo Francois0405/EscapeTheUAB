@@ -73,6 +73,7 @@ struct RuntimeRenderer
 	std::function<void()> dibuixa_Escena;
 	std::function<void()> Barra_Estat;
 	std::function<glm::dvec3()> cameraVisualOffset;
+	std::function<glm::dvec3()> cameraSanityLookOffset;   // giro de camara por baja cordura (solo vista de escritorio)
 	std::function<glm::vec3()> piesJugador;
 	std::function<float()> alturaOjosJugador;
 

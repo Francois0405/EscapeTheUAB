@@ -102,6 +102,9 @@ fps::CameraBob cameraBob;
 
 fps::StaminaBar staminaBar;
 
+sanity::SanitySystem sanitySystem;
+sanity::SanityEffects sanityEffects;
+
 bool showStaminaPercent = true;
 
 bool hasPreviousFrameFeet = false;

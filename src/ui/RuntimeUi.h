@@ -14,6 +14,7 @@ struct SceneObject;
 namespace animation { struct Playback; }
 namespace physics { class FallingCubeDemo; class PhysicsScene; class PhysicsWorld; }
 namespace fps { class CameraBob; class StaminaBar; class PlayerMovement; }
+namespace sanity { class SanitySystem; class SanityEffects; }
 namespace glb { struct AnimatedScene; }
 namespace game { class HiritiAnimator; }
 namespace netgame { class NetworkGame; struct NetworkConfig; }
@@ -47,6 +48,8 @@ namespace runtimeui
 		std::function<const char*()> interactionPrompt;   // nullptr when nothing is targeted
 		const unsigned int& handTexture;
 		const bool& showPickupNotice;
+		const sanity::SanitySystem& sanitySystem;
+		const sanity::SanityEffects& sanityEffects;
 	};
 
 	struct MenuContext

@@ -74,10 +74,38 @@ out vec2 vertexTexCoord;
 out vec4 vertexColor;
 out vec3 vertexWorldPosition;
 
+// Cordura baja: deformacion de la geometria (ondas, franjas desplazadas a saltos y cuantizacion de vertices).
+// Es funcion de la posicion en el mundo, asi que las costuras entre mallas se mueven juntas. 0 = sin efecto.
+uniform float uInsanity;
+uniform float uInsanityTime;
+
+float insHash(vec3 p) { return fract(sin(dot(p, vec3(127.1, 311.7, 74.7))) * 43758.5453); }
+
+vec3 insanityWorld(vec3 wp)
+{
+    float s = smoothstep(0.12, 1.0, uInsanity);
+    if (s <= 0.0) return wp;
+    float t = uInsanityTime;
+    vec3 w = vec3(sin(wp.z * 2.1 + t * 1.6 + wp.y * 1.3),
+                  sin(wp.x * 1.7 - t * 2.1 + wp.z * 1.1),
+                  sin(wp.y * 2.3 + t * 1.9 + wp.x * 0.9));
+    vec3 off = w * (0.015 + 0.14 * s) * s;
+    float paso = floor(t * 7.0);
+    float franja = floor(wp.z * 3.0);
+    float burst = step(1.0 - 0.45 * s * s, insHash(vec3(franja, paso, 1.0)));
+    off.x += burst * (insHash(vec3(franja, paso, 2.0)) - 0.5) * 1.2 * s;
+    off.y += burst * (insHash(vec3(franja, paso, 3.0)) - 0.5) * 1.2 * s;
+    wp += off;
+    float g = mix(0.0, 0.35, s * s * s);
+    if (g > 0.01) wp = mix(wp, floor(wp / g + 0.5) * g, smoothstep(0.35, 0.9, s));
+    return wp;
+}
+
 void main()	// --- L68-
 {
 // --- L70- Calcul variables out.
-    vertexPV = vec3(viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
+    vec3 insanityPos = insanityWorld(vec3(modelMatrix * vec4(in_Vertex, 1.0)));
+    vertexPV = vec3(viewMatrix * vec4(insanityPos, 1.0));
     vertexWorldPosition = vec3(modelMatrix * vec4(in_Vertex, 1.0));
 
     //mat4 NormalMatrix = transpose(inverse(viewMatrix * modelMatrix));
@@ -106,5 +134,5 @@ void main()	// --- L68-
     vertexColor = in_Color;
 
 // --- L84- Transformacio de Visualitzacio amb Matriu Projeccio (PMatrix), Matriu Cmera (VMatrix) i Matriu TG (MMatrix)
-    gl_Position = vec4(projectionMatrix * viewMatrix * modelMatrix * vec4(in_Vertex,1.0));
+    gl_Position = vec4(projectionMatrix * viewMatrix * vec4(insanityPos, 1.0));
 }
