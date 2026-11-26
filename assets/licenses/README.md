@@ -15,5 +15,6 @@ repositorio y hay que conseguirlo antes de publicar o distribuir el juego.
 | `assets/animations/*.glb` | Sin nota | **Pendiente** |
 | `assets/audio/hirity/` | Sin nota. `appear/rickroll.ogg` apunta, por el nombre, a una grabación comercial | **Pendiente**: revisar antes de publicar |
 | `assets/textures/` (skybox, fondo del menú), `assets/ui/` | Sin nota | **Pendiente** |
+| `archive/legacy/vgi-samples/` (fuera de `assets/`, no se distribuye con el juego) | Modelos Skull y UH60, mapamundis y texturas de la base VGI; son de terceros | **Pendiente** |
 
 `assets/models/imatges`, `items` y los `.blend` se rigen por la misma regla: sin nota, pendiente.
