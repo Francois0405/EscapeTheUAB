@@ -16,6 +16,7 @@
 #include <openxr/openxr_platform.h>
 
 #include <algorithm>
+#include <cmath>
 #include <cstring>
 #include <iostream>
 #include <sstream>
@@ -86,6 +87,7 @@ namespace vr
 
 		XrActionSet actionSet = XR_NULL_HANDLE;
 		XrAction grabAction = XR_NULL_HANDLE;
+		XrAction moveStickAction = XR_NULL_HANDLE;
 		XrPath rutaManos[2] = { XR_NULL_PATH, XR_NULL_PATH }; // 0: izq, 1: der
 
 		bool gatilloAnterior = false;
@@ -392,11 +394,10 @@ namespace vr
 			return true;
 		}
 
-		// Etapa D: crear el ActionSet, la acción "agarrar" y vincularla al gatillo frontal de los mandos.
-		// Etapa D: crear el ActionSet, las acciones "agarrar" y "apuntar_mando" y vincularlas.
+		// Etapa D: crear el ActionSet, las acciones "agarrar", "apuntar_mando" y "mover_stick" y vincularlas.
 		bool CrearAcciones(XrInstance instancia, XrSession sesion, XrActionSet& actionSet,
-			XrAction& grabAction, XrAction& aimAction, XrPath rutaManos[2],
-			XrSpace aimSpace[2], std::string& mensaje, std::string& d)
+			XrAction& grabAction, XrAction& aimAction, XrAction& moveStickAction,
+			XrPath rutaManos[2], XrSpace aimSpace[2], std::string& mensaje, std::string& d)
 		{
 			XrActionSetCreateInfo setInfo = { XR_TYPE_ACTION_SET_CREATE_INFO };
 			std::strncpy(setInfo.actionSetName, "acciones_juego", XR_MAX_ACTION_SET_NAME_SIZE - 1);
@@ -428,33 +429,46 @@ namespace vr
 			r = xrCreateAction(actionSet, &poseInfo, &aimAction);
 			if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear la accion apuntar_mando", r); return false; }
 
+			// 3. Acción VECTOR2F para el joystick izquierdo (moverse)
+			XrActionCreateInfo stickInfo = { XR_TYPE_ACTION_CREATE_INFO };
+			stickInfo.actionType = XR_ACTION_TYPE_VECTOR2F_INPUT;
+			std::strncpy(stickInfo.actionName, "mover_stick", XR_MAX_ACTION_NAME_SIZE - 1);
+			std::strncpy(stickInfo.localizedActionName, "Mover Stick", XR_MAX_LOCALIZED_ACTION_NAME_SIZE - 1);
+			stickInfo.countSubactionPaths = 1;
+			stickInfo.subactionPaths = &rutaManos[0];
+			r = xrCreateAction(actionSet, &stickInfo, &moveStickAction);
+			if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear la accion mover_stick", r); return false; }
+
 			// Rutas físicas
 			XrPath triggerIzq = XR_NULL_PATH, triggerDer = XR_NULL_PATH;
 			XrPath selectIzq = XR_NULL_PATH, selectDer = XR_NULL_PATH;
 			XrPath aimIzq = XR_NULL_PATH, aimDer = XR_NULL_PATH;
+			XrPath thumbstickIzq = XR_NULL_PATH;
 			xrStringToPath(instancia, "/user/hand/left/input/trigger/value", &triggerIzq);
 			xrStringToPath(instancia, "/user/hand/right/input/trigger/value", &triggerDer);
 			xrStringToPath(instancia, "/user/hand/left/input/select/click", &selectIzq);
 			xrStringToPath(instancia, "/user/hand/right/input/select/click", &selectDer);
 			xrStringToPath(instancia, "/user/hand/left/input/aim/pose", &aimIzq);
 			xrStringToPath(instancia, "/user/hand/right/input/aim/pose", &aimDer);
+			xrStringToPath(instancia, "/user/hand/left/input/thumbstick", &thumbstickIzq);
 
-			// 3. Perfil Oculus Touch (Meta Quest / Rift)
+			// 4. Perfil Oculus Touch (Meta Quest / Rift)
 			XrPath perfilOculus = XR_NULL_PATH;
 			xrStringToPath(instancia, "/interaction_profiles/oculus/touch_controller", &perfilOculus);
 			XrActionSuggestedBinding bindingsOculus[] = {
 				{ grabAction, triggerIzq },
 				{ grabAction, triggerDer },
 				{ aimAction, aimIzq },
-				{ aimAction, aimDer }
+				{ aimAction, aimDer },
+				{ moveStickAction, thumbstickIzq }
 			};
 			XrInteractionProfileSuggestedBinding sugOculus = { XR_TYPE_INTERACTION_PROFILE_SUGGESTED_BINDING };
 			sugOculus.interactionProfile = perfilOculus;
 			sugOculus.suggestedBindings = bindingsOculus;
-			sugOculus.countSuggestedBindings = 4;
+			sugOculus.countSuggestedBindings = 5;
 			xrSuggestInteractionProfileBindings(instancia, &sugOculus);
 
-			// 4. Perfil genérico Khronos Simple Controller (respaldo)
+			// 5. Perfil genérico Khronos Simple Controller (respaldo)
 			XrPath perfilSimple = XR_NULL_PATH;
 			xrStringToPath(instancia, "/interaction_profiles/khr/simple_controller", &perfilSimple);
 			XrActionSuggestedBinding bindingsSimple[] = {
@@ -469,14 +483,14 @@ namespace vr
 			sugSimple.countSuggestedBindings = 4;
 			xrSuggestInteractionProfileBindings(instancia, &sugSimple);
 
-			// 5. Adjuntar el ActionSet a la sesión (SIEMPRE DESPUÉS de crear todas las acciones y bindings)
+			// 6. Adjuntar el ActionSet a la sesión (SIEMPRE DESPUÉS de crear todas las acciones y bindings)
 			XrSessionActionSetsAttachInfo attachInfo = { XR_TYPE_SESSION_ACTION_SETS_ATTACH_INFO };
 			attachInfo.countActionSets = 1;
 			attachInfo.actionSets = &actionSet;
 			r = xrAttachSessionActionSets(sesion, &attachInfo);
 			if (XR_FAILED(r)) { mensaje = Texto("No se pudieron adjuntar las acciones a la sesion", r); return false; }
 
-			// 6. Crear espacios de acción para rastrear la pose de ambos mandos
+			// 7. Crear espacios de acción para rastrear la pose de ambos mandos
 			for (int i = 0; i < 2; ++i)
 			{
 				XrActionSpaceCreateInfo spaceInfo = { XR_TYPE_ACTION_SPACE_CREATE_INFO };
@@ -487,7 +501,7 @@ namespace vr
 				if (XR_FAILED(r)) { mensaje = Texto("No se pudo crear XrActionSpace del mando", r); return false; }
 			}
 
-			d += "Acciones de mandos listas (gatillo frontal y apuntado vinculados).\n";
+			d += "Acciones de mandos listas (gatillo frontal, apuntado y stick izquierdo vinculados).\n";
 			return true;
 		}
 #endif
@@ -508,6 +522,37 @@ namespace vr
 			}
 			ojos.clear();
 		}
+	}
+
+	void OpenXrManager::GetLeftThumbstick(float& outX, float& outY, float deadzone) const
+	{
+		outX = 0.0f;
+		outY = 0.0f;
+
+		if (!impl || !IsSessionRunning() || impl->sesion == XR_NULL_HANDLE ||
+			impl->moveStickAction == XR_NULL_HANDLE)
+			return;
+
+		XrActionStateGetInfo getInfo{ XR_TYPE_ACTION_STATE_GET_INFO };
+		getInfo.action = impl->moveStickAction;
+		getInfo.subactionPath = impl->rutaManos[0];
+
+		XrActionStateVector2f state{ XR_TYPE_ACTION_STATE_VECTOR2F };
+		if (XR_FAILED(xrGetActionStateVector2f(impl->sesion, &getInfo, &state)) || !state.isActive)
+			return;
+
+		const float x = state.currentState.x;
+		const float y = state.currentState.y;
+		const float mag = std::sqrt(x * x + y * y);
+		if (mag <= deadzone)
+			return;
+
+		const float clampedMag = std::min(mag, 1.0f);
+		const float scaledMag = (clampedMag - deadzone) / (1.0f - deadzone);
+		const float invMag = scaledMag / mag;
+
+		outX = x * invMag;
+		outY = y * invMag;
 	}
 
 	OpenXrManager::OpenXrManager() : impl(std::make_unique<Impl>()) {}
@@ -539,6 +584,7 @@ namespace vr
 		impl->vistas.clear();
 		if (impl->aimSpace[0] != XR_NULL_HANDLE) xrDestroySpace(impl->aimSpace[0]);
 		if (impl->aimSpace[1] != XR_NULL_HANDLE) xrDestroySpace(impl->aimSpace[1]);
+		if (impl->moveStickAction != XR_NULL_HANDLE) xrDestroyAction(impl->moveStickAction);
 		if (impl->aimAction != XR_NULL_HANDLE) xrDestroyAction(impl->aimAction);
 		if (impl->grabAction != XR_NULL_HANDLE) xrDestroyAction(impl->grabAction);
 		if (impl->actionSet != XR_NULL_HANDLE) xrDestroyActionSet(impl->actionSet);
@@ -553,6 +599,7 @@ namespace vr
 		impl->gatilloIzqRecienPulsado = false;
 		impl->aimSpace[0] = XR_NULL_HANDLE;
 		impl->aimSpace[1] = XR_NULL_HANDLE;
+		impl->moveStickAction = XR_NULL_HANDLE;
 		impl->aimAction = XR_NULL_HANDLE;
 		impl->controllerPoseValid[0] = false;
 		impl->controllerPoseValid[1] = false;
@@ -604,7 +651,7 @@ namespace vr
 				resultado = OpenXrState::Error;
 			if (resultado == OpenXrState::SessionCreated &&
 				!CrearAcciones(impl->instancia, impl->sesion, impl->actionSet, impl->grabAction,
-					impl->aimAction, impl->rutaManos, impl->aimSpace, aviso, informe))
+					impl->aimAction, impl->moveStickAction, impl->rutaManos, impl->aimSpace, aviso, informe))
 				resultado = OpenXrState::Error;
 			if (resultado == OpenXrState::SessionCreated)
 				aviso = "Sesion OpenXR lista. Esperando a que el runtime la ponga en READY (ponte el casco).";
@@ -895,40 +942,6 @@ namespace vr
 		return true;
 	}
 
-	// En OpenXRManager.cpp (dentro de vr::OpenXrManager::GetLeftThumbstick)
-	void OpenXrManager::GetLeftThumbstick(float& outX, float& outY, float deadzone) const
-	{
-		outX = 0.0f;
-		outY = 0.0f;
-
-		if (!impl || !IsSessionRunning() || impl->session == XR_NULL_HANDLE ||
-			impl->leftThumbstickAction == XR_NULL_HANDLE)
-			return;
-
-		XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
-		getInfo.action = impl->leftThumbstickAction;
-		// Si la acción se creó sin subactionPath específico, usa XR_NULL_HANDLE;
-		// si usa subaction paths, pasa impl->handPaths[0] (/user/hand/left).
-		getInfo.subactionPath = XR_NULL_HANDLE;
-
-		XrActionStateVector2f state{XR_TYPE_ACTION_STATE_VECTOR2F};
-		if (XR_FAILED(xrGetActionStateVector2f(impl->session, &getInfo, &state)) || !state.isActive)
-			return;
-
-		const float x = state.currentState.x;
-		const float y = state.currentState.y;
-		const float mag = std::sqrt(x * x + y * y);
-		if (mag <= deadzone)
-			return;
-
-		const float clampedMag = std::min(mag, 1.0f);
-		const float scaledMag = (clampedMag - deadzone) / (1.0f - deadzone);
-		const float invMag = scaledMag / mag;
-
-		outX = x * invMag;
-		outY = y * invMag;
-	}
-
 #else   // ---- Sin OpenXR en esta compilación: la clase existe, pero no hace nada ----
 
 	struct OpenXrManager::Impl {};
@@ -953,6 +966,7 @@ namespace vr
 	bool OpenXrManager::GatilloPulsado() const { return false; }
 	bool OpenXrManager::ControllerAimPose(int, XrPose&) const { return false; }
 	bool OpenXrManager::LeftTriggerJustPressed() const { return false; }
+	void OpenXrManager::GetLeftThumbstick(float& outX, float& outY, float) const { outX = 0.0f; outY = 0.0f; }
 
 	OpenXrState OpenXrManager::SetActive(GLFWwindow*, int, int)
 	{
