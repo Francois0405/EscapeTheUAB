@@ -548,3 +548,11 @@ De 1.660 entradas a 727; el contenido versionado pasa de 215,6 a 138,9 MB. Lista
 Se conservan en `archive/legacy/` las muestras académicas VGI (curvas, modelos Skull y UH60, texturas y tres shaders únicos) y los modelos de `res/` que no duplican ningún asset. `src/`, `tests/` y los assets activos no cambian; en `assets/` solo se añade `licenses/README.md`, con las licencias que **faltan por documentar** antes de publicar.
 
 **Validación sobre `befcf26` (Windows).** Exportado a un directorio nuevo: lanzadores Debug y Release, CTest 23/23 en ambas, `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10, arranque y cierre; `OpenXR: ON` con el cargador de vcpkg; MSBuild Debug y Release. Linux y macOS no se compilaron: solo se comprobó que ningún `CMakeLists`, script ni preset referencia lo borrado.
+
+## 34. Licencias, procedencia y últimos restos (2026-11-26)
+
+- Eliminados los formatos del UH60 que nada abre (`.3ds`, `.FBX`, `.lwo`, `.lxo`, `.max`, `.mb`; 7 ficheros, 15,2 MB) y 16 `.mtl` huérfanos de `archive/legacy/res/`: ningún OBJ los resolvía y los activos solo difieren en rutas `C:/` corregidas.
+- Textos de licencia de las dependencias: [`third_party/licenses/README.md`](../third_party/licenses/README.md).
+- Procedencia y derechos de los assets: [`assets/licenses/README.md`](../assets/licenses/README.md). Cinco texturas verificadas byte a byte; el resto, declarado sin comparar o **desconocido**.
+- **Bloqueante para publicar o distribuir:** los assets de derechos desconocidos, en particular `rickroll.ogg`.
+- Los respaldos Git se conservan. Con esto queda cerrada la fase de arquitectura y limpieza.
