@@ -13,7 +13,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "ENTORNVGI_USE_SYSTEM_DEPENDENCIES": "ON"
+        "ENTORNVGI_USE_SYSTEM_DEPENDENCIES": "ON",
+        "ENTORNVGI_REQUIRE_ENET": "ON"
       }
     },
     {
@@ -28,7 +29,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "ENTORNVGI_USE_SYSTEM_DEPENDENCIES": "ON"
+        "ENTORNVGI_USE_SYSTEM_DEPENDENCIES": "ON",
+        "ENTORNVGI_REQUIRE_ENET": "ON"
       }
     },
     {
@@ -44,7 +46,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_MAKE_PROGRAM": "$env{NINJA}"
+        "CMAKE_MAKE_PROGRAM": "$env{NINJA}",
+        "ENTORNVGI_REQUIRE_ENET": "ON"
       }
     },
     {
@@ -60,7 +63,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
-        "CMAKE_MAKE_PROGRAM": "$env{NINJA}"
+        "CMAKE_MAKE_PROGRAM": "$env{NINJA}",
+        "ENTORNVGI_REQUIRE_ENET": "ON"
       }
     },
     {
@@ -75,7 +79,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "ENTORNVGI_REQUIRE_ENET": "ON"
       }
     },
     {
@@ -90,7 +95,8 @@
       },
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
-        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "ENTORNVGI_REQUIRE_ENET": "ON"
       }
     }
   ],

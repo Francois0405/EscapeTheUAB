@@ -6,9 +6,11 @@
     "glfw3",
     "glew",
     "glm",
+    "meshoptimizer",
     "bullet3",
     "stb",
     "nativefiledialog-extended",
+    "enet",
     {
       "name": "openxr-loader",
       "platform": "windows"

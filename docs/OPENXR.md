@@ -11,17 +11,17 @@
 | A | Instancia OpenXR, runtime, visor, extensión OpenGL, versión de OpenGL | Hecha. Rutas de fallo probadas sin visor |
 | B | Sesión enlazada al contexto OpenGL (WGL) y eventos de estado | Hecha (solo Windows). **Sin probar con visor** |
 | C | Espacio STAGE/LOCAL, vistas, swapchains + framebuffers, `READY/FOCUSED/STOPPING/pérdida`, `xrBegin/EndSession`, bucle `xrWaitFrame → xrBeginFrame → xrLocateViews → xrEndFrame`, capa de proyección | Hecha (solo Windows). **Compila; sin probar con visor** |
-| – | Conversión OpenXR → motor (Z arriba), proyección asimétrica por ojo (`VistaVR.h`) | Hecha y con tests (`VistaVRTests`) |
+| – | Conversión OpenXR → motor (Z arriba), proyección asimétrica por ojo (`src/vr/VrView.h`) | Hecha y con tests (`VistaVRTests`) |
 | – | Manos, mandos, agarre con mandos, teleportación | No implementado (a propósito) |
 
-**F2 no es VR:** es la vista estereoscópica de prueba en pantalla (`VistaEstereo.h`). OpenXR se activa aparte.
+**F2 no es VR:** es la vista estereoscópica de prueba en pantalla (`src/vr/StereoView.h`). OpenXR se activa aparte.
 
 ## Cómo se activa (siempre explícito)
 
 * `F3` en modo FPS, o el botón **Activar OpenXR** del panel F1 → *Fisica (Bullet)*.
 * Nunca al arrancar. Sin runtime o visor el juego sigue en pantalla y el panel explica el motivo
   (`Sin runtime OpenXR`, `Sin visor`, `Falta XR_KHR_opengl_enable`, `OpenGL insuficiente`…).
-* `ElegirModoDeJuego(vrPedido, estado)` solo devuelve VR si hay sesión creada.
+* `ChooseGamePlayMode(vrPedido, estado)` solo devuelve VR si hay sesión creada.
 
 ## Dependencias y CMake
 
@@ -31,16 +31,15 @@
 * **macOS:** desactivado por defecto (no hay runtime OpenXR real). Para probar solo la inicialización:
   `cmake --preset macos-debug -B build/macos-openxr -DENTORNVGI_ENABLE_OPENXR=ON -DVCPKG_MANIFEST_FEATURES=openxr`
 * Opción `ENTORNVGI_ENABLE_OPENXR` (ON en Windows/Linux, OFF en macOS). Define `ENTORNVGI_HAS_OPENXR` para el código.
-* **Visual Studio (`.vcxproj`):** los archivos están añadidos, pero **sin** `ENTORNVGI_HAS_OPENXR`, así que compila sin OpenXR
-  (seguro). Para activarlo: `vcpkg install openxr-loader:x64-windows`, `vcpkg integrate install` y añadir
-  `ENTORNVGI_HAS_OPENXR=1` a las definiciones del preprocesador. Sin verificar.
+* **Visual Studio:** el proyecto generado por `tools/generate_vs_project.py` define `ENTORNVGI_HAS_OPENXR=1` y toma el
+  cargador del manifiesto de vcpkg. Compila en Debug y Release; sin probar con visor.
 
 ## Decisión sobre `third_party/OpenXR-SDK-main`
 
 El commit `89c6f33` (rama VR) añadía una copia completa del SDK oficial (≈430 archivos: documentación, CI, tests, herramientas)
 y su CMake apuntaba a `third_party/OpenXR-SDK/include`, que no existe; además **nunca enlazaba el cargador**, así que
 `xrCreateInstance` no habría enlazado. Se sustituye por el paquete `openxr-loader` de vcpkg (licencias: Apache-2.0 / MIT / BSL-1.0,
-las del SDK). La copia sigue intacta en la rama `VR` por si se necesita; no se ha borrado nada.
+las del SDK). La copia se eliminó de esta rama el 2026-11-26; sigue en la rama `VR` y en el historial.
 
 ## Problemas del código original corregidos
 
@@ -65,10 +64,10 @@ reales, versión de OpenGL aceptada, bucle de fotogramas.
   `xrEnumerateSwapchainFormats` (prefiere `GL_SRGB8_ALPHA8`, luego `RGBA8`…), el campo de visión y la separación entre ojos de
   `xrLocateViews` (cada ojo trae su pose y su FOV, posiblemente asimétrico) y el ritmo de `xrWaitFrame`.
 * **Espacio:** `STAGE` si el runtime lo ofrece (origen en el suelo), si no `LOCAL` (origen en la cabeza).
-* **Coordenadas:** OpenXR es X derecha, Y arriba, −Z delante; el motor usa **Z arriba**. `VistaVR.h` ancla el origen de OpenXR al
+* **Coordenadas:** OpenXR es X derecha, Y arriba, −Z delante; el motor usa **Z arriba**. `src/vr/VrView.h` ancla el origen de OpenXR al
   jugador (los **pies** con STAGE, los **ojos** con LOCAL) y lo gira con la orientación FPS (ratón), así *delante de OpenXR = delante de la
   cámara FPS*. La cabeza real mueve la **cámara**; la **cápsula de Bullet no se toca**. Unidades: 1 unidad del motor = 1 m.
-* **Dibujo:** `dibujarEscenaVR()` (main.cpp) usa el mismo `configura_Escena()/dibuixa_Escena()` que la pantalla (OBJ, GLB, puertas,
+* **Dibujo:** `drawVrScene()` (main.cpp) usa el mismo `configura_Escena()/dibuixa_Escena()` que la pantalla (OBJ, GLB, puertas,
   Bullet, colisionadores). Planos 0,05 m – 500 m en VR. El ojo izquierdo se copia a la ventana como espejo.
 * **Sin VR o sin visor:** el juego sigue en pantalla. Si el visor no está mostrando imagen (`shouldRender = false`) se dibuja el
   escritorio normal. La sincronía vertical del monitor se apaga mientras la sesión VR está en marcha.
@@ -106,7 +105,7 @@ del runtime, extensiones, espacios disponibles/elegido, formatos de swapchain (e
 |---|---|
 | `Sin runtime OpenXR` | Horizon Link cerrado o no marcado como runtime activo de OpenXR |
 | `Sin visor` | Casco apagado o Link no activado |
-| `OpenGL insuficiente` | El controlador no dio 4.x; la ventana volvió a 3.3 (ver `Diagnostico`) |
+| `OpenGL insuficiente` | El controlador no dio 4.x; la ventana volvió a 3.3 (ver `NetworkDiagnostics`) |
 | Sesión creada pero pantalla negra en el casco | Aún no está en `READY`/`FOCUSED` (ponte el casco); mirar el estado en el panel |
-| `Framebuffer del ojo incompleto` | Formato de swapchain no renderizable; enviar el `Diagnostico` |
+| `Framebuffer del ojo incompleto` | Formato de swapchain no renderizable; enviar el `NetworkDiagnostics` |
 | Imagen muy oscura/clara | Formato elegido distinto de sRGB (ver *Formato elegido* en el diagnóstico) |

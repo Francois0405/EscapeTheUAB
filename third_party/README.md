@@ -1,7 +1,9 @@
-# Dependencias vendorizadas (Linux)
+# Dependencias vendorizadas
 
-Estas copias se usan únicamente en la compilación Linux con CMake. Windows
-sigue usando las cabeceras y bibliotecas ya incluidas en `include/` y `lib/x64/`.
+SOIL2, Dear ImGui, ImGuizmo, nlohmann/json y cgltf se compilan desde
+`third_party/` en todas las plataformas. Native File Dialog con GTK3 se usa
+en Linux; Windows y macOS obtienen el resto de dependencias del toolchain
+configurado por CMake.
 
 ## SOIL2
 
@@ -26,7 +28,37 @@ sigue usando las cabeceras y bibliotecas ya incluidas en `include/` y `lib/x64/`
   `efb169dee911696b5d35fc8e3f7ea0c56d679debc529eba9ca6aa6443ba9d5e9`
 - Licencia: MIT. El texto está en `third_party/cgltf/LICENSE` y también al final
   de `cgltf.h`. El archivo se conserva **sin modificar**.
-- Uso: `EntornVGI/ModeloGLB.cpp` lee mallas, jerarquía de nodos y animaciones de
-  los archivos `.glb` de `EntornVGI/assets/animations/`. Es una biblioteca de un
-  solo archivo: `CGLTF_IMPLEMENTATION` se define únicamente en `ModeloGLB.cpp`.
+- Uso: `src/rendering/GlbModel.cpp` lee mallas, jerarquía de nodos y animaciones de
+  los archivos `.glb` de `assets/animations/`. Es una biblioteca de un
+  solo archivo: `CGLTF_IMPLEMENTATION` se define únicamente en `GlbModel.cpp`.
 - Se usa en todas las plataformas (Windows, Linux y macOS) y no depende de vcpkg.
+
+## Dear ImGui
+
+- Ubicación: `third_party/imgui/`; versión indicada en `third_party/imgui/Version.txt`.
+- Licencia: MIT, en `third_party/imgui/LICENSE.txt` (etiqueta `v1.89.4`).
+
+## ImGuizmo
+
+- Ubicación: `third_party/imguizmo/`.
+- Licencia: texto conservado en `third_party/imguizmo/LICENSE-ImGuizmo`.
+
+## nlohmann/json
+
+- Ubicación: `third_party/nlohmann/`.
+- Licencia: MIT, en `third_party/nlohmann/LICENSE.MIT` y en el encabezado de `json.hpp`.
+
+## miniaudio
+
+- Ubicación: `third_party/miniaudio/miniaudio.h`.
+- Licencia: dominio público o MIT-0, a elección; el texto está al final de la cabecera.
+
+## stb_vorbis
+
+- La biblioteca la aporta vcpkg o el sistema; `third_party/stb_compat/` solo contiene el adaptador propio de inclusión.
+
+## OpenXR
+
+- No se vendoriza. El cargador llega de vcpkg (`openxr-loader`) o de `libopenxr-dev` en Linux.
+
+Los textos de licencia, también de los paquetes de vcpkg, se listan en [licenses/README.md](licenses/README.md).

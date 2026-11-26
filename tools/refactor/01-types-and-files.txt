@@ -1,0 +1,136 @@
+# old new
+AccionInteraccion InteractionAction
+Anclaje Anchor
+AnimacionGLB GlbAnimation
+AnimacionHiriti HiritiAnimator
+ArbitroPropiedad OwnershipArbiter
+BalanceoCamara CameraBob
+BarraEstamina StaminaBar
+BloqueoGizmoTrasSeleccion GizmoPostSelectionLock
+CajaColision CollisionBox
+CajaLocal LocalBox
+CajaOrientada OrientedBox
+CampoDeVision FieldOfView
+CanalAnimacion AnimationChannel
+CandidatoSeleccion SelectionCandidate
+ClaseElemento ElementClass
+ConfigRed NetworkConfig
+ContextoEscena EditorSceneContext
+ControladorPasos StepController
+DatosEscena SceneData
+DemoCuboCaida FallingCubeDemo
+DesplazamientoVisual VisualOffset
+EditorEscenas SceneEditor
+ElementoSeleccionable SelectableElement
+EntradaEditor EditorInput
+EntradaMovimiento MovementInput
+EscenaAnimada AnimatedScene
+EscenaFisica PhysicsScene
+EspacioReferencia ReferenceSpaceKind
+EstadoDinamico DynamicState
+EstadoEscena SceneState
+EstadoObjetoEscena SceneObjectState
+EstadoOpenXR OpenXrState
+EstadoPaso StepState
+EstadoPuerta DoorState
+EventoJuego GameplayEvent
+EventoSalida OutputEvent
+FaseRed NetworkPhase
+Flecha ArrowKey
+FormaCuerpo BodyShape
+GestorOpenXR OpenXrManager
+HistorialEscena SceneHistory
+IPuertasEscena ISceneDoors
+InterpoladorRemotos RemoteInterpolator
+Interpolacion InterpolationMode
+KeyframeAngulo AngleKeyframe
+MallaGLB GlbMesh
+MedidasJugador PlayerDimensions
+ModeloGLB GlbModel
+ModoCamara CameraMode
+ModoDeJuego GamePlayMode
+MovimientoJugador PlayerMovement
+MundoFisico PhysicsWorld
+NodoGLB GlbNode
+ObjetivoInteraccion InteractionTarget
+ObjetoAnimado AnimatedObject
+ObjetoCompartido SharedObject
+ObstaculoColocacion PlacementObstacle
+OjoVR VrEye
+OpcionesCamara CameraOptions
+ParametrosBalanceo BobParameters
+ParametrosMovimiento MovementParameters
+ParametrosPasos StepParameters
+PoseCuerpo BodyPose
+PoseGLB GlbPose
+PoseXR XrPose
+PrimitivaGLB GlbPrimitive
+PropiedadAnimada AnimatedProperty
+PuertasGLB GlbDoors
+PulsacionFlecha ArrowPress
+RectanguloVentanaUI UiWindowRect
+RedJuego NetworkGame
+ReproductorAnimacion AnimationPlayer
+ResultadoColocacion PlacementResult
+ResultadoFotograma FrameResult
+ResultadoSolicitud RequestResult
+SceneAperturaPared SceneWallOpening
+SceneColisionador SceneCollider
+SceneFisica ScenePhysics
+SceneLuz SceneLight
+SceneObjetoAnimado SceneAnimatedObject
+ScenePared SceneWall
+SceneSeccionPared SceneWallSection
+SerializadorEscenas SceneSerializer
+SincroPuertas DoorSync
+SolicitudObjetoDinamico DynamicObjectRequest
+TemporizadorAudioHiriti HiritiAudioTimer
+TipoCuerpo BodyType
+TransformacionLocal LocalTransform
+UltimoEndpoint LastEndpoint
+VisibilidadEditor EditorVisibility
+VistaObjetoCompartido SharedObjectView
+animacion animation
+estereo stereo
+juego game
+netjuego netgame
+file src/animation/AnimacionGLB.h src/animation/GlbAnimation.h
+file src/animation/AnimacionPuerta.h src/animation/DoorAnimation.h
+file src/animation/ObjetosAnimadosGLB.cpp src/animation/GlbAnimatedObjects.cpp
+file src/animation/ObjetosAnimadosGLB.h src/animation/GlbAnimatedObjects.h
+file src/editor/CamaraEditor.h src/editor/EditorCamera.h
+file src/editor/EditorEscenas.cpp src/editor/SceneEditor.cpp
+file src/editor/EditorEscenas.h src/editor/SceneEditor.h
+file src/editor/HistorialEscena.h src/editor/SceneHistory.h
+file src/editor/LimitesModelo.cpp src/editor/ModelBounds.cpp
+file src/editor/LimitesModelo.h src/editor/ModelBounds.h
+file src/editor/SelectorObjetos.cpp src/editor/ObjectPicker.cpp
+file src/editor/SelectorObjetos.h src/editor/ObjectPicker.h
+file src/editor/SerializadorEscenas.cpp src/editor/SceneSerializer.cpp
+file src/editor/SerializadorEscenas.h src/editor/SceneSerializer.h
+file src/editor/ValidadorColocacion.cpp src/editor/PlacementValidator.cpp
+file src/editor/ValidadorColocacion.h src/editor/PlacementValidator.h
+file src/editor/VisibilidadEditor.cpp src/editor/EditorVisibility.cpp
+file src/editor/VisibilidadEditor.h src/editor/EditorVisibility.h
+file src/gameplay/hirity/AnimacionHiriti.h src/gameplay/hirity/HiritiAnimation.h
+file src/gameplay/hirity/TemporizadorAmbiente.h src/gameplay/hirity/HiritiAudioTimer.h
+file src/gameplay/hirity/VolumenSonidoHiriti.h src/gameplay/hirity/HiritiSoundVolume.h
+file src/gameplay/player/MovimientoFPS.h src/gameplay/player/FpsMovement.h
+file src/networking/preferences/PreferenciasRed.cpp src/networking/preferences/NetworkPreferences.cpp
+file src/networking/preferences/PreferenciasRed.h src/networking/preferences/NetworkPreferences.h
+file src/networking/replication/NetJuego.cpp src/networking/replication/NetGame.cpp
+file src/networking/replication/NetJuego.h src/networking/replication/NetGame.h
+file src/networking/replication/NetAdaptadores.h src/networking/replication/NetAdapters.h
+file src/physics/DibujoColisionadores.cpp src/physics/ColliderDrawing.cpp
+file src/physics/DibujoColisionadores.h src/physics/ColliderDrawing.h
+file src/physics/EscenaFisica.cpp src/physics/PhysicsScene.cpp
+file src/physics/EscenaFisica.h src/physics/PhysicsScene.h
+file src/physics/MundoFisico.cpp src/physics/PhysicsWorld.cpp
+file src/physics/MundoFisico.h src/physics/PhysicsWorld.h
+file src/rendering/DibujoGLB.cpp src/rendering/GlbDrawing.cpp
+file src/rendering/DibujoGLB.h src/rendering/GlbDrawing.h
+file src/rendering/ModeloGLB.cpp src/rendering/GlbModel.cpp
+file src/rendering/ModeloGLB.h src/rendering/GlbModel.h
+file src/ui/EscalaUI.h src/ui/UiScale.h
+file src/vr/VistaEstereo.h src/vr/StereoView.h
+file src/vr/VistaVR.h src/vr/VrView.h

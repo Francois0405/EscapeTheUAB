@@ -1,5 +1,4 @@
-# SOIL2 vendorizado para Linux (la versión de Windows se sigue tomando de
-# include/gl y lib/x64 en el proyecto de Visual Studio).
+# SOIL2 vendorizado: se compila desde estas fuentes en todas las plataformas.
 cmake_minimum_required(VERSION 3.20)
 
 add_library(soil2 STATIC

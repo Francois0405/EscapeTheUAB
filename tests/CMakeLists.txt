@@ -1,20 +1,28 @@
+include_directories("${PROJECT_SOURCE_DIR}")
 find_package(glm CONFIG REQUIRED)
-file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}" ESCAPETHEUAB_SOURCE_PATH)
+file(TO_CMAKE_PATH "${PROJECT_SOURCE_DIR}" ENTORNVGI_TEST_SOURCE_ROOT)
+file(TO_CMAKE_PATH "${CMAKE_BINARY_DIR}/bin" ENTORNVGI_TEST_RUNTIME_ROOT)
+
+add_executable(GrabDiagnosticsTests
+	GrabDiagnosticsTests.cpp
+)
+target_link_libraries(GrabDiagnosticsTests PRIVATE EntornVGI_grab_diagnostics)
+target_compile_features(GrabDiagnosticsTests PRIVATE cxx_std_20)
+add_test(NAME GrabDiagnosticsTests COMMAND GrabDiagnosticsTests)
 
 add_executable(SceneLoaderTests
 	SceneLoaderTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
 )
 target_include_directories(SceneLoaderTests PRIVATE
-	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}
 )
 target_compile_definitions(SceneLoaderTests PRIVATE
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
 )
 if(TARGET glm::glm)
-	target_link_libraries(SceneLoaderTests PRIVATE glm::glm)
+	target_link_libraries(SceneLoaderTests PRIVATE glm::glm EntornVGI_scene_loader)
 else()
-	target_link_libraries(SceneLoaderTests PRIVATE glm)
+	target_link_libraries(SceneLoaderTests PRIVATE glm EntornVGI_scene_loader)
 endif()
 target_compile_features(SceneLoaderTests PRIVATE cxx_std_20)
 
@@ -22,11 +30,11 @@ add_test(NAME SceneLoaderTests COMMAND SceneLoaderTests)
 
 add_executable(EditorPersistenceTests
 	EditorPersistenceTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
+	${PROJECT_SOURCE_DIR}/src/editor/SceneSerializer.cpp
 )
 target_include_directories(EditorPersistenceTests PRIVATE
-	${PROJECT_SOURCE_DIR}/EntornVGI
+	${PROJECT_SOURCE_DIR}
+	${PROJECT_SOURCE_DIR}/third_party
 )
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/EditorPersistenceRuntimeAssets" EDITOR_PERSISTENCE_RUNTIME_ASSETS)
 file(TO_CMAKE_PATH "${CMAKE_CURRENT_BINARY_DIR}/EditorPersistenceSourceAssets" EDITOR_PERSISTENCE_SOURCE_ASSETS)
@@ -36,44 +44,38 @@ target_compile_definitions(EditorPersistenceTests PRIVATE
 )
 target_compile_features(EditorPersistenceTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
-	target_link_libraries(EditorPersistenceTests PRIVATE glm::glm)
+	target_link_libraries(EditorPersistenceTests PRIVATE glm::glm EntornVGI_scene_loader)
 else()
-	target_link_libraries(EditorPersistenceTests PRIVATE glm)
+	target_link_libraries(EditorPersistenceTests PRIVATE glm EntornVGI_scene_loader)
 endif()
 add_test(NAME EditorPersistenceTests COMMAND EditorPersistenceTests)
 
 add_executable(EditorTests
 	EditorTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/LimitesModelo.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SelectorObjetos.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/SerializadorEscenas.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/VisibilidadEditor.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
+	${PROJECT_SOURCE_DIR}/src/editor/SceneSerializer.cpp
 )
 target_include_directories(EditorTests PRIVATE
-	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/third_party/cgltf
+	${PROJECT_SOURCE_DIR}
+	${PROJECT_SOURCE_DIR}/third_party
 )
 target_compile_definitions(EditorTests PRIVATE GLM_ENABLE_EXPERIMENTAL)
 target_compile_features(EditorTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
-	target_link_libraries(EditorTests PRIVATE glm::glm)
+	target_link_libraries(EditorTests PRIVATE glm::glm EntornVGI_editor_core EntornVGI_scene_loader EntornVGI_glb_model)
 else()
-	target_link_libraries(EditorTests PRIVATE glm)
+	target_link_libraries(EditorTests PRIVATE glm EntornVGI_editor_core EntornVGI_scene_loader EntornVGI_glb_model)
 endif()
 add_test(NAME EditorTests COMMAND EditorTests)
 
 add_executable(EditorPlacementTests
 	EditorPlacementTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/Editor/ValidadorColocacion.cpp
 )
-target_include_directories(EditorPlacementTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_include_directories(EditorPlacementTests PRIVATE ${PROJECT_SOURCE_DIR})
 target_compile_features(EditorPlacementTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
-	target_link_libraries(EditorPlacementTests PRIVATE glm::glm)
+	target_link_libraries(EditorPlacementTests PRIVATE glm::glm EntornVGI_editor_core)
 else()
-	target_link_libraries(EditorPlacementTests PRIVATE glm)
+	target_link_libraries(EditorPlacementTests PRIVATE glm EntornVGI_editor_core)
 endif()
 add_test(NAME EditorPlacementTests COMMAND EditorPlacementTests)
 
@@ -81,16 +83,16 @@ add_test(NAME EditorPlacementTests COMMAND EditorPlacementTests)
 # para comprobar que el gesto que selecciona nunca se convierte en un arrastre.
 add_executable(EditorGizmoInteractionTests
 	EditorGizmoInteractionTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/third_party/ImGuizmo.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_draw.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_tables.cpp
-	${PROJECT_SOURCE_DIR}/include/ImGui/imgui_widgets.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imguizmo/ImGuizmo.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui_draw.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui_tables.cpp
+	${PROJECT_SOURCE_DIR}/third_party/imgui/imgui_widgets.cpp
 )
 target_include_directories(EditorGizmoInteractionTests PRIVATE
-	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/EntornVGI/third_party
-	${PROJECT_SOURCE_DIR}/include/ImGui
+	${PROJECT_SOURCE_DIR}
+	${PROJECT_SOURCE_DIR}/third_party/imguizmo
+	${PROJECT_SOURCE_DIR}/third_party/imgui
 )
 target_compile_features(EditorGizmoInteractionTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
@@ -102,49 +104,32 @@ add_test(NAME EditorGizmoInteractionTests COMMAND EditorGizmoInteractionTests)
 
 add_executable(GlbTests
 	GlbTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
 )
 target_include_directories(GlbTests PRIVATE
-	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/third_party/cgltf
+	${PROJECT_SOURCE_DIR}
 )
 target_compile_definitions(GlbTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
-	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${CMAKE_BINARY_DIR}/bin"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
+	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${ENTORNVGI_TEST_RUNTIME_ROOT}"
 )
-if(TARGET glm::glm)
-	target_link_libraries(GlbTests PRIVATE glm::glm)
-else()
-	target_link_libraries(GlbTests PRIVATE glm)
-endif()
+target_link_libraries(GlbTests PRIVATE EntornVGI_animated_glb)
 target_compile_features(GlbTests PRIVATE cxx_std_20)
 
 add_test(NAME GlbTests COMMAND GlbTests)
 
 add_executable(PhysicsTests
 	PhysicsTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/MundoFisico.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/EscenaFisica.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/SceneLoader.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ModeloGLB.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/ObjetosAnimadosGLB.cpp
 )
 target_include_directories(PhysicsTests PRIVATE
-	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/third_party/cgltf
+	${PROJECT_SOURCE_DIR}
 )
 target_compile_definitions(PhysicsTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
-	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${CMAKE_BINARY_DIR}/bin"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
+	ESCAPETHEUAB_RUNTIME_ASSET_ROOT="${ENTORNVGI_TEST_RUNTIME_ROOT}"
 )
-if(TARGET glm::glm)
-	target_link_libraries(PhysicsTests PRIVATE glm::glm EntornVGI_bullet)
-else()
-	target_link_libraries(PhysicsTests PRIVATE glm EntornVGI_bullet)
-endif()
+target_link_libraries(PhysicsTests PRIVATE EntornVGI_physics)
 target_compile_features(PhysicsTests PRIVATE cxx_std_20)
 
 add_test(NAME PhysicsTests COMMAND PhysicsTests)
@@ -166,18 +151,22 @@ endif()
 
 add_executable(ObjLoaderTests
 	ObjLoaderTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/objLoader.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/glut_geometry.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/material.cpp
+	${PROJECT_SOURCE_DIR}/src/scene/objLoader.cpp
+	${PROJECT_SOURCE_DIR}/src/rendering/ObjMeshOptimization.cpp
+	${PROJECT_SOURCE_DIR}/src/rendering/glut_geometry.cpp
+	${PROJECT_SOURCE_DIR}/src/rendering/material.cpp
 )
 target_include_directories(ObjLoaderTests PRIVATE
-	${PROJECT_SOURCE_DIR}/EntornVGI
-	${PROJECT_SOURCE_DIR}/include/ImGui
+	${PROJECT_SOURCE_DIR}
+	${PROJECT_SOURCE_DIR}/src/legacy_vgi
+	${PROJECT_SOURCE_DIR}/src/scene
+	${PROJECT_SOURCE_DIR}/src/platform
+	${PROJECT_SOURCE_DIR}/third_party/imgui
 	${PROJECT_SOURCE_DIR}/third_party/SOIL2/src
 )
 target_compile_definitions(ObjLoaderTests PRIVATE
 	GLM_ENABLE_EXPERIMENTAL
-	ESCAPETHEUAB_SOURCE_DIR="${ESCAPETHEUAB_SOURCE_PATH}"
+	ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}"
 )
 target_link_libraries(ObjLoaderTests PRIVATE
 	OpenGL::GL
@@ -186,6 +175,22 @@ target_link_libraries(ObjLoaderTests PRIVATE
 	soil2
 )
 target_compile_features(ObjLoaderTests PRIVATE cxx_std_20)
+if(ENTORNVGI_MESHOPT_TARGET)
+    target_link_libraries(ObjLoaderTests PRIVATE ${ENTORNVGI_MESHOPT_TARGET})
+    target_compile_definitions(ObjLoaderTests PRIVATE ENTORNVGI_HAS_MESHOPTIMIZER=1)
+endif()
+
+add_executable(ObjMeshOptimizationTests
+    ObjMeshOptimizationTests.cpp
+    ${PROJECT_SOURCE_DIR}/src/rendering/ObjMeshOptimization.cpp
+)
+target_include_directories(ObjMeshOptimizationTests PRIVATE ${PROJECT_SOURCE_DIR})
+target_compile_features(ObjMeshOptimizationTests PRIVATE cxx_std_20)
+if(ENTORNVGI_MESHOPT_TARGET)
+    target_link_libraries(ObjMeshOptimizationTests PRIVATE ${ENTORNVGI_MESHOPT_TARGET})
+    target_compile_definitions(ObjMeshOptimizationTests PRIVATE ENTORNVGI_HAS_MESHOPTIMIZER=1)
+endif()
+add_test(NAME ObjMeshOptimizationTests COMMAND ObjMeshOptimizationTests)
 
 if(WIN32)
 	add_custom_command(TARGET ObjLoaderTests POST_BUILD
@@ -214,9 +219,9 @@ endif()
 # limpieza tras un fallo). Las que necesitan un casco real NO estan aqui: ver docs/OPENXR.md.
 add_executable(OpenXRTests
 	OpenXRTests.cpp
-	${PROJECT_SOURCE_DIR}/EntornVGI/OpenXRManager.cpp
+	${PROJECT_SOURCE_DIR}/src/vr/OpenXRManager.cpp
 )
-target_include_directories(OpenXRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_include_directories(OpenXRTests PRIVATE ${PROJECT_SOURCE_DIR})
 # OpenXRManager.cpp usa GLEW/OpenGL para los framebuffers de los swapchains (solo se llaman con sesion real).
 target_link_libraries(OpenXRTests PRIVATE EntornVGI_openxr OpenGL::GL ${TEST_GLEW_TARGET})
 if(WIN32)
@@ -234,7 +239,7 @@ add_test(NAME OpenXRTests COMMAND OpenXRTests)
 add_executable(VistaVRTests
 	VistaVRTests.cpp
 )
-target_include_directories(VistaVRTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_include_directories(VistaVRTests PRIVATE ${PROJECT_SOURCE_DIR})
 if(TARGET glm::glm)
 	target_link_libraries(VistaVRTests PRIVATE glm::glm)
 else()
@@ -247,15 +252,32 @@ add_test(NAME VistaVRTests COMMAND VistaVRTests)
 add_executable(MovimientoFPSTests
 	MovimientoFPSTests.cpp
 )
-target_include_directories(MovimientoFPSTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_include_directories(MovimientoFPSTests PRIVATE ${PROJECT_SOURCE_DIR})
 target_compile_features(MovimientoFPSTests PRIVATE cxx_std_20)
 add_test(NAME MovimientoFPSTests COMMAND MovimientoFPSTests)
+
+# Formula de escala logica y DPI de la interfaz, sin ventana ni contexto OpenGL.
+add_executable(EscalaUITests EscalaUITests.cpp)
+target_include_directories(EscalaUITests PRIVATE ${PROJECT_SOURCE_DIR})
+target_compile_features(EscalaUITests PRIVATE cxx_std_20)
+add_test(NAME EscalaUITests COMMAND EscalaUITests)
+
+# Console status bar text and multiplayer panel decisions extracted from main.cpp (no window, no OpenGL context).
+add_executable(RuntimeUiTests
+	RuntimeUiTests.cpp
+	${PROJECT_SOURCE_DIR}/src/ui/StatusBar.cpp
+)
+target_include_directories(RuntimeUiTests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/src/legacy_vgi)
+# GLEW headers only provide the GL scalar types; NetJuegoLogica needs the network headers.
+target_link_libraries(RuntimeUiTests PRIVATE ${TEST_GLEW_TARGET} EntornVGI_network_game)
+target_compile_features(RuntimeUiTests PRIVATE cxx_std_20)
+add_test(NAME RuntimeUiTests COMMAND RuntimeUiTests)
 
 # Descubrimiento por mirada y animacion de Hiriti (sin ventana ni fisica).
 add_executable(AnimacionHiritiTests
 	AnimacionHiritiTests.cpp
 )
-target_include_directories(AnimacionHiritiTests PRIVATE ${PROJECT_SOURCE_DIR}/EntornVGI)
+target_include_directories(AnimacionHiritiTests PRIVATE ${PROJECT_SOURCE_DIR})
 target_compile_features(AnimacionHiritiTests PRIVATE cxx_std_20)
 if(TARGET glm::glm)
 	target_link_libraries(AnimacionHiritiTests PRIVATE glm::glm)
@@ -271,11 +293,61 @@ add_executable(AudioDecoderTests
 )
 target_include_directories(AudioDecoderTests PRIVATE
 	"${ENTORNVGI_STB_INCLUDE_DIR}"
-	"${PROJECT_SOURCE_DIR}/EntornVGI/third_party"
+	"${PROJECT_SOURCE_DIR}/third_party/stb_compat"
 	"${PROJECT_SOURCE_DIR}/third_party/miniaudio"
 )
 target_compile_definitions(AudioDecoderTests PRIVATE
-	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/EntornVGI/assets"
+	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/assets"
 )
 target_compile_features(AudioDecoderTests PRIVATE cxx_std_20)
 add_test(NAME AudioDecoderTests COMMAND AudioDecoderTests)
+
+# Capa de red (protocolo, sesion, servicio thread-safe) con transporte en memoria: sin ENet ni sockets.
+add_executable(NetworkTests
+	NetworkTests.cpp
+)
+target_link_libraries(NetworkTests PRIVATE EntornVGI_network)
+add_test(NAME NetworkTests COMMAND NetworkTests)
+
+# Adaptador de red del juego (poses PC/OpenXR, interpolacion, puertas con autoridad del host, propiedad temporal):
+# transporte en memoria, sin ENet, sin OpenGL, sin Bullet y sin visor.
+add_executable(NetJuegoTests
+	NetJuegoTests.cpp
+)
+target_include_directories(NetJuegoTests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(NetJuegoTests PRIVATE EntornVGI_network_game EntornVGI_scene_loader)
+target_compile_definitions(NetJuegoTests PRIVATE
+	ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/assets"
+)
+target_compile_features(NetJuegoTests PRIVATE cxx_std_20)
+add_test(NAME NetJuegoTests COMMAND NetJuegoTests)
+
+# Persistencia del ultimo destino de red: usa una ruta temporal aislada.
+add_executable(NetworkPreferencesTests
+	NetworkPreferencesTests.cpp
+)
+target_include_directories(NetworkPreferencesTests PRIVATE ${PROJECT_SOURCE_DIR})
+target_link_libraries(NetworkPreferencesTests PRIVATE EntornVGI_network_preferences)
+target_compile_features(NetworkPreferencesTests PRIVATE cxx_std_20)
+add_test(NAME NetworkPreferencesTests COMMAND NetworkPreferencesTests)
+
+# Bucle local con ENet REAL (127.0.0.1). Solo si la capa de red encontro ENet; sin ENet no se registra.
+if(TARGET EntornVGI_network AND ENTORNVGI_NETWORK_TIENE_ENET)
+	add_executable(ENetLoopbackTests ENetLoopbackTests.cpp)
+	target_link_libraries(ENetLoopbackTests PRIVATE EntornVGI_network)
+	add_test(NAME ENetLoopbackTests COMMAND ENetLoopbackTests)
+endif()
+
+# Pure player camera and sway behavior through the extracted runtime context.
+add_executable(PlayerRuntimeTests
+	PlayerRuntimeTests.cpp
+	${PROJECT_SOURCE_DIR}/src/gameplay/player/PlayerRuntime.cpp
+)
+target_include_directories(PlayerRuntimeTests PRIVATE
+	${PROJECT_SOURCE_DIR}/src/platform
+	${PROJECT_SOURCE_DIR}/third_party/SOIL2/src
+)
+target_link_libraries(PlayerRuntimeTests PRIVATE EntornVGI_physics ${TEST_GLFW_TARGET})
+target_compile_features(PlayerRuntimeTests PRIVATE cxx_std_20)
+target_compile_definitions(PlayerRuntimeTests PRIVATE GLM_ENABLE_EXPERIMENTAL)
+add_test(NAME PlayerRuntimeTests COMMAND PlayerRuntimeTests)

@@ -1,0 +1,665 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <Filter Include="src" />
+    <Filter Include="src\animation" />
+    <Filter Include="src\app" />
+    <Filter Include="src\app\adapters" />
+    <Filter Include="src\app\input" />
+    <Filter Include="src\app\render" />
+    <Filter Include="src\app\state" />
+    <Filter Include="src\app\ui" />
+    <Filter Include="src\audio" />
+    <Filter Include="src\diagnostics" />
+    <Filter Include="src\editor" />
+    <Filter Include="src\gameplay" />
+    <Filter Include="src\gameplay\hirity" />
+    <Filter Include="src\gameplay\interaction" />
+    <Filter Include="src\gameplay\player" />
+    <Filter Include="src\legacy_vgi" />
+    <Filter Include="src\networking" />
+    <Filter Include="src\networking\preferences" />
+    <Filter Include="src\networking\replication" />
+    <Filter Include="src\networking\replication\Game" />
+    <Filter Include="src\networking\session" />
+    <Filter Include="src\networking\transport" />
+    <Filter Include="src\physics" />
+    <Filter Include="src\platform" />
+    <Filter Include="src\rendering" />
+    <Filter Include="src\scene" />
+    <Filter Include="src\ui" />
+    <Filter Include="src\vr" />
+    <Filter Include="third_party" />
+    <Filter Include="third_party\SOIL2" />
+    <Filter Include="third_party\SOIL2\src" />
+    <Filter Include="third_party\imgui" />
+    <Filter Include="third_party\imguizmo" />
+    <Filter Include="vcpkg" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="$(VcpkgInstalledDir)$(VcpkgTriplet)\include\stb_vorbis.c">
+      <Filter>vcpkg</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\animation\GlbAnimatedObjects.cpp">
+      <Filter>src\animation</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\GrabTrace.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\GraphicsAdapters.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\HirityAdapters.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\InteractionAdapters.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\PlayerAdapters.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\RenderAdapters.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\SceneAdapters.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\adapters\SessionAdapters.cpp">
+      <Filter>src\app\adapters</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\Application.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\AppState.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\DemoDoor.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\input\CursorCapture.cpp">
+      <Filter>src\app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\input\KeyboardInput.cpp">
+      <Filter>src\app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\input\MouseInput.cpp">
+      <Filter>src\app\input</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\main.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\MainLoop.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\render\GpuFrameTimer.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\render\HandheldDevices.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\render\MaterialTextures.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\render\SceneLighting.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\Shutdown.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\ui\InteractionHudTexture.cpp">
+      <Filter>src\app\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\ui\UiFrame.cpp">
+      <Filter>src\app\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\VrToggle.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\WindowCallbacks.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\app\WorkingDirectory.cpp">
+      <Filter>src\app</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\audio\AudioManager.cpp">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\diagnostics\GrabDiagnostics.cpp">
+      <Filter>src\diagnostics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\EditorVisibility.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ModelBounds.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\ObjectPicker.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\PlacementValidator.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\SceneEditor.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\editor\SceneSerializer.cpp">
+      <Filter>src\editor</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gameplay\hirity\HiritiRuntime.cpp">
+      <Filter>src\gameplay\hirity</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gameplay\interaction\InteractionRuntime.cpp">
+      <Filter>src\gameplay\interaction</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\gameplay\player\PlayerRuntime.cpp">
+      <Filter>src\gameplay\player</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\LegacyVgiState.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiFileActions.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiKeyboard.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiMainWindow.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiMaterial.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiMenuCallbacks.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiMenus.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiStatusBar.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\legacy_vgi\VgiTimer.cpp">
+      <Filter>src\legacy_vgi</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\preferences\NetworkPreferences.cpp">
+      <Filter>src\networking\preferences</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\replication\NetAvatar.cpp">
+      <Filter>src\networking\replication</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\replication\NetGame.cpp">
+      <Filter>src\networking\replication</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\session\NetworkSessionRuntime.cpp">
+      <Filter>src\networking\session</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\transport\ENetTransport.cpp">
+      <Filter>src\networking\transport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\transport\NetProtocol.cpp">
+      <Filter>src\networking\transport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\transport\NetService.cpp">
+      <Filter>src\networking\transport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\networking\transport\NetSession.cpp">
+      <Filter>src\networking\transport</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\physics\ColliderDrawing.cpp">
+      <Filter>src\physics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\physics\PhysicsScene.cpp">
+      <Filter>src\physics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\physics\PhysicsWorld.cpp">
+      <Filter>src\physics</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\GlbDrawing.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\GlbModel.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\glut_geometry.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\LegacyVgiGeometryControls.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\LegacyVgiGraphicsBootstrap.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\LegacyVgiSceneRenderer.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\LegacyVgiViewControls.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\material.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\ObjMeshOptimization.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\Ps1Framebuffer.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\quatern.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\RuntimeRenderControls.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\RuntimeRenderer.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\shader.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\rendering\visualitzacio.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\scene\escena.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\scene\objLoader.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\scene\SceneLoader.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\scene\SceneRuntime.cpp">
+      <Filter>src\scene</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ui\DebugPanels.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ui\NetworkPanels.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ui\RuntimeUi.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ui\StatusBar.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\vr\OpenXRManager.cpp">
+      <Filter>src\vr</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_demo.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_draw.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_impl_glfw.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_impl_opengl3.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_tables.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imgui\imgui_widgets.cpp">
+      <Filter>third_party\imgui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\imguizmo\ImGuizmo.cpp">
+      <Filter>third_party\imguizmo</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\SOIL2\src\image_array.c">
+      <Filter>third_party\SOIL2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\SOIL2\src\image_DXT.c">
+      <Filter>third_party\SOIL2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\SOIL2\src\image_helper.c">
+      <Filter>third_party\SOIL2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\SOIL2\src\SOIL2.c">
+      <Filter>third_party\SOIL2\src</Filter>
+    </ClCompile>
+    <ClCompile Include="..\third_party\SOIL2\src\wfETC.c">
+      <Filter>third_party\SOIL2\src</Filter>
+    </ClCompile>
+    <ClInclude Include="..\src\animation\DoorAnimation.h">
+      <Filter>src\animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\animation\GlbAnimatedObjects.h">
+      <Filter>src\animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\animation\GlbAnimation.h">
+      <Filter>src\animation</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\GrabTrace.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\GraphicsAdapters.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\HirityAdapters.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\InteractionAdapters.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\PlayerAdapters.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\RenderAdapters.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\SceneAdapters.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\adapters\SessionAdapters.h">
+      <Filter>src\app\adapters</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\AppIncludes.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\Application.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\DemoDoor.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\input\CursorCapture.h">
+      <Filter>src\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\input\KeyboardInput.h">
+      <Filter>src\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\input\MouseInput.h">
+      <Filter>src\app\input</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\MainLoop.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\render\GpuFrameTimer.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\render\HandheldDevices.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\render\MaterialTextures.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\render\SceneLighting.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\Shutdown.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\GameplayState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\NetworkState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\PlayerState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\RenderState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\SceneState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\state\VrState.h">
+      <Filter>src\app\state</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\ui\InteractionHudTexture.h">
+      <Filter>src\app\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\ui\UiFrame.h">
+      <Filter>src\app\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\VrToggle.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\WindowCallbacks.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\app\WorkingDirectory.h">
+      <Filter>src\app</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\audio\AudioManager.h">
+      <Filter>src\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\diagnostics\GrabDiagnostics.h">
+      <Filter>src\diagnostics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\EditorCamera.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\EditorVisibility.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ModelBounds.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\ObjectPicker.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\PlacementValidator.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\SceneEditor.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\SceneHistory.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\editor\SceneSerializer.h">
+      <Filter>src\editor</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\hirity\HiritiAnimation.h">
+      <Filter>src\gameplay\hirity</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\hirity\HiritiAudioTimer.h">
+      <Filter>src\gameplay\hirity</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\hirity\HiritiRuntime.h">
+      <Filter>src\gameplay\hirity</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\hirity\HiritiSoundVolume.h">
+      <Filter>src\gameplay\hirity</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\interaction\InteractionRuntime.h">
+      <Filter>src\gameplay\interaction</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\interaction\ThrowCharge.h">
+      <Filter>src\gameplay\interaction</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\player\FpsMovement.h">
+      <Filter>src\gameplay\player</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\gameplay\player\PlayerRuntime.h">
+      <Filter>src\gameplay\player</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\constants.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\framework.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\LegacyVgiState.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiFileActions.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiKeyboard.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiMainWindow.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiMaterial.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiMenuCallbacks.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiMenus.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiStatusBar.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\legacy_vgi\VgiTimer.h">
+      <Filter>src\legacy_vgi</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\preferences\NetworkPreferences.h">
+      <Filter>src\networking\preferences</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\replication\Game\HostPhysicsPublication.h">
+      <Filter>src\networking\replication\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\replication\Game\RemotePhysicsTimeline.h">
+      <Filter>src\networking\replication\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\replication\Game\SceneNetworkState.h">
+      <Filter>src\networking\replication\Game</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\replication\NetAdapters.h">
+      <Filter>src\networking\replication</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\replication\NetAvatar.h">
+      <Filter>src\networking\replication</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\replication\NetGame.h">
+      <Filter>src\networking\replication</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\replication\NetGameLogic.h">
+      <Filter>src\networking\replication</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\session\NetworkSessionRuntime.h">
+      <Filter>src\networking\session</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\session\SessionRules.h">
+      <Filter>src\networking\session</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\transport\ENetTransport.h">
+      <Filter>src\networking\transport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\transport\NetProtocol.h">
+      <Filter>src\networking\transport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\transport\NetService.h">
+      <Filter>src\networking\transport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\transport\NetSession.h">
+      <Filter>src\networking\transport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\networking\transport\NetTransport.h">
+      <Filter>src\networking\transport</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\physics\ColliderDrawing.h">
+      <Filter>src\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\physics\PhysicsScene.h">
+      <Filter>src\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\physics\PhysicsWorld.h">
+      <Filter>src\physics</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\platform\file_dialog_compat.h">
+      <Filter>src\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\platform\platform_compat.h">
+      <Filter>src\platform</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\FrustumCulling.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\GlbDrawing.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\GlbModel.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\glut_geometry.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\LegacyVgiGeometryControls.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\LegacyVgiGraphicsBootstrap.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\LegacyVgiSceneRenderer.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\LegacyVgiViewControls.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\material.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\ObjMeshOptimization.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\Ps1Framebuffer.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\quatern.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\RenderMetrics.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\RuntimeRenderControls.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\RuntimeRenderer.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\shader.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\UniformCache.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\visualitzacio.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\scene\escena.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\scene\objLoader.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\scene\SceneLoader.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\scene\SceneRuntime.h">
+      <Filter>src\scene</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ui\RuntimeUi.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ui\RuntimeUiLogic.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ui\StatusBar.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ui\UiScale.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vr\OpenXRManager.h">
+      <Filter>src\vr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vr\StereoView.h">
+      <Filter>src\vr</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\vr\VrView.h">
+      <Filter>src\vr</Filter>
+    </ClInclude>
+  </ItemGroup>
+</Project>

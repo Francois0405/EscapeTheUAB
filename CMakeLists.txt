@@ -11,7 +11,7 @@ find_path(ENTORNVGI_STB_INCLUDE_DIR
 if(EXISTS "${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c")
     set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${ENTORNVGI_STB_INCLUDE_DIR}/stb_vorbis.c")
 else()
-    set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${PROJECT_SOURCE_DIR}/EntornVGI/third_party/stb_vorbis_impl.c")
+    set(ENTORNVGI_STB_IMPLEMENTATION_SOURCE "${PROJECT_SOURCE_DIR}/third_party/stb_compat/stb_vorbis_impl.c")
 endif()
 
 # Bullet Physics (fisica). vcpkg (Windows/macOS) y libbullet-dev (Linux) instalan el
@@ -54,7 +54,22 @@ if(ENTORNVGI_ENABLE_OPENXR)
 endif()
 message(STATUS "OpenXR: ${ENTORNVGI_OPENXR_ACTIVO}")
 
-add_subdirectory(EntornVGI)
+# OBJ indexed geometry optimization. Build is optional if dependency is unavailable.
+option(ENTORNVGI_ENABLE_OBJ_MESHOPT "Optimize indexed OBJ geometry with meshoptimizer" ON)
+set(ENTORNVGI_MESHOPT_TARGET "")
+if(ENTORNVGI_ENABLE_OBJ_MESHOPT)
+    find_package(meshoptimizer CONFIG QUIET)
+    if(TARGET meshoptimizer::meshoptimizer)
+        set(ENTORNVGI_MESHOPT_TARGET meshoptimizer::meshoptimizer)
+    elseif(TARGET meshoptimizer)
+        set(ENTORNVGI_MESHOPT_TARGET meshoptimizer)
+    else()
+        message(WARNING "meshoptimizer not found: OBJ loader retains the legacy glDrawArrays path")
+    endif()
+endif()
+message(STATUS "OBJ meshoptimizer target: ${ENTORNVGI_MESHOPT_TARGET}")
+
+add_subdirectory(src)
 
 if(BUILD_TESTING)
 	add_subdirectory(tests)

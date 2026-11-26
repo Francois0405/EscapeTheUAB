@@ -2,8 +2,8 @@
 
 Proyecto académico de visualización gráfica 3D basado en el entorno del profesor.
 Utiliza **C++20, OpenGL, GLFW, GLEW, GLM, SOIL2, Dear ImGui**, carga de
-modelos **OBJ/MTL** y escenas en **JSON**. Se conserva la solución original de
-Visual Studio y se utiliza **CMake** para las compilaciones multiplataforma.
+modelos **OBJ/MTL** y escenas en **JSON**. **CMake** es el sistema de compilación principal; la solución de Visual Studio
+se genera a partir de él. La guía del equipo está en [docs/TEAM_GUIDE.md](docs/TEAM_GUIDE.md).
 
 ## Inicio rápido — una sola orden
 
@@ -39,7 +39,7 @@ permiso, también se pueden llamar directamente con `./run-linux.sh` o
 
 Instala Visual Studio 2026 con los componentes **Desarrollo de escritorio con
 C++**, **MSVC x64**, **Windows SDK**, **CMake** y **Ninja**. El proyecto utiliza
-`vcpkg.json` para gestionar GLFW, GLEW, GLM, Bullet Physics (`bullet3`), stb y Native File Dialog Extended.
+`vcpkg.json` para gestionar GLFW, GLEW, GLM, Bullet Physics (`bullet3`), ENet (`enet`, multijugador LAN, ver `docs/MULTIJUGADOR_LAN.md`) y Native File Dialog Extended.
 
 En el equipo donde se preparó el lanzador se detecta Visual Studio en
 `D:\Visual Studio` y vcpkg en `D:\Visual Studio\VC\vcpkg`. También se
@@ -71,7 +71,7 @@ Instala las dependencias una sola vez:
 ```bash
 sudo apt update
 sudo apt install -y build-essential cmake ninja-build pkg-config \
-    libgl1-mesa-dev libglfw3-dev libglew-dev libglm-dev libbullet-dev libopenxr-dev libgtk-3-dev libstb-dev
+    libgl1-mesa-dev libglfw3-dev libglew-dev libglm-dev libbullet-dev libopenxr-dev libenet-dev libgtk-3-dev libstb-dev
 ```
 
 Después, desde la raíz del repositorio:
@@ -113,27 +113,34 @@ OpenGL está deprecado por Apple: el soporte macOS requiere validación real.
 ## Estructura del proyecto
 
 ```text
-CMakeLists.txt                Compilación común
-CMakePresets.json             Presets para Windows, Linux y macOS
-vcpkg.json                    Dependencias Windows/macOS
-run-windows.cmd/.ps1          Lanzador Windows: MSVC + CMake + ejecutar
-run-linux.sh                  Lanzador Linux
-run-macos.sh                  Lanzador macOS
-EntornVGI/main.cpp            Entrada, renderizado y controles
-EntornVGI/SceneLoader.*       Lectura de escenas JSON
-EntornVGI/objLoader.*         Importador OBJ/MTL del profesor
-EntornVGI/assets/models/     Modelos y materiales
-EntornVGI/assets/scenes/     Escenas JSON
-EntornVGI/shaders/           Shaders GLSL
-include/ImGui/                Dear ImGui
-third_party/SOIL2/           Carga de texturas
-third_party/nativefiledialog/ Backend GTK3 para Linux
-lib/                          Bibliotecas Windows heredadas
-build/<preset>/bin/           Ejecutables generados por CMake
+CMakeLists.txt, CMakePresets.json, vcpkg.json   Compilacion y dependencias
+run-windows.cmd/.ps1, run-linux.sh, run-macos.sh  Lanzadores oficiales
+src/CMakeLists.txt        Target del juego y bibliotecas internas
+src/app/                  main.cpp (composicion), ciclo de vida (Application, MainLoop, Shutdown),
+                          estado compartido (AppState), entrada (input/) y enlaces con modulos (adapters/)
+src/legacy_vgi/           Entorno academico VGI: estado, menus, ventana principal y teclado heredados
+src/rendering/            Render, iluminacion, shaders en CPU, GLB, framebuffer PS1
+src/scene/                Carga y aplicacion de escenas JSON y OBJ
+src/physics/              Mundo y escena Bullet
+src/animation/            Animaciones GLB y puertas
+src/gameplay/             player/, interaction/, hirity/
+src/networking/           transport/, replication/, session/, preferences/
+src/editor/  src/ui/  src/audio/  src/vr/  src/diagnostics/  src/platform/
+assets/                   Modelos, escenas, shaders, texturas, audio y UI
+tests/                    Pruebas CTest
+tools/                    Utilidades de assets y generador del proyecto Visual Studio
+visualstudio/             Proyecto Visual Studio generado (abierto desde EntornVGI.slnx)
+third_party/              Dependencias de terceros
+archive/legacy/           Muestras academicas VGI y modelos fuente; nada se compila ni se carga
+build/<preset>/bin/       Ejecutables generados (EntornVGI)
 ```
 
-Los recursos (`assets/`, `shaders/` y `textures/`) se sincronizan junto al
-ejecutable en cada build. CMake registra cada archivo como entrada y usa
+El estado compartido sigue siendo global y se declara por responsabilidad en `src/app/state/` y en
+`src/legacy_vgi/LegacyVgiState.h`. Fuera de `src/app/` y `src/legacy_vgi/` los módulos lo reciben por
+contextos que se construyen en `src/app/adapters/`.
+
+Los recursos bajo `assets/` (modelos, escenas, shaders, texturas, audio y UI)
+se sincronizan junto al ejecutable en cada build. CMake registra cada archivo como entrada y usa
 `copy_if_different`, así que al modificar JSON, OBJ, MTL, PNG o shaders se
 actualiza su copia sin volver a enlazar el juego ni reescribir recursos que no
 cambiaron. El programa busca automáticamente la raíz de recursos. Al importar
@@ -141,13 +148,13 @@ un OBJ con `.mtl`, las texturas deben referenciarse con nombres o
 rutas **relativas** (por ejemplo `map_Kd Phone_BaseColor.png`), nunca con una
 ruta `C:\...` o `D:\...`: Linux y macOS no conocen esas rutas.
 
-La habitación inicial es `EntornVGI/assets/scenes/habitacion_beta.json` y tiene
+La habitación inicial es `assets/scenes/habitacion_beta.json` y tiene
 12 instancias. El formato JSON versión 1 define nombre, arquitectura y objetos;
 cada elemento incluye ID, ruta OBJ relativa, posición, rotación y escala. Las
 rutas se resuelven desde la carpeta del JSON y una escena inválida no sustituye
 la que ya está activa.
 
-En modo FPS se muestra `EntornVGI/assets/models/Phone.obj` con
+En modo FPS se muestra `assets/models/Phone.obj` con
 `Phone_BaseColor.png`. El movimiento incluye idle sway, walking bob y mouse
 sway. El panel **Movil FPS** aparece con F1. El cargador utiliza `map_Kd` para
 la textura difusa; `Phone_Roughness.png` se conserva como recurso, pero
@@ -200,37 +207,18 @@ CMake. Ejecútalas con `ctest --test-dir build/<preset> --output-on-failure`.
 `ObjLoaderTests` necesita un contexto OpenGL oculto; si no hay sesión gráfica o
 no se puede crear el contexto, CTest lo marca como omitido.
 
-Estado de esta revisión (5 de noviembre de 2026):
+El estado de validación vigente, con sus limitaciones, está en la sección 30 de
+[docs/REFACTOR_MIGRATION_MAP.md](docs/REFACTOR_MIGRATION_MAP.md) (secciones 30 y 31).
 
-- **Windows/MSVC:** `EntornVGI.slnx`, Debug|x64, compiló con MSBuild 18.10 en
-  `build/msbuild-debug/`, con 0 warnings y 0 errores. Las pruebas
-  `SceneLoaderTests` pasaron. El preset CMake `windows-debug` no pudo completar
-  la configuración: vcpkg intentó consultar el registro Git remoto y este
-  entorno bloqueó la operación. No se abrió el juego ni se validaron sus
-  controles visualmente.
-- **Linux:** no se ejecutó en esta revisión. Se solicitó el registro completo
-  del equipo Linux antes de diagnosticar sus errores; la plataforma queda
-  pendiente.
-- **macOS:** no se ejecutó en esta revisión y queda pendiente Apple Clang,
-  vcpkg, contexto OpenGL 4.1 y comprobación interactiva.
-- `SceneLoaderTests` pasó al compilarse y ejecutarse directamente con MSVC.
-  `ObjLoaderTests` está preparado para CTest y requiere un contexto gráfico,
-  pero no se ejecutó porque la configuración CMake no llegó a completarse.
-  No se declara validada la carga gráfica del teléfono.
-- No se implementaron Bullet Physics ni OpenXR.
-
-`ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
-no estaba incluido en el proyecto original. `SceneLoader` y el cargador propio
-OBJ/MTL son la ruta actualmente utilizada. El repositorio ignora salidas CMake,
+`SceneLoader` y el cargador propio OBJ/MTL son la ruta de carga; la procedencia de los assets está en
+[assets/licenses/README.md](assets/licenses/README.md). El repositorio ignora salidas CMake,
 artefactos temporales, ImGui y archivos generados. Las rutas de assets y las
 escenas deben conservarse en control de versiones cuando sus licencias lo
 permitan.
 
 ## Contribuciones del equipo
 
-Antes de incorporar los cambios, ejecuta `git status -sb` y confirma qué rama
-estás utilizando. Respeta el trabajo de tus compañeros; no uses `git reset
---hard`, `git clean` ni copies un `main.cpp` antiguo sobre cambios nuevos.
-Mantén `master` para versiones comprobadas y desarrolla funcionalidades en la
-rama de trabajo acordada con el grupo; solicita revisión antes del merge.
+Antes de incorporar cambios, ejecuta `git status -sb` y confirma en qué rama estás. Respeta el trabajo
+de tus compañeros: no uses `git reset --hard` ni `git clean`. La propuesta de ramas y los requisitos
+antes de un merge están en [docs/TEAM_GUIDE.md](docs/TEAM_GUIDE.md).
 Los scripts de ejecución no hacen ninguna operación Git.

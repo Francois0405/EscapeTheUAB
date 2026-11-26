@@ -26,7 +26,7 @@
             "label": "CMake: run selected target",
             "type": "shell",
             "command": "${command:cmake.launchTargetPath}",
-            "options": { "cwd": "${workspaceFolder}/EntornVGI" },
+            "options": { "cwd": "${workspaceFolder}" },
             "problemMatcher": []
         }
     ],

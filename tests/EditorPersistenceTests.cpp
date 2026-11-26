@@ -1,6 +1,6 @@
-#include "Editor/SerializadorEscenas.h"
-#include "SceneLoader.h"
-#include "third_party/nlohmann/json.hpp"
+#include "src/editor/SceneSerializer.h"
+#include "src/scene/SceneLoader.h"
+#include <nlohmann/json.hpp>
 
 #include <chrono>
 #include <cmath>
@@ -72,17 +72,17 @@ int main()
 	escribir(escena, original);
 
 	std::string error;
-	editor::SerializadorEscenas serializador;
-	comprobar(serializador.Cargar(escena, error), "carga el documento JSON de la escena");
-	DatosEscena datos;
-	comprobar(CargarDatosEscenaJSON(escena, datos, error), "fixture JSON válido");
+	editor::SceneSerializer serializador;
+	comprobar(serializador.LoadScene(escena, error), "carga el documento JSON de la escena");
+	SceneData datos;
+	comprobar(LoadSceneDataJson(escena, datos, error), "fixture JSON válido");
 	comprobar(std::abs(datos.indirectIntensity - 0.20f) < 1e-6f &&
 		std::abs(datos.indirectAmbientBase - 0.035f) < 1e-6f &&
 		std::abs(datos.directSceneLightScale - 0.80f) < 1e-6f,
 		"carga los parametros de iluminacion configurables");
 	SceneObject mesa = datos.objetos.at(1);
-	mesa.posicion = glm::vec3(7.25f, -3.5f, 1.75f);
-	mesa.rotacion = glm::vec3(15.0f, -20.0f, 90.0f);
+	mesa.position = glm::vec3(7.25f, -3.5f, 1.75f);
+	mesa.eulerRotation = glm::vec3(15.0f, -20.0f, 90.0f);
 	mesa.escala = glm::vec3(1.25f, 0.75f, 2.0f);
 	mesa.material.presente = true;
 	mesa.material.textura = "../models/floor.png";
@@ -92,7 +92,7 @@ int main()
 	mesa.material.dirtScale = 0.42f;
 	mesa.material.dirtSeed = 17.0f;
 	datos.objetos[1] = mesa;
-	comprobar(serializador.Guardar(datos.objetos, error), "guarda transformaciones válidas");
+	comprobar(serializador.SaveScene(datos.objetos, error), "guarda transformaciones válidas");
 	comprobar(fs::exists(escena.string() + ".bak"), "crea una copia de seguridad antes de reemplazar");
 
 	nlohmann::json guardado = nlohmann::json::parse(leer(escena));
@@ -131,10 +131,10 @@ int main()
 	comprobar(guardado["animated"][0]["colliders"][0]["type"] == "kinematic", "preserva colisionador animado");
 	comprobar(guardado["animated"][0]["allowArchitecturePenetration"] == true, "persiste la excepcion explicita en la puerta GLB");
 	comprobar(guardado["architecture"][0]["position"] == nlohmann::json::array({ 0, 0, 0 }), "preserva instancias no editadas");
-	DatosEscena recargada;
-	comprobar(CargarDatosEscenaJSON(escena, recargada, error), "recarga JSON editado");
+	SceneData recargada;
+	comprobar(LoadSceneDataJson(escena, recargada, error), "recarga JSON editado");
 	comprobar(recargada.animados[0].permitirPenetracionArquitectura, "la puerta GLB restaura su excepcion explicita");
-	comprobar(recargada.objetos[1].posicion == mesa.posicion && recargada.objetos[1].rotacion == mesa.rotacion &&
+	comprobar(recargada.objetos[1].position == mesa.position && recargada.objetos[1].eulerRotation == mesa.eulerRotation &&
 		recargada.objetos[1].escala == mesa.escala, "la recarga conserva transformaciones exactas");
 	comprobar(recargada.objetos[1].permitirPenetracionArquitectura, "la recarga restaura la excepcion explicita");
 	comprobar(recargada.objetos[1].luz.presente && recargada.objetos[1].luz.encendida &&
@@ -146,21 +146,21 @@ int main()
 		"la recarga restaura el material configurable");
 	SceneObject duplicada = mesa;
 	duplicada.id = "table_copy";
-	comprobar(serializador.Guardar({ datos.objetos[0], mesa, duplicada }, error), "serializa una instancia duplicada con ID nuevo");
+	comprobar(serializador.SaveScene({ datos.objetos[0], mesa, duplicada }, error), "serializa una instancia duplicada con ID nuevo");
 	guardado = nlohmann::json::parse(leer(escena));
 	comprobar(guardado["objects"].size() == 2 && guardado["objects"][1]["id"] == "table_copy",
 		"añade la copia sin cambiar la ruta relativa");
 	comprobar(guardado["objects"][1]["model"] == "../models/table.obj", "serializa ruta relativa para objeto añadido");
-	comprobar(serializador.Guardar({ datos.objetos[0], mesa }, error), "serializa la eliminación de una instancia");
+	comprobar(serializador.SaveScene({ datos.objetos[0], mesa }, error), "serializa la eliminación de una instancia");
 	guardado = nlohmann::json::parse(leer(escena));
 	comprobar(guardado["objects"].size() == 1 && guardado["objects"][0]["id"] == "table",
 		"elimina solo la instancia retirada");
-	comprobar(serializador.Guardar({ datos.objetos[0], mesa }, std::vector<SceneObjetoAnimado>{}, error),
+	comprobar(serializador.SaveScene({ datos.objetos[0], mesa }, std::vector<SceneAnimatedObject>{}, error),
 		"guarda la escena al eliminar la ultima instancia GLB");
 	guardado = nlohmann::json::parse(leer(escena));
 	comprobar(guardado.contains("animated") && guardado["animated"].is_array() && guardado["animated"].empty(),
 		"borrar la ultima puerta deja animated vacio en JSON");
-	comprobar(CargarDatosEscenaJSON(escena, recargada, error) && recargada.animados.empty(),
+	comprobar(LoadSceneDataJson(escena, recargada, error) && recargada.animados.empty(),
 		"recargar no resucita la puerta GLB eliminada");
 	const fs::path paredEscena = temp / "scenes" / "wall-openings.json";
 	escribir(paredEscena, R"json({"version":1,"name":"wall-openings","architecture":[
@@ -168,20 +168,20 @@ int main()
        "physics":{"type":"static","halfSize":[1,1,1]},
        "wall":{"apertures":[{"id":"door-opening","doorId":"door","centerU":0.5,"width":1.0,"height":2.1,"base":0.0}]}}
       ],"objects":[],"animated":[{"id":"door","model":"../models/door.glb","position":[0.5,0,-1.5],"rotation":[0,0,90],"wallId":"wall","openingId":"door-opening"}]})json");
-	editor::SerializadorEscenas serializerWall;
-	comprobar(serializerWall.Cargar(paredEscena, error), "carga escena con pared paramétrica y asociación de puerta");
-	DatosEscena paredDatos;
-	comprobar(CargarDatosEscenaJSON(paredEscena, paredDatos, error), "valida pared y apertura asociada");
-	comprobar(serializerWall.Guardar(paredDatos.objetos, paredDatos.animados, error), "guarda pared paramétrica sin hornear el OBJ");
-	DatosEscena paredRecargada;
-	comprobar(CargarDatosEscenaJSON(paredEscena, paredRecargada, error) &&
+	editor::SceneSerializer serializerWall;
+	comprobar(serializerWall.LoadScene(paredEscena, error), "carga escena con pared paramétrica y asociación de puerta");
+	SceneData paredDatos;
+	comprobar(LoadSceneDataJson(paredEscena, paredDatos, error), "valida pared y apertura asociada");
+	comprobar(serializerWall.SaveScene(paredDatos.objetos, paredDatos.animados, error), "guarda pared paramétrica sin hornear el OBJ");
+	SceneData paredRecargada;
+	comprobar(LoadSceneDataJson(paredEscena, paredRecargada, error) &&
 		paredRecargada.objetos[0].pared.aperturas[0].id == "door-opening" &&
-		paredRecargada.animados[0].paredId == "wall" && paredRecargada.animados[0].aperturaId == "door-opening",
+		paredRecargada.animados[0].paredId == "wall" && paredRecargada.animados[0].openingId == "door-opening",
 		"Save/Reload conserva exactamente el vínculo pared, vano y puerta");
 	paredDatos.objetos[0].pared.aperturas[0].idPuerta.clear();
 	paredDatos.animados.clear();
-	comprobar(serializerWall.Guardar(paredDatos.objetos, paredDatos.animados, error), "guarda una apertura abierta sin puerta");
-	comprobar(CargarDatosEscenaJSON(paredEscena, paredRecargada, error) && paredRecargada.animados.empty() &&
+	comprobar(serializerWall.SaveScene(paredDatos.objetos, paredDatos.animados, error), "guarda una apertura abierta sin puerta");
+	comprobar(LoadSceneDataJson(paredEscena, paredRecargada, error) && paredRecargada.animados.empty() &&
 		paredRecargada.objetos[0].pared.aperturas.size() == 1 && paredRecargada.objetos[0].pared.aperturas[0].idPuerta.empty(),
 		"el hueco puede persistir después de eliminar solo la puerta");
 
@@ -200,11 +200,11 @@ int main()
 	escribir(runtimeScene, original);
 	escribir(sourceScene, original);
 
-	editor::SerializadorEscenas serializadorConCopiaFuente;
-	comprobar(serializadorConCopiaFuente.Cargar(runtimeScene, error), "carga una escena desde assets de ejecución");
+	editor::SceneSerializer serializadorConCopiaFuente;
+	comprobar(serializadorConCopiaFuente.LoadScene(runtimeScene, error), "carga una escena desde assets de ejecución");
 	comprobar(serializadorConCopiaFuente.RutaFuente() == sourceScene.lexically_normal(),
 		"resuelve la escena fuente correspondiente");
-	comprobar(serializadorConCopiaFuente.Guardar({ datos.objetos[0], mesa }, error),
+	comprobar(serializadorConCopiaFuente.SaveScene({ datos.objetos[0], mesa }, error),
 		"guarda en runtime y en la escena fuente");
 	comprobar(leer(runtimeScene) == leer(sourceScene), "mantiene iguales las copias de runtime y fuente");
 	std::error_code copiaEc;
@@ -217,14 +217,14 @@ int main()
 	const std::string antesDelFallo = leer(escena);
 	SceneObject invalida = mesa;
 	invalida.escala.x = 0.0f;
-	comprobar(!serializador.Guardar({ datos.objetos[0], invalida }, error), "rechaza escala cero antes de sustituir");
+	comprobar(!serializador.SaveScene({ datos.objetos[0], invalida }, error), "rechaza escala cero antes de sustituir");
 	comprobar(leer(escena) == antesDelFallo, "una validación fallida conserva el JSON original");
 
 #ifdef _WIN32
 	HANDLE bloqueo = CreateFileW(escena.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr, OPEN_EXISTING,
 		FILE_ATTRIBUTE_NORMAL, nullptr);
 	comprobar(bloqueo != INVALID_HANDLE_VALUE, "abre bloqueo de prueba del archivo JSON");
-	comprobar(!serializador.Guardar(datos.objetos, error), "un reemplazo bloqueado devuelve error");
+	comprobar(!serializador.SaveScene(datos.objetos, error), "un reemplazo bloqueado devuelve error");
 	if (bloqueo != INVALID_HANDLE_VALUE) CloseHandle(bloqueo);
 	comprobar(leer(escena) == antesDelFallo, "un reemplazo fallido conserva los bytes originales");
 #endif

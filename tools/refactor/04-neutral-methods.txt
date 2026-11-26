@@ -1,0 +1,11 @@
+# old new
+Advance Update
+BeginPlayback Start
+StopSessionGame Stop
+CreatePlayback Create
+ResetState Reset
+MoveView Move
+LookAround Look
+OrbitView Orbit
+PointAt Point
+SetOpenState SetOpen

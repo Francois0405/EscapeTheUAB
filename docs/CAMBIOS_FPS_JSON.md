@@ -2,7 +2,7 @@
 
 ## Formato de escena
 
-Las habitaciones se definen únicamente en `EntornVGI/assets/scenes/*.json`. La escena inicial `habitacion_beta.json` contiene 12 instancias: seis en `architecture` (suelo, techo y cuatro paredes) y seis en `objects` (armario, dos mesas, lámpara y dos cajas). Cada instancia especifica `id`, `model`, `position`, `rotation` y `scale`. Las rotaciones están en grados.
+Las habitaciones se definen únicamente en `assets/scenes/*.json`. La escena inicial `habitacion_beta.json` contiene 12 instancias: seis en `architecture` (suelo, techo y cuatro paredes) y seis en `objects` (armario, dos mesas, lámpara y dos cajas). Cada instancia especifica `id`, `model`, `position`, `rotation` y `scale`. Las rotaciones están en grados.
 
 `SceneObject` es el formato interno sencillo que conecta el archivo con el renderizador: guarda el identificador, la categoría, el modelo y tres vectores GLM. El lector no cambia el sistema de coordenadas ni las matrices OpenGL existentes.
 
@@ -36,7 +36,7 @@ ImGui empieza en escala 1.0 (`FontGlobalScale`) y no se llama a `ScaleAllSizes`,
 
 ### Modelos y DLL
 
-Los OBJ y MTL de la habitación y de los brazos, además de `arms_01.png`, están en `EntornVGI/assets/models`. Las dependencias de enlace x64 están en `lib/x64`; las DLL de GLFW y GLEW también se guardan ahí y el proyecto las copia al directorio del ejecutable después de compilar. La configuración no contiene rutas absolutas ligadas a una cuenta de usuario. Visual Studio usa `EntornVGI` como directorio de trabajo para resolver las rutas relativas de escenas, modelos, texturas y shaders.
+Los OBJ y MTL de la habitación y de los brazos, además de `arms_01.png`, están en `assets/models`. Las dependencias de enlace x64 están en `lib/x64`; las DLL de GLFW y GLEW también se guardan ahí y el proyecto las copia al directorio del ejecutable después de compilar. La configuración no contiene rutas absolutas ligadas a una cuenta de usuario. Visual Studio usa `EntornVGI` como directorio de trabajo para resolver las rutas relativas de escenas, modelos, texturas y shaders.
 
 ## Validación
 

@@ -5,9 +5,9 @@
 #
 # Uso (desde la raíz del repositorio; ajusta la ruta de Blender si hace falta):
 #   macOS:   /Applications/Blender.app/Contents/MacOS/Blender -b MiEscena.blend \
-#              --python tools/exportar_glb.py -- EntornVGI/assets/animations/MiEscena.glb
+#              --python tools/exportar_glb.py -- assets/animations/MiEscena.glb
 #   Windows: "C:\Program Files\Blender Foundation\Blender 5.2\blender.exe" -b MiEscena.blend ^
-#              --python tools/exportar_glb.py -- EntornVGI\assets\animations\MiEscena.glb
+#              --python tools/exportar_glb.py -- assets\animations\MiEscena.glb
 #
 # También puedes hacerlo a mano: File > Export > glTF 2.0 con los mismos ajustes
 # (ver docs/ANIMACIONES_GLB.md).

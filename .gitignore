@@ -364,18 +364,15 @@ FodyWeavers.xsd
 # Objetos de compilación C++
 *.obj
 
-# Copia temporal heredada de main.cpp; se mantiene en el repositorio hasta revisión.
-EntornVGI/main.cpp~RF31ab74.TMP
-
 # Modelos Blender que sí queremos guardar
-!EntornVGI/assets/models/**/*.obj
+!assets/models/**/*.obj
 
-# Bibliotecas x64 necesarias para enlazar el proyecto Visual Studio.
-!lib/
-!lib/x64/
-!lib/x64/*.lib
-!lib/x64/*.pdb
-!lib/x64/*.dll
+# Muestras academicas VGI y modelos fuente archivados: no son salidas de compilacion,
+# aunque cuelguen de carpetas Debug/Release o sean .obj.
+!archive/legacy/vgi-samples/Debug/
+!archive/legacy/vgi-samples/Release/
+!archive/legacy/vgi-samples/**/*.obj
+!archive/legacy/res/*.obj
 
 # Dependencias locales de vcpkg
 vcpkg_installed/
@@ -399,4 +396,3 @@ compile_commands.json
 GLSL_Error.*
 extensions.txt
 imgui.ini
-/third_party/OpenXR-SDK-main/src/external/jnipp
