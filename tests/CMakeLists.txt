@@ -344,6 +344,7 @@ add_executable(PlayerRuntimeTests
 	${PROJECT_SOURCE_DIR}/src/gameplay/player/PlayerRuntime.cpp
 )
 target_include_directories(PlayerRuntimeTests PRIVATE
+	${PROJECT_SOURCE_DIR}/src/legacy_vgi
 	${PROJECT_SOURCE_DIR}/src/platform
 	${PROJECT_SOURCE_DIR}/third_party/SOIL2/src
 )
