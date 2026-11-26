@@ -8,8 +8,7 @@
 
 namespace sanity
 {
-	// Segundos que tarda la cordura en pasar de 100 % a 0 %. Unico parametro de duracion.
-	// 600 s mientras se depura; el valor de diseño previo era 420 s (7 minutos).
+	// Segundos que tarda la cordura en pasar de 100 % a 0 %.
 	inline constexpr float SANITY_DEGRADATION_DURATION = 60.0f;
 
 	// Mayor salto de tiempo que se acepta por fotograma (un tirón de ventana no consume cordura de golpe).

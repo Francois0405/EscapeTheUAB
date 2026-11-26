@@ -6,6 +6,7 @@ Documento de referencia sobre el código **actual**. Si discrepa del código, ma
 |---|---|
 | Dónde está cada cosa y cómo funciona | este |
 | Ciclo, audio y físicas de Hirity | [../HIRITY.md](../HIRITY.md) |
+| Ciclo, lógica y efectos de Sanity | [../SANITY.md](../SANITY.md) |
 | Paneles ImGui | [UI_PANELS.md](UI_PANELS.md) |
 | Estado y validación del trabajo visual retro | [../midnight-hoops/TASKS.md](../midnight-hoops/TASKS.md), [VALIDATION.md](../midnight-hoops/VALIDATION.md) |
 | Reglas de trabajo del equipo | [../TEAM_GUIDE.md](../TEAM_GUIDE.md) |
@@ -74,6 +75,7 @@ Resto de `app/`: `input/` (`KeyboardInput`, `MouseInput`, `CursorCapture`), `ren
 | Carpeta | Archivos y función |
 |---|---|
 | `gameplay/player/` | `FpsMovement.h` (velocidad, estamina, balanceo; puro), `PlayerRuntime.*` (cámara y cápsula) |
+| `gameplay/sanity/` | `Sanity.h` (degradación y efectos derivados), `SanityEffects.h` (eventos visuales temporizados) |
 | `gameplay/interaction/` | `InteractionRuntime.*` (objetivo, coger, soltar, lanzar, puertas), `ThrowCharge.h` (tiempos y velocidades) |
 | `gameplay/hirity/` | `HiritiRuntime.*`, `HiritiAnimation.h` (mirada, seguimiento, reaparición), `HiritiAudioTimer.h`, `HiritiSoundVolume.h` |
 | `scene/` | `SceneLoader.*` (JSON → datos), `SceneRuntime.*` (carga transaccional), `escena.*` (dibujo VGI), `objLoader.*` |

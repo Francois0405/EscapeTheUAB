@@ -1,6 +1,6 @@
 #pragma once
 
-// Eventos visuales de baja cordura: mensajes, ojos, fallos de "matrix", rayos de escaneo y lluvia de digitos.
+// Eventos visuales de baja cordura: mensajes, fallos de "matrix", rayos de escaneo y lluvia de digitos.
 // Logica pura (sin ImGui ni OpenGL): decide cuando aparece cada evento y cuanto dura. El dibujo vive en
 // src/ui/SanityOverlay.cpp. Todo depende del tiempo (delta), no de los fotogramas.
 #include "src/gameplay/sanity/Sanity.h"
@@ -37,7 +37,6 @@ namespace sanity
 	inline constexpr int kMessageCount = static_cast<int>(sizeof(kMessages) / sizeof(kMessages[0]));
 
 	struct Message { int text = 0; float x = 0.5f, y = 0.5f, age = 0.0f, life = 1.0f, scale = 2.0f, seed = 0.0f; };
-	struct Eye { float x = 0.5f, y = 0.5f, age = 0.0f, life = 1.0f, size = 0.1f, seed = 0.0f; };
 	// kind 0: barra de color desplazada, 1: rayo fino de escaneo, 2: bloques de pixeles.
 	struct Glitch { int kind = 0; float y = 0.5f, height = 0.02f, x = 0.0f, width = 1.0f, age = 0.0f, life = 0.1f, seed = 0.0f; };
 	struct Rain { float x = 0.5f, y0 = 0.0f, speed = 0.5f, age = 0.0f, life = 1.0f, seed = 0.0f; int length = 8; };
@@ -49,8 +48,8 @@ namespace sanity
 
 		void Reset()
 		{
-			messages_.clear(); eyes_.clear(); glitches_.clear(); rain_.clear();
-			accMessage_ = accEye_ = accGlitch_ = accRain_ = 0.0f;
+			messages_.clear(); glitches_.clear(); rain_.clear();
+			accMessage_ = accGlitch_ = accRain_ = 0.0f;
 			time_ = 0.0f;
 		}
 
@@ -62,7 +61,7 @@ namespace sanity
 			insanity_ = Clamp01(insanity);
 			time_ += delta;
 			if (time_ > 1.0e4f) time_ = std::fmod(time_, 1.0e4f);
-			Age(messages_, delta); Age(eyes_, delta); Age(glitches_, delta); Age(rain_, delta);
+			Age(messages_, delta); Age(glitches_, delta); Age(rain_, delta);
 
 			const float i = insanity_;
 			// Mensajes: desde la mitad de la cordura. Pocos y largos al principio, muchos y breves al final.
@@ -77,22 +76,6 @@ namespace sanity
 						m.scale = Rand(1.6f, 2.6f) + 1.4f * tm * Rand(0.0f, 1.0f);
 						m.seed = Rand(0.0f, 1000.0f);
 						return m;
-					});
-			// Ojos: desde el 20 % de perdida.
-			const float te = Ramp(i, 0.2f, 1.0f);
-			if (i >= 0.2f)
-				Spawn(accEye_, delta, 0.08f + 2.2f * te, eyes_, 1 + static_cast<int>(10.0f * te),
-					[&] {
-						Eye e;
-						for (int tries = 0; tries < 6; ++tries)
-						{
-							e.x = Rand(0.04f, 0.96f); e.y = Rand(0.06f, 0.94f);
-							if (std::abs(e.x - 0.5f) > 0.16f || std::abs(e.y - 0.5f) > 0.16f) break;   // deja libre la reticula
-						}
-						e.life = Lerp(4.0f, 1.0f, te) * Rand(0.7f, 1.3f);
-						e.size = Rand(0.05f, 0.11f) * (0.8f + 0.7f * te);
-						e.seed = Rand(0.0f, 1000.0f);
-						return e;
 					});
 			// Fallos de matrix: barras, rayos y bloques.
 			const float tg = Ramp(i, 0.3f, 1.0f);
@@ -122,7 +105,6 @@ namespace sanity
 		}
 
 		const std::vector<Message>& Messages() const { return messages_; }
-		const std::vector<Eye>& Eyes() const { return eyes_; }
 		const std::vector<Glitch>& Glitches() const { return glitches_; }
 		const std::vector<Rain>& RainColumns() const { return rain_; }
 		float Time() const { return time_; }
@@ -152,10 +134,9 @@ namespace sanity
 
 		std::mt19937 rng_;
 		std::vector<Message> messages_;
-		std::vector<Eye> eyes_;
 		std::vector<Glitch> glitches_;
 		std::vector<Rain> rain_;
-		float accMessage_ = 0.0f, accEye_ = 0.0f, accGlitch_ = 0.0f, accRain_ = 0.0f;
+		float accMessage_ = 0.0f, accGlitch_ = 0.0f, accRain_ = 0.0f;
 		float time_ = 0.0f;
 		float insanity_ = 0.0f;
 	};

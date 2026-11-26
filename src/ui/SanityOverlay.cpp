@@ -6,7 +6,6 @@
 #include <cmath>
 #include <cstdint>
 #include <string>
-#include <vector>
 #include "src/gameplay/sanity/SanityEffects.h"
 
 namespace runtimeui
@@ -111,55 +110,6 @@ void DrawRain(ImDrawList* dl, const ImVec2& d, const sanity::SanityEffects& fx, 
 	}
 }
 
-// Ojo en forma de almendra con parpado, iris que sigue el centro de la pantalla y venas rojas.
-void DrawEye(ImDrawList* dl, const ImVec2& d, const sanity::Eye& e, const sanity::SanityEffects& fx, float scale)
-{
-	const float u = e.age / e.life;
-	float env = std::min(1.0f, std::min(u * 5.0f, (1.0f - u) * 4.0f));
-	const std::uint32_t paso = static_cast<std::uint32_t>(fx.Time() * 18.0f);
-	// Parpadeo del propio ojo y parpadeo de señal: por momentos no se dibuja.
-	if (Noise(e.seed, paso, 3) < 0.06f + 0.10f * fx.Insanity()) return;
-	const float parpadeo = std::pow(std::max(0.0f, std::sin(e.age * 2.2f + e.seed)), 24.0f);
-	const float abierto = std::max(0.08f, 1.0f - parpadeo);
-	const float ancho = e.size * d.x * 0.5f, alto = ancho * 0.52f * abierto;
-	const ImVec2 c(e.x * d.x + (Noise(e.seed, paso, 4) - 0.5f) * 6.0f * scale, e.y * d.y);
-
-	constexpr int N = 14;
-	ImVec2 arriba[N + 1], abajo[N + 1];
-	for (int k = 0; k <= N; ++k)
-	{
-		const float t = static_cast<float>(k) / N, x = (t * 2.0f - 1.0f), curva = 1.0f - x * x;
-		arriba[k] = ImVec2(c.x + x * ancho, c.y - curva * alto);
-		abajo[k] = ImVec2(c.x + x * ancho, c.y + curva * alto * 0.85f);
-	}
-	std::vector<ImVec2> contorno;
-	contorno.reserve(2 * N + 2);
-	for (int k = 0; k <= N; ++k) contorno.push_back(arriba[k]);
-	for (int k = N; k >= 0; --k) contorno.push_back(abajo[k]);
-	dl->AddConvexPolyFilled(contorno.data(), static_cast<int>(contorno.size()), Rgba(0.93f, 0.85f, 0.82f, 0.85f * env));
-
-	// Iris y pupila: miran hacia el jugador (centro de la pantalla) con pequeño temblor.
-	const float dx = d.x * 0.5f - c.x, dy = d.y * 0.5f - c.y, dist = std::max(1.0f, std::sqrt(dx * dx + dy * dy));
-	const float radio = alto * 0.95f;
-	const ImVec2 iris(c.x + dx / dist * ancho * 0.18f, c.y + dy / dist * alto * 0.2f);
-	if (abierto > 0.3f)
-	{
-		dl->PushClipRect(ImVec2(c.x - ancho, c.y - alto), ImVec2(c.x + ancho, c.y + alto), true);
-		dl->AddCircleFilled(iris, radio, Rgba(0.75f, 0.05f, 0.05f, 0.95f * env), 24);
-		dl->AddCircleFilled(iris, radio * 0.45f, Rgba(0.0f, 0.0f, 0.0f, env), 20);
-		dl->AddCircleFilled(ImVec2(iris.x - radio * 0.25f, iris.y - radio * 0.25f), radio * 0.12f, Rgba(1, 1, 1, 0.8f * env), 8);
-		dl->PopClipRect();
-	}
-	for (int k = 1; k < N; k += 3)
-	{
-		const float s = Noise(e.seed, 0, 20u + static_cast<std::uint32_t>(k));
-		dl->AddLine(arriba[k], ImVec2(Hash01(k) < 0.5f ? iris.x - radio : iris.x + radio, iris.y - radio * 0.3f * s),
-			Rgba(0.7f, 0.0f, 0.05f, 0.5f * env), std::max(1.0f, scale * 0.8f));
-	}
-	dl->AddPolyline(arriba, N + 1, Rgba(0.05f, 0.0f, 0.0f, 0.95f * env), 0, std::max(1.5f, 2.0f * scale));
-	dl->AddPolyline(abajo, N + 1, Rgba(0.05f, 0.0f, 0.0f, 0.95f * env), 0, std::max(1.5f, 2.0f * scale));
-}
-
 void DrawMessage(ImDrawList* dl, const ImVec2& d, const sanity::Message& m, const sanity::SanityEffects& fx, float scale)
 {
 	const float u = m.age / m.life;
@@ -210,7 +160,6 @@ void DrawSanityOverlay(const sanity::SanityEffects& effects, float uiScale)
 	DrawScanRays(dl, io.DisplaySize, effects, escala);
 	DrawRain(dl, io.DisplaySize, effects, escala);
 	DrawGlitches(dl, io.DisplaySize, effects, escala);
-	for (const sanity::Eye& e : effects.Eyes()) DrawEye(dl, io.DisplaySize, e, effects, escala);
 	for (const sanity::Message& m : effects.Messages()) DrawMessage(dl, io.DisplaySize, m, effects, escala);
 }
 }
