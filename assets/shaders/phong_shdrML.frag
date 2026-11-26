@@ -92,6 +92,7 @@ uniform float uDirtScale;
 uniform float uDirtSeed;
 uniform float uTextureEmission;
 uniform bool uMobileSurface;
+uniform float uFogDensity;	// Niebla por distancia (estilo retro). 0 = desactivada.
 
 // ---- L63- Variables out
 out vec4 FragColor; 		// Color fragment (r,g,b,a)
@@ -397,4 +398,10 @@ void main ()
     }
     if (uLightingDebugMode > 0)
         FragColor = vec4(clamp(fragmentColor.rgb, 0.0, 1.0), fragmentColor.a);
+    else if (uFogDensity > 0.0)
+    {
+        // Los 3 primeros metros quedan limpios para no tapar pistas ni objetos interactivos.
+        float clear = exp(-uFogDensity * max(length(vertexPV) - 3.0, 0.0));
+        FragColor.rgb = mix(vec3(0.045, 0.055, 0.080), FragColor.rgb, clear);
+    }
 }

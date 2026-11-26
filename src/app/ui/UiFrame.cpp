@@ -9,6 +9,7 @@
 #include "src/app/DemoDoor.h"
 #include "src/app/VrToggle.h"
 #include "src/app/adapters/SessionAdapters.h"
+#include "src/app/adapters/InteractionAdapters.h"
 #include "src/app/input/CursorCapture.h"
 #include "src/legacy_vgi/VgiMainWindow.h"
 
@@ -125,12 +126,14 @@ void draw_Menu_ImGui()
 	const auto fpsMode = [] { return fpsModeActive(); };
 	const runtimeui::FrameContext contexto{
 		// HUD
-		{ fpsMode, [] { return fpsInputActive(); }, [] { return sceneEditor.IsEnabled(); },
+		{ fpsMode, [] { return fpsInputActive(); }, [] { return sceneEditor.IsEnabled(); }, [] { return playerHoldsObject(); },
+			[] { return currentGameState == GAME_STATE_PLAYING && fpsModeActive() && !sceneEditor.IsEnabled() &&
+				!showDebugPanels && !stereoTestMode && !openXrManager.IsSessionRunning(); },
 			staminaBar, playerMovement, showStaminaPercent,
 			throwChargeActive, throwChargeTime, kMaxThrowChargeDuration, physicsScene,
 			[]() -> const char* { return currentInteractionTarget.accion == InteractionAction::None
 				? nullptr : currentInteractionTarget.texto; },
-			interactionHandTexture },
+			interactionHandTexture, retroSettings.pickupNotice },
 		// Menus
 		{ window, currentGameState, menuBackgroundTexture, masterVolumePercent, audioManager,
 			[] { fpsHasPreviousPosition = false; mouseDeltaX = mouseDeltaY = 0.0; } },
@@ -145,7 +148,10 @@ void draw_Menu_ImGui()
 			demoDoorPlayback, demoDoorAngle, showColliders, hiritiFollowPlayerEnabled, hiritiFollowStopDistance, hiritiFollowMaxSpeed,
 			stereoTestMode, openXrManager,
 			physicsWorld, physicsScene, fallingCubeDemo, networkGame, sceneObjects, animatedObjects,
-			[] { startDemoDoor(); }, [] { toggleOpenXr(); } },
+			[] { startDemoDoor(); }, [] { toggleOpenXr(); }, retroSettings },
+		// Subtitulos
+		{ subtitleManager, retroSettings, [](unsigned int id) { return audioManager.isPlaying(id); },
+			[](unsigned int id) { return audioManager.playbackCursorSeconds(id); } },
 		(c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5),
 		showDebugPanels, showFpsCounter,
 		drawLegacyImGuiWindows,

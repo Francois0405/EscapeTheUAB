@@ -3,7 +3,11 @@
 Proyecto académico de visualización gráfica 3D basado en el entorno del profesor.
 Utiliza **C++20, OpenGL, GLFW, GLEW, GLM, SOIL2, Dear ImGui**, carga de
 modelos **OBJ/MTL** y escenas en **JSON**. **CMake** es el sistema de compilación principal; la solución de Visual Studio
-se genera a partir de él. La guía del equipo está en [docs/TEAM_GUIDE.md](docs/TEAM_GUIDE.md).
+se genera a partir de él.
+
+**Por dónde empezar:** [mapa del código](docs/architecture/CODE_MAP.md) ·
+[guía del equipo](docs/TEAM_GUIDE.md) · [instrucciones para agentes de IA](AGENTS.md) ·
+[estado del aspecto retro](docs/midnight-hoops/TASKS.md).
 
 ## Inicio rápido — una sola orden
 
@@ -41,15 +45,13 @@ Instala Visual Studio 2026 con los componentes **Desarrollo de escritorio con
 C++**, **MSVC x64**, **Windows SDK**, **CMake** y **Ninja**. El proyecto utiliza
 `vcpkg.json` para gestionar GLFW, GLEW, GLM, Bullet Physics (`bullet3`), ENet (`enet`, multijugador LAN, ver `docs/MULTIJUGADOR_LAN.md`) y Native File Dialog Extended.
 
-En el equipo donde se preparó el lanzador se detecta Visual Studio en
-`D:\Visual Studio` y vcpkg en `D:\Visual Studio\VC\vcpkg`. También se
-intenta localizar Visual Studio mediante `vswhere` y vcpkg con `VCPKG_ROOT`
-o en `~/vcpkg`. No es obligatorio utilizar esas rutas concretas.
+El lanzador localiza Visual Studio mediante la instalación abierta o `vswhere`, y vcpkg mediante
+`VCPKG_ROOT`, la instalación de Visual Studio o `~/vcpkg`.
 
 Desde PowerShell:
 
 ```powershell
-cd F:\EscapeTheUAB\EscapeTheUAB  # cambia la ruta si clonaste el repo en otro sitio
+# desde la raíz del repositorio
 .\run-windows.cmd
 ```
 
@@ -119,7 +121,7 @@ src/CMakeLists.txt        Target del juego y bibliotecas internas
 src/app/                  main.cpp (composicion), ciclo de vida (Application, MainLoop, Shutdown),
                           estado compartido (AppState), entrada (input/) y enlaces con modulos (adapters/)
 src/legacy_vgi/           Entorno academico VGI: estado, menus, ventana principal y teclado heredados
-src/rendering/            Render, iluminacion, shaders en CPU, GLB, framebuffer PS1
+src/rendering/            Render, iluminacion, shaders en CPU, GLB, framebuffer y posprocesado retro
 src/scene/                Carga y aplicacion de escenas JSON y OBJ
 src/physics/              Mundo y escena Bullet
 src/animation/            Animaciones GLB y puertas
@@ -148,11 +150,10 @@ un OBJ con `.mtl`, las texturas deben referenciarse con nombres o
 rutas **relativas** (por ejemplo `map_Kd Phone_BaseColor.png`), nunca con una
 ruta `C:\...` o `D:\...`: Linux y macOS no conocen esas rutas.
 
-La habitación inicial es `assets/scenes/habitacion_beta.json` y tiene
-12 instancias. El formato JSON versión 1 define nombre, arquitectura y objetos;
-cada elemento incluye ID, ruta OBJ relativa, posición, rotación y escala. Las
-rutas se resuelven desde la carpeta del JSON y una escena inválida no sustituye
-la que ya está activa.
+El juego arranca con `assets/scenes/aula_informatica_calibrada.json`. El formato JSON versión 1 define
+nombre, arquitectura, objetos y objetos animados; cada elemento incluye ID, ruta de modelo relativa, posición,
+rotación y escala. Las rutas se resuelven desde la carpeta del JSON y una escena inválida no sustituye la que
+ya está activa.
 
 En modo FPS se muestra `assets/models/Phone.obj` con
 `Phone_BaseColor.png`. El movimiento incluye idle sway, walking bob y mouse
@@ -162,9 +163,41 @@ la textura difusa; `Phone_Roughness.png` se conserva como recurso, pero
 acepta índices OBJ positivos; rechaza índices relativos negativos en vez de
 acceder fuera de los arrays.
 
-Controles: WASD mueve al jugador, el ratón orienta la cámara, ESC pausa y libera
-el cursor, y F1 abre/cierra los paneles ImGui. Mientras esos paneles están
-abiertos, WASD no mueve al jugador.
+## Controles
+
+| Tecla | Acción |
+| --- | --- |
+| WASD, ratón, Shift, Ctrl | Moverse, mirar, correr, agacharse |
+| E | Interactuar o coger; con un objeto, mantener para cargar y soltar para lanzar |
+| F | Linterna del teléfono |
+| Esc | Pausa |
+| F1 | Paneles de depuración ([inventario](docs/architecture/UI_PANELS.md)) |
+| F2 / F3 | Vista estéreo de prueba / activar OpenXR |
+| F4 | Paneles de multijugador y objetos dinámicos (visibles al arrancar) |
+| F6 | Editor de escenas |
+
+Con F1 abierto, WASD no mueve al jugador.
+
+## Aspecto gráfico, subtítulos y ajustes
+
+El aspecto oficial es el preset **PSX Classic**: 360p, 4 bits por canal, dithering Bayer 8×8 cromático,
+saturación 0,90, contraste 1,12, viñeta 0,10, niebla 0,040 y texturas nearest. En F1, ventana **Graficos retro**,
+se pueden elegir `Retro Cinematic` y `Original` (alternativas de depuración), retocar parámetros y configurar
+los subtítulos. El editor, F2 y OpenXR no aplican estos efectos.
+
+Los ajustes se guardan al cerrar en `retro_settings.ini`, junto a los recursos (`build/<preset>/bin/`). Si ya
+habías ejecutado una versión anterior, tu fichero se respeta: para pasar al aspecto oficial elige
+`PSX Classic (oficial)` en F1 o borra el fichero.
+
+Los subtítulos de Hirity están en `assets/subtitles/hirity.json`. Mientras `verified` sea `false` se muestran
+marcados como «sin verificar».
+
+## Multijugador en un equipo
+
+```powershell
+build\windows-release\bin\EntornVGI.exe --host --port 7777 --name Host
+build\windows-release\bin\EntornVGI.exe --connect 127.0.0.1:7777 --name Cliente
+```
 
 ## Qué hacer cuando algo no funciona
 
@@ -202,13 +235,21 @@ GPU, driver y versión de OpenGL.
 
 ## Pruebas y estado de validación
 
-Las pruebas de escenas y OBJ se compilan como targets CTest cuando se configura
-CMake. Ejecútalas con `ctest --test-dir build/<preset> --output-on-failure`.
-`ObjLoaderTests` necesita un contexto OpenGL oculto; si no hay sesión gráfica o
-no se puede crear el contexto, CTest lo marca como omitido.
+Ejecuta las pruebas con `ctest --test-dir build/<preset> --output-on-failure` (25 en Windows con ENet).
+Cubren escena, editor, GLB, física, red, audio, subtítulos, presets gráficos y lógica de la interfaz.
+`ObjLoaderTests` necesita un contexto OpenGL oculto; sin sesión gráfica CTest lo marca como omitido.
 
-El estado de validación vigente, con sus limitaciones, está en la sección 30 de
-[docs/REFACTOR_MIGRATION_MAP.md](docs/REFACTOR_MIGRATION_MAP.md) (secciones 30 y 31).
+Para generar capturas y métricas del juego sin manejarlo (no guarda ajustes y se cierra solo):
+
+```powershell
+$env:ENTORNVGI_RETRO_CAPTURE = "$PWD\build\capturas"
+.\build\windows-release\bin\EntornVGI.exe
+Remove-Item Env:ENTORNVGI_RETRO_CAPTURE
+```
+
+Qué está comprobado y qué falta probar a mano:
+[docs/midnight-hoops/VALIDATION.md](docs/midnight-hoops/VALIDATION.md). La validación del refactor está en las
+secciones 30 y 31 de [docs/REFACTOR_MIGRATION_MAP.md](docs/REFACTOR_MIGRATION_MAP.md).
 
 `SceneLoader` y el cargador propio OBJ/MTL son la ruta de carga; la procedencia de los assets está en
 [assets/licenses/README.md](assets/licenses/README.md). El repositorio ignora salidas CMake,

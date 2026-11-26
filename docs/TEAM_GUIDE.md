@@ -3,6 +3,9 @@
 Cómo moverse por el proyecto después del refactor. Si vienes de una rama anterior (con `EntornVGI/`),
 empieza por [PORTING_MAP.md](PORTING_MAP.md).
 
+El mapa completo de archivos, el bucle y el pipeline gráfico están en
+[architecture/CODE_MAP.md](architecture/CODE_MAP.md).
+
 ## Estructura y responsabilidades
 
 | Carpeta | Qué hay |

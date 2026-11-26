@@ -1,0 +1,22 @@
+{
+  "note": "Borradores obtenidos con Whisper (small) o descritos a partir del recurso. Nadie los ha comparado todavia con el audio: el juego los marca como 'sin verificar'. Poner verified=true solo despues de escucharlos.",
+  "lines": [
+    { "id": "story.hello", "speaker": "Hirity", "audio": "assets/audio/hirity/story/holahirity.ogg", "text": "Hola, soy Hirity, tu asistente personal.", "language": "es", "priority": 30, "category": "dialogue", "verified": false },
+    { "id": "story.hello_gl", "speaker": "Hirity", "audio": "assets/audio/hirity/story/holahiritygallego.ogg", "text": "Ola, carallo, son... digo, o asistente persoal. Carallo, que che pasa?", "language": "gl", "priority": 30, "category": "dialogue", "verified": false,
+      "segments": [
+        { "start": 0.0, "end": 3.0, "text": "Ola, carallo, son... digo, o asistente persoal." },
+        { "start": 3.0, "end": 5.3, "text": "Carallo, que che pasa?" }
+      ] },
+    { "id": "story.grab_me", "speaker": "Hirity", "audio": "assets/audio/hirity/story/agarrame.ogg", "text": "¿Sabías que si pulsas la tecla E puedes agarrarme? ¡Pruébalo!", "language": "es", "priority": 30, "category": "dialogue", "verified": false },
+    { "id": "story.well_done", "speaker": "Hirity", "audio": "assets/audio/hirity/story/lohashechobien.ogg", "text": "¡Lo has hecho chupi fantástico!", "language": "es", "priority": 30, "category": "dialogue", "verified": false },
+    { "id": "search.where", "speaker": "Voz", "audio": "assets/audio/hirity/searching/heydondeestashirity.ogg", "text": "Hey, ¿dónde estás?", "language": "es", "priority": 20, "category": "dialogue", "verified": false },
+    { "id": "search.come", "speaker": "Voz", "audio": "assets/audio/hirity/searching/venaquihirity.ogg", "text": "Ven aquí.", "language": "es", "priority": 20, "category": "dialogue", "verified": false },
+    { "id": "damage.short", "speaker": "Hirity", "audio": "assets/audio/hirity/damage/damagehirity.ogg", "text": "¡Oh!", "language": "es", "priority": 10, "category": "dialogue", "verified": false },
+    { "id": "damage.long", "speaker": "Hirity", "audio": "assets/audio/hirity/damage/damegehiritylong.ogg", "text": "¡Au, au, au! ¡No me hagas eso! ¡Para!", "language": "es", "priority": 15, "category": "dialogue", "verified": false },
+    { "id": "ambient.cough", "speaker": "", "audio": "assets/audio/hirity/ambient/cough.ogg", "text": "[Tos]", "language": "es", "priority": 5, "category": "caption", "verified": false },
+    { "id": "ambient.steps", "speaker": "", "audio": "assets/audio/hirity/ambient/pasosfuertes.ogg", "text": "[Pasos fuertes]", "language": "es", "priority": 5, "category": "caption", "verified": false },
+    { "id": "appear.voice", "speaker": "", "audio": "assets/audio/hirity/appear/anotopat.ogg", "text": "A no topar.", "language": "ca", "priority": 10, "category": "dialogue", "verified": false },
+    { "id": "appear.giggle", "speaker": "", "audio": "assets/audio/hirity/appear/heehee.ogg", "text": "[Risita]", "language": "es", "priority": 5, "category": "caption", "verified": false },
+    { "id": "appear.music", "speaker": "", "audio": "assets/audio/hirity/appear/rickroll.ogg", "text": "[Fragmento musical]", "language": "es", "priority": 5, "category": "caption", "verified": false }
+  ]
+}

@@ -396,3 +396,6 @@ compile_commands.json
 GLSL_Error.*
 extensions.txt
 imgui.ini
+
+# Ajustes graficos locales de cada jugador
+retro_settings.ini
