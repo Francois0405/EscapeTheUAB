@@ -529,3 +529,22 @@ git switch master && git merge --ff-only origin/master && git merge --no-ff refa
 ```
 
 Si `origin/master` tiene commits posteriores a `f017e20`, no usar `-s ours`: portarlos antes. Conviene avisar a Marc de que su escena y su límite de luces no quedan aplicados aunque su commit figure en el historial. No se ha hecho push ni se ha modificado `master`.
+
+## 33. Limpieza final del árbol (2026-11-26)
+
+Respaldo: etiqueta local `backup/pre-cleanup-2026-11-26` (`d12b203`). Sin reescribir historial: lo borrado se recupera con `git show backup/pre-cleanup-2026-11-26:<ruta>` y el tamaño de `.git` no se reduce.
+
+| Eliminado | Archivos | Tamaño |
+|---|---|---|
+| Salidas de compilación de Visual Studio (1-2 nov) | 40 | 45,8 MB |
+| `include/` y `lib/` vendorizados, ya archivados | 417 | 17,8 MB |
+| Copia del OpenXR SDK | 428 | 7,1 MB |
+| Duplicados byte a byte de assets activos | 33 | 5,8 MB |
+| Temporales, copias `.bak`, parche de un solo uso y `ModelLoader.cpp` | 15 | 0,6 MB |
+| Gitlink `ImDesignManager` | 1 | 0 |
+
+De 1.660 entradas a 727; el contenido versionado pasa de 215,6 a 138,9 MB. Lista exacta: `git diff --diff-filter=D --name-only backup/pre-cleanup-2026-11-26 befcf26`.
+
+Se conservan en `archive/legacy/` las muestras académicas VGI (curvas, modelos Skull y UH60, texturas y tres shaders únicos) y los modelos de `res/` que no duplican ningún asset. `src/`, `tests/` y los assets activos no cambian; en `assets/` solo se añade `licenses/README.md`, con las licencias que **faltan por documentar** antes de publicar.
+
+**Validación sobre `befcf26` (Windows).** Exportado a un directorio nuevo: lanzadores Debug y Release, CTest 23/23 en ambas, `NetJuegoTests` 20/20 y `ENetLoopbackTests` 10/10, arranque y cierre; `OpenXR: ON` con el cargador de vcpkg; MSBuild Debug y Release. Linux y macOS no se compilaron: solo se comprobó que ningún `CMakeLists`, script ni preset referencia lo borrado.
