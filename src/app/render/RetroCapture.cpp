@@ -4,6 +4,7 @@
 #include "src/app/state/PlayerState.h"
 #include "src/app/state/GameplayState.h"
 #include "src/app/state/VrState.h"
+#include "src/app/state/NetworkState.h"
 #include "src/app/adapters/HirityAdapters.h"
 #include "src/app/adapters/PlayerAdapters.h"
 #include "src/app/render/RetroCapture.h"
@@ -17,15 +18,24 @@ namespace
 	constexpr int kWarmup = 120;    // fotogramas sin medir tras cambiar de fase
 	constexpr int kMeasured = 300;
 
-	struct Phase { const char* name; retro::Preset preset; bool grab; bool stereo; float fog; };
+	// width/height 0: la ventana no se toca.
+	struct Phase { const char* name; retro::Preset preset; bool grab; bool stereo; float fog;
+		GameState state; int width; int height; };
+	constexpr retro::Preset kOriginal = retro::Preset::Original;
+	constexpr retro::Preset kCinematic = retro::Preset::Cinematic;
 	constexpr Phase kPhases[] = {
-		{ "original", retro::Preset::Original, false, false, 0.0f },
-		{ "cinematic", retro::Preset::Cinematic, false, false, 0.0f },
-		{ "psx", retro::Preset::PsxClassic, false, false, 0.0f },
-		{ "cinematic_fog", retro::Preset::Cinematic, false, false, 0.04f },
-		{ "held_charge_subtitle", retro::Preset::Cinematic, true, false, 0.0f },
-		{ "f2_stereo", retro::Preset::Cinematic, false, true, 0.0f },
-		{ "original_again", retro::Preset::Original, false, false, 0.0f },
+		{ "original", kOriginal, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
+		{ "cinematic", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
+		{ "psx", retro::Preset::PsxClassic, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
+		{ "cinematic_fog", kCinematic, false, false, 0.08f, GAME_STATE_PLAYING, 0, 0 },
+		{ "held_charge_subtitle", kCinematic, true, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
+		{ "f2_stereo", kCinematic, false, true, 0.0f, GAME_STATE_PLAYING, 0, 0 },
+		{ "original_again", kOriginal, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
+		{ "resize_1280x720", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 1280, 720 },
+		{ "resize_2560x1080", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 2560, 1080 },
+		{ "resize_800x900", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 800, 900 },
+		{ "pause", kCinematic, false, false, 0.0f, GAME_STATE_PAUSED, 1280, 720 },
+		{ "main_menu", kCinematic, false, false, 0.0f, GAME_STATE_MAIN_MENU, 0, 0 },
 	};
 	constexpr int kPhaseCount = static_cast<int>(sizeof(kPhases) / sizeof(kPhases[0]));
 
@@ -82,7 +92,13 @@ void retroCaptureBeforeUi(GLFWwindow* window)
 			audioManager.setMasterVolume(0.0f);
 			glfwSwapInterval(0);   // con vsync todos los presets medirian lo mismo
 			renderMetrics::enabled = true;
-			currentGameState = GAME_STATE_PLAYING;
+		}
+		currentGameState = actual.state;
+		showNetworkPanel = false;   // los paneles F4 taparian la comparacion
+		if (actual.width > 0)
+		{
+			glfwRestoreWindow(window);
+			glfwSetWindowSize(window, actual.width, actual.height);
 		}
 		retro::ApplyPreset(retroSettings, actual.preset);
 		retroSettings.fogDensity = actual.fog;

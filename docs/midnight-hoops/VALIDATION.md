@@ -10,7 +10,11 @@ Windows 11, MSVC 14.51, RTX 5070 Ti. Linux y macOS no se han compilado.
 | CTest Debug y Release | 25/25 en cada una |
 | `EntornVGI.slnx` con MSBuild, Debug y Release | Compila (proyecto generado con `tools/generate_vs_project.py`); binarios no ejecutados |
 | Shader en GPU frente a la referencia de CPU (ventana oculta, 128x72) | 72 combinaciones de modo, patrón, 3/4/5/8 bits e intensidad 0,85/1,5, más exposición +1 EV. Tolerancia 1,5/255. En ruido espacial solo se comprueban los niveles |
-| Recorrido de capturas en el juego Release | Cierre con código 0, `glGetError` 0 en las 7 fases |
+| Recorrido de capturas en el juego Release | Cierre con código 0, `glGetError` 0 y ningún error de FBO en las 12 fases |
+| Redimensionado | 1280x720 → interno 960x540; 2560x1061 → 1303x540; 800x900 → 480x540; sin deformación en la captura revisada (800x900) |
+| Menú principal y pausa | Sin retícula |
+| Shader de posprocesado roto a propósito (copia en `build/`, restaurada) | Error en consola, el juego usa el blit anterior y cierra con código 0 |
+| Niebla 0,08 frente a 0 en la pared del fondo | 27 % de los píxeles de la zona cambian; nivel medio 10,16 → 9,54 |
 
 El arnés de GPU es temporal y no está en el repositorio.
 
@@ -35,15 +39,20 @@ Medición del 26-11-2026: Release, ventana 1920x1009, cámara inicial, sin vsync
 - El temporizador de GPU mide el dibujo de la escena, no el pase de posprocesado.
 - Cinematic dibuja un 7 % más de píxeles que Original porque sigue la proporción de la ventana.
 - Es una sola pasada en una GPU potente; no dice nada sobre equipos modestos.
-- Original repetido al final coincide con el inicial salvo el subtítulo que aún sonaba y el balanceo del móvil.
+- Una repetición de Original coincidió con la inicial salvo el subtítulo que aún sonaba y el balanceo del móvil.
+- Original estira la imagen 16:9 a la proporción de la ventana: es el comportamiento anterior, conservado a
+  propósito. Por eso la estantería se ve más ancha que en Cinematic.
+- Con anchos internos no enteros respecto a la ventana (1920/1028) el dithering puede mostrar columnas desiguales.
+- La niebla solo existe en el shader Phong; con Gouraud o Flat no hace nada.
+- Las capturas ocultan los paneles de red y de objetos dinámicos que el juego muestra por defecto.
 
 ## Pendiente: QA manual
 
-- [ ] Retícula oculta en menú, pausa, editor, F1 y OpenXR.
+- [ ] Retícula oculta en editor, F1 y OpenXR.
 - [ ] Arco con la tecla E: se completa, cambia a amarillo y desaparece al lanzar, cancelar o perder el objeto.
 - [ ] Panel F1: cambiar parámetros, "Restaurar preset" y comprobar que se conservan al reiniciar.
 - [ ] Legibilidad de pistas y carteles en los tres presets; aliasing lejano con texturas nearest.
-- [ ] Redimensionar, maximizar y minimizar.
+- [ ] Maximizar, minimizar y arrastrar el borde; buscar columnas desiguales en el dithering.
 - [ ] Entrar y salir del editor; F2 y F3.
 - [ ] Activar el viewmodel en F1: paredes cercanas, lanzamiento, salto visual al soltar, solape con subtítulos.
 - [ ] Multijugador LAN: el otro jugador ve el objeto físico; el cliente ve su retícula, arco y viewmodel.
@@ -77,4 +86,5 @@ Codex (`codex@openai-codex` 1.0.6, solo lectura).
   nearest" no afectaba a la reducción).
 - Segunda pasada, contra `a9fea0c` (hasta `cc0d6f2`): un P2 sobre caracteres corruptos en
   `hirity.json`, **descartado**. El fichero es UTF-8 válido, sin U+FFFD, y el juego muestra bien las tildes
-  (captura `held_charge_subtitle.png`); el revisor lo leyó sin decodificar UTF-8. No informó de más problemas.
+  (captura `held_charge_subtitle.png`); como hipótesis sin comprobar, el revisor pudo leerlo sin decodificar UTF-8. No informó de más problemas.
+- Las fases de captura añadidas después (redimensionado, pausa y menú) no se auditaron.

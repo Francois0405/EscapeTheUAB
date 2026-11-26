@@ -2,21 +2,21 @@
 
 Rama `feature/midnight-hoops`, base `a9fea0c`.
 
-`PASS` significa que hay evidencia ejecutada (pruebas, GPU o captura del juego real), no que alguien lo haya
-jugado. Nadie ha jugado todavía con estos cambios; ver `VALIDATION.md`.
+`PASS` solo cuando todos los criterios obligatorios tienen evidencia ejecutada. Nadie ha jugado todavía con
+estos cambios; ver `VALIDATION.md`.
 
 | Tarea | Estado | Evidencia y lo que falta |
 |-------|--------|--------------------------|
-| MH-01 Retícula cuadrada | PASS | Pruebas de estado; visible en captura de juego y oculta en F2. Sin observar: menú, pausa, editor, OpenXR |
-| MH-02 Arco de carga | PASS | Pruebas de estado; captura al 70 %. Falta cargar y lanzar con la tecla E |
-| MH-03 Framebuffer y posprocesado | PASS | Shader igual a la referencia CPU; capturas de los presets. Falta redimensionar la ventana |
-| MH-04 Presets y F1 | PASS | Pruebas de valores, límites y persistencia. El panel F1 no se ha manejado a mano |
+| MH-01 Retícula cuadrada | IMPLEMENTED_UNVERIFIED | Pruebas de estado; visible en juego, oculta en menú, pausa y F2. Sin observar: editor, OpenXR, ImGui capturando |
+| MH-02 Arco de carga | IMPLEMENTED_UNVERIFIED | Pruebas de estado; captura al 70 %. Falta cargar, lanzar y cancelar con la tecla E |
+| MH-03 Framebuffer y posprocesado | IMPLEMENTED_UNVERIFIED | Shader igual a la referencia CPU; presets, tres tamaños de ventana y fallo de shader probados; F2 sin efectos. Sin observar: editor, OpenXR |
+| MH-04 Presets y F1 | IMPLEMENTED_UNVERIFIED | Pruebas de valores, límites y persistencia. El panel F1 no se ha manejado a mano |
 | MH-05 Subtítulos | PARTIAL | Sistema probado y visto en captura. Textos sin verificar; sin Pixelify Sans |
 | MH-06 Objeto en primera persona | PARTIAL | Experimental, **desactivado por defecto**. Probado con un frasco en captura |
 | MH-07 Texturas nearest | IMPLEMENTED_UNVERIFIED | Sin comparación visual de cerca |
 | Ruido espacial, granulado, viñeta, tono frío/cálido | IMPLEMENTED_UNVERIFIED | Apagados salvo que se activen en F1 |
-| Niebla por distancia (shader Phong) | IMPLEMENTED_UNVERIFIED | Apagada por defecto; a las distancias de la sala apenas se aprecia |
-| Persistencia (`retro_settings.ini`) | PASS | Prueba de ida y vuelta y de valores inválidos |
+| Niebla por distancia (shader Phong) | IMPLEMENTED_UNVERIFIED | Apagada por defecto; sutil a las distancias de la sala |
+| Persistencia (`retro_settings.ini`) | IMPLEMENTED_UNVERIFIED | Serialización probada; falta reiniciar el juego tras cambiar algo en F1 |
 | Aviso al agarrar | PASS | Visto en captura |
 | Subtítulos en el visor OpenXR | TODO | Fuera del alcance |
 | Conos de luz, blue noise | TODO | Opcionales |
