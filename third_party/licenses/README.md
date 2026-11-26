@@ -10,6 +10,9 @@ línea base de `vcpkg.json`: bullet3 3.25, enet 1.3.18, glew 2.3.1, glfw3 3.5.1,
 stb 2026-08-02 (de ahí sale stb_vorbis). Si cambia la línea base, hay que volver a copiarlos. En Linux las
 dependencias vienen de la distribución, con sus propias versiones y avisos.
 
+El fichero de meshoptimizer es grande porque vcpkg le añade completas las cabeceras `cgltf.h` y `fast_obj.h`, que usa su
+herramienta `gltfpack` (el juego no la usa).
+
 ## Código vendorizado
 
 | Dependencia | Versión en el repositorio | Texto | De dónde sale |
@@ -17,7 +20,7 @@ dependencias vienen de la distribución, con sus propias versiones y avisos.
 | Dear ImGui | 1.89.4 WIP | `../imgui/LICENSE.txt` | Repositorio oficial, etiqueta `v1.89.4` |
 | nlohmann/json | 3.11.3 | `../nlohmann/LICENSE.MIT` | Repositorio oficial, etiqueta `v3.11.3` |
 | miniaudio | 0.11.26 | `../miniaudio/LICENSE` | Extraído del final de `miniaudio.h` |
-| SOIL2 | no identificada | `../SOIL2/NOTICES.txt` | Avisos extraídos de sus fuentes; varios auxiliares no llevan aviso propio |
+| SOIL2 | 1.3.0 (`SOIL2.h`) | `../SOIL2/NOTICES.txt` | Avisos extraídos de sus fuentes; varios auxiliares no llevan aviso propio |
 | cgltf | commit `de9828bc` | `../cgltf/LICENSE` | Ya estaba |
 | ImGuizmo | sin etiqueta anotada | `../imguizmo/LICENSE-ImGuizmo` | Ya estaba |
 | Native File Dialog (Linux) | sin etiqueta anotada | `../nativefiledialog/LICENSE` | Ya estaba |
