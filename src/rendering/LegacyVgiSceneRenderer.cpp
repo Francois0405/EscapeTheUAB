@@ -2,6 +2,7 @@
 
 #include "GlbDrawing.h"
 #include "FrustumCulling.h"
+#include "HeldViewModel.h"
 #include "RenderMetrics.h"
 #include "UniformCache.h"
 #include "src/animation/DoorAnimation.h"
@@ -19,6 +20,30 @@
 #include <cmath>
 #include <iostream>
 
+namespace
+{
+	int LocalHeldObject(const SceneRenderContext& ctx)
+	{
+		const int local = ctx.physicsScene->GrabbedObject();
+		const bool cliente = ctx.networkGame.IsClient();
+		if (local >= 0 || !cliente) return local;
+		std::vector<std::uint32_t> hashes;
+		hashes.reserve(ctx.sceneObjects.size());
+		for (const SceneObject& obj : ctx.sceneObjects) hashes.push_back(netgame::HashId(obj.id));
+		return viewmodel::SelectLocalHeld(local, cliente,
+			ctx.networkGame.DynamicObjectOfPeer(ctx.networkGame.LocalPeerId()), hashes);
+	}
+
+	// Entrada suave: 0.15 s desde que cambia el objeto sostenido.
+	float HeldSlide(int held)
+	{
+		static int anterior = -1;
+		static double desde = 0.0;
+		if (held != anterior) { anterior = held; desde = glfwGetTime(); }
+		return std::clamp(static_cast<float>((glfwGetTime() - desde) / 0.15), 0.0f, 1.0f);
+	}
+}
+
 void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 {
 	const auto inicioEscena = std::chrono::steady_clock::now();
@@ -35,6 +60,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	glUniform3f(glcache::UniformLocation(ctx.shader_programID, "uIndirectSkyColor"),
 		ctx.sceneSkyBounceColor.r, ctx.sceneSkyBounceColor.g, ctx.sceneSkyBounceColor.b);
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), 1.0f);
+	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uFogDensity"), ctx.fogDensity);
 	const bool renderizarMovil = ctx.fpsModeActive() && !ctx.sceneEditor.IsEnabled()
 		&& ctx.showPhone && ctx.phoneOBJ != nullptr;
 	glm::mat4 matrizMovilMundo(1.0f);
@@ -78,6 +104,10 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	// Dibuix Coordenades Món i Reixes.
 	dibuixa_Eixos(ctx.eixos_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid, ctx.ProjectionMatrix, ctx.ViewMatrix);
 
+	const int sostenido = ctx.showHeldViewModel && ctx.fpsModeActive() && !ctx.sceneEditor.IsEnabled()
+		? LocalHeldObject(ctx) : -1;
+	const float entradaMano = HeldSlide(sostenido);
+
 	// Dibuja cada objeto de la habitacion con su transformacion.
 	if (!ctx.sceneObjects.empty())
 	{
@@ -111,7 +141,22 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			}
 			if (matrices.empty()) matrices.push_back(ctx.sceneEditor.IsEnabled()
 				? physics::ObjectMatrix(obj) : ctx.physicsScene->VisualMatrixOf(static_cast<int>(i), obj));
-			if (ctx.optimizedRendering)
+			bool enMano = false;
+			if (static_cast<int>(i) == sostenido)
+			{
+				Vector3D minimo{}, maximo{};
+				glm::mat4 enPantalla(1.0f);
+				// El objeto fisico solo se sustituye si el viewmodel es valido.
+				if (it->second->GetLocalBounds(minimo, maximo) && viewmodel::Build(
+					{ obj.id, obj.eulerRotation, obj.escala, glm::vec3(minimo.fX, minimo.fY, minimo.fZ),
+						glm::vec3(maximo.fX, maximo.fY, maximo.fZ) },
+					ctx.ViewMatrix, ctx.ProjectionMatrix, entradaMano, enPantalla))
+				{
+					matrices.assign(1, enPantalla);
+					enMano = true;
+				}
+			}
+			if (ctx.optimizedRendering && !enMano)
 			{
 				Vector3D minimo{}, maximo{};
 				if (it->second->GetLocalBounds(minimo, maximo))
@@ -145,6 +190,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 				? (obj.luz.encendida && ctx.labLampsEnabled ? 1.0f : 0.0f) : 1.0f;
 			glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), emisionLuminaria);
 
+			if (enMano) glDepthRange(0.0, 0.05);   // delante de las paredes cercanas, sin perder auto-oclusion
 			for (const glm::mat4& matriz : matrices)
 				dibuixa_EscenaGL(
 					ctx.shader_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid,
@@ -153,6 +199,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 					ctx.npts_T, ctx.PC_t, ctx.pas_CS, ctx.sw_Punts_Control, ctx.dibuixa_TriedreFrenet,
 					it->second.get(), matriz
 				);
+			if (enMano) glDepthRange(0.0, 1.0);
 			it->second->SetInstanceMaterialOverride(0, -1.0f);
 			glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), 1.0f);
 			glUniform1i(glcache::UniformLocation(ctx.shader_programID, "uWorldTiling"), GL_FALSE);

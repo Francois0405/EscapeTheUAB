@@ -7,13 +7,18 @@
 #include "imgui_impl_opengl3.h"
 
 #include <algorithm>
+#include <cfloat>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/player/FpsMovement.h"
 #include "src/physics/PhysicsScene.h"
+#include "src/ui/RuntimeUiLogic.h"
 #include "src/ui/UiScale.h"
+#include "src/audio/SubtitleManager.h"
+#include "src/rendering/RetroSettings.h"
 
 namespace runtimeui
 {
@@ -51,31 +56,65 @@ void DrawStaminaBar(const HudContext& context)
 void DrawInteractionHud(const HudContext& context)
 {
 	const ImGuiIO& io = ImGui::GetIO();
-	if (!context.isFpsInputActive() ||
-		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
-		return;
+	if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f) return;
+	const bool agarrado = context.playerHoldsObject && context.playerHoldsObject();
+	const ReticleState estado = EvaluateReticle(context.isDesktopHudVisible && context.isDesktopHudVisible(),
+		io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse,
+		agarrado, context.throwCharging, context.throwChargeSeconds);
+	if (!estado.reticle) return;
 
 	const float escala = uiScale;
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
-	if (context.throwCharging)
+	const ImVec2 centro(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
+	// Cuadrado de 5 unidades con contorno oscuro de 1: sigue visible sobre fondos claros.
+	const float medio = 2.5f * escala;
+	dl->AddRectFilled(ImVec2(centro.x - medio - escala, centro.y - medio - escala),
+		ImVec2(centro.x + medio + escala, centro.y + medio + escala), IM_COL32(0, 0, 0, 170));
+	dl->AddRectFilled(ImVec2(centro.x - medio, centro.y - medio),
+		ImVec2(centro.x + medio, centro.y + medio), IM_COL32(255, 250, 235, 245));
+	if (estado.arc)
 	{
-		const float ancho = 140.0f * escala, alto = 8.0f * escala;
-		const float x = (io.DisplaySize.x - ancho) * 0.5f;
-		const float y = io.DisplaySize.y * 0.5f + 36.0f * escala;
-		dl->AddRectFilled(ImVec2(x - 2.0f * escala, y - 2.0f * escala), ImVec2(x + ancho + 2.0f * escala, y + alto + 2.0f * escala),
-			IM_COL32(0, 0, 0, 210), 3.0f * escala);
-		dl->AddRectFilled(ImVec2(x, y), ImVec2(x + ancho * std::clamp(
-			context.throwChargeSeconds / context.maxThrowChargeSeconds, 0.0f, 1.0f), y + alto),
-			IM_COL32(235, 220, 150, 245), 2.0f);
+		// Bloques alineados a pixeles fisicos, sin antialiasing; empieza arriba y avanza en horario.
+		const float densidad = io.DisplayFramebufferScale.x > 0.0f ? io.DisplayFramebufferScale.x : 1.0f;
+		const int celda = ChargeCellPixels(escala, densidad);
+		const int borde = std::max(1, static_cast<int>(std::lround(escala * densidad)));
+		const int origenX = static_cast<int>(std::floor(centro.x * densidad)) - celda / 2;
+		const int origenY = static_cast<int>(std::floor(centro.y * densidad)) - celda / 2;
+		const ImU32 color = estado.full ? IM_COL32(0xF0, 0xCA, 0x65, 255) : IM_COL32(255, 248, 230, 255);
+		const int encendidos = LitChargeSegments(estado.fraction, estado.full);
+		// Primero todos los contornos y despues los rellenos, para que un contorno no tape un vecino.
+		for (int pasada = 0; pasada < 2; ++pasada)
+			for (int i = 0; i < encendidos; ++i)
+			{
+				const Cell c = ChargeSegmentCell(i);
+				const int margen = pasada == 0 ? borde : 0;
+				const int x = origenX + c.x * celda, y = origenY + c.y * celda;
+				dl->AddRectFilled(ImVec2((x - margen) / densidad, (y - margen) / densidad),
+					ImVec2((x + celda + margen) / densidad, (y + celda + margen) / densidad),
+					pasada == 0 ? IM_COL32(0, 0, 0, 170) : color);
+			}
 	}
 
-	if (io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
-		return;
-	if (context.physicsScene->HasGrab())
+	// Aviso breve al pasar a sostener un objeto, abajo a la izquierda.
+	static bool agarradoAntes = false;
+	static double avisoHasta = 0.0;
+	if (agarrado && !agarradoAntes) avisoHasta = ImGui::GetTime() + 1.6;
+	agarradoAntes = agarrado;
+	if (context.showPickupNotice && agarrado && ImGui::GetTime() < avisoHasta)
 	{
-		const ImVec2 pos(io.DisplaySize.x * 0.5f + 16.0f * escala, io.DisplaySize.y * 0.5f + 31.0f * escala);
-		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), "Mantener E carga el lanzamiento; soltar E lanza");
-		dl->AddText(pos, IM_COL32(245, 248, 240, 255), "Mantener E carga el lanzamiento; soltar E lanza");
+		const ImVec2 pos(18.0f * escala, io.DisplaySize.y - 92.0f * escala);
+		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), "Objeto agarrado");
+		dl->AddText(pos, IM_COL32(0xF0, 0xCA, 0x65, 255), "Objeto agarrado");
+	}
+
+	if (agarrado)
+	{
+		// Abajo a la derecha, lejos de la mira y de los subtitulos.
+		const char* ayuda = "Mantener E carga el lanzamiento; soltar E lanza";
+		const ImVec2 medida = ImGui::CalcTextSize(ayuda);
+		const ImVec2 pos(io.DisplaySize.x - medida.x - 18.0f * escala, io.DisplaySize.y - medida.y - 14.0f * escala);
+		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), ayuda);
+		dl->AddText(pos, IM_COL32(245, 248, 240, 255), ayuda);
 		return;
 	}
 	const char* prompt = context.interactionPrompt();
@@ -249,6 +288,33 @@ void DrawMenus(const MenuContext& context)
 }
 }
 
+// Franja inferior central: amarillo calido sobre negro al 72 %, con la fuente pixelada de ImGui.
+static void DrawSubtitles(const SubtitleContext& context)
+{
+	// Se consulta siempre para olvidar lo que ya no suena aunque esten desactivados.
+	subtitles::Visible linea;
+	const bool hay = context.manager.Current(context.isPlaying, context.cursorSeconds,
+		{ context.settings.soundCaptions, context.settings.unverifiedSubtitles }, linea);
+	if (!hay || !context.settings.subtitles) return;
+	const ImGuiIO& io = ImGui::GetIO();
+	if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f) return;
+
+	std::string texto = linea.speaker.empty() ? linea.text : linea.speaker + ": " + linea.text;
+	if (!linea.verified) texto += "  (sin verificar)";
+	ImFont* fuente = ImGui::GetFont();
+	// 26 px a 1080p; ProggyClean mide 13 px, asi que el doble mantiene los pixeles nitidos.
+	const float tamano = std::max(13.0f, 26.0f * io.DisplaySize.y / 1080.0f);
+	const float ajuste = io.DisplaySize.x * 0.72f;
+	const ImVec2 medida = fuente->CalcTextSizeA(tamano, FLT_MAX, ajuste, texto.c_str());
+	const float margen = tamano * 0.35f;
+	const ImVec2 pos(std::floor((io.DisplaySize.x - medida.x) * 0.5f),
+		std::floor(io.DisplaySize.y * 0.92f - medida.y - margen * 0.5f));
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	dl->AddRectFilled(ImVec2(pos.x - margen, pos.y - margen * 0.5f),
+		ImVec2(pos.x + medida.x + margen, pos.y + medida.y + margen * 0.5f), IM_COL32(0, 0, 0, 184));
+	dl->AddText(fuente, tamano, pos, IM_COL32(0xF0, 0xCA, 0x65, 255), texto.c_str(), nullptr, ajuste);
+}
+
 void DrawRuntimeUiFrame(const FrameContext& context)
 {
 	static ImGuiStyle estiloUIBase;
@@ -280,6 +346,9 @@ void DrawRuntimeUiFrame(const FrameContext& context)
 		DrawStaminaBar(context.hud);
 		DrawInteractionHud(context.hud);
 	}
+
+	// El audio sigue sonando en pausa y en el menu; el menu principal no muestra subtitulos.
+	if (context.menu.state != GAME_STATE_MAIN_MENU) DrawSubtitles(context.subtitle);
 
 	DrawMenus(context.menu);
 

@@ -15,6 +15,7 @@
 #include "src/physics/PhysicsScene.h"
 #include "src/physics/PhysicsWorld.h"
 #include "src/rendering/RenderMetrics.h"
+#include "src/rendering/RetroSettings.h"
 #include "src/scene/SceneLoader.h"
 #include "src/vr/OpenXRManager.h"
 
@@ -109,6 +110,54 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 		ImGui::SliderFloat("Amortiguacion al parar", &pb.salida, 1.0f, 20.0f, "%.1f");
 		ImGui::Text("fase: %.2f rad | peso: %.2f", cameraBob.CurrentPhase(), cameraBob.WeightValue());
 	}
+	ImGui::End();
+
+	retro::Settings& retroSettings = context.retroSettings;
+	ImGui::Begin("Graficos retro");
+	const char* presets[] = { "Original", "Retro Cinematic", "PSX Classic (oficial)" };
+	int preset = static_cast<int>(retroSettings.preset);
+	if (ImGui::Combo("Preset", &preset, presets, IM_ARRAYSIZE(presets)))
+		retro::ApplyPreset(retroSettings, static_cast<retro::Preset>(preset));
+	if (retroSettings.preset != retro::Preset::Original)
+	{
+		if (retroSettings.modified) ImGui::Text("%s (modificado)", presets[static_cast<int>(retroSettings.preset)]);
+		if (ImGui::Button("Restaurar preset")) retro::ApplyPreset(retroSettings, retroSettings.preset);
+		bool cambiado = false;
+		const int alturas[] = { 360, 480, 540, 720 };
+		const char* nombres[] = { "360p", "480p", "540p", "720p" };
+		int altura = -1;
+		for (int i = 0; i < IM_ARRAYSIZE(alturas); ++i)
+			if (alturas[i] == retroSettings.internalHeight) altura = i;
+		if (ImGui::Combo("Resolucion interna", &altura, nombres, IM_ARRAYSIZE(nombres)))
+		{ retroSettings.internalHeight = alturas[altura]; cambiado = true; }
+		cambiado |= ImGui::SliderInt("Bits por canal", &retroSettings.bitsPerChannel, 3, 8);
+		const char* modos[] = { "Desactivado", "Monocromatico", "Cromatico" };
+		int modo = static_cast<int>(retroSettings.dither);
+		if (ImGui::Combo("Dithering", &modo, modos, IM_ARRAYSIZE(modos)))
+		{ retroSettings.dither = static_cast<retro::DitherMode>(modo); cambiado = true; }
+		const char* patrones[] = { "Bayer 4x4", "Bayer 8x8", "Ruido espacial" };
+		int patron = static_cast<int>(retroSettings.pattern);
+		if (ImGui::Combo("Patron", &patron, patrones, IM_ARRAYSIZE(patrones)))
+		{ retroSettings.pattern = static_cast<retro::Pattern>(patron); cambiado = true; }
+		cambiado |= ImGui::SliderFloat("Intensidad dithering", &retroSettings.ditherStrength, 0.0f, 1.5f, "%.2f");
+		cambiado |= ImGui::SliderFloat("Saturacion", &retroSettings.saturation, 0.5f, 1.5f, "%.2f");
+		cambiado |= ImGui::SliderFloat("Contraste", &retroSettings.contrast, 0.8f, 1.3f, "%.2f");
+		cambiado |= ImGui::SliderFloat("Exposicion (EV)", &retroSettings.exposureEV, -1.0f, 1.0f, "%.2f");
+		cambiado |= ImGui::SliderFloat("Granulado", &retroSettings.grain, 0.0f, 0.03f, "%.3f");
+		cambiado |= ImGui::SliderFloat("Vineta", &retroSettings.vignette, 0.0f, 0.10f, "%.2f");
+		cambiado |= ImGui::SliderFloat("Tono frio/calido", &retroSettings.grading, 0.0f, 0.15f, "%.2f");
+		cambiado |= ImGui::SliderFloat("Niebla", &retroSettings.fogDensity, 0.0f, 0.08f, "%.3f");
+		cambiado |= ImGui::Checkbox("Texturas de entorno nearest", &retroSettings.nearestTextures);
+		if (cambiado) retroSettings.modified = true;
+		retro::Sanitize(retroSettings);
+	}
+	ImGui::Separator();
+	ImGui::Checkbox("Subtitulos", &retroSettings.subtitles);
+	ImGui::Checkbox("Describir sonidos", &retroSettings.soundCaptions);
+	ImGui::Checkbox("Mostrar textos sin verificar", &retroSettings.unverifiedSubtitles);
+	ImGui::Checkbox("Objeto en primera persona (experimental)", &retroSettings.heldViewModel);
+	ImGui::Checkbox("Aviso al agarrar", &retroSettings.pickupNotice);
+	ImGui::TextUnformatted("Los efectos no afectan a F2, OpenXR ni al editor.");
 	ImGui::End();
 
 	ImGui::Begin("Diagnostico de iluminacion");

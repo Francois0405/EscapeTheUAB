@@ -397,3 +397,6 @@ GLSL_Error.*
 extensions.txt
 imgui.ini
 /third_party/OpenXR-SDK-main/src/external/jnipp
+
+# Ajustes graficos locales de cada jugador
+retro_settings.ini

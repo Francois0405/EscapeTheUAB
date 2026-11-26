@@ -1,5 +1,8 @@
 # Arquitectura de EscapeTheUAB
 
+> **Documento histórico del refactor.** Para el código actual usa
+> [architecture/CODE_MAP.md](architecture/CODE_MAP.md).
+
 Documento inicial. Describe la arquitectura **actual** y propone una dirección. La arquitectura propuesta **todavía no existe** en el código. El plan por etapas está en [REFACTOR_MIGRATION_MAP.md](REFACTOR_MIGRATION_MAP.md) y el árbol destino con sus lotes de movimiento en [REFACTOR_PHYSICAL_PLAN.md](REFACTOR_PHYSICAL_PLAN.md).
 
 ## Estado actual (2026-11-26)
