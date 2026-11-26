@@ -40,7 +40,7 @@
 El commit `89c6f33` (rama VR) añadía una copia completa del SDK oficial (≈430 archivos: documentación, CI, tests, herramientas)
 y su CMake apuntaba a `third_party/OpenXR-SDK/include`, que no existe; además **nunca enlazaba el cargador**, así que
 `xrCreateInstance` no habría enlazado. Se sustituye por el paquete `openxr-loader` de vcpkg (licencias: Apache-2.0 / MIT / BSL-1.0,
-las del SDK). La copia sigue intacta en la rama `VR` por si se necesita; no se ha borrado nada.
+las del SDK). La copia se eliminó de esta rama el 2026-11-26; sigue en la rama `VR`, en `master` y en el historial.
 
 ## Problemas del código original corregidos
 

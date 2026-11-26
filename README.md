@@ -131,7 +131,7 @@ tests/                    Pruebas CTest
 tools/                    Utilidades de assets y generador del proyecto Visual Studio
 visualstudio/             Proyecto Visual Studio generado (abierto desde EntornVGI.slnx)
 third_party/              Dependencias de terceros
-archive/legacy/           Ficheros sin uso, pendientes de decision del equipo
+archive/legacy/           Muestras academicas VGI y modelos fuente; nada se compila ni se carga
 build/<preset>/bin/       Ejecutables generados (EntornVGI)
 ```
 
@@ -210,9 +210,8 @@ no se puede crear el contexto, CTest lo marca como omitido.
 El estado de validación vigente, con sus limitaciones, está en la sección 30 de
 [docs/REFACTOR_MIGRATION_MAP.md](docs/REFACTOR_MIGRATION_MAP.md) (secciones 30 y 31).
 
-`archive/legacy/ModelLoader.cpp` no participa en la compilación actual: necesita Assimp y
-no estaba incluido en el proyecto original. `SceneLoader` y el cargador propio
-OBJ/MTL son la ruta actualmente utilizada. El repositorio ignora salidas CMake,
+`SceneLoader` y el cargador propio OBJ/MTL son la ruta de carga; la procedencia de los assets está en
+[assets/licenses/README.md](assets/licenses/README.md). El repositorio ignora salidas CMake,
 artefactos temporales, ImGui y archivos generados. Las rutas de assets y las
 escenas deben conservarse en control de versiones cuando sus licencias lo
 permitan.

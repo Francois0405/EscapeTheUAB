@@ -28,9 +28,9 @@ configurado por CMake.
   `efb169dee911696b5d35fc8e3f7ea0c56d679debc529eba9ca6aa6443ba9d5e9`
 - Licencia: MIT. El texto está en `third_party/cgltf/LICENSE` y también al final
   de `cgltf.h`. El archivo se conserva **sin modificar**.
-- Uso: `EntornVGI/ModeloGLB.cpp` lee mallas, jerarquía de nodos y animaciones de
+- Uso: `src/rendering/GlbModel.cpp` lee mallas, jerarquía de nodos y animaciones de
   los archivos `.glb` de `assets/animations/`. Es una biblioteca de un
-  solo archivo: `CGLTF_IMPLEMENTATION` se define únicamente en `ModeloGLB.cpp`.
+  solo archivo: `CGLTF_IMPLEMENTATION` se define únicamente en `GlbModel.cpp`.
 - Se usa en todas las plataformas (Windows, Linux y macOS) y no depende de vcpkg.
 
 ## Dear ImGui
@@ -47,3 +47,16 @@ configurado por CMake.
 
 - Ubicación: `third_party/nlohmann/`.
 - Licencia: MIT, conservada en el encabezado de `json.hpp`.
+
+## miniaudio
+
+- Ubicación: `third_party/miniaudio/miniaudio.h`.
+- Licencia: dominio público o MIT-0, a elección; el texto está al final de la cabecera.
+
+## stb_vorbis
+
+- La biblioteca la aporta vcpkg o el sistema; `third_party/stb_compat/` solo contiene el adaptador propio de inclusión.
+
+## OpenXR
+
+- No se vendoriza. El cargador llega de vcpkg (`openxr-loader`) o de `libopenxr-dev` en Linux.

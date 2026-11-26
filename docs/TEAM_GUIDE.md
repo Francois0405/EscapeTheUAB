@@ -24,7 +24,7 @@ empieza por [PORTING_MAP.md](PORTING_MAP.md).
 | `src/legacy_vgi/` | Entorno académico VGI (menús, teclado heredado, ventana "EntornVGI") |
 | `assets/` | Todo lo que el juego carga en ejecución |
 | `tools/` | Utilidades de assets, generador del proyecto Visual Studio, mapas del refactor |
-| `archive/legacy/` | Ficheros sin uso. Nada se compila ni se carga desde aquí |
+| `archive/legacy/` | Muestras académicas VGI y modelos fuente. Nada se compila ni se carga desde aquí |
 
 Cada cabecera de `src/app/state/` compila por sí sola porque incluye el agregado `src/app/AppIncludes.h`; dividir
 ese agregado es deuda pendiente.
