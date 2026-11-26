@@ -1,87 +1,336 @@
 #include "SlidingPuzzleObj.h"
 
-SlidingPuzzleObj::SlidingPuzzleObj(fisica::MundoFisico& mundo) : m_mundo(mundo) {
-    for (int i = 0; i < 16; i++) {
-        cuerpos[i] = fisica::CuerpoInvalido;
-    }
+#include <glm/gtc/matrix_transform.hpp>
+
+#include <iostream>
+#include <cmath>
+
+
+SlidingPuzzleObj::SlidingPuzzleObj(
+    std::vector<SceneObject>& objetosEscena,
+    fisica::EscenaFisica& escenaFisica
+)
+    : m_objetosEscena(objetosEscena),
+      m_escenaFisica(escenaFisica)
+{
+    for (int i = 0; i < 16; i++)
+        m_indicesObjetos[i] = -1;
 }
 
-glm::vec3 SlidingPuzzleObj::posicionCasilla(int fila, int columna) const {
-    float desplazamientoColumna = (columna - 1.5f) * m_separacion;
-    float desplazamientoFila = (1.5f - fila) * m_separacion;
-    return m_origen + (m_ejeColumnas * desplazamientoColumna) + (m_ejeFilas * desplazamientoFila);
-}
 
-bool SlidingPuzzleObj::iniciar() {
+// ------------------------------------------------------------
+// INICIAR
+// ------------------------------------------------------------
+
+bool SlidingPuzzleObj::iniciar()
+{
     vaciar();
+
     m_puzzle.iniciar();
-    return crearCuerpos();
-}
 
-bool SlidingPuzzleObj::crearCuerpos() {
-    const glm::vec3 mitadTamano(0.25f, 0.25f, 0.025f);
+    if (!localizarTablero())
+    {
+        std::cerr << "No se ha encontrado obj_tauler\n";
+        return false;
+    }
 
-    for (int fila = 0; fila < 4; fila++) {
-        for (int columna = 0; columna < 4; columna++) {
+    if (!localizarPiezas())
+    {
+        std::cerr << "No se han encontrado todas las piezas\n";
+        return false;
+    }
+
+    // Colocar inicialmente las piezas según el estado lógico
+    // del puzzle.
+    for (int fila = 0; fila < 4; fila++)
+    {
+        for (int columna = 0; columna < 4; columna++)
+        {
             int pieza = m_puzzle.getPieza(fila, columna);
-            if (pieza == 0) {
-                continue;
-            }
-            glm::vec3 posicion = posicionCasilla(fila, columna);
 
-            cuerpos[pieza] = m_mundo.CrearCaja(fisica::TipoCuerpo::Cinematico, posicion, 
-                m_rotacion, mitadTamano, 0.0f);
-            if (cuerpos[pieza] == fisica::CuerpoInvalido) {
-                vaciar();
+            if (pieza == 0)
+                continue;
+
+            SceneObject* objeto = objetoDePieza(pieza);
+
+            if (!objeto)
+                return false;
+
+            glm::vec3 posicionModelo =
+                posicionCasilla(fila, columna);
+
+            glm::vec3 centro =
+                centroFisicoDePieza(*objeto, posicionModelo);
+
+            int indiceObjeto = m_indicesObjetos[pieza];
+
+            if (!m_escenaFisica.TeletransportarObjetoDinamico(
+                indiceObjeto, centro))
+            {
+                std::cerr << "No se ha podido colocar la pieza "
+                          << pieza << '\n';
                 return false;
             }
         }
     }
+
     return true;
 }
 
-bool SlidingPuzzleObj::intentarMover(int fila, int columna) {
-    if (!m_puzzle.puedeMover(fila, columna)) {
-        return false;
-    }
-    int pieza = m_puzzle.getPieza(fila, columna);
-    if (cuerpos[pieza] == fisica::CuerpoInvalido) {
-        return false;
-    }
-    if (!m_puzzle.mover(fila, columna)) {
-        return false;
-    }
-    // Busca nueva posición de la pieza
-    int filaDestino = 0;
-    int columnaDestino = 0;
-    for (int fila = 0; fila < 4; fila++) {
-        for (int col = 0; col < 4; col++) {
-            if (m_puzzle.getPieza(fila, col) == pieza) {
-                filaDestino = fila;
-                columnaDestino = col;
-            }
+
+// ------------------------------------------------------------
+// LOCALIZAR TABLERO
+// ------------------------------------------------------------
+
+bool SlidingPuzzleObj::localizarTablero()
+{
+    for (const SceneObject& objeto : m_objetosEscena)
+    {
+        if (objeto.id == "obj_tauler")
+        {
+            m_origen = objeto.posicion;
+
+            glm::mat4 giro(1.0f);
+
+            giro = glm::rotate(
+                giro,
+                glm::radians(objeto.rotacion.z),
+                glm::vec3(0, 0, 1)
+            );
+
+            giro = glm::rotate(
+                giro,
+                glm::radians(objeto.rotacion.y),
+                glm::vec3(0, 1, 0)
+            );
+
+            giro = glm::rotate(
+                giro,
+                glm::radians(objeto.rotacion.x),
+                glm::vec3(1, 0, 0)
+            );
+
+            // Los ejes locales del tablero transformados
+            // a coordenadas del mundo.
+            m_ejeColumnas = glm::normalize(
+                glm::vec3(giro * glm::vec4(1, 0, 0, 0))
+            );
+
+            m_ejeFilas = glm::normalize(
+                glm::vec3(giro * glm::vec4(0, 0, 1, 0))
+            );
+
+            return true;
         }
     }
-    m_mundo.MoverCinematico(cuerpos[pieza], posicionCasilla(filaDestino, columnaDestino), m_rotacion);
+
+    return false;
+}
+
+
+// ------------------------------------------------------------
+// LOCALIZAR PIEZAS
+// ------------------------------------------------------------
+
+bool SlidingPuzzleObj::localizarPiezas()
+{
+    for (int pieza = 1; pieza <= 15; pieza++)
+    {
+        std::string id = "obj_pieza" + std::to_string(pieza);
+
+        m_indicesObjetos[pieza] = -1;
+
+        for (int i = 0; i < static_cast<int>(m_objetosEscena.size()); i++)
+        {
+            if (m_objetosEscena[i].id == id)
+            {
+                m_indicesObjetos[pieza] = i;
+                break;
+            }
+        }
+
+        if (m_indicesObjetos[pieza] == -1)
+        {
+            std::cerr << "No se ha encontrado " << id << '\n';
+            return false;
+        }
+    }
+
     return true;
 }
 
-bool SlidingPuzzleObj::estaResuelto() const {
+
+// ------------------------------------------------------------
+// POSICIÓN DE UNA CASILLA
+// ------------------------------------------------------------
+
+glm::vec3 SlidingPuzzleObj::posicionCasilla(
+    int fila,
+    int columna
+) const
+{
+    // Distribuir las cuatro casillas alrededor del centro.
+    float desplazamientoColumnas =
+        (columna - 1.5f) * m_separacion;
+
+    float desplazamientoFilas =
+        (fila - 1.5f) * m_separacion;
+
+    return m_origen
+        + m_ejeColumnas * desplazamientoColumnas
+        + m_ejeFilas * desplazamientoFilas;
+}
+
+
+// ------------------------------------------------------------
+// CENTRO DEL COLLIDER
+// ------------------------------------------------------------
+
+glm::vec3 SlidingPuzzleObj::centroFisicoDePieza(
+    const SceneObject& objeto,
+    const glm::vec3& posicionModelo
+) const
+{
+    glm::mat4 giro(1.0f);
+
+    giro = glm::rotate(
+        giro,
+        glm::radians(objeto.rotacion.z),
+        glm::vec3(0, 0, 1)
+    );
+
+    giro = glm::rotate(
+        giro,
+        glm::radians(objeto.rotacion.y),
+        glm::vec3(0, 1, 0)
+    );
+
+    giro = glm::rotate(
+        giro,
+        glm::radians(objeto.rotacion.x),
+        glm::vec3(1, 0, 0)
+    );
+
+    glm::vec3 desplazamiento =
+        objeto.escala * objeto.fisica.desplazamiento;
+
+    return posicionModelo +
+        glm::vec3(giro * glm::vec4(desplazamiento, 0.0f));
+}
+
+
+// ------------------------------------------------------------
+// INTENTAR MOVER UNA PIEZA
+// ------------------------------------------------------------
+
+bool SlidingPuzzleObj::intentarMover(int fila, int columna)
+{
+    // Comprobar si la pieza seleccionada puede moverse.
+    if (!m_puzzle.puedeMover(fila, columna))
+        return false;
+
+    int pieza = m_puzzle.getPieza(fila, columna);
+
+    if (pieza <= 0 || pieza > 15)
+        return false;
+
+    SceneObject* objeto = objetoDePieza(pieza);
+
+    if (!objeto)
+        return false;
+
+    int indiceObjeto = m_indicesObjetos[pieza];
+
+    // Calcular la posición de destino: la casilla vacía.
+    int indiceHueco = m_puzzle.m_indiceHueco;
+
+    int filaDestino = indiceHueco / 4;
+    int columnaDestino = indiceHueco % 4;
+
+    glm::vec3 posicionModelo =
+        posicionCasilla(filaDestino, columnaDestino);
+
+    // Convertir la posición del modelo al centro del collider.
+    glm::vec3 nuevoCentro =
+        centroFisicoDePieza(*objeto, posicionModelo);
+
+    // Mover el cuerpo Bullet que ya existe.
+    if (!m_escenaFisica.TeletransportarObjetoDinamico(
+        indiceObjeto, nuevoCentro))
+    {
+        std::cerr << "No se ha podido mover la pieza "
+                  << pieza << '\n';
+
+        return false;
+    }
+
+    // Actualizar el tablero lógico.
+    return m_puzzle.mover(fila, columna);
+}
+
+bool SlidingPuzzleObj::intentarMoverObjeto(int indiceObjeto)
+{
+    // Buscar qué pieza corresponde al objeto seleccionado.
+    for (int pieza = 1; pieza <= 15; pieza++)
+    {
+        if (m_indicesObjetos[pieza] != indiceObjeto)
+            continue;
+
+        // Buscar la posición actual de esa pieza en el tablero.
+        for (int fila = 0; fila < 4; fila++)
+        {
+            for (int columna = 0; columna < 4; columna++)
+            {
+                if (m_puzzle.getPieza(fila, columna) == pieza)
+                {
+                    return intentarMover(fila, columna);
+                }
+            }
+        }
+
+        return false;
+    }
+
+    return false;
+}
+
+// ------------------------------------------------------------
+// OBTENER OBJETO DE UNA PIEZA
+// ------------------------------------------------------------
+
+SceneObject* SlidingPuzzleObj::objetoDePieza(int numero)
+{
+    if (numero < 1 || numero > 15)
+        return nullptr;
+
+    int indice = m_indicesObjetos[numero];
+
+    if (indice < 0 ||
+        indice >= static_cast<int>(m_objetosEscena.size()))
+    {
+        return nullptr;
+    }
+
+    return &m_objetosEscena[indice];
+}
+
+
+// ------------------------------------------------------------
+// COMPROBAR SI ESTÁ RESUELTO
+// ------------------------------------------------------------
+
+bool SlidingPuzzleObj::estaResuelto() const
+{
     return m_puzzle.estaResuelto();
 }
 
-fisica::PoseCuerpo SlidingPuzzleObj::poseDePieza(int numero) const {
-    if (cuerpos[numero] == fisica::CuerpoInvalido) {
-        return {};
-    }
-    return m_mundo.PoseDe(cuerpos[numero]);
-}
 
-void SlidingPuzzleObj::vaciar() {
-    for (fisica::IdCuerpo& cuerpo : cuerpos) {
-        if (cuerpo != fisica::CuerpoInvalido) {
-            m_mundo.EliminarCuerpo(cuerpo);
-            cuerpo = fisica::CuerpoInvalido;
-        }
-    }
+// ------------------------------------------------------------
+// LIMPIAR
+// ------------------------------------------------------------
+
+void SlidingPuzzleObj::vaciar()
+{
+    for (int i = 0; i < 16; i++)
+        m_indicesObjetos[i] = -1;
 }

@@ -58,6 +58,7 @@ namespace fisica
 		todos.clear();
 		dinamicos.clear();
 		colisionesNodo.clear();
+		asociacionesObjetos.clear();
 	}
 
 	// Calcula dónde está AHORA la caja de un nodo animado, en coordenadas del mundo.
@@ -121,6 +122,7 @@ namespace fisica
 			if (id == CuerpoInvalido)
 				return fallar("no se pudo crear la caja fisica de '" + objeto.id + "' (tamano o masa no validos)");
 			todos.push_back(id);
+			asociacionesObjetos.push_back({ i, id });
 			if (EsCuerpoDinamico(objeto.fisica.tipo))
 				dinamicos.push_back({ i, id, desplazamiento, objeto.escala, objeto.fisica.forma,
 					glm::quat_cast(glm::mat3(giro)) });
@@ -327,6 +329,15 @@ namespace fisica
 		const IdCuerpo sujeto = mundo.CuerpoSujeto();
 		for (const Dinamico& d : dinamicos)
 			if (d.cuerpo == sujeto && sujeto != CuerpoInvalido) return d.indiceObjeto;
+		return -1;
+	}
+
+	int EscenaFisica::IndiceObjetoDeCuerpo(IdCuerpo cuerpo) const {
+		for (const auto& asociacion : asociacionesObjetos) {
+			if (asociacion.cuerpo == cuerpo) {
+				return asociacion.indiceObjeto;
+			}
+		}
 		return -1;
 	}
 }

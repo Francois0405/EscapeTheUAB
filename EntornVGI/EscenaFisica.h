@@ -100,10 +100,13 @@ namespace fisica
 		bool HayAgarre() const;
 		// Índice (en la lista de la escena) del objeto que se sujeta, o -1.
 		int ObjetoAgarrado() const;
-
+		int IndiceObjetoDeCuerpo(IdCuerpo cuerpo) const;
+		
 		int NumeroDeCuerpos() const { return static_cast<int>(todos.size()); }
 		int NumeroDeDinamicos() const { return static_cast<int>(dinamicos.size()); }
-
+		
+		
+		
 	private:
 		// Un objeto OBJ dinámico: hay que copiar su pose de Bullet al dibujo.
 		struct Dinamico
@@ -125,13 +128,19 @@ namespace fisica
 			glm::vec3 mitadTamano{ 0.5f };
 			glm::vec3 desplazamiento{ 0.0f };
 		};
-		
+		// asocia con IdCuerpo
+		struct AsociacionObjeto
+		{
+			int indiceObjeto = -1;
+			IdCuerpo cuerpo = CuerpoInvalido;
+		};
+
 		void ColocarCaja(const Colision& caja, const glb::ObjetoAnimado& objeto, glm::vec3& centro,
 			glm::quat& rotacion, glm::vec3& mitad) const;
-
 		MundoFisico& mundo;
 		std::vector<IdCuerpo> todos;          // todo lo que hay que quitar en Vaciar()
 		std::vector<Dinamico> dinamicos;
 		std::vector<Colision> colisionesNodo;
+		std::vector<AsociacionObjeto> asociacionesObjetos;
 	};
 }

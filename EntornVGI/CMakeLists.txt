@@ -65,6 +65,8 @@ set(ENTORNVGI_SOURCES
 	OpenXRManager.cpp
 	quatern.cpp
 	SceneLoader.cpp
+	SlidingPuzzle.cpp
+    SlidingPuzzleObj.cpp
 	shader.cpp
 	visualitzacio.cpp
 )

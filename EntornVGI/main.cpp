@@ -33,6 +33,7 @@
 #include "TemporizadorAmbiente.h"
 #include "Editor/EditorEscenas.h"
 #include "Editor/SerializadorEscenas.h"
+#include "SlidingPuzzleObj.h"
 #include <iostream>
 #include <algorithm>
 #include <array>
@@ -51,9 +52,11 @@
 
 // ---------------------------
 
+using std::cout;
 // Objetos de la escena cargada.
 std::vector<SceneObject> objetosEscena;
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> modelosHabitacion;
+std::unique_ptr<SlidingPuzzleObj> puzzle;
 editor::EditorEscenas editorEscenas;
 editor::SerializadorEscenas serializadorEscena;
 std::vector<SceneObjetoAnimado> datosAnimadosEscena;
@@ -593,6 +596,15 @@ namespace
 		const ObjetivoInteraccion objetivo = objetivoInteraccionActual;
 		if (objetivo.accion == AccionInteraccion::Recoger)
 		{
+			if (objetivo.indiceDinamico >= 0 && objetivo.indiceDinamico < static_cast<int>(objetosEscena.size())) {
+				const std::string& id = objetosEscena[objetivo.indiceDinamico].id;
+				if (id.rfind("obj_pieza", 0) == 0) {
+					if (puzzle) 
+						puzzle->intentarMoverObjeto(objetivo.indiceDinamico);
+					return;
+				}
+			}
+		
 			glm::vec3 origen, direccion;
 			origenYDireccionDeLaMirada(origen, direccion);
 			if (escenaFisica->SujetarObjetoDinamico(objetivo.indiceDinamico, origen, direccion) &&
@@ -8669,6 +8681,11 @@ int main(int argc, char** argv)
 		glfwDestroyWindow(window);
 		glfwTerminate();
 		return EXIT_FAILURE;
+	}
+	// 
+	puzzle = std::make_unique<SlidingPuzzleObj>(objetosEscena,*escenaFisica);
+	if (!puzzle->iniciar()) {
+		std::cerr << "Error al iniciar el sliding puzzle\n";
 	}
 	glfwSetWindowTitle(window, "EscapeTheUAB");
 	glfwGetFramebufferSize(window, &w, &h);
