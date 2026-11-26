@@ -5,6 +5,7 @@ Documento de referencia sobre el código **actual**. Si discrepa del código, ma
 | Para | Documento |
 |---|---|
 | Dónde está cada cosa y cómo funciona | este |
+| Ciclo, audio y físicas de Hirity | [../HIRITY.md](../HIRITY.md) |
 | Paneles ImGui | [UI_PANELS.md](UI_PANELS.md) |
 | Estado y validación del trabajo visual retro | [../midnight-hoops/TASKS.md](../midnight-hoops/TASKS.md), [VALIDATION.md](../midnight-hoops/VALIDATION.md) |
 | Reglas de trabajo del equipo | [../TEAM_GUIDE.md](../TEAM_GUIDE.md) |
