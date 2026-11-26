@@ -36,7 +36,7 @@ configurado por CMake.
 ## Dear ImGui
 
 - Ubicación: `third_party/imgui/`; versión indicada en `third_party/imgui/Version.txt`.
-- Licencia: Dear ImGui identifica MIT como su licencia; `imgui.cpp` remite a `LICENSE.txt`, que no está incluida en esta copia vendorizada.
+- Licencia: MIT, en `third_party/imgui/LICENSE.txt` (etiqueta `v1.89.4`).
 
 ## ImGuizmo
 
@@ -46,7 +46,7 @@ configurado por CMake.
 ## nlohmann/json
 
 - Ubicación: `third_party/nlohmann/`.
-- Licencia: MIT, conservada en el encabezado de `json.hpp`.
+- Licencia: MIT, en `third_party/nlohmann/LICENSE.MIT` y en el encabezado de `json.hpp`.
 
 ## miniaudio
 
@@ -60,3 +60,5 @@ configurado por CMake.
 ## OpenXR
 
 - No se vendoriza. El cargador llega de vcpkg (`openxr-loader`) o de `libopenxr-dev` en Linux.
+
+Los textos de licencia, también de los paquetes de vcpkg, se listan en [licenses/README.md](licenses/README.md).
