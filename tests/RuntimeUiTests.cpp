@@ -1,6 +1,7 @@
 #include "src/ui/RuntimeUiLogic.h"
 #include "src/ui/StatusBar.h"
 
+#include <cmath>
 #include <iostream>
 #include <string>
 #include <vector>
@@ -159,12 +160,46 @@ void TestReticle()
 		game::interaction::ThrowSpeed(1.0f) == 15.0f, "throw timing and speeds are unchanged");
 }
 
+// Anillo de bloques: geometria en rejilla, sentido horario y progreso por cuartos.
+void TestChargeBlocks()
+{
+	using namespace runtimeui;
+	static_assert(kChargeSegments >= 16 && kChargeSegments <= 24 && kChargeSegments % 4 == 0);
+	Check(LitChargeSegments(0.0f, false) == 0, "no blocks before charging");
+	Check(LitChargeSegments(0.25f, false) == 5 && LitChargeSegments(0.5f, false) == 10 &&
+		LitChargeSegments(0.75f, false) == 15, "quarters light whole quadrants");
+	Check(LitChargeSegments(0.999f, false) == kChargeSegments - 1, "last block waits for full charge");
+	Check(LitChargeSegments(1.0f, true) == kChargeSegments, "full ring");
+
+	Check(ChargeSegmentCell(0).x == 0 && ChargeSegmentCell(0).y == -kChargeRadiusCells, "starts at the top");
+	Check(ChargeSegmentCell(5).x == kChargeRadiusCells && ChargeSegmentCell(5).y == 0, "quarter is on the right");
+	Check(ChargeSegmentCell(10).x == 0 && ChargeSegmentCell(10).y == kChargeRadiusCells, "half is at the bottom");
+	Check(ChargeSegmentCell(15).x == -kChargeRadiusCells && ChargeSegmentCell(15).y == 0, "three quarters on the left");
+	float anterior = -1.0f;
+	bool horario = true, separados = true;
+	for (int i = 0; i < kChargeSegments; ++i)
+	{
+		const Cell c = ChargeSegmentCell(i);
+		float angulo = std::atan2(static_cast<float>(c.x), static_cast<float>(-c.y));
+		if (angulo < 0.0f) angulo += 6.2831853f;
+		horario = horario && angulo > anterior;
+		anterior = angulo;
+		for (int j = 0; j < i; ++j)
+			separados = separados && (ChargeSegmentCell(j).x != c.x || ChargeSegmentCell(j).y != c.y);
+	}
+	Check(horario, "blocks advance clockwise");
+	Check(separados, "blocks never overlap");
+	Check(ChargeCellPixels(1.0f, 1.0f) == 4 && ChargeCellPixels(1.5f, 1.0f) == 6 &&
+		ChargeCellPixels(1.0f, 2.0f) == 8 && ChargeCellPixels(0.1f, 1.0f) == 2, "block size follows DPI in whole pixels");
+}
+
 int main()
 {
 	TestStatusBar();
 	TestNetworkStartRequest();
 	TestDynamicRows();
 	TestReticle();
+	TestChargeBlocks();
 	if (failures != 0) return 1;
 	std::cout << "RuntimeUiTests OK\n";
 	return 0;

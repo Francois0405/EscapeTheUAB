@@ -25,20 +25,34 @@ namespace
 	void TestSettings()
 	{
 		retro::Settings s;
-		Check(s.preset == retro::Preset::Cinematic && s.internalHeight == 540 && s.bitsPerChannel == 5 &&
-			s.dither == retro::DitherMode::Chromatic && s.pattern == retro::Pattern::Bayer4 &&
-			Near(s.ditherStrength, 0.85f) && Near(s.saturation, 0.92f) && Near(s.contrast, 1.08f) &&
-			s.exposureEV == 0.0f && s.vignette == 0.0f && s.grain == 0.0f && s.fogDensity == 0.0f &&
-			!s.heldViewModel, "Retro Cinematic defaults");
+		Check(s.preset == retro::Preset::PsxClassic && !s.modified && s.internalHeight == 360 &&
+			s.bitsPerChannel == 4 && s.dither == retro::DitherMode::Chromatic && s.pattern == retro::Pattern::Bayer8 &&
+			Near(s.ditherStrength, 1.0f) && Near(s.saturation, 0.90f) && Near(s.contrast, 1.12f) &&
+			s.exposureEV == 0.0f && s.grain == 0.0f && Near(s.vignette, 0.10f) && s.grading == 0.0f &&
+			Near(s.fogDensity, 0.040f) && s.nearestTextures && !s.heldViewModel, "official defaults");
+		retro::Settings oficial;
+		retro::ApplyPreset(oficial, retro::Preset::PsxClassic);
+		Check(retro::Serialize(oficial) == retro::Serialize(retro::Settings{}), "PSX Classic is the official look");
+
+		// Las alternativas de depuracion conservan todos sus valores anteriores.
+		for (const retro::Preset alternativa : { retro::Preset::Cinematic, retro::Preset::Original })
+		{
+			retro::Settings a;
+			retro::ApplyPreset(a, alternativa);
+			Check(a.preset == alternativa && a.internalHeight == 540 && a.bitsPerChannel == 5 &&
+				a.dither == retro::DitherMode::Chromatic && a.pattern == retro::Pattern::Bayer4 &&
+				Near(a.ditherStrength, 0.85f) && Near(a.saturation, 0.92f) && Near(a.contrast, 1.08f) &&
+				a.exposureEV == 0.0f && a.grain == 0.0f && a.vignette == 0.0f && a.grading == 0.0f &&
+				a.fogDensity == 0.0f && a.nearestTextures == (alternativa == retro::Preset::Cinematic),
+				"Cinematic and Original unchanged");
+		}
+
 		s.subtitles = false;
-		retro::ApplyPreset(s, retro::Preset::PsxClassic);
-		Check(s.bitsPerChannel == 4 && s.internalHeight == 360 && s.pattern == retro::Pattern::Bayer8 &&
-			Near(s.ditherStrength, 1.0f) && Near(s.saturation, 0.90f) && Near(s.contrast, 1.12f), "PSX preset values");
-		Check(!s.subtitles, "preset keeps accessibility choices");
 		s.bitsPerChannel = 7;
 		s.modified = true;
 		retro::ApplyPreset(s, s.preset);
-		Check(s.bitsPerChannel == 4 && !s.modified, "restore preset");
+		Check(s.bitsPerChannel == 4 && !s.modified && Near(s.vignette, 0.10f), "restore preset");
+		Check(!s.subtitles, "preset keeps accessibility choices");
 
 		retro::ApplyPreset(s, retro::Preset::Original);
 		Check(!s.nearestTextures, "Original keeps linear textures");
@@ -61,9 +75,28 @@ namespace
 		Check(leido.preset == retro::Preset::Cinematic && leido.modified && leido.ditherStrength == 1.5f &&
 			!leido.subtitles, "round trip");
 
+		// Un ini ya guardado se respeta, aunque no sea el oficial.
+		const retro::Settings antiguo = retro::Parse("preset=1\nmodified=0\ninternalHeight=540\nbitsPerChannel=5\n"
+			"pattern=0\nvignette=0\nfogDensity=0\n");
+		Check(antiguo.preset == retro::Preset::Cinematic && antiguo.internalHeight == 540 &&
+			antiguo.vignette == 0.0f && antiguo.fogDensity == 0.0f, "existing preferences are preserved");
+		const retro::Settings psxAntiguo = retro::Parse("preset=2\nmodified=0\nvignette=0\nfogDensity=0\nsubtitles=0\n");
+		Check(Near(psxAntiguo.vignette, 0.10f) && Near(psxAntiguo.fogDensity, 0.040f) && !psxAntiguo.subtitles,
+			"untouched old PSX file adopts the official look and keeps other choices");
+		const retro::Settings psxRetocado = retro::Parse("preset=2\nmodified=1\nvignette=0\nfogDensity=0\n");
+		Check(psxRetocado.vignette == 0.0f && psxRetocado.fogDensity == 0.0f, "tweaked old file is preserved");
+		const retro::Settings vigente = retro::Parse("version=2\npreset=2\nmodified=0\nvignette=0\n");
+		Check(vigente.vignette == 0.0f, "current files are read as written");
+		const retro::Settings parcial = retro::Parse("preset=1\n");
+		Check(parcial.internalHeight == 540 && parcial.pattern == retro::Pattern::Bayer4 &&
+			parcial.fogDensity == 0.0f, "missing keys come from the saved preset");
+		Check(retro::Serialize(retro::Parse("")) == retro::Serialize(retro::Settings{}),
+			"new install gets the official look");
+		Check(retro::Serialize(retro::Settings{}).rfind("version=2\n", 0) == 0, "file is versioned");
+
 		const retro::Settings roto = retro::Parse(
-			"preset=99\nbitsPerChannel=0\ninternalHeight=-5\ncontrast=nan\ngrain=7\nexposureEV=9\nbasura\n=3\n");
-		Check(roto.preset == retro::Preset::Cinematic && roto.bitsPerChannel == 3 &&
+			"version=2\npreset=99\nbitsPerChannel=0\ninternalHeight=-5\ncontrast=nan\ngrain=7\nexposureEV=9\nbasura\n=3\n");
+		Check(roto.preset == retro::Preset::PsxClassic && roto.bitsPerChannel == 3 &&
 			roto.internalHeight == retro::kMinHeight, "invalid integers become safe");
 		Check(roto.contrast == retro::Settings{}.contrast && roto.grain == 0.03f && roto.exposureEV == 1.0f,
 			"invalid floats become safe");
@@ -95,6 +128,7 @@ namespace
 			retro::ChannelShift(1).x == 1 && retro::ChannelShift(1).y == 2 &&
 			retro::ChannelShift(2).x == 2 && retro::ChannelShift(2).y == 1, "channel shifts");
 		retro::Settings s;
+		s.pattern = retro::Pattern::Bayer4;
 		s.ditherStrength = 1.0f;
 		Check(Near(retro::DitherOffset(s, 0, 0, 1), retro::Bayer4Offset(1, 2)), "chromatic uses per channel shift");
 		s.dither = retro::DitherMode::Mono;

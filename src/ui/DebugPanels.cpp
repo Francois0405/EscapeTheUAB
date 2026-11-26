@@ -114,7 +114,7 @@ void DrawDebugPanels(const DebugPanelsContext& context)
 
 	retro::Settings& retroSettings = context.retroSettings;
 	ImGui::Begin("Graficos retro");
-	const char* presets[] = { "Original", "Retro Cinematic", "PSX Classic" };
+	const char* presets[] = { "Original", "Retro Cinematic", "PSX Classic (oficial)" };
 	int preset = static_cast<int>(retroSettings.preset);
 	if (ImGui::Combo("Preset", &preset, presets, IM_ARRAYSIZE(presets)))
 		retro::ApplyPreset(retroSettings, static_cast<retro::Preset>(preset));

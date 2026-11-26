@@ -21,24 +21,30 @@ namespace retro
 	constexpr int kMaxHeight = 1080;
 	constexpr int kMaxWidth = 4096;
 
+	// Version del formato de retro_settings.ini. 2: PSX Classic pasa a ser el aspecto oficial.
+	constexpr int kSettingsVersion = 2;
+
+	// Los valores iniciales son el aspecto oficial aprobado por el equipo (PSX Classic).
+	// ApplyPreset define TODOS los parametros de imagen de cada preset: cambiar estos
+	// valores iniciales no altera Original ni Retro Cinematic.
 	struct Settings
 	{
-		Preset preset = Preset::Cinematic;
+		Preset preset = Preset::PsxClassic;
 		bool modified = false;   // algun parametro de imagen se ha cambiado respecto al preset
 
 		// Parametros de imagen (ignorados en Original).
-		int internalHeight = 540;
-		int bitsPerChannel = 5;
+		int internalHeight = 360;
+		int bitsPerChannel = 4;
 		DitherMode dither = DitherMode::Chromatic;
-		Pattern pattern = Pattern::Bayer4;
-		float ditherStrength = 0.85f;
-		float saturation = 0.92f;
-		float contrast = 1.08f;
+		Pattern pattern = Pattern::Bayer8;
+		float ditherStrength = 1.0f;
+		float saturation = 0.90f;
+		float contrast = 1.12f;
 		float exposureEV = 0.0f;
-		float grain = 0.0f;       // 0..0.03 sobre RGB normalizado
-		float vignette = 0.0f;    // 0..0.10
-		float grading = 0.0f;     // sombras frias, luces calidas
-		float fogDensity = 0.0f;  // 0..0.08 por metro a partir de 3 m
+		float grain = 0.0f;           // 0..0.03 sobre RGB normalizado
+		float vignette = 0.10f;       // 0..0.10
+		float grading = 0.0f;         // sombras frias, luces calidas
+		float fogDensity = 0.040f;    // 0..0.08 por metro a partir de 3 m
 		bool nearestTextures = true;
 
 		// Independientes del preset.
@@ -52,23 +58,36 @@ namespace retro
 	// Restaura los parametros de imagen del preset; subtitulos y viewmodel se conservan.
 	inline void ApplyPreset(Settings& s, Preset preset)
 	{
-		const Settings anterior = s;
-		s = Settings{};
-		s.subtitles = anterior.subtitles;
-		s.soundCaptions = anterior.soundCaptions;
-		s.unverifiedSubtitles = anterior.unverifiedSubtitles;
-		s.heldViewModel = anterior.heldViewModel;
-		s.pickupNotice = anterior.pickupNotice;
-		s.preset = preset;
-		if (preset == Preset::Original) s.nearestTextures = false;
-		else if (preset == Preset::PsxClassic)
+		const auto imagen = [&s](int alto, int bits, Pattern patron, float intensidad, float saturacion,
+			float contraste, float vineta, float niebla, bool nearest)
 		{
-			s.internalHeight = 360;
-			s.bitsPerChannel = 4;
-			s.pattern = Pattern::Bayer8;
-			s.ditherStrength = 1.0f;
-			s.saturation = 0.90f;
-			s.contrast = 1.12f;
+			s.modified = false;
+			s.internalHeight = alto;
+			s.bitsPerChannel = bits;
+			s.dither = DitherMode::Chromatic;
+			s.pattern = patron;
+			s.ditherStrength = intensidad;
+			s.saturation = saturacion;
+			s.contrast = contraste;
+			s.exposureEV = 0.0f;
+			s.grain = 0.0f;
+			s.vignette = vineta;
+			s.grading = 0.0f;
+			s.fogDensity = niebla;
+			s.nearestTextures = nearest;
+		};
+		s.preset = preset;
+		switch (preset)
+		{
+		case Preset::Original:     // alternativa de depuracion: presentacion anterior
+			imagen(540, 5, Pattern::Bayer4, 0.85f, 0.92f, 1.08f, 0.0f, 0.0f, false);
+			break;
+		case Preset::Cinematic:    // alternativa de depuracion
+			imagen(540, 5, Pattern::Bayer4, 0.85f, 0.92f, 1.08f, 0.0f, 0.0f, true);
+			break;
+		case Preset::PsxClassic:   // aspecto oficial
+			imagen(360, 4, Pattern::Bayer8, 1.0f, 0.90f, 1.12f, 0.10f, 0.040f, true);
+			break;
 		}
 	}
 
@@ -164,7 +183,8 @@ namespace retro
 	{
 		std::ostringstream out;
 		out.imbue(std::locale::classic());
-		out << "preset=" << static_cast<int>(s.preset) << '\n'
+		out << "version=" << kSettingsVersion << '\n'
+			<< "preset=" << static_cast<int>(s.preset) << '\n'
 			<< "modified=" << s.modified << '\n'
 			<< "internalHeight=" << s.internalHeight << '\n'
 			<< "bitsPerChannel=" << s.bitsPerChannel << '\n'
@@ -187,12 +207,26 @@ namespace retro
 		return out.str();
 	}
 
-	// Las claves desconocidas o los valores ilegibles se ignoran y dejan el valor por defecto.
+	// Las claves desconocidas o los valores ilegibles se ignoran. Lo que falte se completa con el
+	// preset guardado en el propio fichero, no con el oficial, para no mezclar dos aspectos.
+	// Los ajustes retocados (modified=1) y el preset elegido se respetan siempre. Un fichero anterior a
+	// la version 2 que no se hubiera retocado adopta la definicion actual de su preset.
 	inline Settings Parse(const std::string& text)
 	{
 		Settings s;
+		std::istringstream busqueda(text);
+		for (std::string linea; std::getline(busqueda, linea);)
+		{
+			if (linea.rfind("preset=", 0) != 0) continue;
+			std::istringstream valor(linea.substr(7));
+			int preset = -1;
+			if (valor >> preset && preset >= static_cast<int>(Preset::Original) &&
+				preset <= static_cast<int>(Preset::PsxClassic))
+				ApplyPreset(s, static_cast<Preset>(preset));
+		}
 		std::istringstream lineas(text);
 		std::string linea;
+		int version = 1;
 		while (std::getline(lineas, linea))
 		{
 			const auto igual = linea.find('=');
@@ -204,7 +238,8 @@ namespace retro
 			if (!(valor >> v) || !std::isfinite(v) || std::abs(v) > 1.0e6) continue;
 			const int entero = static_cast<int>(v);
 			const float real = static_cast<float>(v);
-			if (clave == "preset") s.preset = static_cast<Preset>(entero);
+			if (clave == "version") version = entero;
+			else if (clave == "preset") s.preset = static_cast<Preset>(entero);
 			else if (clave == "modified") s.modified = entero != 0;
 			else if (clave == "internalHeight") s.internalHeight = entero;
 			else if (clave == "bitsPerChannel") s.bitsPerChannel = entero;
@@ -226,6 +261,7 @@ namespace retro
 			else if (clave == "pickupNotice") s.pickupNotice = entero != 0;
 		}
 		Sanitize(s);
+		if (version < kSettingsVersion && !s.modified) ApplyPreset(s, s.preset);
 		return s;
 	}
 }

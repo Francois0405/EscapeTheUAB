@@ -74,11 +74,25 @@ void DrawInteractionHud(const HudContext& context)
 		ImVec2(centro.x + medio, centro.y + medio), IM_COL32(255, 250, 235, 245));
 	if (estado.arc)
 	{
-		// Empieza arriba y avanza en sentido horario.
-		constexpr float pi = 3.14159265358979f;
-		dl->PathArcTo(centro, 21.0f * escala, -pi * 0.5f, -pi * 0.5f + 2.0f * pi * estado.fraction, 48);
-		dl->PathStroke(estado.full ? IM_COL32(0xF0, 0xCA, 0x65, 255) : IM_COL32(255, 248, 230, 245),
-			ImDrawFlags_None, 2.0f * escala);
+		// Bloques alineados a pixeles fisicos, sin antialiasing; empieza arriba y avanza en horario.
+		const float densidad = io.DisplayFramebufferScale.x > 0.0f ? io.DisplayFramebufferScale.x : 1.0f;
+		const int celda = ChargeCellPixels(escala, densidad);
+		const int borde = std::max(1, static_cast<int>(std::lround(escala * densidad)));
+		const int origenX = static_cast<int>(std::floor(centro.x * densidad)) - celda / 2;
+		const int origenY = static_cast<int>(std::floor(centro.y * densidad)) - celda / 2;
+		const ImU32 color = estado.full ? IM_COL32(0xF0, 0xCA, 0x65, 255) : IM_COL32(255, 248, 230, 255);
+		const int encendidos = LitChargeSegments(estado.fraction, estado.full);
+		// Primero todos los contornos y despues los rellenos, para que un contorno no tape un vecino.
+		for (int pasada = 0; pasada < 2; ++pasada)
+			for (int i = 0; i < encendidos; ++i)
+			{
+				const Cell c = ChargeSegmentCell(i);
+				const int margen = pasada == 0 ? borde : 0;
+				const int x = origenX + c.x * celda, y = origenY + c.y * celda;
+				dl->AddRectFilled(ImVec2((x - margen) / densidad, (y - margen) / densidad),
+					ImVec2((x + celda + margen) / densidad, (y + celda + margen) / densidad),
+					pasada == 0 ? IM_COL32(0, 0, 0, 170) : color);
+			}
 	}
 
 	// Aviso breve al pasar a sostener un objeto, abajo a la izquierda.

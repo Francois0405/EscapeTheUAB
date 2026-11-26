@@ -18,24 +18,29 @@ namespace
 	constexpr int kWarmup = 120;    // fotogramas sin medir tras cambiar de fase
 	constexpr int kMeasured = 300;
 
-	// width/height 0: la ventana no se toca.
-	struct Phase { const char* name; retro::Preset preset; bool grab; bool stereo; float fog;
-		GameState state; int width; int height; };
+	// width/height 0: la ventana no se toca. fog < 0: la del preset. charge < 0: sin agarrar.
+	struct Phase { const char* name; retro::Preset preset; bool viewModel; bool stereo; float fog;
+		GameState state; int width; int height; float charge; };
 	constexpr retro::Preset kOriginal = retro::Preset::Original;
 	constexpr retro::Preset kCinematic = retro::Preset::Cinematic;
+	constexpr retro::Preset kOfficial = retro::Preset::PsxClassic;
+	constexpr float kFull = game::interaction::kMaxThrowChargeSeconds;
 	constexpr Phase kPhases[] = {
-		{ "original", kOriginal, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
-		{ "cinematic", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
-		{ "psx", retro::Preset::PsxClassic, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
-		{ "cinematic_fog", kCinematic, false, false, 0.08f, GAME_STATE_PLAYING, 0, 0 },
-		{ "held_charge_subtitle", kCinematic, true, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
-		{ "f2_stereo", kCinematic, false, true, 0.0f, GAME_STATE_PLAYING, 0, 0 },
-		{ "original_again", kOriginal, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0 },
-		{ "resize_1280x720", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 1280, 720 },
-		{ "resize_2560x1080", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 2560, 1080 },
-		{ "resize_800x900", kCinematic, false, false, 0.0f, GAME_STATE_PLAYING, 800, 900 },
-		{ "pause", kCinematic, false, false, 0.0f, GAME_STATE_PAUSED, 1280, 720 },
-		{ "main_menu", kCinematic, false, false, 0.0f, GAME_STATE_MAIN_MENU, 0, 0 },
+		{ "official", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 0, 0, -1.0f },
+		{ "original", kOriginal, false, false, -1.0f, GAME_STATE_PLAYING, 0, 0, -1.0f },
+		{ "cinematic", kCinematic, false, false, -1.0f, GAME_STATE_PLAYING, 0, 0, -1.0f },
+		{ "official_no_fog", kOfficial, false, false, 0.0f, GAME_STATE_PLAYING, 0, 0, -1.0f },
+		{ "charge_025", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 0, 0, 0.25f * kFull },
+		{ "charge_050", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 0, 0, 0.50f * kFull },
+		{ "charge_075", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 0, 0, 0.75f * kFull },
+		{ "charge_100", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 0, 0, kFull },
+		{ "held_viewmodel_subtitle", kOfficial, true, false, -1.0f, GAME_STATE_PLAYING, 0, 0, 0.70f * kFull },
+		{ "f2_stereo", kOfficial, false, true, -1.0f, GAME_STATE_PLAYING, 0, 0, -1.0f },
+		{ "resize_1280x720", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 1280, 720, 0.50f * kFull },
+		{ "resize_2560x1080", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 2560, 1080, -1.0f },
+		{ "resize_800x900", kOfficial, false, false, -1.0f, GAME_STATE_PLAYING, 800, 900, -1.0f },
+		{ "pause", kOfficial, false, false, -1.0f, GAME_STATE_PAUSED, 1280, 720, -1.0f },
+		{ "main_menu", kOfficial, false, false, -1.0f, GAME_STATE_MAIN_MENU, 0, 0, -1.0f },
 	};
 	constexpr int kPhaseCount = static_cast<int>(sizeof(kPhases) / sizeof(kPhases[0]));
 
@@ -101,18 +106,19 @@ void retroCaptureBeforeUi(GLFWwindow* window)
 			glfwSetWindowSize(window, actual.width, actual.height);
 		}
 		retro::ApplyPreset(retroSettings, actual.preset);
-		retroSettings.fogDensity = actual.fog;
-		retroSettings.heldViewModel = actual.grab;
+		if (actual.fog >= 0.0f) retroSettings.fogDensity = actual.fog;
+		retroSettings.heldViewModel = actual.viewModel;
 		stereoTestMode = actual.stereo;
-		if (actual.grab) grabSomething();
+		if (actual.charge >= 0.0f) grabSomething();
 		else if (physicsScene->HasGrab()) physicsScene->ReleaseGrab();
 	}
-	if (actual.grab)
+	if (actual.charge >= 0.0f)
 	{
-		// Anillo a ~70 % y un dialogo real sonando (en silencio) en el momento de la captura.
+		// La carga se fija por fase; en la del viewmodel suena ademas un dialogo real (en silencio).
 		throwChargeActive = physicsScene->HasGrab();
-		throwChargeTime = 0.875f;
-		if (frame == kWarmup + kMeasured - 3) playHiritiSoundCue("assets/audio/hirity/story/agarrame.ogg", 1.0f);
+		throwChargeTime = actual.charge;
+		if (actual.viewModel && frame == kWarmup + kMeasured - 3)
+			playHiritiSoundCue("assets/audio/hirity/story/agarrame.ogg", 1.0f);
 	}
 	else throwChargeActive = false;
 }
