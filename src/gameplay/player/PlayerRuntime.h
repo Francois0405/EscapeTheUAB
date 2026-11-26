@@ -66,7 +66,7 @@ namespace gameplay::player
 	void applyGamePreset(PlayerContext& context);
 	void look(PlayerContext& context, double deltaY);
 	bool createPhysicsPlayer(PlayerContext& context);
-	void moveFpsPlayer(PlayerContext& context, GLFWwindow* window, double speed);
+	void moveFpsPlayer(PlayerContext& context, GLFWwindow* window, double speed, double stickX, double stickY);
 	void synchronizePlayerAndCamera(PlayerContext& context);
 	void updateMobile(PlayerContext& context, float deltaTime);
 	void updateVisualBob(PlayerContext& context, float deltaTime);

@@ -10,7 +10,7 @@ bool movementKeyPressed(GLFWwindow* window);
 glm::vec3 feetPositionFromCamera();
 void gazeOriginAndDirection(glm::vec3& origen, glm::vec3& direccion);
 bool spawnPhysicsPlayer();
-void moveFirstPersonPlayer(GLFWwindow* window, double velocidadJugador);
+void moveFirstPersonPlayer(GLFWwindow* window, double velocidadJugador, double stickX, double stickY);
 void syncPlayerWithCamera();
 void updatePhoneMotion(GLFWwindow* window, float deltaTime);
 void updateCameraBobbing(float delta);
