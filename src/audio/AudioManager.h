@@ -13,13 +13,18 @@ public:
     AudioManager();
     ~AudioManager();
 
-    bool init();
+    // noDevice: motor sin salida de audio, avanzado a mano con advanceWithoutDevice (pruebas).
+    bool init(bool noDevice = false);
+    void advanceWithoutDevice(unsigned int frames);
     void shutdown();
 
     // Devuelve un identificador de la reproduccion, o 0 si no se pudo iniciar.
     unsigned int playOneShot(const std::string& filepath, float volume = 1.0f);
     // true mientras esa reproduccion siga sonando.
     bool isPlaying(unsigned int playback) const;
+    // Segundos ya reproducidos de esa reproduccion; 0 si no existe.
+    float playbackCursorSeconds(unsigned int playback) const;
+    void stopOneShot(unsigned int playback);
     // Se avisa cada vez que un one-shot empieza a sonar de verdad.
     void setPlaybackListener(std::function<void(const std::string&, unsigned int, float)> listener);
 

@@ -2,6 +2,7 @@
 
 #include "GlbDrawing.h"
 #include "FrustumCulling.h"
+#include "HeldViewModel.h"
 #include "RenderMetrics.h"
 #include "UniformCache.h"
 #include "src/animation/DoorAnimation.h"
@@ -18,55 +19,28 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
-#include <limits>
 
 namespace
 {
-	// Indice del objeto que sostiene ESTE jugador (host/offline por Bullet, cliente por el host).
 	int LocalHeldObject(const SceneRenderContext& ctx)
 	{
 		const int local = ctx.physicsScene->GrabbedObject();
-		if (local >= 0 || !ctx.networkGame.IsClient()) return local;
-		const uint32_t id = ctx.networkGame.DynamicObjectOfPeer(ctx.networkGame.LocalPeerId());
-		for (std::size_t i = 0; id != 0 && i < ctx.sceneObjects.size(); ++i)
-			if (netgame::HashId(ctx.sceneObjects[i].id) == id) return static_cast<int>(i);
-		return -1;
+		const bool cliente = ctx.networkGame.IsClient();
+		if (local >= 0 || !cliente) return local;
+		std::vector<std::uint32_t> hashes;
+		hashes.reserve(ctx.sceneObjects.size());
+		for (const SceneObject& obj : ctx.sceneObjects) hashes.push_back(netgame::HashId(obj.id));
+		return viewmodel::SelectLocalHeld(local, cliente,
+			ctx.networkGame.DynamicObjectOfPeer(ctx.networkGame.LocalPeerId()), hashes);
 	}
 
-	// Presentacion en primera persona: abajo a la derecha, anclada a la camara y reducida si es grande.
-	// Solo cambia el dibujo local; la pose fisica, la red y el lanzamiento no se tocan.
-	glm::mat4 HeldViewModelMatrix(const SceneObject& obj, const Vector3D& minimo, const Vector3D& maximo,
-		const glm::mat4& view, const glm::mat4& projection)
+	// Entrada suave: 0.15 s desde que cambia el objeto sostenido.
+	float HeldSlide(int held)
 	{
-		// El juego usa Z arriba; en coordenadas de vista arriba es Y. Se conserva el giro de autor.
-		glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(-25.0f), glm::vec3(0, 1, 0));
-		giro = glm::rotate(giro, glm::radians(-90.0f), glm::vec3(1, 0, 0));
-		giro = glm::rotate(giro, glm::radians(obj.eulerRotation.z), glm::vec3(0, 0, 1));
-		giro = glm::rotate(giro, glm::radians(obj.eulerRotation.y), glm::vec3(0, 1, 0));
-		giro = glm::rotate(giro, glm::radians(obj.eulerRotation.x), glm::vec3(1, 0, 0));
-		const glm::mat4 orientado = glm::scale(giro, obj.escala);
-
-		glm::vec3 lo(std::numeric_limits<float>::max()), hi(-std::numeric_limits<float>::max());
-		for (int i = 0; i < 8; ++i)
-		{
-			const glm::vec3 esquina((i & 1) ? maximo.fX : minimo.fX, (i & 2) ? maximo.fY : minimo.fY,
-				(i & 4) ? maximo.fZ : minimo.fZ);
-			const glm::vec3 p = glm::vec3(orientado * glm::vec4(esquina, 1.0f));
-			lo = glm::min(lo, p);
-			hi = glm::max(hi, p);
-		}
-		const glm::vec3 tamano = hi - lo;
-		const float mayor = std::max({ tamano.x, tamano.y, tamano.z, 1.0e-4f });
-
-		constexpr float profundidad = 0.7f;
-		const float medioAncho = profundidad / projection[0][0];
-		const float medioAlto = profundidad / projection[1][1];
-		const float escala = std::min(1.0f, 0.45f * medioAlto / mayor);   // como mucho ~22 % del alto
-		const glm::vec3 destino(0.55f * medioAncho, -0.55f * medioAlto, -profundidad);
-
-		return glm::inverse(view) * glm::translate(glm::mat4(1.0f), destino) *
-			glm::scale(glm::mat4(1.0f), glm::vec3(escala)) *
-			glm::translate(glm::mat4(1.0f), -0.5f * (lo + hi)) * orientado;
+		static int anterior = -1;
+		static double desde = 0.0;
+		if (held != anterior) { anterior = held; desde = glfwGetTime(); }
+		return std::clamp(static_cast<float>((glfwGetTime() - desde) / 0.15), 0.0f, 1.0f);
 	}
 }
 
@@ -86,6 +60,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	glUniform3f(glcache::UniformLocation(ctx.shader_programID, "uIndirectSkyColor"),
 		ctx.sceneSkyBounceColor.r, ctx.sceneSkyBounceColor.g, ctx.sceneSkyBounceColor.b);
 	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), 1.0f);
+	glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uFogDensity"), ctx.fogDensity);
 	const bool renderizarMovil = ctx.fpsModeActive() && !ctx.sceneEditor.IsEnabled()
 		&& ctx.showPhone && ctx.phoneOBJ != nullptr;
 	glm::mat4 matrizMovilMundo(1.0f);
@@ -131,6 +106,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 
 	const int sostenido = ctx.showHeldViewModel && ctx.fpsModeActive() && !ctx.sceneEditor.IsEnabled()
 		? LocalHeldObject(ctx) : -1;
+	const float entradaMano = HeldSlide(sostenido);
 
 	// Dibuja cada objeto de la habitacion con su transformacion.
 	if (!ctx.sceneObjects.empty())
@@ -169,9 +145,14 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			if (static_cast<int>(i) == sostenido)
 			{
 				Vector3D minimo{}, maximo{};
-				if (it->second->GetLocalBounds(minimo, maximo))
+				glm::mat4 enPantalla(1.0f);
+				// El objeto fisico solo se sustituye si el viewmodel es valido.
+				if (it->second->GetLocalBounds(minimo, maximo) && viewmodel::Build(
+					{ obj.id, obj.eulerRotation, obj.escala, glm::vec3(minimo.fX, minimo.fY, minimo.fZ),
+						glm::vec3(maximo.fX, maximo.fY, maximo.fZ) },
+					ctx.ViewMatrix, ctx.ProjectionMatrix, entradaMano, enPantalla))
 				{
-					matrices.assign(1, HeldViewModelMatrix(obj, minimo, maximo, ctx.ViewMatrix, ctx.ProjectionMatrix));
+					matrices.assign(1, enPantalla);
 					enMano = true;
 				}
 			}

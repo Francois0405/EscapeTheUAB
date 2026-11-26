@@ -12,8 +12,9 @@ struct Ps1Framebuffer
 	unsigned int color = 0;
 	unsigned int depth = 0;
 
-	void Create();
-	// Recrea el destino solo si cambia el tamano.
+	// false si el framebuffer no queda completo.
+	bool Create();
+	// Recrea el destino solo si cambia el tamano; si falla vuelve a 960x540.
 	void Resize(int newWidth, int newHeight);
 	void Destroy();
 };

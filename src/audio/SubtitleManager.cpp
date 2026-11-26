@@ -1,4 +1,4 @@
-#include "src/ui/Subtitles.h"
+#include "src/audio/SubtitleManager.h"
 
 #include <nlohmann/json.hpp>
 
@@ -28,14 +28,25 @@ namespace subtitles
 			for (const auto& e : raiz.at("lines"))
 			{
 				Line l;
-				l.id = e.at("id").get<std::string>();
 				l.audio = Normalize(e.at("audio").get<std::string>());
 				l.text = e.at("text").get<std::string>();
+				l.id = e.value("id", l.audio);
 				l.speaker = e.value("speaker", std::string());
 				l.language = e.value("language", std::string("es"));
 				l.priority = e.value("priority", 0);
 				l.caption = e.value("category", std::string("dialogue")) == "caption";
-				l.validated = e.value("validated", false);
+				l.verified = e.value("verified", false);
+				if (e.contains("segments"))
+					for (const auto& s : e.at("segments"))
+					{
+						Segment segmento{ s.at("start").get<float>(), s.at("end").get<float>(), s.at("text").get<std::string>() };
+						if (!(segmento.end > segmento.start) || segmento.start < 0.0f)
+						{
+							error = "segmento no valido en " + l.audio;
+							return false;
+						}
+						l.segments.push_back(std::move(segmento));
+					}
 				const std::string clave = l.audio;
 				if (!nuevas.emplace(clave, std::move(l)).second)
 				{
@@ -72,17 +83,34 @@ namespace subtitles
 		active.push_back({ clave, playback });
 	}
 
-	const Line* Manager::Current(const std::function<bool(unsigned int)>& isPlaying, bool includeCaptions)
+	bool Manager::Current(const std::function<bool(unsigned int)>& isPlaying,
+		const std::function<float(unsigned int)>& cursorSeconds, Filter filter, Visible& out)
 	{
 		active.erase(std::remove_if(active.begin(), active.end(),
 			[&](const Active& a) { return !isPlaying(a.playback); }), active.end());
 		const Line* mejor = nullptr;
+		const std::string* texto = nullptr;
 		for (const Active& a : active)
 		{
 			const auto it = lines.find(a.key);
-			if (it == lines.end() || (it->second.caption && !includeCaptions)) continue;
-			if (!mejor || it->second.priority >= mejor->priority) mejor = &it->second;
+			if (it == lines.end()) continue;
+			const Line& linea = it->second;
+			if ((linea.caption && !filter.captions) || (!linea.verified && !filter.unverified)) continue;
+			if (mejor && linea.priority < mejor->priority) continue;
+			const std::string* candidato = &linea.text;
+			if (!linea.segments.empty())
+			{
+				candidato = nullptr;
+				const float t = cursorSeconds(a.playback);
+				for (const Segment& s : linea.segments)
+					if (t >= s.start && t < s.end) { candidato = &s.text; break; }
+			}
+			if (!candidato || candidato->empty()) continue;
+			mejor = &linea;
+			texto = candidato;
 		}
-		return mejor;
+		if (!mejor) return false;
+		out = { mejor->speaker, *texto, mejor->verified };
+		return true;
 	}
 }

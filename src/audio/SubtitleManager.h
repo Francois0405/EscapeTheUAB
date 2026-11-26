@@ -1,7 +1,7 @@
 #pragma once
 
 // Subtitulos ligados a las reproducciones reales de AudioManager. Logica pura: sin ImGui,
-// audio ni OpenGL; quien dibuja le pregunta que linea sigue sonando.
+// miniaudio ni OpenGL; quien dibuja le pregunta que linea sigue sonando y por donde va.
 #include <functional>
 #include <string>
 #include <unordered_map>
@@ -9,6 +9,13 @@
 
 namespace subtitles
 {
+	struct Segment
+	{
+		float start = 0.0f;   // segundos del propio audio
+		float end = 0.0f;
+		std::string text;
+	};
+
 	struct Line
 	{
 		std::string id;
@@ -16,9 +23,23 @@ namespace subtitles
 		std::string audio;     // ruta relativa "assets/audio/..."
 		std::string text;
 		std::string language;
+		std::vector<Segment> segments;   // opcional; si hay, sustituye a text
 		int priority = 0;
-		bool caption = false;     // descripcion de un sonido no verbal
-		bool validated = false;   // false hasta que una persona la compare con el audio
+		bool caption = false;    // descripcion de un sonido no verbal
+		bool verified = false;   // false hasta que una persona la compare con el audio
+	};
+
+	struct Visible
+	{
+		std::string speaker;
+		std::string text;
+		bool verified = false;
+	};
+
+	struct Filter
+	{
+		bool captions = true;
+		bool unverified = true;
 	};
 
 	class Manager
@@ -32,8 +53,9 @@ namespace subtitles
 		void OnPlay(const std::string& audioPath, unsigned int playback);
 
 		// Olvida lo que ya no suena y devuelve la linea de mayor prioridad (a igualdad, la mas
-		// reciente). nullptr si no hay nada que mostrar.
-		const Line* Current(const std::function<bool(unsigned int)>& isPlaying, bool includeCaptions);
+		// reciente) que tenga texto en la posicion actual de su audio.
+		bool Current(const std::function<bool(unsigned int)>& isPlaying,
+			const std::function<float(unsigned int)>& cursorSeconds, Filter filter, Visible& out);
 
 		void Clear() { active.clear(); }
 		std::size_t LineCount() const { return lines.size(); }

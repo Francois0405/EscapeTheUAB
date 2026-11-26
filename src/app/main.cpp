@@ -17,6 +17,7 @@
 #include "src/rendering/Ps1Framebuffer.h"
 #include "src/rendering/RetroPostFX.h"
 #include "src/app/state/RenderState.h"
+#include "src/app/render/RetroCapture.h"
 
 #include <fstream>
 #include <iterator>
@@ -53,8 +54,10 @@ int main(int argc, char** argv)
 	LoadMenuBackground();
 
 	RunMainLoop(ps1, previous, postFx);
-	if (std::ofstream ajustes{ "retro_settings.ini", std::ios::trunc })
-		ajustes << retro::Serialize(retroSettings);
+	// El diagnostico de capturas cambia los ajustes: no se guardan.
+	if (!retroCaptureEnabled())
+		if (std::ofstream ajustes{ "retro_settings.ini", std::ios::trunc })
+			ajustes << retro::Serialize(retroSettings);
 	postFx.Destroy();
 	ShutdownApplication(ps1);
 	return 0;

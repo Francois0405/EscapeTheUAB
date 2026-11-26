@@ -57,6 +57,7 @@ struct SceneRenderContext
 	const bool& labLampsEnabled;
 	LLUM (&llumGL)[NUM_MAX_LLUMS];
 	bool showHeldViewModel;
+	float fogDensity;
 	const bool& showPhone;
 	COBJModel* const& phoneOBJ;
 	const float& phoneScale;

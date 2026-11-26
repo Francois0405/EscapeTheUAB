@@ -133,7 +133,7 @@ void draw_Menu_ImGui()
 			throwChargeActive, throwChargeTime, kMaxThrowChargeDuration, physicsScene,
 			[]() -> const char* { return currentInteractionTarget.accion == InteractionAction::None
 				? nullptr : currentInteractionTarget.texto; },
-			interactionHandTexture },
+			interactionHandTexture, retroSettings.pickupNotice },
 		// Menus
 		{ window, currentGameState, menuBackgroundTexture, masterVolumePercent, audioManager,
 			[] { fpsHasPreviousPosition = false; mouseDeltaX = mouseDeltaY = 0.0; } },
@@ -150,7 +150,8 @@ void draw_Menu_ImGui()
 			physicsWorld, physicsScene, fallingCubeDemo, networkGame, sceneObjects, animatedObjects,
 			[] { startDemoDoor(); }, [] { toggleOpenXr(); }, retroSettings },
 		// Subtitulos
-		{ subtitleManager, retroSettings, [](unsigned int id) { return audioManager.isPlaying(id); } },
+		{ subtitleManager, retroSettings, [](unsigned int id) { return audioManager.isPlaying(id); },
+			[](unsigned int id) { return audioManager.playbackCursorSeconds(id); } },
 		(c_fons.r < 0.5) || (c_fons.g < 0.5) || (c_fons.b < 0.5),
 		showDebugPanels, showFpsCounter,
 		drawLegacyImGuiWindows,

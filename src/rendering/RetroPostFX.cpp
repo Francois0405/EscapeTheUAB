@@ -101,10 +101,11 @@ void RetroPostFX::Draw(unsigned int sceneTexture, retro::Size internal, int wind
 	glUniform2i(lugar("uInternalSize"), internal.width, internal.height);
 	glUniform1i(lugar("uLevels"), (1 << settings.bitsPerChannel) - 1);
 	glUniform1i(lugar("uDitherMode"), static_cast<int>(settings.dither));
+	glUniform1i(lugar("uPattern"), static_cast<int>(settings.pattern));
 	glUniform1f(lugar("uDitherStrength"), settings.ditherStrength);
 	glUniform1f(lugar("uSaturation"), settings.saturation);
 	glUniform1f(lugar("uContrast"), settings.contrast);
-	glUniform1f(lugar("uExposure"), settings.exposure);
+	glUniform1f(lugar("uExposureEV"), settings.exposureEV);
 	glUniform1f(lugar("uGrain"), settings.grain);
 	glUniform1f(lugar("uVignette"), settings.vignette);
 	glUniform1f(lugar("uGrading"), settings.grading);

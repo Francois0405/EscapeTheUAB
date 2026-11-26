@@ -15,9 +15,9 @@
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/player/FpsMovement.h"
 #include "src/physics/PhysicsScene.h"
-#include "src/gameplay/interaction/ThrowCharge.h"
+#include "src/ui/RuntimeUiLogic.h"
 #include "src/ui/UiScale.h"
-#include "src/ui/Subtitles.h"
+#include "src/audio/SubtitleManager.h"
 #include "src/rendering/RetroSettings.h"
 
 namespace runtimeui
@@ -56,30 +56,41 @@ void DrawStaminaBar(const HudContext& context)
 void DrawInteractionHud(const HudContext& context)
 {
 	const ImGuiIO& io = ImGui::GetIO();
-	if (!context.isDesktopHudVisible || !context.isDesktopHudVisible() ||
-		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f ||
-		io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
-		return;
+	if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f) return;
+	const bool agarrado = context.playerHoldsObject && context.playerHoldsObject();
+	const ReticleState estado = EvaluateReticle(context.isDesktopHudVisible && context.isDesktopHudVisible(),
+		io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse,
+		agarrado, context.throwCharging, context.throwChargeSeconds);
+	if (!estado.reticle) return;
 
 	const float escala = uiScale;
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
 	const ImVec2 centro(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
-	const float lado = 5.0f * escala;
-	const bool agarrado = context.playerHoldsObject && context.playerHoldsObject();
-	// Contorno oscuro de 1 unidad: el cuadrado sigue visible sobre fondos claros.
-	const float medio = lado * 0.5f;
+	// Cuadrado de 5 unidades con contorno oscuro de 1: sigue visible sobre fondos claros.
+	const float medio = 2.5f * escala;
 	dl->AddRectFilled(ImVec2(centro.x - medio - escala, centro.y - medio - escala),
 		ImVec2(centro.x + medio + escala, centro.y + medio + escala), IM_COL32(0, 0, 0, 170));
 	dl->AddRectFilled(ImVec2(centro.x - medio, centro.y - medio),
 		ImVec2(centro.x + medio, centro.y + medio), IM_COL32(255, 250, 235, 245));
-	if (agarrado && context.throwCharging)
+	if (estado.arc)
 	{
+		// Empieza arriba y avanza en sentido horario.
 		constexpr float pi = 3.14159265358979f;
-		const float fraccion = game::interaction::ThrowChargeFraction(context.throwChargeSeconds);
-		const bool completa = fraccion >= 1.0f;
-		dl->PathArcTo(centro, 21.0f * escala, -pi * 0.5f, -pi * 0.5f + 2.0f * pi * fraccion, 48);
-		dl->PathStroke(completa ? IM_COL32(255, 196, 90, 255) : IM_COL32(240, 220, 155, 245),
-			ImDrawFlags_None, (completa ? 3.0f : 2.0f) * escala);
+		dl->PathArcTo(centro, 21.0f * escala, -pi * 0.5f, -pi * 0.5f + 2.0f * pi * estado.fraction, 48);
+		dl->PathStroke(estado.full ? IM_COL32(0xF0, 0xCA, 0x65, 255) : IM_COL32(255, 248, 230, 245),
+			ImDrawFlags_None, 2.0f * escala);
+	}
+
+	// Aviso breve al pasar a sostener un objeto, abajo a la izquierda.
+	static bool agarradoAntes = false;
+	static double avisoHasta = 0.0;
+	if (agarrado && !agarradoAntes) avisoHasta = ImGui::GetTime() + 1.6;
+	agarradoAntes = agarrado;
+	if (context.showPickupNotice && agarrado && ImGui::GetTime() < avisoHasta)
+	{
+		const ImVec2 pos(18.0f * escala, io.DisplaySize.y - 92.0f * escala);
+		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), "Objeto agarrado");
+		dl->AddText(pos, IM_COL32(0xF0, 0xCA, 0x65, 255), "Objeto agarrado");
 	}
 
 	if (agarrado)
@@ -263,27 +274,30 @@ void DrawMenus(const MenuContext& context)
 }
 }
 
-// Franja inferior central: amarillo calido sobre negro al 70 %, con la fuente pixelada de ImGui.
+// Franja inferior central: amarillo calido sobre negro al 72 %, con la fuente pixelada de ImGui.
 static void DrawSubtitles(const SubtitleContext& context)
 {
 	// Se consulta siempre para olvidar lo que ya no suena aunque esten desactivados.
-	const subtitles::Line* linea = context.manager.Current(context.isPlaying, context.settings.soundCaptions);
-	if (!linea || !context.settings.subtitles) return;
+	subtitles::Visible linea;
+	const bool hay = context.manager.Current(context.isPlaying, context.cursorSeconds,
+		{ context.settings.soundCaptions, context.settings.unverifiedSubtitles }, linea);
+	if (!hay || !context.settings.subtitles) return;
 	const ImGuiIO& io = ImGui::GetIO();
 	if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f) return;
 
-	const std::string texto = linea->speaker.empty() ? linea->text : linea->speaker + ": " + linea->text;
+	std::string texto = linea.speaker.empty() ? linea.text : linea.speaker + ": " + linea.text;
+	if (!linea.verified) texto += "  (sin verificar)";
 	ImFont* fuente = ImGui::GetFont();
 	// 26 px a 1080p; ProggyClean mide 13 px, asi que el doble mantiene los pixeles nitidos.
 	const float tamano = std::max(13.0f, 26.0f * io.DisplaySize.y / 1080.0f);
-	const float ajuste = io.DisplaySize.x * 0.7f;
+	const float ajuste = io.DisplaySize.x * 0.72f;
 	const ImVec2 medida = fuente->CalcTextSizeA(tamano, FLT_MAX, ajuste, texto.c_str());
-	const ImVec2 pos(std::floor((io.DisplaySize.x - medida.x) * 0.5f),
-		std::floor(io.DisplaySize.y * 0.90f - medida.y));
 	const float margen = tamano * 0.35f;
+	const ImVec2 pos(std::floor((io.DisplaySize.x - medida.x) * 0.5f),
+		std::floor(io.DisplaySize.y * 0.92f - medida.y - margen * 0.5f));
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
 	dl->AddRectFilled(ImVec2(pos.x - margen, pos.y - margen * 0.5f),
-		ImVec2(pos.x + medida.x + margen, pos.y + medida.y + margen * 0.5f), IM_COL32(0, 0, 0, 178));
+		ImVec2(pos.x + medida.x + margen, pos.y + medida.y + margen * 0.5f), IM_COL32(0, 0, 0, 184));
 	dl->AddText(fuente, tamano, pos, IM_COL32(0xF0, 0xCA, 0x65, 255), texto.c_str(), nullptr, ajuste);
 }
 
@@ -319,9 +333,8 @@ void DrawRuntimeUiFrame(const FrameContext& context)
 		DrawInteractionHud(context.hud);
 	}
 
-	// El menu principal corta la partida: no se arrastran subtitulos a la siguiente.
-	if (context.menu.state == GAME_STATE_MAIN_MENU) context.subtitle.manager.Clear();
-	else DrawSubtitles(context.subtitle);
+	// El audio sigue sonando en pausa y en el menu; el menu principal no muestra subtitulos.
+	if (context.menu.state != GAME_STATE_MAIN_MENU) DrawSubtitles(context.subtitle);
 
 	DrawMenus(context.menu);
 

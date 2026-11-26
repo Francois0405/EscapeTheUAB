@@ -3,7 +3,7 @@
 
 #include <iostream>
 
-void Ps1Framebuffer::Create()
+bool Ps1Framebuffer::Create()
 {
 	glGenFramebuffers(1, &fbo);
 	glBindFramebuffer(GL_FRAMEBUFFER, fbo);
@@ -23,9 +23,11 @@ void Ps1Framebuffer::Create()
 	glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH24_STENCIL8, width, height);
 	glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, depth);
 
-	if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE)
-		std::cerr << "Error en el FBO de PS1\n";
+	const bool completo = glCheckFramebufferStatus(GL_FRAMEBUFFER) == GL_FRAMEBUFFER_COMPLETE;
+	if (!completo)
+		std::cerr << "Error en el FBO de PS1 (" << width << 'x' << height << ")\n";
 	glBindFramebuffer(GL_FRAMEBUFFER, 0); // Volver al framebuffer por defecto
+	return completo;
 }
 
 void Ps1Framebuffer::Resize(int newWidth, int newHeight)
@@ -34,6 +36,10 @@ void Ps1Framebuffer::Resize(int newWidth, int newHeight)
 	Destroy();
 	width = newWidth;
 	height = newHeight;
+	if (Create()) return;
+	Destroy();
+	width = kWidth;
+	height = kHeight;
 	Create();
 }
 

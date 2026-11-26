@@ -100,6 +100,9 @@
     <ClCompile Include="..\src\app\render\MaterialTextures.cpp">
       <Filter>src\app\render</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\app\render\RetroCapture.cpp">
+      <Filter>src\app\render</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\app\render\SceneLighting.cpp">
       <Filter>src\app\render</Filter>
     </ClCompile>
@@ -122,6 +125,9 @@
       <Filter>src\app</Filter>
     </ClCompile>
     <ClCompile Include="..\src\audio\AudioManager.cpp">
+      <Filter>src\audio</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\audio\SubtitleManager.cpp">
       <Filter>src\audio</Filter>
     </ClCompile>
     <ClCompile Include="..\src\diagnostics\GrabDiagnostics.cpp">
@@ -286,9 +292,6 @@
     <ClCompile Include="..\src\ui\StatusBar.cpp">
       <Filter>src\ui</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\ui\Subtitles.cpp">
-      <Filter>src\ui</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\vr\OpenXRManager.cpp">
       <Filter>src\vr</Filter>
     </ClCompile>
@@ -394,6 +397,9 @@
     <ClInclude Include="..\src\app\render\MaterialTextures.h">
       <Filter>src\app\render</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\app\render\RetroCapture.h">
+      <Filter>src\app\render</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\app\render\SceneLighting.h">
       <Filter>src\app\render</Filter>
     </ClInclude>
@@ -434,6 +440,9 @@
       <Filter>src\app</Filter>
     </ClInclude>
     <ClInclude Include="..\src\audio\AudioManager.h">
+      <Filter>src\audio</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\audio\SubtitleManager.h">
       <Filter>src\audio</Filter>
     </ClInclude>
     <ClInclude Include="..\src\diagnostics\GrabDiagnostics.h">
@@ -592,6 +601,9 @@
     <ClInclude Include="..\src\rendering\glut_geometry.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\rendering\HeldViewModel.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\rendering\LegacyVgiGeometryControls.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
@@ -659,9 +671,6 @@
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\StatusBar.h">
-      <Filter>src\ui</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\ui\Subtitles.h">
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\UiScale.h">

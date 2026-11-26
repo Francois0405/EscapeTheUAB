@@ -46,6 +46,7 @@ namespace runtimeui
 		const std::unique_ptr<physics::PhysicsScene>& physicsScene;
 		std::function<const char*()> interactionPrompt;   // nullptr when nothing is targeted
 		const unsigned int& handTexture;
+		const bool& showPickupNotice;
 	};
 
 	struct MenuContext
@@ -63,6 +64,7 @@ namespace runtimeui
 		subtitles::Manager& manager;
 		const retro::Settings& settings;
 		std::function<bool(unsigned int)> isPlaying;
+		std::function<float(unsigned int)> cursorSeconds;
 	};
 
 	struct MultiplayerContext

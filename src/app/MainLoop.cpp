@@ -19,18 +19,18 @@
 #include "src/app/ui/UiFrame.h"
 #include "src/rendering/Ps1Framebuffer.h"
 #include "src/rendering/RetroPostFX.h"
+#include "src/app/render/RetroCapture.h"
 
 namespace
 {
 	// Filtrado nearest solo en las texturas de material del entorno: las incrustadas en los OBJ
 	// (carteles, pistas) y las de la interfaz conservan el filtrado original. Es estado global de la
 	// textura, asi que el editor y OpenXR necesitan que se restaure antes de dibujar.
-	void applyEnvironmentTextureFilter()
+	void applyEnvironmentTextureFilter(bool retroActive)
 	{
 		static bool aplicado = false;
 		static std::size_t cantidad = 0;
-		const bool nearest = retroSettings.preset != retro::Preset::Original && retroSettings.nearestTextures &&
-			!sceneEditor.IsEnabled() && !openXrManager.IsSessionRunning();
+		const bool nearest = retroActive && retroSettings.nearestTextures;
 		if (nearest == aplicado && (!nearest || cantidad == sceneMaterialTextures.size())) return;
 		GLint anterior = 0;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, &anterior);
@@ -158,6 +158,7 @@ void RunMainLoop(Ps1Framebuffer& ps1, float previous, const RetroPostFX& postFx)
 		updateSceneLights();
 		if (renderMetrics::enabled) renderMetrics::lucesMs += std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - inicioLuces).count();
 
+		retroCaptureBeforeUi(window);
 		draw_Menu_ImGui();
 		if (sceneEditor.ConsumeRebuildPhysicsRequest())
 		{
@@ -223,7 +224,9 @@ void RunMainLoop(Ps1Framebuffer& ps1, float previous, const RetroPostFX& postFx)
 				vrEnMarchaAntes = vrEnMarcha;
 			}
 
-			applyEnvironmentTextureFilter();
+			// Editor, F2 y OpenXR conservan la presentacion anterior.
+			const bool retroActivo = retro::IsActive(retroSettings, sceneEditor.IsEnabled(), stereoTestMode, vrEnMarcha);
+			applyEnvironmentTextureFilter(retroActivo);
 			const bool vrDibujado = !sceneEditor.IsEnabled() && vrEnMarcha && drawVrScene();
 			if (!vrDibujado)
 			{
@@ -232,9 +235,9 @@ void RunMainLoop(Ps1Framebuffer& ps1, float previous, const RetroPostFX& postFx)
 				glfwGetFramebufferSize(window, &winW, &winH);
 
 				// EDIT: resolución nativa.
-				// PLAY: resolución interna del preset retro (Original = 960x540).
+				// PLAY: resolución interna del preset retro (sin efectos = 960x540).
 				const bool modoEditor = sceneEditor.IsEnabled();
-				const retro::Size interna = retro::InternalSize(retroSettings, winW, winH);
+				const retro::Size interna = retro::InternalSize(retroSettings, retroActivo, winW, winH);
 				if (!modoEditor)
 					ps1.Resize(interna.width, interna.height);
 
@@ -249,10 +252,10 @@ void RunMainLoop(Ps1Framebuffer& ps1, float previous, const RetroPostFX& postFx)
 				glViewport(0, 0, w, h);
 				OnPaint(window);
 
-				// Solo escalar durante PLAY. Original (o un shader no disponible) usa el blit de siempre.
+				// Solo escalar durante PLAY. Sin efectos (o sin shader) se usa el blit de siempre.
 				if (!modoEditor)
 				{
-					if (retroSettings.preset != retro::Preset::Original && postFx.Ready())
+					if (retroActivo && postFx.Ready())
 						postFx.Draw(ps1.color, { ps1.width, ps1.height }, winW, winH, retroSettings);
 					else
 					{
@@ -280,6 +283,7 @@ void RunMainLoop(Ps1Framebuffer& ps1, float previous, const RetroPostFX& postFx)
 
 			// Renderizado final de ImGui e intercambio de buffers
 			ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
+			retroCaptureAfterUi(window);
 			glfwSwapBuffers(window);
 		}
 	}

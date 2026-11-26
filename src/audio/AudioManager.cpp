@@ -18,9 +18,15 @@ AudioManager::~AudioManager() {
     shutdown();
 }
 
-bool AudioManager::init() {
+bool AudioManager::init(bool noDevice) {
     m_engine = new ma_engine();
-    ma_result result = ma_engine_init(NULL, m_engine);
+    ma_engine_config config = ma_engine_config_init();
+    if (noDevice) {
+        config.noDevice = MA_TRUE;
+        config.channels = 2;
+        config.sampleRate = 48000;
+    }
+    ma_result result = ma_engine_init(&config, m_engine);
     
     if (result != MA_SUCCESS) {
         std::cerr << "[AudioManager] Error al iniciar motor de audio. El juego continuara sin sonido.\n";
@@ -83,7 +89,8 @@ unsigned int AudioManager::playOneShot(const std::string& filepath, float volume
     }
 
     for (auto sound = m_oneShotSounds.begin(); sound != m_oneShotSounds.end();) {
-        if (ma_sound_at_end(sound->sound)) {
+        // Terminadas o detenidas: ambas se liberan.
+        if (ma_sound_at_end(sound->sound) || !ma_sound_is_playing(sound->sound)) {
             ma_sound_uninit(sound->sound);
             delete sound->sound;
             sound = m_oneShotSounds.erase(sound);
@@ -120,6 +127,30 @@ bool AudioManager::isPlaying(unsigned int playback) const {
         if (oneShot.id == playback)
             return ma_sound_is_playing(oneShot.sound) && !ma_sound_at_end(oneShot.sound);
     return false;
+}
+
+float AudioManager::playbackCursorSeconds(unsigned int playback) const {
+    for (const OneShot& oneShot : m_oneShotSounds)
+        if (oneShot.id == playback) {
+            float seconds = 0.0f;
+            return ma_sound_get_cursor_in_seconds(oneShot.sound, &seconds) == MA_SUCCESS ? seconds : 0.0f;
+        }
+    return 0.0f;
+}
+
+void AudioManager::stopOneShot(unsigned int playback) {
+    for (const OneShot& oneShot : m_oneShotSounds)
+        if (oneShot.id == playback) ma_sound_stop(oneShot.sound);
+}
+
+void AudioManager::advanceWithoutDevice(unsigned int frames) {
+    if (!m_initialized) return;
+    std::vector<float> descartado(1024 * 2);
+    while (frames > 0) {
+        const unsigned int bloque = frames < 1024u ? frames : 1024u;
+        ma_engine_read_pcm_frames(m_engine, descartado.data(), bloque, NULL);
+        frames -= bloque;
+    }
 }
 
 void AudioManager::setPlaybackListener(std::function<void(const std::string&, unsigned int, float)> listener) {

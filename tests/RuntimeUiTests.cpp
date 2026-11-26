@@ -141,11 +141,30 @@ namespace
 	}
 }
 
+// Reticula y anillo de carga: visibilidad, progreso, lanzamiento y cancelacion.
+void TestReticle()
+{
+	using runtimeui::EvaluateReticle;
+	Check(!EvaluateReticle(false, false, true, true, 1.0f).reticle, "hidden outside desktop gameplay");
+	Check(!EvaluateReticle(true, true, true, true, 1.0f).reticle, "hidden while ImGui captures input");
+	const auto libre = EvaluateReticle(true, false, false, false, 0.0f);
+	Check(libre.reticle && !libre.arc, "square without object");
+	Check(!EvaluateReticle(true, false, true, false, 0.0f).arc, "holding without charging has no ring");
+	const auto media = EvaluateReticle(true, false, true, true, 0.625f);
+	Check(media.arc && media.fraction == 0.5f && !media.full, "half charge");
+	const auto completa = EvaluateReticle(true, false, true, true, 5.0f);
+	Check(completa.arc && completa.fraction == 1.0f && completa.full, "full charge is clamped");
+	Check(!EvaluateReticle(true, false, false, true, 1.0f).arc, "losing the object removes the ring");
+	Check(game::interaction::kMaxThrowChargeSeconds == 1.25f && game::interaction::ThrowSpeed(0.0f) == 3.0f &&
+		game::interaction::ThrowSpeed(1.0f) == 15.0f, "throw timing and speeds are unchanged");
+}
+
 int main()
 {
 	TestStatusBar();
 	TestNetworkStartRequest();
 	TestDynamicRows();
+	TestReticle();
 	if (failures != 0) return 1;
 	std::cout << "RuntimeUiTests OK\n";
 	return 0;

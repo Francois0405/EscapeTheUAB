@@ -355,9 +355,42 @@ add_test(NAME PlayerRuntimeTests COMMAND PlayerRuntimeTests)
 # Retro presets, reference dithering and Hirity subtitles (no window, audio or OpenGL).
 add_executable(RetroTests
 	RetroTests.cpp
-	${PROJECT_SOURCE_DIR}/src/ui/Subtitles.cpp
+	${PROJECT_SOURCE_DIR}/src/audio/SubtitleManager.cpp
 )
 target_include_directories(RetroTests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/third_party)
 target_compile_definitions(RetroTests PRIVATE ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}")
+if(TARGET glm::glm)
+	target_link_libraries(RetroTests PRIVATE glm::glm)
+else()
+	target_link_libraries(RetroTests PRIVATE glm)
+endif()
 target_compile_features(RetroTests PRIVATE cxx_std_20)
 add_test(NAME RetroTests COMMAND RetroTests)
+
+# Reproducciones identificables y cursor de AudioManager sobre un motor miniaudio sin dispositivo:
+# no suena nada ni necesita tarjeta de sonido.
+add_executable(AudioPlaybackTests
+	AudioPlaybackTests.cpp
+	${PROJECT_SOURCE_DIR}/src/audio/AudioManager.cpp
+	"${ENTORNVGI_STB_IMPLEMENTATION_SOURCE}"
+)
+target_include_directories(AudioPlaybackTests PRIVATE
+	${PROJECT_SOURCE_DIR}
+	"${ENTORNVGI_STB_INCLUDE_DIR}"
+	"${PROJECT_SOURCE_DIR}/third_party/stb_compat"
+	"${PROJECT_SOURCE_DIR}/third_party/miniaudio"
+)
+target_compile_definitions(AudioPlaybackTests PRIVATE ENTORNVGI_SOURCE_ASSETS_DIR="${PROJECT_SOURCE_DIR}/assets")
+if(TARGET glm::glm)
+	target_link_libraries(AudioPlaybackTests PRIVATE glm::glm Threads::Threads ${CMAKE_DL_LIBS})
+else()
+	target_link_libraries(AudioPlaybackTests PRIVATE glm Threads::Threads ${CMAKE_DL_LIBS})
+endif()
+if(APPLE)
+	target_link_libraries(AudioPlaybackTests PRIVATE "-framework CoreAudio" "-framework AudioToolbox" "-framework CoreFoundation")
+endif()
+if(WIN32)
+	target_compile_definitions(AudioPlaybackTests PRIVATE NOMINMAX)
+endif()
+target_compile_features(AudioPlaybackTests PRIVATE cxx_std_20)
+add_test(NAME AudioPlaybackTests COMMAND AudioPlaybackTests)

@@ -132,6 +132,8 @@ void dibuixa_Escena()
 		.labLampsEnabled = labLampsEnabled,
 		.llumGL = llumGL,
 		.showHeldViewModel = retroSettings.heldViewModel && !stereoTestMode && !openXrManager.IsSessionRunning(),
+		.fogDensity = retro::IsActive(retroSettings, sceneEditor.IsEnabled(), stereoTestMode,
+			openXrManager.IsSessionRunning()) ? retroSettings.fogDensity : 0.0f,
 		.showPhone = showPhone,
 		.phoneOBJ = phoneOBJ,
 		.phoneScale = phoneScale,

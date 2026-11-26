@@ -61,6 +61,7 @@ add_subdirectory("${REPO_ROOT}/src/networking/transport" "${CMAKE_BINARY_DIR}/sr
 
 set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/audio/AudioManager.cpp
+	${REPO_ROOT}/src/audio/SubtitleManager.cpp
 	${REPO_ROOT}/src/physics/ColliderDrawing.cpp
 	${REPO_ROOT}/src/rendering/GlbDrawing.cpp
 	${REPO_ROOT}/src/editor/SceneEditor.cpp
@@ -112,6 +113,7 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/app/render/GpuFrameTimer.cpp
 	${REPO_ROOT}/src/app/render/HandheldDevices.cpp
 	${REPO_ROOT}/src/app/render/MaterialTextures.cpp
+	${REPO_ROOT}/src/app/render/RetroCapture.cpp
 	${REPO_ROOT}/src/app/render/SceneLighting.cpp
 	${REPO_ROOT}/src/app/ui/InteractionHudTexture.cpp
 	${REPO_ROOT}/src/app/ui/UiFrame.cpp
@@ -129,7 +131,6 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/ui/NetworkPanels.cpp
 	${REPO_ROOT}/src/ui/RuntimeUi.cpp
 	${REPO_ROOT}/src/ui/StatusBar.cpp
-	${REPO_ROOT}/src/ui/Subtitles.cpp
 	${REPO_ROOT}/src/rendering/visualitzacio.cpp
 )
 
