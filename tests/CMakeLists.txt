@@ -351,3 +351,13 @@ target_link_libraries(PlayerRuntimeTests PRIVATE EntornVGI_physics ${TEST_GLFW_T
 target_compile_features(PlayerRuntimeTests PRIVATE cxx_std_20)
 target_compile_definitions(PlayerRuntimeTests PRIVATE GLM_ENABLE_EXPERIMENTAL)
 add_test(NAME PlayerRuntimeTests COMMAND PlayerRuntimeTests)
+
+# Retro presets, reference dithering and Hirity subtitles (no window, audio or OpenGL).
+add_executable(RetroTests
+	RetroTests.cpp
+	${PROJECT_SOURCE_DIR}/src/ui/Subtitles.cpp
+)
+target_include_directories(RetroTests PRIVATE ${PROJECT_SOURCE_DIR} ${PROJECT_SOURCE_DIR}/third_party)
+target_compile_definitions(RetroTests PRIVATE ESCAPETHEUAB_SOURCE_DIR="${ENTORNVGI_TEST_SOURCE_ROOT}")
+target_compile_features(RetroTests PRIVATE cxx_std_20)
+add_test(NAME RetroTests COMMAND RetroTests)

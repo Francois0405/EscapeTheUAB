@@ -97,6 +97,7 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/app/MainLoop.cpp
 	${REPO_ROOT}/src/app/Shutdown.cpp
 	${REPO_ROOT}/src/rendering/Ps1Framebuffer.cpp
+	${REPO_ROOT}/src/rendering/RetroPostFX.cpp
 	${REPO_ROOT}/src/app/main.cpp
 	${REPO_ROOT}/src/app/adapters/GrabTrace.cpp
 	${REPO_ROOT}/src/legacy_vgi/LegacyVgiState.cpp
@@ -128,6 +129,7 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/ui/NetworkPanels.cpp
 	${REPO_ROOT}/src/ui/RuntimeUi.cpp
 	${REPO_ROOT}/src/ui/StatusBar.cpp
+	${REPO_ROOT}/src/ui/Subtitles.cpp
 	${REPO_ROOT}/src/rendering/visualitzacio.cpp
 )
 

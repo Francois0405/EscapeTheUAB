@@ -17,6 +17,8 @@ namespace fps { class CameraBob; class StaminaBar; class PlayerMovement; }
 namespace glb { struct AnimatedScene; }
 namespace game { class HiritiAnimator; }
 namespace netgame { class NetworkGame; struct NetworkConfig; }
+namespace retro { struct Settings; }
+namespace subtitles { class Manager; }
 namespace vr { class OpenXrManager; }
 
 enum GameState {
@@ -33,6 +35,8 @@ namespace runtimeui
 		std::function<bool()> isFpsMode;
 		std::function<bool()> isFpsInputActive;
 		std::function<bool()> isEditorActive;
+		std::function<bool()> playerHoldsObject;
+		std::function<bool()> isDesktopHudVisible;
 		const fps::StaminaBar& staminaBar;
 		const fps::PlayerMovement& movement;
 		const bool& showStaminaPercent;
@@ -52,6 +56,13 @@ namespace runtimeui
 		float& masterVolumePercent;
 		AudioManager& audio;
 		std::function<void()> resetMouseLook;
+	};
+
+	struct SubtitleContext
+	{
+		subtitles::Manager& manager;
+		const retro::Settings& settings;
+		std::function<bool(unsigned int)> isPlaying;
 	};
 
 	struct MultiplayerContext
@@ -106,6 +117,7 @@ namespace runtimeui
 		glb::AnimatedScene& animatedObjects;
 		std::function<void()> startDoorDemo;
 		std::function<void()> toggleOpenXR;
+		retro::Settings& retroSettings;
 	};
 
 	struct FrameContext
@@ -115,6 +127,7 @@ namespace runtimeui
 		MultiplayerContext network;
 		DynamicObjectsContext dynamicObjects;
 		DebugPanelsContext debug;
+		SubtitleContext subtitle;
 		bool useLightStyle;
 		const bool& showDebugPanels;
 		const bool& showFpsCounter;

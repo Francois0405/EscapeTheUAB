@@ -247,6 +247,9 @@
     <ClCompile Include="..\src\rendering\quatern.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\rendering\RetroPostFX.cpp">
+      <Filter>src\rendering</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\rendering\RuntimeRenderControls.cpp">
       <Filter>src\rendering</Filter>
     </ClCompile>
@@ -281,6 +284,9 @@
       <Filter>src\ui</Filter>
     </ClCompile>
     <ClCompile Include="..\src\ui\StatusBar.cpp">
+      <Filter>src\ui</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ui\Subtitles.cpp">
       <Filter>src\ui</Filter>
     </ClCompile>
     <ClCompile Include="..\src\vr\OpenXRManager.cpp">
@@ -613,6 +619,12 @@
     <ClInclude Include="..\src\rendering\RenderMetrics.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
+    <ClInclude Include="..\src\rendering\RetroPostFX.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\rendering\RetroSettings.h">
+      <Filter>src\rendering</Filter>
+    </ClInclude>
     <ClInclude Include="..\src\rendering\RuntimeRenderControls.h">
       <Filter>src\rendering</Filter>
     </ClInclude>
@@ -647,6 +659,9 @@
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\StatusBar.h">
+      <Filter>src\ui</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ui\Subtitles.h">
       <Filter>src\ui</Filter>
     </ClInclude>
     <ClInclude Include="..\src\ui\UiScale.h">

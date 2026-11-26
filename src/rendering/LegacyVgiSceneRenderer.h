@@ -56,6 +56,7 @@ struct SceneRenderContext
 	const glm::vec3& sceneSkyBounceColor;
 	const bool& labLampsEnabled;
 	LLUM (&llumGL)[NUM_MAX_LLUMS];
+	bool showHeldViewModel;
 	const bool& showPhone;
 	COBJModel* const& phoneOBJ;
 	const float& phoneScale;

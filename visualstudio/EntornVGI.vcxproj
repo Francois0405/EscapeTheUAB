@@ -140,6 +140,7 @@
     <ClCompile Include="..\src\rendering\ObjMeshOptimization.cpp" />
     <ClCompile Include="..\src\rendering\Ps1Framebuffer.cpp" />
     <ClCompile Include="..\src\rendering\quatern.cpp" />
+    <ClCompile Include="..\src\rendering\RetroPostFX.cpp" />
     <ClCompile Include="..\src\rendering\RuntimeRenderControls.cpp" />
     <ClCompile Include="..\src\rendering\RuntimeRenderer.cpp" />
     <ClCompile Include="..\src\rendering\shader.cpp" />
@@ -152,6 +153,7 @@
     <ClCompile Include="..\src\ui\NetworkPanels.cpp" />
     <ClCompile Include="..\src\ui\RuntimeUi.cpp" />
     <ClCompile Include="..\src\ui\StatusBar.cpp" />
+    <ClCompile Include="..\src\ui\Subtitles.cpp" />
     <ClCompile Include="..\src\vr\OpenXRManager.cpp" />
     <ClCompile Include="..\third_party\imgui\imgui.cpp" />
     <ClCompile Include="..\third_party\imgui\imgui_demo.cpp" />
@@ -264,6 +266,8 @@
     <ClInclude Include="..\src\rendering\Ps1Framebuffer.h" />
     <ClInclude Include="..\src\rendering\quatern.h" />
     <ClInclude Include="..\src\rendering\RenderMetrics.h" />
+    <ClInclude Include="..\src\rendering\RetroPostFX.h" />
+    <ClInclude Include="..\src\rendering\RetroSettings.h" />
     <ClInclude Include="..\src\rendering\RuntimeRenderControls.h" />
     <ClInclude Include="..\src\rendering\RuntimeRenderer.h" />
     <ClInclude Include="..\src\rendering\shader.h" />
@@ -276,6 +280,7 @@
     <ClInclude Include="..\src\ui\RuntimeUi.h" />
     <ClInclude Include="..\src\ui\RuntimeUiLogic.h" />
     <ClInclude Include="..\src\ui\StatusBar.h" />
+    <ClInclude Include="..\src\ui\Subtitles.h" />
     <ClInclude Include="..\src\ui\UiScale.h" />
     <ClInclude Include="..\src\vr\OpenXRManager.h" />
     <ClInclude Include="..\src\vr\StereoView.h" />

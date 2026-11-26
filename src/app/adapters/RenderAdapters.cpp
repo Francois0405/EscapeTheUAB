@@ -131,6 +131,7 @@ void dibuixa_Escena()
 		.sceneSkyBounceColor = sceneSkyBounceColor,
 		.labLampsEnabled = labLampsEnabled,
 		.llumGL = llumGL,
+		.showHeldViewModel = retroSettings.heldViewModel && !stereoTestMode && !openXrManager.IsSessionRunning(),
 		.showPhone = showPhone,
 		.phoneOBJ = phoneOBJ,
 		.phoneScale = phoneScale,

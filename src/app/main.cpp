@@ -15,11 +15,25 @@
 #include "src/app/Shutdown.h"
 #include "src/app/WorkingDirectory.h"
 #include "src/rendering/Ps1Framebuffer.h"
+#include "src/rendering/RetroPostFX.h"
+#include "src/app/state/RenderState.h"
+
+#include <fstream>
+#include <iterator>
 
 int main(int argc, char** argv)
 {
 	SetWorkingDirectoryToAssetRoot(argc > 0 ? argv[0] : nullptr);
 	audioManager.init();
+	{
+		std::string error;
+		if (!subtitleManager.LoadFile("assets/subtitles/hirity.json", error))
+			std::cerr << "[subtitulos] " << error << '\n';
+		audioManager.setPlaybackListener([](const std::string& ruta, unsigned int id, float volumen)
+			{ if (volumen > 0.0f) subtitleManager.OnPlay(ruta, id); });
+		if (std::ifstream ajustes{ "retro_settings.ini" })
+			retroSettings = retro::Parse(std::string(std::istreambuf_iterator<char>(ajustes), {}));
+	}
 	ParseNetworkArguments(argc, argv);
 
 	if (!CreateMainWindow()) return -1;
@@ -34,9 +48,14 @@ int main(int argc, char** argv)
 
 	Ps1Framebuffer ps1;
 	ps1.Create();
+	RetroPostFX postFx;
+	postFx.Create("assets/shaders/retro_post.vert", "assets/shaders/retro_post.frag");
 	LoadMenuBackground();
 
-	RunMainLoop(ps1, previous);
+	RunMainLoop(ps1, previous, postFx);
+	if (std::ofstream ajustes{ "retro_settings.ini", std::ios::trunc })
+		ajustes << retro::Serialize(retroSettings);
+	postFx.Destroy();
 	ShutdownApplication(ps1);
 	return 0;
 }

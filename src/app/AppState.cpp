@@ -90,6 +90,8 @@ float fpsTime = 0.0f;
 float deltaFPS = 0.0f;
 
 AudioManager audioManager;
+subtitles::Manager subtitleManager;
+retro::Settings retroSettings;
 
 game::HiritiAnimator hiritiAnimator;
 

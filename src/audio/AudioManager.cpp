@@ -49,9 +49,9 @@ bool AudioManager::init() {
 void AudioManager::shutdown() {
     if (!m_initialized) return;
 
-    for (ma_sound* sound : m_oneShotSounds) {
-        ma_sound_uninit(sound);
-        delete sound;
+    for (const OneShot& oneShot : m_oneShotSounds) {
+        ma_sound_uninit(oneShot.sound);
+        delete oneShot.sound;
     }
     m_oneShotSounds.clear();
 
@@ -68,24 +68,24 @@ void AudioManager::shutdown() {
     m_initialized = false;
 }
 
-void AudioManager::playOneShot(const std::string& filepath, float volume) {
+unsigned int AudioManager::playOneShot(const std::string& filepath, float volume) {
     if (!m_initialized) {
         std::cerr << "[AudioManager] No se puede reproducir sin inicializar el motor: " << filepath << "\n";
-        return;
+        return 0;
     }
     if (!std::isfinite(volume) || volume < 0.0f) {
         std::cerr << "[AudioManager] Volumen no valido para " << filepath << ".\n";
-        return;
+        return 0;
     }
     if (!std::filesystem::exists(filepath)) {
         std::cerr << "[AudioManager] Archivo no encontrado: " << filepath << "\n";
-        return;
+        return 0;
     }
 
     for (auto sound = m_oneShotSounds.begin(); sound != m_oneShotSounds.end();) {
-        if (ma_sound_at_end(*sound)) {
-            ma_sound_uninit(*sound);
-            delete *sound;
+        if (ma_sound_at_end(sound->sound)) {
+            ma_sound_uninit(sound->sound);
+            delete sound->sound;
             sound = m_oneShotSounds.erase(sound);
         } else {
             ++sound;
@@ -98,7 +98,7 @@ void AudioManager::playOneShot(const std::string& filepath, float volume) {
     if (initResult != MA_SUCCESS) {
         delete sound;
         std::cerr << "[AudioManager] Error al cargar " << filepath << " (codigo " << initResult << ").\n";
-        return;
+        return 0;
     }
 
     ma_sound_set_volume(sound, volume);
@@ -107,9 +107,23 @@ void AudioManager::playOneShot(const std::string& filepath, float volume) {
         ma_sound_uninit(sound);
         delete sound;
         std::cerr << "[AudioManager] Error al reproducir " << filepath << " (codigo " << startResult << ").\n";
-        return;
+        return 0;
     }
-    m_oneShotSounds.push_back(sound);
+    const unsigned int id = ++m_lastPlayback;
+    m_oneShotSounds.push_back({ sound, id });
+    if (m_playbackListener) m_playbackListener(filepath, id, volume);
+    return id;
+}
+
+bool AudioManager::isPlaying(unsigned int playback) const {
+    for (const OneShot& oneShot : m_oneShotSounds)
+        if (oneShot.id == playback)
+            return ma_sound_is_playing(oneShot.sound) && !ma_sound_at_end(oneShot.sound);
+    return false;
+}
+
+void AudioManager::setPlaybackListener(std::function<void(const std::string&, unsigned int, float)> listener) {
+    m_playbackListener = std::move(listener);
 }
 
 bool AudioManager::loadSound(const std::string& id, const std::string& filepath, bool loop, bool spatial) {

@@ -7,13 +7,18 @@
 #include "imgui_impl_opengl3.h"
 
 #include <algorithm>
+#include <cfloat>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
 
 #include "src/audio/AudioManager.h"
 #include "src/gameplay/player/FpsMovement.h"
 #include "src/physics/PhysicsScene.h"
+#include "src/gameplay/interaction/ThrowCharge.h"
 #include "src/ui/UiScale.h"
+#include "src/ui/Subtitles.h"
+#include "src/rendering/RetroSettings.h"
 
 namespace runtimeui
 {
@@ -51,31 +56,40 @@ void DrawStaminaBar(const HudContext& context)
 void DrawInteractionHud(const HudContext& context)
 {
 	const ImGuiIO& io = ImGui::GetIO();
-	if (!context.isFpsInputActive() ||
-		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f)
+	if (!context.isDesktopHudVisible || !context.isDesktopHudVisible() ||
+		io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f ||
+		io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
 		return;
 
 	const float escala = uiScale;
 	ImDrawList* dl = ImGui::GetForegroundDrawList();
-	if (context.throwCharging)
+	const ImVec2 centro(io.DisplaySize.x * 0.5f, io.DisplaySize.y * 0.5f);
+	const float lado = 5.0f * escala;
+	const bool agarrado = context.playerHoldsObject && context.playerHoldsObject();
+	// Contorno oscuro de 1 unidad: el cuadrado sigue visible sobre fondos claros.
+	const float medio = lado * 0.5f;
+	dl->AddRectFilled(ImVec2(centro.x - medio - escala, centro.y - medio - escala),
+		ImVec2(centro.x + medio + escala, centro.y + medio + escala), IM_COL32(0, 0, 0, 170));
+	dl->AddRectFilled(ImVec2(centro.x - medio, centro.y - medio),
+		ImVec2(centro.x + medio, centro.y + medio), IM_COL32(255, 250, 235, 245));
+	if (agarrado && context.throwCharging)
 	{
-		const float ancho = 140.0f * escala, alto = 8.0f * escala;
-		const float x = (io.DisplaySize.x - ancho) * 0.5f;
-		const float y = io.DisplaySize.y * 0.5f + 36.0f * escala;
-		dl->AddRectFilled(ImVec2(x - 2.0f * escala, y - 2.0f * escala), ImVec2(x + ancho + 2.0f * escala, y + alto + 2.0f * escala),
-			IM_COL32(0, 0, 0, 210), 3.0f * escala);
-		dl->AddRectFilled(ImVec2(x, y), ImVec2(x + ancho * std::clamp(
-			context.throwChargeSeconds / context.maxThrowChargeSeconds, 0.0f, 1.0f), y + alto),
-			IM_COL32(235, 220, 150, 245), 2.0f);
+		constexpr float pi = 3.14159265358979f;
+		const float fraccion = game::interaction::ThrowChargeFraction(context.throwChargeSeconds);
+		const bool completa = fraccion >= 1.0f;
+		dl->PathArcTo(centro, 21.0f * escala, -pi * 0.5f, -pi * 0.5f + 2.0f * pi * fraccion, 48);
+		dl->PathStroke(completa ? IM_COL32(255, 196, 90, 255) : IM_COL32(240, 220, 155, 245),
+			ImDrawFlags_None, (completa ? 3.0f : 2.0f) * escala);
 	}
 
-	if (io.WantTextInput || io.WantCaptureKeyboard || io.WantCaptureMouse)
-		return;
-	if (context.physicsScene->HasGrab())
+	if (agarrado)
 	{
-		const ImVec2 pos(io.DisplaySize.x * 0.5f + 16.0f * escala, io.DisplaySize.y * 0.5f + 31.0f * escala);
-		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), "Mantener E carga el lanzamiento; soltar E lanza");
-		dl->AddText(pos, IM_COL32(245, 248, 240, 255), "Mantener E carga el lanzamiento; soltar E lanza");
+		// Abajo a la derecha, lejos de la mira y de los subtitulos.
+		const char* ayuda = "Mantener E carga el lanzamiento; soltar E lanza";
+		const ImVec2 medida = ImGui::CalcTextSize(ayuda);
+		const ImVec2 pos(io.DisplaySize.x - medida.x - 18.0f * escala, io.DisplaySize.y - medida.y - 14.0f * escala);
+		dl->AddText(ImVec2(pos.x + escala, pos.y + escala), IM_COL32(0, 0, 0, 230), ayuda);
+		dl->AddText(pos, IM_COL32(245, 248, 240, 255), ayuda);
 		return;
 	}
 	const char* prompt = context.interactionPrompt();
@@ -249,6 +263,30 @@ void DrawMenus(const MenuContext& context)
 }
 }
 
+// Franja inferior central: amarillo calido sobre negro al 70 %, con la fuente pixelada de ImGui.
+static void DrawSubtitles(const SubtitleContext& context)
+{
+	// Se consulta siempre para olvidar lo que ya no suena aunque esten desactivados.
+	const subtitles::Line* linea = context.manager.Current(context.isPlaying, context.settings.soundCaptions);
+	if (!linea || !context.settings.subtitles) return;
+	const ImGuiIO& io = ImGui::GetIO();
+	if (io.DisplaySize.x <= 0.0f || io.DisplaySize.y <= 0.0f) return;
+
+	const std::string texto = linea->speaker.empty() ? linea->text : linea->speaker + ": " + linea->text;
+	ImFont* fuente = ImGui::GetFont();
+	// 26 px a 1080p; ProggyClean mide 13 px, asi que el doble mantiene los pixeles nitidos.
+	const float tamano = std::max(13.0f, 26.0f * io.DisplaySize.y / 1080.0f);
+	const float ajuste = io.DisplaySize.x * 0.7f;
+	const ImVec2 medida = fuente->CalcTextSizeA(tamano, FLT_MAX, ajuste, texto.c_str());
+	const ImVec2 pos(std::floor((io.DisplaySize.x - medida.x) * 0.5f),
+		std::floor(io.DisplaySize.y * 0.90f - medida.y));
+	const float margen = tamano * 0.35f;
+	ImDrawList* dl = ImGui::GetForegroundDrawList();
+	dl->AddRectFilled(ImVec2(pos.x - margen, pos.y - margen * 0.5f),
+		ImVec2(pos.x + medida.x + margen, pos.y + medida.y + margen * 0.5f), IM_COL32(0, 0, 0, 178));
+	dl->AddText(fuente, tamano, pos, IM_COL32(0xF0, 0xCA, 0x65, 255), texto.c_str(), nullptr, ajuste);
+}
+
 void DrawRuntimeUiFrame(const FrameContext& context)
 {
 	static ImGuiStyle estiloUIBase;
@@ -280,6 +318,10 @@ void DrawRuntimeUiFrame(const FrameContext& context)
 		DrawStaminaBar(context.hud);
 		DrawInteractionHud(context.hud);
 	}
+
+	// El menu principal corta la partida: no se arrastran subtitulos a la siguiente.
+	if (context.menu.state == GAME_STATE_MAIN_MENU) context.subtitle.manager.Clear();
+	else DrawSubtitles(context.subtitle);
 
 	DrawMenus(context.menu);
 

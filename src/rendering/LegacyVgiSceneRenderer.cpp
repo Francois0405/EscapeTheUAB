@@ -18,6 +18,57 @@
 #include <chrono>
 #include <cmath>
 #include <iostream>
+#include <limits>
+
+namespace
+{
+	// Indice del objeto que sostiene ESTE jugador (host/offline por Bullet, cliente por el host).
+	int LocalHeldObject(const SceneRenderContext& ctx)
+	{
+		const int local = ctx.physicsScene->GrabbedObject();
+		if (local >= 0 || !ctx.networkGame.IsClient()) return local;
+		const uint32_t id = ctx.networkGame.DynamicObjectOfPeer(ctx.networkGame.LocalPeerId());
+		for (std::size_t i = 0; id != 0 && i < ctx.sceneObjects.size(); ++i)
+			if (netgame::HashId(ctx.sceneObjects[i].id) == id) return static_cast<int>(i);
+		return -1;
+	}
+
+	// Presentacion en primera persona: abajo a la derecha, anclada a la camara y reducida si es grande.
+	// Solo cambia el dibujo local; la pose fisica, la red y el lanzamiento no se tocan.
+	glm::mat4 HeldViewModelMatrix(const SceneObject& obj, const Vector3D& minimo, const Vector3D& maximo,
+		const glm::mat4& view, const glm::mat4& projection)
+	{
+		// El juego usa Z arriba; en coordenadas de vista arriba es Y. Se conserva el giro de autor.
+		glm::mat4 giro = glm::rotate(glm::mat4(1.0f), glm::radians(-25.0f), glm::vec3(0, 1, 0));
+		giro = glm::rotate(giro, glm::radians(-90.0f), glm::vec3(1, 0, 0));
+		giro = glm::rotate(giro, glm::radians(obj.eulerRotation.z), glm::vec3(0, 0, 1));
+		giro = glm::rotate(giro, glm::radians(obj.eulerRotation.y), glm::vec3(0, 1, 0));
+		giro = glm::rotate(giro, glm::radians(obj.eulerRotation.x), glm::vec3(1, 0, 0));
+		const glm::mat4 orientado = glm::scale(giro, obj.escala);
+
+		glm::vec3 lo(std::numeric_limits<float>::max()), hi(-std::numeric_limits<float>::max());
+		for (int i = 0; i < 8; ++i)
+		{
+			const glm::vec3 esquina((i & 1) ? maximo.fX : minimo.fX, (i & 2) ? maximo.fY : minimo.fY,
+				(i & 4) ? maximo.fZ : minimo.fZ);
+			const glm::vec3 p = glm::vec3(orientado * glm::vec4(esquina, 1.0f));
+			lo = glm::min(lo, p);
+			hi = glm::max(hi, p);
+		}
+		const glm::vec3 tamano = hi - lo;
+		const float mayor = std::max({ tamano.x, tamano.y, tamano.z, 1.0e-4f });
+
+		constexpr float profundidad = 0.7f;
+		const float medioAncho = profundidad / projection[0][0];
+		const float medioAlto = profundidad / projection[1][1];
+		const float escala = std::min(1.0f, 0.45f * medioAlto / mayor);   // como mucho ~22 % del alto
+		const glm::vec3 destino(0.55f * medioAncho, -0.55f * medioAlto, -profundidad);
+
+		return glm::inverse(view) * glm::translate(glm::mat4(1.0f), destino) *
+			glm::scale(glm::mat4(1.0f), glm::vec3(escala)) *
+			glm::translate(glm::mat4(1.0f), -0.5f * (lo + hi)) * orientado;
+	}
+}
 
 void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 {
@@ -78,6 +129,9 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 	// Dibuix Coordenades Món i Reixes.
 	dibuixa_Eixos(ctx.eixos_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid, ctx.ProjectionMatrix, ctx.ViewMatrix);
 
+	const int sostenido = ctx.showHeldViewModel && ctx.fpsModeActive() && !ctx.sceneEditor.IsEnabled()
+		? LocalHeldObject(ctx) : -1;
+
 	// Dibuja cada objeto de la habitacion con su transformacion.
 	if (!ctx.sceneObjects.empty())
 	{
@@ -111,7 +165,17 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 			}
 			if (matrices.empty()) matrices.push_back(ctx.sceneEditor.IsEnabled()
 				? physics::ObjectMatrix(obj) : ctx.physicsScene->VisualMatrixOf(static_cast<int>(i), obj));
-			if (ctx.optimizedRendering)
+			bool enMano = false;
+			if (static_cast<int>(i) == sostenido)
+			{
+				Vector3D minimo{}, maximo{};
+				if (it->second->GetLocalBounds(minimo, maximo))
+				{
+					matrices.assign(1, HeldViewModelMatrix(obj, minimo, maximo, ctx.ViewMatrix, ctx.ProjectionMatrix));
+					enMano = true;
+				}
+			}
+			if (ctx.optimizedRendering && !enMano)
 			{
 				Vector3D minimo{}, maximo{};
 				if (it->second->GetLocalBounds(minimo, maximo))
@@ -145,6 +209,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 				? (obj.luz.encendida && ctx.labLampsEnabled ? 1.0f : 0.0f) : 1.0f;
 			glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), emisionLuminaria);
 
+			if (enMano) glDepthRange(0.0, 0.05);   // delante de las paredes cercanas, sin perder auto-oclusion
 			for (const glm::mat4& matriz : matrices)
 				dibuixa_EscenaGL(
 					ctx.shader_programID, ctx.eixos, ctx.eixos_Id, ctx.grid, ctx.hgrid,
@@ -153,6 +218,7 @@ void RenderLegacyVgiScene(const SceneRenderContext& ctx)
 					ctx.npts_T, ctx.PC_t, ctx.pas_CS, ctx.sw_Punts_Control, ctx.dibuixa_TriedreFrenet,
 					it->second.get(), matriz
 				);
+			if (enMano) glDepthRange(0.0, 1.0);
 			it->second->SetInstanceMaterialOverride(0, -1.0f);
 			glUniform1f(glcache::UniformLocation(ctx.shader_programID, "uLampEmissionScale"), 1.0f);
 			glUniform1i(glcache::UniformLocation(ctx.shader_programID, "uWorldTiling"), GL_FALSE);

@@ -18,8 +18,37 @@
 #include "src/app/render/SceneLighting.h"
 #include "src/app/ui/UiFrame.h"
 #include "src/rendering/Ps1Framebuffer.h"
+#include "src/rendering/RetroPostFX.h"
 
-void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
+namespace
+{
+	// Filtrado nearest solo en las texturas de material del entorno: las incrustadas en los OBJ
+	// (carteles, pistas) y las de la interfaz conservan el filtrado original. Es estado global de la
+	// textura, asi que el editor y OpenXR necesitan que se restaure antes de dibujar.
+	void applyEnvironmentTextureFilter()
+	{
+		static bool aplicado = false;
+		static std::size_t cantidad = 0;
+		const bool nearest = retroSettings.preset != retro::Preset::Original && retroSettings.nearestTextures &&
+			!sceneEditor.IsEnabled() && !openXrManager.IsSessionRunning();
+		if (nearest == aplicado && (!nearest || cantidad == sceneMaterialTextures.size())) return;
+		GLint anterior = 0;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &anterior);
+		for (const auto& entrada : sceneMaterialTextures)
+		{
+			glBindTexture(GL_TEXTURE_2D, entrada.second);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, nearest ? GL_NEAREST : GL_LINEAR);
+			// Los mipmaps se conservan para limitar el aliasing a distancia.
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER,
+				nearest ? GL_NEAREST_MIPMAP_LINEAR : GL_LINEAR_MIPMAP_LINEAR);
+		}
+		glBindTexture(GL_TEXTURE_2D, static_cast<GLuint>(anterior));
+		aplicado = nearest;
+		cantidad = sceneMaterialTextures.size();
+	}
+}
+
+void RunMainLoop(Ps1Framebuffer& ps1, float previous, const RetroPostFX& postFx)
 {
 // Entorn VGI. Timer: Variables
 	float time = elapsedTime;
@@ -194,6 +223,7 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 				vrEnMarchaAntes = vrEnMarcha;
 			}
 
+			applyEnvironmentTextureFilter();
 			const bool vrDibujado = !sceneEditor.IsEnabled() && vrEnMarcha && drawVrScene();
 			if (!vrDibujado)
 			{
@@ -202,32 +232,40 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 				glfwGetFramebufferSize(window, &winW, &winH);
 
 				// EDIT: resolución nativa.
-				// PLAY: resolución PS1 (320x240).
+				// PLAY: resolución interna del preset retro (Original = 960x540).
 				const bool modoEditor = sceneEditor.IsEnabled();
+				const retro::Size interna = retro::InternalSize(retroSettings, winW, winH);
+				if (!modoEditor)
+					ps1.Resize(interna.width, interna.height);
 
 				glBindFramebuffer(
 					GL_FRAMEBUFFER,
 					modoEditor ? 0 : ps1.fbo
 				);
 
-				w = modoEditor ? winW : Ps1Framebuffer::kWidth;
-				h = modoEditor ? winH : Ps1Framebuffer::kHeight;
+				w = modoEditor ? winW : ps1.width;
+				h = modoEditor ? winH : ps1.height;
 
 				glViewport(0, 0, w, h);
 				OnPaint(window);
 
-				// Solo aplicar el escalado pixelado durante PLAY.
+				// Solo escalar durante PLAY. Original (o un shader no disponible) usa el blit de siempre.
 				if (!modoEditor)
 				{
-					glBindFramebuffer(GL_READ_FRAMEBUFFER, ps1.fbo);
-					glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+					if (retroSettings.preset != retro::Preset::Original && postFx.Ready())
+						postFx.Draw(ps1.color, { ps1.width, ps1.height }, winW, winH, retroSettings);
+					else
+					{
+						glBindFramebuffer(GL_READ_FRAMEBUFFER, ps1.fbo);
+						glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
 
-					glBlitFramebuffer(
-						0, 0, Ps1Framebuffer::kWidth, Ps1Framebuffer::kHeight,
-						0, 0, winW, winH,
-						GL_COLOR_BUFFER_BIT,
-						GL_NEAREST
-					);
+						glBlitFramebuffer(
+							0, 0, ps1.width, ps1.height,
+							0, 0, winW, winH,
+							GL_COLOR_BUFFER_BIT,
+							GL_NEAREST
+						);
+					}
 				}
 
 				// Restaurar framebuffer y dimensiones reales.
