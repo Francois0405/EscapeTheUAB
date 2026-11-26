@@ -211,6 +211,12 @@ namespace editor
 					(*entrada)["scale"] = VectorJSON(objeto.escala);
 					if (objeto.permitirPenetracionArquitectura) (*entrada)["allowArchitecturePenetration"] = true;
 					else entrada->erase("allowArchitecturePenetration");
+					if (objeto.puzzle.tipo == physics::PuzzleType::SlidingPuzzle) {
+						(*entrada)["puzzle"] = {{"type", "slidingPuzzle"}};
+					}
+					else {
+						entrada->erase("puzzle");
+					}
 					if (objeto.luz.presente)
 					{
 						json luz = { {"enabled", objeto.luz.encendida}, {"offset", VectorJSON(objeto.luz.desplazamiento)},
@@ -322,6 +328,9 @@ namespace editor
 					{"position", VectorJSON(objeto.position)}, {"rotation", VectorJSON(objeto.eulerRotation)},
 					{"scale", VectorJSON(objeto.escala)}
 				};
+				if (objeto.puzzle.tipo == physics::PuzzleType::SlidingPuzzle) {
+					nueva["puzzle"] = { {"type", "slidingPuzzle"} };
+				}
 				if (objeto.permitirPenetracionArquitectura) nueva["allowArchitecturePenetration"] = true;
 				if (objeto.luz.presente)
 				{

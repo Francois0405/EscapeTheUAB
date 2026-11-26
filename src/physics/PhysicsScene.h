@@ -108,13 +108,16 @@ namespace physics
 		bool HasGrab() const;
 		// Índice (en la lista de la escena) del objeto que se sujeta, o -1.
 		int GrabbedObject() const;
+		// lo de puzzle
+		int IndexObjectOfBody(IdCuerpo cuerpo) const;
+		
 		bool HoldRemoteDynamic(int objectIndex, const glm::vec3& origen, const glm::vec3& direccion);
 		void UpdateRemoteGrab(int objectIndex, const glm::vec3& destino);
 		bool ReleaseRemoteDynamic(int objectIndex, const glm::vec3& speed);
 		bool HeldDynamicObject(int objectIndex) const;
 		bool ApplyReplicatedState(const DynamicState& estado);
 		void CaptureDynamicStates(std::vector<DynamicState>& salida) const;
-
+		
 		int BodyCount() const { return static_cast<int>(todos.size()); }
 		int DynamicCount() const { return static_cast<int>(dinamicos.size()); }
 
@@ -139,7 +142,12 @@ namespace physics
 			glm::vec3 halfExtents{ 0.5f };
 			glm::vec3 desplazamiento{ 0.0f };
 		};
-		
+		// asocia con idcuerpo
+		struct ObjectAssociation {
+			int indiceObjeto = -1;
+			IdCuerpo cuerpo = CuerpoInvalido;
+		};
+
 		void PlaceBox(const CollisionEntry& caja, const glb::AnimatedObject& objeto, glm::vec3& centro,
 			glm::quat& eulerRotation, glm::vec3& mitad) const;
 
@@ -147,6 +155,7 @@ namespace physics
 		std::vector<IdCuerpo> todos;          // todo lo que hay que quitar en Vaciar()
 		std::vector<DynamicEntry> dinamicos;
 		std::vector<CollisionEntry> colisionesNodo;
+		std::vector<ObjectAssociation> asociacionesObjetos;
 		bool physicsAuthority = true;
 	};
 }

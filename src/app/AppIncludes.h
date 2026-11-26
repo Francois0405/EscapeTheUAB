@@ -34,6 +34,7 @@
 #include "src/gameplay/hirity/HiritiRuntime.h"
 #include "src/gameplay/interaction/InteractionRuntime.h"
 #include "src/gameplay/hirity/HiritiAudioTimer.h"
+#include "src/gameplay/slidingPuzzle/SlidingPuzzleObj.h"
 #include "src/networking/replication/NetGame.h"
 #include "src/networking/replication/NetAdapters.h"
 #include "src/networking/replication/NetAvatar.h"

@@ -38,7 +38,7 @@ namespace physics
 	//   Cinematico : lo movemos NOSOTROS cada fotograma (p. ej. la hoja de una puerta animada);
 	//                empuja a los dinámicos pero nada le empuja a él.
 	enum class BodyType { Static, Dynamic, Kinematic, Bouncer };
-
+	enum class PuzzleType { None, SlidingPuzzle};
 	constexpr bool IsDynamicBody(BodyType tipo)
 	{
 		return tipo == BodyType::Dynamic || tipo == BodyType::Bouncer;

@@ -22,6 +22,11 @@ struct ScenePhysics
     float masa = 0.0f;                                      // "mass" en kg (solo dinámicos)
 };
 
+// xd
+struct ScenePuzzle {
+    physics::PuzzleType tipo = physics::PuzzleType::None;
+};
+
 // Fuente de luz ligada a la transformacion de una instancia OBJ.
 // El motor limita estas fuentes a los slots disponibles del shader Phong.
 struct SceneLight
@@ -87,7 +92,9 @@ struct SceneObject
     glm::vec3 eulerRotation;
     glm::vec3 escala;
 
+    ScenePuzzle puzzle;
     ScenePhysics fisica;   // opcional: sin "physics" en el JSON queda con presente = false
+    
     SceneLight luz;         // opcional: fuente Phong atada al objeto, sin colision extra
     SceneMaterial material; // opcional: material configurable por instancia
     SceneWall pared;       // opcional: definición lógica con aperturas, no altera el OBJ compartido

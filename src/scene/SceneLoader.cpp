@@ -416,6 +416,39 @@ namespace
         }
         return true;
     }
+
+    // El campo puzzle es opcional 
+    bool leerPuzzle(const json& entrada, ScenePuzzle& puzzle, const std::string& contexto, std::string& error) { 
+        if (!entrada.contains("puzzle")) return true;
+        const json& datos = entrada["puzzle"];
+        const std::string ctx = contexto + ".puzzle";
+        if (!datos.is_object()) {
+            error = ctx + " debe ser un objeto JSON.";
+            return false;
+        }
+        if (!soloClavesConocidas(datos, { "type" }, ctx, error)) {
+            return false;
+        }
+        if (!datos.contains("type") || !datos["type"].is_string()) {
+            error = ctx + " necesita el campo 'type' de tipo texto.";
+            return false;
+        }
+
+        const std::string tipo = datos["type"].get<std::string>();
+
+        if (tipo == "none") {
+            puzzle.tipo = physics::PuzzleType::None;
+        }
+        else if (tipo == "slidingPuzzle") {
+            puzzle.tipo = physics::PuzzleType::SlidingPuzzle;
+        }
+        else {
+            error = ctx + ".type debe ser \"none\" o \"slidingPuzzle\".";
+            return false;
+        }
+
+        return true;
+    }
 }
 
 bool LoadSceneJson(const std::filesystem::path& ruta,
@@ -569,8 +602,10 @@ bool LoadSceneDataJson(const std::filesystem::path& ruta, SceneData& datosSalida
                     !leerVector3(entrada["scale"], objeto.escala, contexto + ".scale", error))
                     return false;
 
-                if (!leerFisica(entrada, objeto.fisica, contexto, error) || !leerLuz(entrada, objeto.luz, contexto, error) ||
-                    !leerMaterial(entrada, objeto.material, ruta.parent_path(), contexto, error)) return false;
+                if (!leerFisica(entrada, objeto.fisica, contexto, error) ||
+                    !leerLuz(entrada, objeto.luz, contexto, error) ||
+                    !leerMaterial(entrada, objeto.material, ruta.parent_path(), contexto, error) ||
+                    !leerPuzzle(entrada, objeto.puzzle, contexto, error)) return false;
 
                 if (entrada.contains("wall"))
                 {

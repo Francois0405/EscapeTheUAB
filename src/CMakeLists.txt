@@ -68,6 +68,8 @@ set(ENTORNVGI_SOURCES
 	${REPO_ROOT}/src/gameplay/hirity/HiritiRuntime.cpp
 	${REPO_ROOT}/src/gameplay/interaction/InteractionRuntime.cpp
 	${REPO_ROOT}/src/gameplay/player/PlayerRuntime.cpp
+	${REPO_ROOT}/src/gameplay/slidingPuzzle/SlidingPuzzle.cpp
+	${REPO_ROOT}/src/gameplay/slidingPuzzle/SlidingPuzzleObj.cpp
 	${REPO_ROOT}/src/networking/session/NetworkSessionRuntime.cpp
 	${REPO_ROOT}/src/scene/escena.cpp
 	${REPO_ROOT}/src/rendering/glut_geometry.cpp
