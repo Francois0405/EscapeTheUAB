@@ -89,7 +89,7 @@ void gazeOriginAndDirection(glm::vec3& origen, glm::vec3& direccion)
 bool spawnPhysicsPlayer() { return gameplay::player::createPhysicsPlayer(playerBindings()); }
 
 // Convierte las teclas WASD en una velocidad horizontal DEL MUNDO (sin tocar la posición).
-void moveFirstPersonPlayer(GLFWwindow* window, double velocidadJugador) { gameplay::player::moveFpsPlayer(playerBindings(), window, velocidadJugador); }
+void moveFirstPersonPlayer(GLFWwindow* window, double velocidadJugador,double stickX = 0.0, double stickY = 0.0){gameplay::player::moveFpsPlayer(playerBindings(), window, velocidadJugador, stickX, stickY);}
 
 // Después de simular: la cámara va a donde está la cápsula (conservando hacia dónde mira).
 // Si NO estamos en modo FPS (cámaras de depuración), ocurre lo contrario: la cápsula sigue a la

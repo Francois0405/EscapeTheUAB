@@ -99,7 +99,7 @@ namespace gameplay::player
 		return true;
 	}
 
-	void moveFpsPlayer(PlayerContext& context, GLFWwindow* window, double speed)
+	void moveFpsPlayer(PlayerContext& context, GLFWwindow* window, double speed, double stickX = 0.0, double stickY = 0.0)
 	{
 		const double dx = context.lookAt[0] - context.cameraOrigin.x;
 		const double dy = context.lookAt[1] - context.cameraOrigin.y;
@@ -108,18 +108,31 @@ namespace gameplay::player
 
 		const double forwardX = dx / length;
 		const double forwardY = dy / length;
-		double moveX = 0.0;
-		double moveY = 0.0;
+		// Vector derecha en el plano XY coherente con W/S/A/D de tu función
+		const double rightX = forwardY;
+		const double rightY = -forwardX;
 
-		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) { moveX += forwardX; moveY += forwardY; }
-		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) { moveX -= forwardX; moveY -= forwardY; }
-		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) { moveX += forwardY; moveY -= forwardX; }
-		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) { moveX -= forwardY; moveY += forwardX; }
+		double inputForward = 0.0;
+		double inputRight = 0.0;
+
+		if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) inputForward += 1.0;
+		if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) inputForward -= 1.0;
+		if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) inputRight += 1.0;
+		if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) inputRight -= 1.0;
+
+		// Suma el stick del mando (aplicando zona muerta en tu lector de OpenXR)
+		inputForward += stickY;
+		inputRight += stickX;
+
+		const double moveX = forwardX * inputForward + rightX * inputRight;
+		const double moveY = forwardY * inputForward + rightY * inputRight;
 
 		const double distance = sqrt(moveX * moveX + moveY * moveY);
 		if (distance == 0.0) return;
-		context.physics.SetPlayerVelocity(glm::vec3(moveX / distance * speed,
-			moveY / distance * speed, 0.0));
+
+		// Normaliza solo si supera magnitud 1.0 para permitir caminar suave a medio stick
+		const double scale = (distance > 1.0) ? (speed / distance) : speed;
+		context.physics.SetPlayerVelocity(glm::vec3(moveX * scale, moveY * scale, 0.0));
 	}
 
 	void synchronizePlayerAndCamera(PlayerContext& context)

@@ -60,18 +60,26 @@ void RunMainLoop(const Ps1Framebuffer& ps1, float previous)
 			physicsWorld.UpdatePlayerCrouch(fpsModeActive() && ctrlPulsado, deltaPostura);
 
 			// Movimiento WASD
+			// Movimiento WASD + OpenXR Thumbstick
 			physicsWorld.SetPlayerVelocity(glm::vec3(0.0f));
 			{
+				float stickX = 0.0f;
+				float stickY = 0.0f;
+				if (openXrManager.IsSessionRunning())
+					openXrManager.GetLeftThumbstick(stickX, stickY);
+
+				const bool vrMovePressed = (stickX * stickX + stickY * stickY) > 0.0001f;
+
 				fps::MovementInput entrada;
 				entrada.activo = !sceneEditor.IsEnabled() && fpsInputActive() && physicsWorld.HasPlayerBody();
-				entrada.wantsToMove = entrada.activo && movementKeyPressed(window);
+				entrada.wantsToMove = entrada.activo && (movementKeyPressed(window) || vrMovePressed);
 				entrada.sprintRequested = glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS ||
 					glfwGetKey(window, GLFW_KEY_RIGHT_SHIFT) == GLFW_PRESS;
 				entrada.enSuelo = physicsWorld.IsPlayerGrounded();
 				entrada.crouchRatio = physicsWorld.CrouchFraction();
 				const float speed = playerMovement.Update(static_cast<float>(delta), entrada);
 				if (entrada.activo)
-					moveFirstPersonPlayer(window, speed);
+					moveFirstPersonPlayer(window, speed, stickX, stickY);
 				staminaBar.Update(static_cast<float>(delta), playerMovement.StaminaFraction(), playerMovement.IsSprinting());
 			}
 

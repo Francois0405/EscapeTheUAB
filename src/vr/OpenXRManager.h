@@ -126,6 +126,7 @@ namespace vr
 		bool LeftTriggerJustPressed() const;
 
 		bool ControllerAimPose(int mano, XrPose& poseOut) const;
+		void GetLeftThumbstick(float& outX, float& outY, float deadzone = 0.15f) const;
 	private:
 		struct Impl;   // oculta los tipos de OpenXR: el resto del juego no incluye sus cabeceras
 		std::unique_ptr<Impl> impl;

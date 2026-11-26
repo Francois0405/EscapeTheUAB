@@ -895,6 +895,40 @@ namespace vr
 		return true;
 	}
 
+	// En OpenXRManager.cpp (dentro de vr::OpenXrManager::GetLeftThumbstick)
+	void OpenXrManager::GetLeftThumbstick(float& outX, float& outY, float deadzone) const
+	{
+		outX = 0.0f;
+		outY = 0.0f;
+
+		if (!impl || !IsSessionRunning() || impl->session == XR_NULL_HANDLE ||
+			impl->leftThumbstickAction == XR_NULL_HANDLE)
+			return;
+
+		XrActionStateGetInfo getInfo{XR_TYPE_ACTION_STATE_GET_INFO};
+		getInfo.action = impl->leftThumbstickAction;
+		// Si la acción se creó sin subactionPath específico, usa XR_NULL_HANDLE;
+		// si usa subaction paths, pasa impl->handPaths[0] (/user/hand/left).
+		getInfo.subactionPath = XR_NULL_HANDLE;
+
+		XrActionStateVector2f state{XR_TYPE_ACTION_STATE_VECTOR2F};
+		if (XR_FAILED(xrGetActionStateVector2f(impl->session, &getInfo, &state)) || !state.isActive)
+			return;
+
+		const float x = state.currentState.x;
+		const float y = state.currentState.y;
+		const float mag = std::sqrt(x * x + y * y);
+		if (mag <= deadzone)
+			return;
+
+		const float clampedMag = std::min(mag, 1.0f);
+		const float scaledMag = (clampedMag - deadzone) / (1.0f - deadzone);
+		const float invMag = scaledMag / mag;
+
+		outX = x * invMag;
+		outY = y * invMag;
+	}
+
 #else   // ---- Sin OpenXR en esta compilación: la clase existe, pero no hace nada ----
 
 	struct OpenXrManager::Impl {};
