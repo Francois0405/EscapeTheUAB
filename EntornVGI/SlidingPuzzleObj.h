@@ -32,7 +32,7 @@ private:
     glm::vec3 m_origen{0.0f};
     glm::vec3 m_ejeColumnas{1.0f, 0.0f, 0.0f};
     glm::vec3 m_ejeFilas{0.0f, 1.0f, 0.0f};
-    float m_separacion = 0.60f;
+    float m_separacion = 0.51f;
     bool localizarPiezas();
     bool localizarTablero();
     glm::vec3 centroFisicoDePieza(
