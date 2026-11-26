@@ -9,4 +9,6 @@
 - El editor y OpenXR no usan el framebuffer retro; no añadir efectos a esas rutas sin validarlos.
 - No hacer commits, push, merges ni borrar ramas o recursos sin autorización expresa.
 
+- `ENTORNVGI_RETRO_CAPTURE=<carpeta>` recorre los presets, guarda capturas y métricas y cierra el juego.
+
 Estado del trabajo visual: `docs/midnight-hoops/TASKS.md` y `docs/midnight-hoops/VALIDATION.md`.
