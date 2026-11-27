@@ -1,4 +1,4 @@
-#include "SlidingPuzzle.h"
+#include "src/gameplay/slidingPuzzle/slidingPuzzle.h"
 #include <cstdlib>
 
 bool SlidingPuzzle::puedeMover(int fila, int columna) const {

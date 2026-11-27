@@ -1,8 +1,8 @@
 #pragma once
 
-#include "SlidingPuzzle.h"
-#include "SceneLoader.h"
-#include "PhysicsScene.h"
+#include "src/gameplay/slidingPuzzle/SlidingPuzzle.h"
+#include "src/scene/SceneLoader.h"
+#include "src/physics/PhysicsScene.h"
 
 #include <glm/glm.hpp>
 #include <vector>

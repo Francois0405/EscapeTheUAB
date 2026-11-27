@@ -14,7 +14,7 @@
 const game::interaction::InteractionContext& interactionBindings()
 {
 	static const game::interaction::InteractionContext contexto{
-		sceneObjects, physicsScene, physicsWorld, networkGame, animatedObjects, networkDoors,
+		sceneObjects, slidingPuzzle.get(), physicsScene, physicsWorld, networkGame, animatedObjects, networkDoors,
 		currentInteractionTarget, throwChargeActive, throwChargeTime, showDebugPanels,
 		[] { return fpsInputActive(); },
 		[] { return sceneEditor.IsEnabled(); },

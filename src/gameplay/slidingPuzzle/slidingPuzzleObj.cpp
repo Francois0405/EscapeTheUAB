@@ -1,4 +1,4 @@
-#include "SlidingPuzzleObj.h"
+#include "src/gameplay/slidingPuzzle/slidingPuzzleObj.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 

@@ -6,6 +6,7 @@
 // La API publica va en ingles; src/app enlaza cada miembro con su global en interactionBindings().
 #include "src/animation/GlbAnimatedObjects.h"
 #include "src/gameplay/interaction/ThrowCharge.h"
+#include "src/gameplay/slidingPuzzle/slidingPuzzleObj.h"
 #include "src/networking/replication/NetAdapters.h"
 #include "src/networking/replication/NetGame.h"
 #include "src/physics/PhysicsScene.h"
@@ -36,6 +37,8 @@ namespace game::interaction
 	{
 		// Estado prestado
 		const std::vector<SceneObject>& sceneObjects;
+		// Slid2ing
+		SlidingPuzzleObj* slidingPuzzle = nullptr;
 		// Referencias al unique_ptr: la carga de habitacion sustituye la escena fisica y las puertas.
 		std::unique_ptr<physics::PhysicsScene>& physicsScene;
 		const physics::PhysicsWorld& physicsWorld;

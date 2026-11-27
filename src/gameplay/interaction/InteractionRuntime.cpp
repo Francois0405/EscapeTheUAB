@@ -73,14 +73,14 @@ namespace game::interaction
 			if (networkGame.ToggleAnimatedObject(origenRed, direccionRed, context.clockSeconds())) return;
 		}
 
-		// if (objetivo.indiceDinamico >= 0 && objetivo.indiceDinamico < static_cast<int>(objetosEscena.size())) {
-		// 	const std::string& id = objetosEscena[objetivo.indiceDinamico].id;
-		// 	if (id.rfind("obj_pieza", 0) == 0) {
-		// 		if (puzzle) 
-		// 			puzzle->intentarMoverObjeto(objetivo.indiceDinamico);
-		// 		return;
-		// 	}
-		// }
+		if (objetivo.indiceDinamico >= 0 && objetivo.indiceDinamico < static_cast<int>(sceneObjects.size())) {
+			const std::string& id = sceneObjects[objetivo.indiceDinamico].id;
+			if (id.rfind("obj_pieza", 0) == 0) {
+				if (context.slidingPuzzle) 
+					context.slidingPuzzle->intentarMoverObjeto(objetivo.indiceDinamico);
+				return;
+			}
+		}
 
 		if (objetivo.accion == InteractionAction::PickUp)
 		{

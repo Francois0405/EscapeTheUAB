@@ -237,8 +237,8 @@ bool StartGame()
 	}
 	// Red solo si se pidio por linea de comandos (--host / --connect); por defecto sigue OFFLINE.
 	if (pendingNetworkConfig.rol != net::Role::Offline) startNetwork(pendingNetworkConfig);
-	puzzle = std::make_unique<SlidingPuzzleObj>(objetosEscena,*escenaFisica);
-	if (!puzzle->iniciar()) {
+	slidingPuzzle = std::make_unique<SlidingPuzzleObj>(sceneObjects,*physicsScene);
+	if (!slidingPuzzle->iniciar()) {
 		std::cerr << "Error al iniciar el sliding puzzle\n";
 	}
 	glfwSetWindowTitle(window, "EscapeTheUAB");

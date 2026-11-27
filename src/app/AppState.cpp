@@ -13,7 +13,7 @@
 std::vector<SceneObject> sceneObjects;
 
 std::unordered_map<std::string, std::unique_ptr<COBJModel>> roomModels;
-
+std::unique_ptr<SlidingPuzzleObj> slidingPuzzle;
 editor::SceneEditor sceneEditor;
 
 editor::SceneSerializer sceneSerializer;

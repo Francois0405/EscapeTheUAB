@@ -14,7 +14,7 @@
 
 extern std::vector<SceneObject> sceneObjects;
 extern std::unordered_map<std::string, std::unique_ptr<COBJModel>> roomModels;
-extern std::unique_ptr<SlidingPuzzleObj> puzzle;
+extern std::unique_ptr<SlidingPuzzleObj> slidingPuzzle;
 extern editor::SceneEditor sceneEditor;
 extern editor::SceneSerializer sceneSerializer;
 extern std::vector<SceneAnimatedObject> sceneAnimatedData;
