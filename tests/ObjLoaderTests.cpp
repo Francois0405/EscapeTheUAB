@@ -1,5 +1,6 @@
 #include "framework.h"
 #include "objLoader.h"
+#include "src/rendering/GlbDrawing.h"
 #include <SOIL2.h>
 
 #include <GL/glew.h>
@@ -763,6 +764,64 @@ int main()
 						<< static_cast<int>(emisionApagada[0]) << ", GL=" << emisionError << ".\n";
 					++failures;
 				}
+
+				// Animated GLB materials must not inherit emission from the previous OBJ.
+				glb::GlbModel animatedMaterial;
+				animatedMaterial.nodos.resize(1);
+				animatedMaterial.nodos[0].meshIndex = 0;
+				animatedMaterial.mallas.resize(1);
+				glb::GlbPrimitive doorPanel;
+				doorPanel.posiciones = {
+					{ -0.5f, -0.5f, 0.0f }, { 0.5f, -0.5f, 0.0f },
+					{ 0.5f, 0.5f, 0.0f }, { -0.5f, 0.5f, 0.0f }
+				};
+				doorPanel.normales.assign(4, glm::vec3(0.0f, 0.0f, 1.0f));
+				doorPanel.indices = { 0, 1, 2, 0, 2, 3 };
+				doorPanel.colorBase = glm::vec4(0.19f, 0.23f, 0.24f, 1.0f);
+				animatedMaterial.mallas[0].primitivas.push_back(std::move(doorPanel));
+				glb::UploadModelToGpu(animatedMaterial);
+				const glb::GlbPose animatedPose = glb::CreateRestPose(animatedMaterial);
+				glUseProgram(phong);
+				glViewport(0, 0, 64, 32);
+				glDisable(GL_DEPTH_TEST);
+				glDisable(GL_CULL_FACE);
+				glUniformMatrix4fv(loc("projectionMatrix"), 1, GL_FALSE, glm::value_ptr(glm::mat4(1.0f)));
+				const glm::mat4 glbView = glm::rotate(glm::mat4(1.0f), glm::radians(-90.0f), glm::vec3(1, 0, 0));
+				glUniformMatrix4fv(loc("viewMatrix"), 1, GL_FALSE, glm::value_ptr(glbView));
+				glUniform1i(loc("fixedLight"), GL_FALSE);
+				glUniform1i(loc("sw_material"), GL_TRUE);
+				glUniform4i(loc("sw_intensity"), GL_TRUE, GL_FALSE, GL_FALSE, GL_FALSE);
+				glUniform1i(loc("uMaterialEmission"), GL_TRUE);
+				glUniform4f(loc("material.emission"), 1.0f, 1.0f, 1.0f, 1.0f);
+				glUniform1i(loc("uLightingDebugMode"), 0);
+				glUniform4f(loc("LightModelAmbient"), 0.0f, 0.0f, 0.0f, 1.0f);
+				glUniform1i(loc("uOccluderCount"), 0);
+				glUniform1i(loc("uIndirectOccluderCount"), 0);
+				glUniform1f(loc("uIndirectIntensity"), 0.0f);
+				glUniform1f(loc("uIndirectAmbientBase"), 0.0f);
+				glUniform1f(loc("uSceneDirectScale"), 0.0f);
+				for (int light = 0; light < NUM_MAX_LLUMS; ++light)
+				{
+					const std::string lightEnabled = "LightSource[" + std::to_string(light) + "].sw_light";
+					glUniform1i(loc(lightEnabled.c_str()), GL_FALSE);
+				}
+				glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+				glClear(GL_COLOR_BUFFER_BIT);
+				glb::DrawGlbModel(animatedMaterial, animatedPose, phong, glm::mat4(1.0f),
+					glm::mat4(1.0f), false);
+				unsigned char animatedDoorPixel[4] = {};
+				glReadPixels(32, 16, 1, 1, GL_RGBA, GL_UNSIGNED_BYTE, animatedDoorPixel);
+				const GLenum animatedDoorError = glGetError();
+				if (animatedDoorError != GL_NO_ERROR || animatedDoorPixel[0] > 2 ||
+					animatedDoorPixel[1] > 2 || animatedDoorPixel[2] > 2)
+				{
+					std::cerr << "FALLO: el GLB hereda la emision del OBJ anterior: RGB="
+						<< static_cast<int>(animatedDoorPixel[0]) << ','
+						<< static_cast<int>(animatedDoorPixel[1]) << ','
+						<< static_cast<int>(animatedDoorPixel[2]) << ", GL=" << animatedDoorError << ".\n";
+					++failures;
+				}
+				glb::ReleaseModelFromGpu(animatedMaterial);
 
 				if (!renderizarPreviewCuadro(phong, cuadroBotanico)) ++failures;
                 glBindFramebuffer(GL_FRAMEBUFFER, 0);

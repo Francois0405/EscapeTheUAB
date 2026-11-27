@@ -74,6 +74,8 @@ namespace glb
 		void ActivarMaterial(unsigned int programa, const glm::vec4& color)
 		{
 			glUniform1i(glcache::UniformLocation(programa, "textur"), GL_FALSE);
+			glUniform1i(glcache::UniformLocation(programa, "uMaterialEmission"), GL_FALSE);
+			glUniform4f(glcache::UniformLocation(programa, "material.emission"), 0.0f, 0.0f, 0.0f, 1.0f);
 			glUniform4f(glcache::UniformLocation(programa, "material.ambient"), color.r, color.g, color.b, color.a);
 			glUniform4f(glcache::UniformLocation(programa, "material.diffuse"), color.r, color.g, color.b, color.a);
 			glUniform4f(glcache::UniformLocation(programa, "material.specular"), 0.1f, 0.1f, 0.1f, 1.0f);

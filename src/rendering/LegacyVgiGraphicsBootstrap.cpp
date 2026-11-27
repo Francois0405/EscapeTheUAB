@@ -48,7 +48,7 @@ void LegacyVgiGraphicsBootstrap::InitViewAndRenderState()
 // Entorn VGI: Variables de control per Menú VISTA: Pantalla Completa, Pan, dibuixar eixos i grids
 	fullscreen = false;	// La finestra s'inicia en mode finestra; F11 alterna pantalla completa
 	pan = false;
-	eixos = true;	eixos_programID = 0;  eixos_Id = 0;
+	eixos = false;	eixos_programID = 0;  eixos_Id = 0;
 	sw_grid = false;
 	grid.x = false;	grid.y = false;		grid.z = false;		grid.w = false;
 	hgrid.x = 0.0;	hgrid.y = 0.0;		hgrid.z = 0.0;		hgrid.w = 0.0;
@@ -299,12 +299,12 @@ void LegacyVgiGraphicsBootstrap::LoadShadersAndSkybox()
 	{	// load Skybox textures
 		// -------------
 		std::vector<std::string> faces =
-		{ "./assets/textures/skybox/right.jpg",
-			"./assets/textures/skybox/left.jpg",
-			"./assets/textures/skybox/top.jpg",
-			"./assets/textures/skybox/bottom.jpg",
-			"./assets/textures/skybox/front.jpg",
-			"./assets/textures/skybox/back.jpg"
+		{ "./assets/textures/skybox/right.png",
+			"./assets/textures/skybox/left.png",
+			"./assets/textures/skybox/top.png",
+			"./assets/textures/skybox/bottom.png",
+			"./assets/textures/skybox/front.png",
+			"./assets/textures/skybox/back.png"
 		};
 		cubemapTexture = loadCubemap(faces);
 	}

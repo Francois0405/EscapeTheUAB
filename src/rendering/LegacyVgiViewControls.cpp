@@ -262,12 +262,12 @@ void LegacyVgiViewControls::OnVistaSkyBox()
 		{	// load Skybox textures
 			// -------------
 			std::vector<std::string> faces =
-			{ "./assets/textures/skybox/right.jpg",
-				"./assets/textures/skybox/left.jpg",
-				"./assets/textures/skybox/top.jpg",
-				"./assets/textures/skybox/bottom.jpg",
-				"./assets/textures/skybox/front.jpg",
-				"./assets/textures/skybox/back.jpg"
+			{ "./assets/textures/skybox/right.png",
+				"./assets/textures/skybox/left.png",
+				"./assets/textures/skybox/top.png",
+				"./assets/textures/skybox/bottom.png",
+				"./assets/textures/skybox/front.png",
+				"./assets/textures/skybox/back.png"
 			};
 		cubemapTexture = loadCubemap(faces);
 	}

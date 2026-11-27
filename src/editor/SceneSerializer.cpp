@@ -34,6 +34,19 @@ namespace editor
 			return json::array({ vector.x, vector.y, vector.z });
 		}
 
+		json PhysicsJSON(const ScenePhysics& fisica)
+		{
+			json result = {
+				{"type", fisica.tipo == physics::BodyType::Bouncer ? "bouncy" :
+					(fisica.tipo == physics::BodyType::Dynamic ? "dynamic" : "static")},
+				{"halfSize", VectorJSON(fisica.halfExtents)},
+				{"offset", VectorJSON(fisica.desplazamiento)}
+			};
+			if (fisica.forma == physics::BodyShape::Sphere) result["shape"] = "sphere";
+			if (physics::IsDynamicBody(fisica.tipo)) result["mass"] = fisica.masa;
+			return result;
+		}
+
 		bool ReemplazarArchivo(const std::filesystem::path& temporal, const std::filesystem::path& destino,
 			std::string& error)
 		{
@@ -209,6 +222,8 @@ namespace editor
 					(*entrada)["position"] = VectorJSON(objeto.position);
 					(*entrada)["rotation"] = VectorJSON(objeto.eulerRotation);
 					(*entrada)["scale"] = VectorJSON(objeto.escala);
+					if (objeto.fisica.presente) (*entrada)["physics"] = PhysicsJSON(objeto.fisica);
+					else entrada->erase("physics");
 					if (objeto.permitirPenetracionArquitectura) (*entrada)["allowArchitecturePenetration"] = true;
 					else entrada->erase("allowArchitecturePenetration");
 					if (objeto.luz.presente)
@@ -339,18 +354,7 @@ namespace editor
 					if (!objeto.material.textura.empty()) material["texture"] = objeto.material.textura;
 					nueva["material"] = std::move(material);
 				}
-				if (objeto.fisica.presente)
-				{
-					json fisica = {
-						{"type", objeto.fisica.tipo == physics::BodyType::Bouncer ? "bouncy" :
-							(objeto.fisica.tipo == physics::BodyType::Dynamic ? "dynamic" : "static")},
-						{"halfSize", VectorJSON(objeto.fisica.halfExtents)},
-						{"offset", VectorJSON(objeto.fisica.desplazamiento)}
-					};
-					if (objeto.fisica.forma == physics::BodyShape::Sphere) fisica["shape"] = "sphere";
-					if (physics::IsDynamicBody(objeto.fisica.tipo)) fisica["mass"] = objeto.fisica.masa;
-					nueva["physics"] = std::move(fisica);
-				}
+				if (objeto.fisica.presente) nueva["physics"] = PhysicsJSON(objeto.fisica);
 				documento["objects"].push_back(std::move(nueva));
 			}
 		}

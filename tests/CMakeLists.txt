@@ -153,6 +153,7 @@ add_executable(ObjLoaderTests
 	ObjLoaderTests.cpp
 	${PROJECT_SOURCE_DIR}/src/scene/objLoader.cpp
 	${PROJECT_SOURCE_DIR}/src/rendering/ObjMeshOptimization.cpp
+	${PROJECT_SOURCE_DIR}/src/rendering/GlbDrawing.cpp
 	${PROJECT_SOURCE_DIR}/src/rendering/glut_geometry.cpp
 	${PROJECT_SOURCE_DIR}/src/rendering/material.cpp
 )
@@ -173,6 +174,7 @@ target_link_libraries(ObjLoaderTests PRIVATE
 	${TEST_GLFW_TARGET}
 	${TEST_GLEW_TARGET}
 	soil2
+	EntornVGI_animated_glb
 )
 target_compile_features(ObjLoaderTests PRIVATE cxx_std_20)
 if(ENTORNVGI_MESHOPT_TARGET)

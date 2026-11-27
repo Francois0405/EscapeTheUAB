@@ -389,9 +389,14 @@
       "model": "../models/escape_pack/arquitectura/suelo_base.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -427,9 +432,14 @@
       "model": "../models/escape_pack/arquitectura/techo.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -465,9 +475,14 @@
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -485,7 +500,19 @@
         12.0,
         0.15000000596046448,
         1.4499996900558472
-      ]
+      ],
+      "wall": {
+        "apertures": [
+          {
+            "base": 0.7200000286102295,
+            "centerU": 10.002462387084961,
+            "doorId": "",
+            "height": 1.5499999523162842,
+            "id": "windowCreepy_south_opening",
+            "width": 1.0399999618530273
+          }
+        ]
+      }
     },
     {
       "id": "pared_oeste_s1",
@@ -503,9 +530,14 @@
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -541,9 +573,14 @@
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -561,7 +598,27 @@
         21.0,
         0.15000000596046448,
         1.4499995708465576
-      ]
+      ],
+      "wall": {
+        "apertures": [
+          {
+            "base": 0.6800000071525574,
+            "centerU": 6.77230978012085,
+            "doorId": "",
+            "height": 1.5499999523162842,
+            "id": "windowCreepy_east_positive_opening",
+            "width": 5.039999961853027
+          },
+          {
+            "base": 0.7200000286102295,
+            "centerU": -6.77230978012085,
+            "doorId": "",
+            "height": 1.5499999523162842,
+            "id": "windowCreepy_east_negative_opening",
+            "width": 5.039999961853027
+          }
+        ]
+      }
     },
     {
       "id": "tabique_oficina_laboratorio_s1",
@@ -579,9 +636,14 @@
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -617,9 +679,14 @@
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -655,9 +722,14 @@
       "model": "../models/escape_pack/arquitectura/pared.obj",
       "physics": {
         "halfSize": [
-          1,
-          1,
-          1
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
         ],
         "type": "static"
       },
@@ -736,7 +808,19 @@
         12.0,
         0.15000002086162567,
         1.449999451637268
-      ]
+      ],
+      "wall": {
+        "apertures": [
+          {
+            "base": 0.7200000286102295,
+            "centerU": 10.002462387084961,
+            "doorId": "",
+            "height": 1.5499999523162842,
+            "id": "windowCreepy_north_opening",
+            "width": 1.0399999618530273
+          }
+        ]
+      }
     },
     {
       "id": "obj_Prop_Light_Wide_mesa_copy",
@@ -759,6 +843,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         2.75,
         -14.0,
@@ -796,6 +893,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         10.0,
         5.5,
@@ -833,6 +943,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         10.0,
         -5.5,
@@ -870,6 +993,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         -7.050000190734863,
         -14.0,
@@ -907,6 +1043,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         10.0,
         -16.5,
@@ -944,6 +1093,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         10.0,
         16.5,
@@ -981,6 +1143,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         -7.050000190734863,
         14.0,
@@ -1104,6 +1279,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         -10.149999618530273,
         -3.9000000953674316,
@@ -1141,6 +1329,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         -4.0,
         0.0,
@@ -1212,6 +1413,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         4.0,
         0.0,
@@ -1249,6 +1463,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         2.75,
         14.0,
@@ -1270,16 +1497,15 @@
       "model": "../models/escape_pack/lab/counter_counter/counter_counter.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.384,
-          0.348
+          0.3100000023841858,
+          0.3840000033378601,
+          0.3479999899864197
         ],
         "offset": [
           0.0,
           0.0,
-          0.348
+          0.3479999899864197
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -1303,16 +1529,15 @@
       "model": "../models/escape_pack/lab/cabinet_cabinet_two_shelves/cabinet_cabinet_two_shelves.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.155,
-          0.31
+          0.3100000023841858,
+          0.1550000011920929,
+          0.3100000023841858
         ],
         "offset": [
           0.0,
           0.0,
-          0.31
+          0.3100000023841858
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -1393,14 +1618,14 @@
       "model": "../models/escape_pack/lab/counter_counter/counter_counter.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.38,
-          0.35
+          0.3100000023841858,
+          0.3799999952316284,
+          0.3499999940395355
         ],
         "offset": [
-          0,
-          0,
-          0.35
+          0.0,
+          0.0,
+          0.3499999940395355
         ],
         "type": "static"
       },
@@ -1444,14 +1669,14 @@
       "model": "../models/escape_pack/lab/counter_counter_sink/counter_counter_sink.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.38,
-          0.54
+          0.3100000023841858,
+          0.3799999952316284,
+          0.5400000214576721
         ],
         "offset": [
-          0,
-          0,
-          0.54
+          0.0,
+          0.0,
+          0.5400000214576721
         ],
         "type": "static"
       },
@@ -1472,37 +1697,18 @@
       ]
     },
     {
-      "id": "instrumento_banco_lateral",
-      "model": "../models/escape_pack/lab/machine_hot_plate/machine_hot_plate.obj",
-      "position": [
-        -0.4000000059604645,
-        -2.367743968963623,
-        -2.140000104904175
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.350000023841858,
-        1.350000023841858,
-        1.350000023841858
-      ]
-    },
-    {
       "id": "armario_lateral_este",
       "model": "../models/escape_pack/lab/cabinet_cabinet_two_shelves/cabinet_cabinet_two_shelves.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.16,
-          0.31
+          0.3100000023841858,
+          0.1599999964237213,
+          0.3100000023841858
         ],
         "offset": [
-          0,
-          0,
-          0.31
+          0.0,
+          0.0,
+          0.3100000023841858
         ],
         "type": "static"
       },
@@ -1527,14 +1733,14 @@
       "model": "../models/escape_pack/lab/cabinet_cabinet/cabinet_cabinet.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.16,
-          0.31
+          0.3100000023841858,
+          0.1599999964237213,
+          0.3100000023841858
         ],
         "offset": [
-          0,
-          0,
-          0.31
+          0.0,
+          0.0,
+          0.3100000023841858
         ],
         "type": "static"
       },
@@ -1599,7 +1805,7 @@
       "position": [
         -11.971711158752441,
         4.019733905792236,
-        -1.912412166595459
+        -1.761784315109253
       ],
       "rotation": [
         90.0,
@@ -1607,7 +1813,7 @@
         0.0
       ],
       "scale": [
-        0.9999973773956299,
+        0.9999973177909851,
         0.9106367826461792,
         0.9543173909187317
       ]
@@ -1633,6 +1839,19 @@
         ]
       },
       "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "physics": {
+        "halfSize": [
+          1.3202439546585083,
+          0.09095250070095062,
+          0.22266000509262085
+        ],
+        "offset": [
+          0.0,
+          -0.05672749876976013,
+          0.0
+        ],
+        "type": "static"
+      },
       "position": [
         -10.149999618530273,
         3.9000000953674316,
@@ -1654,16 +1873,15 @@
       "model": "../models/escape_pack/lab/counter_counter_2_shelves/counter_counter_2_shelves.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.38,
-          0.348
+          0.3100000023841858,
+          0.3799999952316284,
+          0.3479999899864197
         ],
         "offset": [
-          0,
-          0,
-          0.348
+          0.0,
+          0.0,
+          0.3479999899864197
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -1725,15 +1943,15 @@
       "model": "../models/escape_pack/lab/bottle_glassware_erlenmeyer_flask_medium/bottle_glassware_erlenmeyer_flask_medium.obj",
       "physics": {
         "halfSize": [
-          0.055,
-          0.055,
-          0.082
+          0.054999999701976776,
+          0.054999999701976776,
+          0.0820000022649765
         ],
-        "mass": 0.35,
+        "mass": 0.3499999940395355,
         "offset": [
-          0,
-          0,
-          0.082
+          0.0,
+          0.0,
+          0.0820000022649765
         ],
         "type": "dynamic"
       },
@@ -1758,16 +1976,15 @@
       "model": "../models/escape_pack/kenney/desk.obj",
       "physics": {
         "halfSize": [
-          0.7345,
-          0.3923,
-          0.3845
+          0.734499990940094,
+          0.392300009727478,
+          0.38449999690055847
         ],
         "offset": [
-          0,
-          0,
-          0.3845
+          0.0,
+          0.0,
+          0.38449999690055847
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -1829,16 +2046,15 @@
       "model": "../models/escape_pack/lab/counter_counter_2_shelves/counter_counter_2_shelves.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.38,
-          0.348
+          0.3100000023841858,
+          0.3799999952316284,
+          0.3479999899864197
         ],
         "offset": [
-          0,
-          0,
-          0.348
+          0.0,
+          0.0,
+          0.3479999899864197
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -1881,16 +2097,15 @@
       "model": "../models/escape_pack/kenney/chairDesk.obj",
       "physics": {
         "halfSize": [
-          0.335,
-          0.314,
-          0.608
+          0.33500000834465027,
+          0.3140000104904175,
+          0.6079999804496765
         ],
         "offset": [
-          0,
-          0,
-          0.608
+          0.0,
+          0.0,
+          0.6079999804496765
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -1914,16 +2129,15 @@
       "model": "../models/escape_pack/lab/counter_counter_2_shelves/counter_counter_2_shelves.obj",
       "physics": {
         "halfSize": [
-          0.31,
-          0.38,
-          0.348
+          0.3100000023841858,
+          0.3799999952316284,
+          0.3479999899864197
         ],
         "offset": [
-          0,
-          0,
-          0.348
+          0.0,
+          0.0,
+          0.3479999899864197
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -1966,16 +2180,15 @@
       "model": "../models/escape_pack/kenney/chairDesk.obj",
       "physics": {
         "halfSize": [
-          0.335,
-          0.314,
-          0.608
+          0.33500000834465027,
+          0.3140000104904175,
+          0.6079999804496765
         ],
         "offset": [
-          0,
-          0,
-          0.608
+          0.0,
+          0.0,
+          0.6079999804496765
         ],
-        "shape": "box",
         "type": "static"
       },
       "position": [
@@ -2017,9 +2230,9 @@
       "id": "cuadro_referencia_botanica",
       "model": "../models/escape_pack/lab/clue_botanical_frame.obj",
       "position": [
-        -10.0,
+        -10.149999618530273,
         0.8233769536018372,
-        -1.5499999523162842
+        -1.5841388702392578
       ],
       "rotation": [
         0.0,
@@ -2027,9 +2240,9 @@
         180.0
       ],
       "scale": [
+        2.836819887161255,
         1.0,
-        1.0,
-        0.9999998807907104
+        2.9957568645477295
       ]
     },
     {
@@ -2106,6 +2319,19 @@
     {
       "id": "obj_pizarra",
       "model": "../models/pizarra.obj",
+      "physics": {
+        "halfSize": [
+          0.019999999552965164,
+          0.5,
+          1.286692500114441
+        ],
+        "offset": [
+          0.008302999660372734,
+          0.017064988613128662,
+          0.009171485900878906
+        ],
+        "type": "static"
+      },
       "position": [
         -2.1500000953674316,
         -7.205711364746094,
@@ -2300,26 +2526,6 @@
       ]
     },
     {
-      "allowArchitecturePenetration": true,
-      "id": "cable_banco_lateral_copy",
-      "model": "../models/escape_pack/scifi/Prop_Cable_3.obj",
-      "position": [
-        -10.237630844116211,
-        1.260223150253296,
-        -2.138392925262451
-      ],
-      "rotation": [
-        360.0,
-        360.0,
-        -180.0
-      ],
-      "scale": [
-        1.1850481033325195,
-        0.4999997019767761,
-        0.7174566984176636
-      ]
-    },
-    {
       "id": "obj_Prop_Cable_1",
       "model": "../models/escape_pack/scifi/Prop_Cable_1.obj",
       "physics": {
@@ -2336,17 +2542,17 @@
         "type": "static"
       },
       "position": [
-        -8.840604782104492,
-        6.27618932723999,
+        -11.411683082580566,
+        1.7123284339904785,
         -3.0316967964172363
       ],
       "rotation": [
-        89.43708801269531,
-        -0.08233286440372467,
-        0.6478204727172852
+        90.0,
+        -0.08233281970024109,
+        89.69071960449219
       ],
       "scale": [
-        0.9999997019767761,
+        1.0,
         1.0000004768371582,
         0.9999998807907104
       ]
@@ -2354,9 +2560,22 @@
     {
       "id": "obj_pottedPlant",
       "model": "../models/escape_pack/kenney/pottedPlant.obj",
+      "physics": {
+        "halfSize": [
+          0.21205919981002808,
+          0.24146200716495514,
+          0.6540169715881348
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.6540169715881348
+        ],
+        "type": "static"
+      },
       "position": [
         -8.506537437438965,
-        0.6589910984039307,
+        -0.3698626756668091,
         -3.0422749519348145
       ],
       "rotation": [
@@ -2425,6 +2644,19 @@
     {
       "id": "obj_chairCushion",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         4.25,
         -14.088479995727539,
@@ -2444,6 +2676,19 @@
     {
       "id": "obj_desk",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         4.0,
         -13.5,
@@ -2501,6 +2746,19 @@
     {
       "id": "obj_desk_1",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         4.0,
         -16.0,
@@ -2520,6 +2778,19 @@
     {
       "id": "obj_desk_2",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         4.0,
         -18.5,
@@ -2539,6 +2810,19 @@
     {
       "id": "obj_desk_3",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         0.0,
         -13.5,
@@ -2558,6 +2842,19 @@
     {
       "id": "obj_desk_4",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         -4.0,
         -13.5,
@@ -2577,6 +2874,19 @@
     {
       "id": "obj_desk_5",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         -8.0,
         -13.5,
@@ -2596,6 +2906,19 @@
     {
       "id": "obj_desk_6",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         -4.0,
         -18.5,
@@ -2615,6 +2938,19 @@
     {
       "id": "obj_desk_7",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         -4.0,
         -16.0,
@@ -2634,6 +2970,19 @@
     {
       "id": "obj_desk_8",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         -8.0,
         -16.0,
@@ -2653,6 +3002,19 @@
     {
       "id": "obj_desk_9",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         0.0,
         -18.5,
@@ -2672,6 +3034,19 @@
     {
       "id": "obj_desk_10",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         0.0,
         -16.0,
@@ -2691,6 +3066,19 @@
     {
       "id": "obj_desk_11",
       "model": "../models/escape_pack/kenney/desk.obj",
+      "physics": {
+        "halfSize": [
+          0.7344753742218018,
+          0.392300009727478,
+          0.3844076097011566
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3844076097011566
+        ],
+        "type": "static"
+      },
       "position": [
         -8.0,
         -18.5,
@@ -2710,6 +3098,19 @@
     {
       "id": "obj_chairCushion_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         4.25,
         -16.602231979370117,
@@ -2729,6 +3130,19 @@
     {
       "id": "obj_chairCushion_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         0.25,
         -16.590755462646484,
@@ -2748,6 +3162,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         4.25,
         -19.10450553894043,
@@ -2767,6 +3194,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         0.25,
         -14.088479995727539,
@@ -2786,6 +3226,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         -3.75,
         -14.099958419799805,
@@ -2805,6 +3258,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         -7.75,
         -14.099958419799805,
@@ -2824,6 +3290,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_1",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         0.25,
         -19.093029022216797,
@@ -2843,6 +3322,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         -3.75,
         -19.138940811157227,
@@ -2862,6 +3354,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         -7.75,
         -19.093029022216797,
@@ -2881,6 +3386,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         -7.75,
         -16.602231979370117,
@@ -2900,6 +3418,19 @@
     {
       "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy_copy_copy_copy",
       "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "physics": {
+        "halfSize": [
+          0.20000000298023224,
+          0.20000000298023224,
+          0.46000000834465027
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.46000000834465027
+        ],
+        "type": "static"
+      },
       "position": [
         -3.75,
         -16.59075355529785,
@@ -3003,30 +3534,25 @@
       ]
     },
     {
-      "id": "obj_Prop_Light_Wide_copy",
-      "light": {
-        "areaSize": [
-          2.4000000953674316,
-          0.3799999952316284
+      "id": "obj_windowCreepy",
+      "model": "../models/Marc/windowCreepy.obj",
+      "physics": {
+        "halfSize": [
+          0.15095649659633636,
+          0.7629140615463257,
+          0.4999760091304779
         ],
-        "color": [
-          0.8199999928474426,
-          0.9399999976158142,
-          1.0
-        ],
-        "enabled": true,
-        "intensity": 6.0,
         "offset": [
-          0.0,
-          -0.05400000140070915,
-          0.0
-        ]
+          0.23196949064731598,
+          0.5960479974746704,
+          0.35446199774742126
+        ],
+        "type": "static"
       },
-      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
       "position": [
-        -0.4028489887714386,
-        -4.946625232696533,
-        -0.23999999463558197
+        9.64799976348877,
+        20.91802978515625,
+        -2.1500000953674316
       ],
       "rotation": [
         90.0,
@@ -3034,8 +3560,123 @@
         90.0
       ],
       "scale": [
-        0.9999998807907104,
-        0.9999998807907104,
+        0.9999992847442627,
+        0.9999996423721313,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_windowCreepy_copy",
+      "model": "../models/Marc/windowCreepy.obj",
+      "physics": {
+        "halfSize": [
+          0.15095649659633636,
+          0.7629140615463257,
+          0.4999760091304779
+        ],
+        "offset": [
+          0.23196949064731598,
+          0.5960479974746704,
+          0.35446199774742126
+        ],
+        "type": "static"
+      },
+      "position": [
+        9.64799976348877,
+        -21.381969451904297,
+        -2.1500000953674316
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        90.0
+      ],
+      "scale": [
+        0.9999992251396179,
+        0.9999994039535522,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_windowCreepy_copy_1",
+      "model": "../models/Marc/windowCreepy.obj",
+      "physics": {
+        "halfSize": [
+          0.15095649659633636,
+          0.7629140615463257,
+          0.4999760091304779
+        ],
+        "offset": [
+          0.23196949064731598,
+          0.5960479974746704,
+          0.35446199774742126
+        ],
+        "type": "static"
+      },
+      "position": [
+        11.91802978515625,
+        5.0,
+        -1.0000001192092896
+      ],
+      "rotation": [
+        270.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.9999998211860657,
+        1.0,
+        5.0
+      ]
+    },
+    {
+      "id": "obj_windowCreepy_copy_1_copy",
+      "model": "../models/Marc/windowCreepy.obj",
+      "physics": {
+        "halfSize": [
+          0.15095649659633636,
+          0.7629140615463257,
+          0.4999760091304779
+        ],
+        "offset": [
+          0.23196949064731598,
+          0.5960479974746704,
+          0.35446199774742126
+        ],
+        "type": "static"
+      },
+      "position": [
+        11.91802978515625,
+        -5.0,
+        -2.1500000953674316
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        0.9999998211860657,
+        1.0,
+        5.0
+      ]
+    },
+    {
+      "id": "obj_monstruoVentana",
+      "model": "../models/Marc/monstruoVentana.obj",
+      "position": [
+        10.42528247833252,
+        -21.179410934448242,
+        -2.1772522926330566
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        270.0
+      ],
+      "scale": [
+        0.9999988675117493,
+        0.9999999403953552,
         1.0
       ]
     }

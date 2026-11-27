@@ -108,8 +108,12 @@ int main()
 	comprobar(guardada["rotation"] == nlohmann::json::array({ 15.0, -20.0, 90.0 }), "persiste rotación");
 	comprobar(guardada["scale"] == nlohmann::json::array({ 1.25, 0.75, 2.0 }), "persiste escala");
 	comprobar(guardada["allowArchitecturePenetration"] == true, "persiste la excepcion explicita de arquitectura");
-	comprobar(guardada["physics"]["halfSize"] == nlohmann::json::array({ 0.5, 0.4, 0.3 }), "preserva halfSize físico");
-	comprobar(guardada["physics"]["offset"] == nlohmann::json::array({ 0.1, 0.2, 0.3 }), "preserva offset físico");
+	comprobar(std::abs(guardada["physics"]["halfSize"][0].get<double>() - 0.5) < 1e-5 &&
+		std::abs(guardada["physics"]["halfSize"][1].get<double>() - 0.4) < 1e-5 &&
+		std::abs(guardada["physics"]["halfSize"][2].get<double>() - 0.3) < 1e-5, "preserva halfSize físico");
+	comprobar(std::abs(guardada["physics"]["offset"][0].get<double>() - 0.1) < 1e-5 &&
+		std::abs(guardada["physics"]["offset"][1].get<double>() - 0.2) < 1e-5 &&
+		std::abs(guardada["physics"]["offset"][2].get<double>() - 0.3) < 1e-5, "preserva offset físico");
 	comprobar(guardada["light"]["enabled"] == true &&
 		std::abs(guardada["light"]["offset"][0].get<double>()) < 1e-5 &&
 		std::abs(guardada["light"]["offset"][1].get<double>() - 0.2) < 1e-5 &&
@@ -144,6 +148,41 @@ int main()
 		recargada.objetos[1].material.dirtStrength == mesa.material.dirtStrength &&
 		recargada.objetos[1].material.dirtScale == mesa.material.dirtScale && recargada.objetos[1].material.dirtSeed == mesa.material.dirtSeed,
 		"la recarga restaura el material configurable");
+	const fs::path escenaFisica = temp / "scenes" / "physics-toggle.json";
+	escribir(escenaFisica, R"json({"version":1,"name":"physics-toggle","architecture":[],"objects":[
+      {"id":"prop","model":"../models/table.obj","position":[0,0,0],"rotation":[0,0,0],"scale":[1,1,1]}
+      ]})json");
+	editor::SceneSerializer serializadorFisica;
+	SceneData datosFisica;
+	comprobar(serializadorFisica.LoadScene(escenaFisica, error) && LoadSceneDataJson(escenaFisica, datosFisica, error),
+		"carga un objeto existente sin collider");
+	SceneObject& propFisico = datosFisica.objetos[0];
+	propFisico.fisica.presente = true;
+	propFisico.fisica.tipo = physics::BodyType::Static;
+	propFisico.fisica.forma = physics::BodyShape::Box;
+	propFisico.fisica.halfExtents = glm::vec3(0.25f, 0.5f, 0.75f);
+	propFisico.fisica.desplazamiento = glm::vec3(0.125f, -0.25f, 0.375f);
+	comprobar(serializadorFisica.SaveScene(datosFisica.objetos, error), "guarda Static box en un objeto existente");
+	nlohmann::json jsonFisica = nlohmann::json::parse(leer(escenaFisica));
+	comprobar(jsonFisica["objects"][0]["physics"]["type"] == "static" &&
+		jsonFisica["objects"][0]["physics"]["halfSize"] == nlohmann::json::array({ 0.25, 0.5, 0.75 }) &&
+		jsonFisica["objects"][0]["physics"]["offset"] == nlohmann::json::array({ 0.125, -0.25, 0.375 }),
+		"persiste tipo, tamaño y offset del collider");
+	SceneData fisicaRecargada;
+	comprobar(LoadSceneDataJson(escenaFisica, fisicaRecargada, error) &&
+		fisicaRecargada.objetos[0].fisica.presente &&
+		fisicaRecargada.objetos[0].fisica.tipo == physics::BodyType::Static &&
+		fisicaRecargada.objetos[0].fisica.forma == physics::BodyShape::Box &&
+		fisicaRecargada.objetos[0].fisica.halfExtents == propFisico.fisica.halfExtents &&
+		fisicaRecargada.objetos[0].fisica.desplazamiento == propFisico.fisica.desplazamiento,
+		"recarga Static box de un objeto existente");
+	fisicaRecargada.objetos[0].fisica.presente = false;
+	comprobar(serializadorFisica.SaveScene(fisicaRecargada.objetos, error), "guarda None en un objeto existente");
+	jsonFisica = nlohmann::json::parse(leer(escenaFisica));
+	comprobar(!jsonFisica["objects"][0].contains("physics"), "None elimina la configuración física del JSON");
+	SceneData sinFisicaRecargada;
+	comprobar(LoadSceneDataJson(escenaFisica, sinFisicaRecargada, error) &&
+		!sinFisicaRecargada.objetos[0].fisica.presente, "recarga None sin restaurar un collider antiguo");
 	SceneObject duplicada = mesa;
 	duplicada.id = "table_copy";
 	comprobar(serializador.SaveScene({ datos.objetos[0], mesa, duplicada }, error), "serializa una instancia duplicada con ID nuevo");
