@@ -297,6 +297,79 @@
       ],
       "scale": 1.0,
       "wallId": "tabique_pasillo_laboratorio_s1_copy"
+    },
+    {
+      "colliders": [
+        {
+          "halfSize": [
+            0.05000000074505806,
+            1.0499999523162842,
+            0.03999999910593033
+          ],
+          "node": "DoorFrame",
+          "offset": [
+            -0.44999998807907104,
+            1.0499999523162842,
+            -0.013000000268220901
+          ],
+          "type": "static"
+        },
+        {
+          "halfSize": [
+            0.05000000074505806,
+            1.0499999523162842,
+            0.03999999910593033
+          ],
+          "node": "DoorFrame",
+          "offset": [
+            0.44999998807907104,
+            1.0499999523162842,
+            -0.013000000268220901
+          ],
+          "type": "static"
+        },
+        {
+          "halfSize": [
+            0.4000000059604645,
+            0.05000000074505806,
+            0.03999999910593033
+          ],
+          "node": "DoorFrame",
+          "offset": [
+            0.0,
+            2.049999952316284,
+            -0.013000000268220901
+          ],
+          "type": "static"
+        },
+        {
+          "halfSize": [
+            0.4180000126361847,
+            1.0049999952316284,
+            0.017000000923871994
+          ],
+          "node": "Door",
+          "offset": [
+            -0.4180000126361847,
+            -0.04100000113248825,
+            -0.017000000923871994
+          ],
+          "type": "kinematic"
+        }
+      ],
+      "id": "Puerta_Lab_3",
+      "model": "../animations/Puerta_Lab.glb",
+      "position": [
+        -8.149999618530273,
+        -3.8759756088256836,
+        -3.049999952316284
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "scale": 1.0
     }
   ],
   "architecture": [
@@ -514,7 +587,7 @@
       },
       "position": [
         -8.149999618530273,
-        2.158170223236084,
+        0.01198434829711914,
         -1.600000023841858
       ],
       "rotation": [
@@ -523,9 +596,9 @@
         90.0
       ],
       "scale": [
-        1.25,
+        3.3923146724700928,
         0.15000000596046448,
-        1.4499993324279785
+        1.4499980211257935
       ]
     },
     {
@@ -563,7 +636,7 @@
       "scale": [
         0.5,
         0.15000000596046448,
-        0.39999985694885254
+        0.39999982714653015
       ]
     },
     {
@@ -601,7 +674,7 @@
       "scale": [
         1.25,
         0.15000000596046448,
-        1.4499995708465576
+        1.449999451637268
       ]
     }
   ],
@@ -1278,39 +1351,6 @@
       ]
     },
     {
-      "id": "caja_laboratorio",
-      "model": "../models/escape_pack/scifi/Prop_Crate3.obj",
-      "physics": {
-        "halfSize": [
-          0.5,
-          0.5,
-          0.5
-        ],
-        "offset": [
-          0.0,
-          0.0,
-          0.0
-        ],
-        "shape": "box",
-        "type": "static"
-      },
-      "position": [
-        5.800000190734863,
-        2.0999999046325684,
-        -2.6500000953674316
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        0.550000011920929,
-        0.550000011920929,
-        0.550000011920929
-      ]
-    },
-    {
       "id": "detalle_tubos_mesa",
       "model": "../models/escape_pack/lab/bottle_test_tube_rack/bottle_test_tube_rack.obj",
       "position": [
@@ -1518,19 +1558,19 @@
       "id": "ventilacion_pared_fondo",
       "model": "../models/escape_pack/scifi/Prop_Vent_Wide.obj",
       "position": [
-        2.299999952316284,
-        7.340000152587891,
+        -4.0,
+        6.848002910614014,
         -1.25
       ],
       "rotation": [
         0.0,
         0.0,
-        0.0
+        180.0
       ],
       "scale": [
         1.25,
         1.25,
-        1.25
+        1.2499998807907104
       ]
     },
     {
@@ -1557,7 +1597,7 @@
       "id": "cable_banco_lateral",
       "model": "../models/escape_pack/scifi/Prop_Cable_3.obj",
       "position": [
-        -11.937026977539063,
+        -11.971711158752441,
         4.019733905792236,
         -1.912412166595459
       ],
@@ -1567,8 +1607,8 @@
         0.0
       ],
       "scale": [
-        0.9999980926513672,
-        0.9371256232261658,
+        0.9999973773956299,
+        0.9106367826461792,
         0.9543173909187317
       ]
     },
@@ -1731,9 +1771,9 @@
         "type": "static"
       },
       "position": [
-        -5.099999904632568,
-        5.199999809265137,
-        -3.049999952316284
+        3.1560826301574707,
+        -9.619550704956055,
+        -2.905362606048584
       ],
       "rotation": [
         0.0,
@@ -1782,72 +1822,6 @@
         0.75,
         0.75,
         0.7499997019767761
-      ]
-    },
-    {
-      "id": "silla_control_sur",
-      "model": "../models/escape_pack/kenney/chairDesk.obj",
-      "physics": {
-        "halfSize": [
-          0.335,
-          0.314,
-          0.608
-        ],
-        "offset": [
-          0,
-          0,
-          0.608
-        ],
-        "shape": "box",
-        "type": "static"
-      },
-      "position": [
-        -5.0,
-        4.0,
-        -3.049999952316284
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        0.800000011920929,
-        0.800000011920929,
-        0.800000011920929
-      ]
-    },
-    {
-      "id": "estanteria_suministros_sur",
-      "model": "../models/escape_pack/kenney/bookcaseOpen.obj",
-      "physics": {
-        "halfSize": [
-          0.4,
-          0.25,
-          0.88
-        ],
-        "offset": [
-          0,
-          0,
-          0.88
-        ],
-        "shape": "box",
-        "type": "static"
-      },
-      "position": [
-        8.700393676757813,
-        -14.0,
-        -3.049999952316284
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0499999523162842,
-        1.0499999523162842,
-        1.0
       ]
     },
     {
@@ -1900,39 +1874,6 @@
         0.75,
         0.75,
         0.550000011920929
-      ]
-    },
-    {
-      "id": "estanteria_documentacion_centro",
-      "model": "../models/escape_pack/kenney/bookcaseClosed.obj",
-      "physics": {
-        "halfSize": [
-          0.4,
-          0.25,
-          0.85
-        ],
-        "offset": [
-          0,
-          0,
-          0.85
-        ],
-        "shape": "box",
-        "type": "static"
-      },
-      "position": [
-        5.800000190734863,
-        1.5,
-        -3.049999952316284
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0499999523162842,
-        1.0499999523162842,
-        1.0
       ]
     },
     {
@@ -2038,18 +1979,18 @@
         "type": "static"
       },
       "position": [
-        -5.699999809265137,
-        3.700000047683716,
-        -3.049999952316284
+        2.9541611671447754,
+        -8.979043006896973,
+        -2.907405376434326
       ],
       "rotation": [
         0.0,
         0.0,
-        0.0
+        180.0
       ],
       "scale": [
-        0.75,
-        0.75,
+        0.7500001788139343,
+        0.7500001788139343,
         0.75
       ]
     },
@@ -2076,19 +2017,19 @@
       "id": "cuadro_referencia_botanica",
       "model": "../models/escape_pack/lab/clue_botanical_frame.obj",
       "position": [
-        0.0,
-        7.320000171661377,
+        -10.0,
+        0.8233769536018372,
         -1.5499999523162842
       ],
       "rotation": [
         0.0,
         0.0,
-        0.0
+        180.0
       ],
       "scale": [
         1.0,
         1.0,
-        1.0
+        0.9999998807907104
       ]
     },
     {
@@ -2163,25 +2104,6 @@
       }
     },
     {
-      "id": "obj_bookcaseOpen",
-      "model": "../models/escape_pack/kenney/bookcaseOpen.obj",
-      "position": [
-        8.667964935302734,
-        14.0,
-        -3.049999952316284
-      ],
-      "rotation": [
-        0.0,
-        0.0,
-        0.0
-      ],
-      "scale": [
-        1.0,
-        1.0,
-        1.0
-      ]
-    },
-    {
       "id": "obj_pizarra",
       "model": "../models/pizarra.obj",
       "position": [
@@ -2201,29 +2123,10 @@
       ]
     },
     {
-      "id": "obj_pizarra_1",
-      "model": "../models/pizarra.obj",
-      "position": [
-        -2.1500000953674316,
-        20.893335342407227,
-        -1.5700000524520874
-      ],
-      "rotation": [
-        90.0,
-        0.0,
-        90.0
-      ],
-      "scale": [
-        1.9999998807907104,
-        2.499999761581421,
-        3.5
-      ]
-    },
-    {
       "id": "obj_servers",
       "model": "../models/servers.obj",
       "position": [
-        6.802238464355469,
+        6.8985700607299805,
         -6.235193252563477,
         -2.741941452026367
       ],
@@ -2233,7 +2136,7 @@
         270.0
       ],
       "scale": [
-        0.3999994993209839,
+        0.39999935030937195,
         0.44999998807907104,
         0.550000011920929
       ]
@@ -2375,6 +2278,765 @@
         1.8509913682937622,
         0.15000000596046448,
         1.4499995708465576
+      ]
+    },
+    {
+      "id": "obj_servers_1",
+      "model": "../models/servers.obj",
+      "position": [
+        3.9152796268463135,
+        -6.225532054901123,
+        -2.7497687339782715
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        270.0
+      ],
+      "scale": [
+        0.39999985694885254,
+        0.44999998807907104,
+        0.550000011920929
+      ]
+    },
+    {
+      "allowArchitecturePenetration": true,
+      "id": "cable_banco_lateral_copy",
+      "model": "../models/escape_pack/scifi/Prop_Cable_3.obj",
+      "position": [
+        -10.237630844116211,
+        1.260223150253296,
+        -2.138392925262451
+      ],
+      "rotation": [
+        360.0,
+        360.0,
+        -180.0
+      ],
+      "scale": [
+        1.1850481033325195,
+        0.4999997019767761,
+        0.7174566984176636
+      ]
+    },
+    {
+      "id": "obj_Prop_Cable_1",
+      "model": "../models/escape_pack/scifi/Prop_Cable_1.obj",
+      "physics": {
+        "halfSize": [
+          0.5092294812202454,
+          0.07412250339984894,
+          0.8234540224075317
+        ],
+        "offset": [
+          0.0206184983253479,
+          0.055819496512413025,
+          0.24840998649597168
+        ],
+        "type": "static"
+      },
+      "position": [
+        -8.840604782104492,
+        6.27618932723999,
+        -3.0316967964172363
+      ],
+      "rotation": [
+        89.43708801269531,
+        -0.08233286440372467,
+        0.6478204727172852
+      ],
+      "scale": [
+        0.9999997019767761,
+        1.0000004768371582,
+        0.9999998807907104
+      ]
+    },
+    {
+      "id": "obj_pottedPlant",
+      "model": "../models/escape_pack/kenney/pottedPlant.obj",
+      "position": [
+        -8.506537437438965,
+        0.6589910984039307,
+        -3.0422749519348145
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "allowArchitecturePenetration": true,
+      "id": "obj_table",
+      "model": "../models/escape_pack/kenney/table.obj",
+      "physics": {
+        "halfSize": [
+          0.8414878845214844,
+          0.44737330079078674,
+          0.3267340064048767
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.3267340064048767
+        ],
+        "type": "static"
+      },
+      "position": [
+        -2.0,
+        -9.04977035522461,
+        -4.940143585205078
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        8.924141883850098,
+        4.8895087242126465,
+        3.114798069000244
+      ]
+    },
+    {
+      "id": "obj_books",
+      "model": "../models/escape_pack/kenney/books.obj",
+      "position": [
+        3.5755462646484375,
+        -9.64694881439209,
+        -1.904386043548584
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        48.380950927734375
+      ],
+      "scale": [
+        0.9999995827674866,
+        1.0,
+        1.0000001192092896
+      ]
+    },
+    {
+      "id": "obj_chairCushion",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        4.25,
+        -14.088479995727539,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        4.0,
+        -13.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        0.9999999403953552,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "ventilacion_pared_fondo_copy",
+      "model": "../models/escape_pack/scifi/Prop_Vent_Wide.obj",
+      "position": [
+        4.0,
+        6.848003387451172,
+        -1.25
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.25,
+        1.25,
+        1.25
+      ]
+    },
+    {
+      "id": "ventilacion_pared_fondo_copy_copy",
+      "model": "../models/escape_pack/scifi/Prop_Vent_Wide.obj",
+      "position": [
+        0.0,
+        6.839448928833008,
+        -1.25
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.25,
+        1.25,
+        1.25
+      ]
+    },
+    {
+      "id": "obj_desk_1",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        4.0,
+        -16.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        0.9999999403953552,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_2",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        4.0,
+        -18.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_3",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        0.0,
+        -13.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_4",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        -4.0,
+        -13.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_5",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        -8.0,
+        -13.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_6",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        -4.0,
+        -18.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_7",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        -4.0,
+        -16.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_8",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        -8.0,
+        -16.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_9",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        0.0,
+        -18.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_10",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        0.0,
+        -16.0,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_desk_11",
+      "model": "../models/escape_pack/kenney/desk.obj",
+      "position": [
+        -8.0,
+        -18.5,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        180.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        4.25,
+        -16.602231979370117,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        0.25,
+        -16.590755462646484,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        4.25,
+        -19.10450553894043,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        0.25,
+        -14.088479995727539,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        -3.75,
+        -14.099958419799805,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        -7.75,
+        -14.099958419799805,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_1",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        0.25,
+        -19.093029022216797,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        -3.75,
+        -19.138940811157227,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        -7.75,
+        -19.093029022216797,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        -7.75,
+        -16.602231979370117,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "obj_chairCushion_copy_copy_copy_copy_copy_copy_copy_copy_copy_copy",
+      "model": "../models/escape_pack/kenney/chairCushion.obj",
+      "position": [
+        -3.75,
+        -16.59075355529785,
+        -3.0
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "scale": [
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    {
+      "id": "tabique_oficina_laboratorio_dintel_2_copy",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -8.149999618530273,
+        -3.883983850479126,
+        -0.550000011920929
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "scale": [
+        0.5,
+        0.15000000596046448,
+        0.3999997675418854
+      ]
+    },
+    {
+      "id": "tabique_oficina_laboratorio_s1_copy_1",
+      "material": {
+        "dirtScale": 0.44999998807907104,
+        "dirtSeed": 0.0,
+        "dirtStrength": 0.0,
+        "roughness": 0.9399999976158142,
+        "texture": "../models/escape_pack/arquitectura/industrial_wall_lab_v2.png",
+        "tileSize": [
+          2.0,
+          2.9000000953674316
+        ]
+      },
+      "model": "../models/escape_pack/arquitectura/pared.obj",
+      "physics": {
+        "halfSize": [
+          1.0,
+          1.0,
+          1.0
+        ],
+        "offset": [
+          0.0,
+          0.0,
+          0.0
+        ],
+        "type": "static"
+      },
+      "position": [
+        -8.149999618530273,
+        -5.601286888122559,
+        -1.600000023841858
+      ],
+      "rotation": [
+        0.0,
+        0.0,
+        90.0
+      ],
+      "scale": [
+        1.217875361442566,
+        0.15000000596046448,
+        1.4499982595443726
+      ]
+    },
+    {
+      "id": "obj_Prop_Light_Wide_copy",
+      "light": {
+        "areaSize": [
+          2.4000000953674316,
+          0.3799999952316284
+        ],
+        "color": [
+          0.8199999928474426,
+          0.9399999976158142,
+          1.0
+        ],
+        "enabled": true,
+        "intensity": 6.0,
+        "offset": [
+          0.0,
+          -0.05400000140070915,
+          0.0
+        ]
+      },
+      "model": "../models/escape_pack/scifi/Prop_Light_Wide.obj",
+      "position": [
+        -0.4028489887714386,
+        -4.946625232696533,
+        -0.23999999463558197
+      ],
+      "rotation": [
+        90.0,
+        0.0,
+        90.0
+      ],
+      "scale": [
+        0.9999998807907104,
+        0.9999998807907104,
+        1.0
       ]
     }
   ],
